@@ -1,5 +1,15 @@
 {
+  // Le decimos a ESLint qué lenguajes debe validar en vivo
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  // (Opcional, pero recomendado) Que intente arreglar el código automáticamente al guardar
   "editor.codeActionsOnSave": {
-    "source.fixAll.prettier": "explicit"
-  }
+    "source.fixAll.eslint": "explicit"
+  },
+  // Habilita explícitamente el soporte para tu archivo flat config (eslint.config.js/mjs)
+  "eslint.useFlatConfig": true
 }
