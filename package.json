@@ -11,9 +11,10 @@
     "test": "jest"
   },
   "dependencies": {
-    "next": "15.5.19",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "@next/eslint-plugin-next": "^16.2.9",
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -27,8 +28,11 @@
     "cypress": "^15.18.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.9",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
+    "prettier": "3.8.4",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5"
