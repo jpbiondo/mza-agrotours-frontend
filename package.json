@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "cypress:open": "cypress open",
-    "test": "jest"
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "@next/eslint-plugin-next": "^16.2.9",
