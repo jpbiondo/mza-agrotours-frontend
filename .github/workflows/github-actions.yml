@@ -1,0 +1,41 @@
+name: Next.js CI Pipeline
+
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+    branches: ["main", "dev"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          # Le indicamos directamente a GitHub Actions que cachee las dependencias de npm
+          cache: "npm"
+
+      - name: Install dependencies
+        # npm ci es mejor para CI/CD que npm install porque respeta estrictamente el package-lock.json
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Jest Unit Tests
+        run: npm run test
+
+      - name: Build Next.js app
+        run: npm run build
+
+      - name: Run Cypress E2E Tests
+        if: github.ref == 'refs/heads/main'
+        uses: cypress-io/github-action@v6
+        with:
+          start: npm run start
+          wait-on: "http://localhost:3000"
