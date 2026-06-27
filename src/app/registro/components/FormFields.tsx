@@ -99,7 +99,8 @@ export function TextInput({
             : errored
             ? "2px solid var(--danger)"
             : "1px solid var(--sand)",
-          padding: tight ? "12px 14px" : "13px 15px",
+          paddingTop: tight ? 12 : 13,
+          paddingBottom: tight ? 12 : 13,
           paddingLeft: icon ? (tight ? 43 : 44) : tight ? 14 : 15,
           paddingRight: rightSlot ? 44 : tight ? 14 : 15,
           boxSizing: "border-box",

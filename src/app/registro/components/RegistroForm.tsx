@@ -1,61 +1,46 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import {
-  User, Mail, Phone, Lock, BadgeCheck, Fingerprint, UserPlus,
+  User,
+  Mail,
+  Phone,
+  Lock,
+  BadgeCheck,
+  Fingerprint,
+  UserPlus,
 } from "lucide-react";
 import {
-  Field, TextInput, SelectInput, CountrySelect, DatePicker,
-  PasswordMeter, EyeToggle, passwordChecks,
+  Field,
+  TextInput,
+  SelectInput,
+  CountrySelect,
+  DatePicker,
+  PasswordMeter,
+  EyeToggle,
 } from "./FormFields";
-import { PAISES, TIPOS_IDENTIFICACION, EMAILS_REGISTRADOS, EMPTY_FORM } from "@/data/registro";
+import { PAISES, TIPOS_IDENTIFICACION, EMPTY_FORM } from "@/data/registro";
 import type { FormData } from "@/types/registro";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+import { registroSchema } from "../schema";
+import z from "zod";
+import { useRegistro } from "@/hooks/useRegistro";
 
 type Errors = Partial<Record<keyof FormData, string>>;
 type Touched = Partial<Record<keyof FormData, boolean>>;
 
-function validate(state: FormData): Errors {
-  const e: Errors = {};
-
-  if (!state.nombre.trim()) e.nombre = "Este campo es obligatorio";
-  else if (state.nombre.trim().length > 40) e.nombre = "Máximo 40 caracteres";
-
-  if (!state.email.trim()) e.email = "Este campo es obligatorio";
-  else if (!EMAIL_RE.test(state.email.trim())) e.email = "Ingresá un email válido (nombre@dominio.com)";
-  else if (EMAILS_REGISTRADOS.includes(state.email.trim().toLowerCase())) e.email = "El correo ya está registrado";
-
-  if (!state.pais) e.pais = "Este campo es obligatorio";
-  if (!state.fecha) e.fecha = "Este campo es obligatorio";
-  if (!state.tipoId) e.tipoId = "Este campo es obligatorio";
-
-  const nid = state.numeroId.trim();
-  if (!nid) e.numeroId = "Este campo es obligatorio";
-  else if (nid.length < 5 || nid.length > 20) e.numeroId = "Debe tener entre 5 y 20 caracteres";
-
-  const tel = state.telefono.trim();
-  if (!tel) e.telefono = "Este campo es obligatorio";
-  else if (tel.length < 7 || tel.length > 15) e.telefono = "El teléfono debe tener entre 7 y 15 caracteres";
-
-  if (!state.password) e.password = "Este campo es obligatorio";
-  else {
-    const c = passwordChecks(state.password);
-    if (!c.length || !c.special) e.password = "La contraseña debe tener mínimo 8 caracteres y un carácter especial";
-  }
-
-  if (!state.confirm) e.confirm = "Este campo es obligatorio";
-  else if (state.confirm !== state.password) e.confirm = "Las contraseñas ingresadas no coinciden";
-
-  if (!state.terminos) e.terminos = "Debe leer y aceptar los términos y condiciones para poder registrarse";
-
-  return e;
+function parseErrors(data: FormData): Errors {
+  const result = registroSchema.safeParse(data);
+  if (result.success) return {};
+  const flat = z.flattenError(result.error);
+  const out: Errors = {};
+  (Object.keys(flat.fieldErrors) as (keyof FormData)[]).forEach((k) => {
+    const msgs = flat.fieldErrors[k as keyof typeof flat.fieldErrors];
+    if (msgs?.[0]) out[k] = msgs[0];
+  });
+  return out;
 }
 
-const ALL_FIELDS: (keyof FormData)[] = [
-  "nombre", "email", "pais", "fecha", "tipoId", "numeroId",
-  "telefono", "password", "confirm", "terminos",
-];
+const ALL_FIELDS = Object.keys(EMPTY_FORM) as (keyof FormData)[];
 
 interface RegistroFormProps {
   onSuccess: (data: FormData) => void;
@@ -63,49 +48,62 @@ interface RegistroFormProps {
 
 export default function RegistroForm({ onSuccess }: RegistroFormProps) {
   const [v, setV] = useState<FormData>(EMPTY_FORM);
-  const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Touched>({});
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const { register, isLoading, apiError } = useRegistro();
 
-  const set = <K extends keyof FormData>(k: K, val: FormData[K]) =>
+  // Setea el valor y marca el campo como tocado en un solo paso.
+  const update = <K extends keyof FormData>(k: K, val: FormData[K]) => {
     setV((s) => ({ ...s, [k]: val }));
-  const touch = (k: keyof FormData) => setTouched((s) => ({ ...s, [k]: true }));
+    setTouched((s) => ({ ...s, [k]: true }));
+  };
 
-  useEffect(() => {
-    if (Object.keys(touched).length === 0) return;
-    const all = validate(v);
-    const next: Errors = {};
+  // Validamos siempre, pero sólo recalculamos cuando cambian los valores.
+  const allErrors = useMemo(() => parseErrors(v), [v]);
+  const errors = useMemo<Errors>(() => {
+    const out: Errors = {};
     (Object.keys(touched) as (keyof FormData)[]).forEach((k) => {
-      if (all[k]) next[k] = all[k];
+      if (allErrors[k]) out[k] = allErrors[k];
     });
-    setErrors(next);
-  }, [v]); // eslint-disable-line react-hooks/exhaustive-deps
+    return out;
+  }, [allErrors, touched]);
 
-  function handleSubmit() {
-    const e = validate(v);
-    setErrors(e);
-    const allTouched = Object.fromEntries(ALL_FIELDS.map((k) => [k, true])) as Touched;
-    setTouched(allTouched);
-    if (Object.keys(e).length > 0) return;
-    setSubmitting(true);
-    setTimeout(() => { setSubmitting(false); onSuccess({ ...v }); }, 850);
+  async function handleSubmit() {
+    setTouched(Object.fromEntries(ALL_FIELDS.map((k) => [k, true])) as Touched);
+    if (Object.keys(allErrors).length > 0) return;
+    try {
+      await register(v);
+      onSuccess({ ...v });
+    } catch {
+      // apiError ya fue seteado por el hook
+    }
   }
 
-  const err = (k: keyof FormData) => touched[k] ? errors[k] : undefined;
+  const err = (k: keyof FormData) => errors[k];
 
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit();
+      }}
       noValidate
       style={{ display: "flex", flexDirection: "column", gap: 22 }}
     >
       {/* ---- Datos personales ---- */}
-      <div className="t-label" style={{ color: "var(--brown-700)" }}>DATOS PERSONALES</div>
+      <div className="t-label" style={{ color: "var(--brown-700)" }}>
+        DATOS PERSONALES
+      </div>
 
       <div id="fld-nombre">
-        <Field label="Nombre y apellido" required error={err("nombre")} hint="Como figura en tu documento" htmlFor="in-nombre">
+        <Field
+          label="Nombre y apellido"
+          required
+          error={err("nombre")}
+          hint="Como figura en tu documento"
+          htmlFor="in-nombre"
+        >
           <TextInput
             id="in-nombre"
             icon={<User size={18} />}
@@ -113,7 +111,7 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
             maxLength={40}
             placeholder="Ej. Camila Ríos"
             autoComplete="name"
-            onChange={(x) => { set("nombre", x); touch("nombre"); }}
+            onChange={(x) => update("nombre", x)}
             error={err("nombre")}
           />
         </Field>
@@ -129,7 +127,7 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
             placeholder="nombre@dominio.com"
             inputMode="email"
             autoComplete="email"
-            onChange={(x) => { set("email", x); touch("email"); }}
+            onChange={(x) => update("email", x)}
             error={err("email")}
           />
         </Field>
@@ -144,7 +142,7 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
               options={PAISES}
               error={err("pais")}
               placeholder="Seleccionar país"
-              onChange={(x) => { set("pais", x); touch("pais"); }}
+              onChange={(x) => update("pais", x)}
             />
           </Field>
         </div>
@@ -154,7 +152,7 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
             <DatePicker
               value={v.fecha}
               error={err("fecha")}
-              onChange={(d) => { set("fecha", d); touch("fecha"); }}
+              onChange={(d) => update("fecha", d)}
             />
           </Field>
         </div>
@@ -162,7 +160,12 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
         <div id="fld-tipoId">
-          <Field label="Tipo de identificación" required error={err("tipoId")} htmlFor="in-tipoId">
+          <Field
+            label="Tipo de identificación"
+            required
+            error={err("tipoId")}
+            htmlFor="in-tipoId"
+          >
             <SelectInput
               id="in-tipoId"
               icon={<BadgeCheck size={18} />}
@@ -170,21 +173,28 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
               options={TIPOS_IDENTIFICACION}
               placeholder="Seleccionar tipo"
               error={err("tipoId")}
-              onChange={(x) => { set("tipoId", x); touch("tipoId"); }}
+              onChange={(x) => update("tipoId", x)}
             />
           </Field>
         </div>
 
         <div id="fld-numeroId">
-          <Field label="Número de identificación" required error={err("numeroId")} htmlFor="in-numeroId">
+          <Field
+            label="Número de identificación"
+            required
+            error={err("numeroId")}
+            htmlFor="in-numeroId"
+          >
             <TextInput
               id="in-numeroId"
               icon={<Fingerprint size={18} />}
               value={v.numeroId}
               maxLength={20}
-              placeholder={v.tipoId === "Pasaporte" ? "Ej. AB123456" : "Ej. 30.123.456"}
+              placeholder={
+                v.tipoId === "Pasaporte" ? "Ej. AB123456" : "Ej. 30.123.456"
+              }
               autoComplete="off"
-              onChange={(x) => { set("numeroId", x); touch("numeroId"); }}
+              onChange={(x) => update("numeroId", x)}
               error={err("numeroId")}
             />
           </Field>
@@ -208,17 +218,27 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
             placeholder="Ej. +54 261 555 1234"
             inputMode="tel"
             autoComplete="tel"
-            onChange={(x) => { set("telefono", x); touch("telefono"); }}
+            onChange={(x) => update("telefono", x)}
             error={err("telefono")}
           />
         </Field>
       </div>
 
       {/* ---- Seguridad ---- */}
-      <div className="t-label" style={{ color: "var(--brown-700)", marginTop: 8 }}>SEGURIDAD</div>
+      <div
+        className="t-label"
+        style={{ color: "var(--brown-700)", marginTop: 8 }}
+      >
+        SEGURIDAD
+      </div>
 
       <div id="fld-password">
-        <Field label="Contraseña" required error={err("password")} htmlFor="in-pw">
+        <Field
+          label="Contraseña"
+          required
+          error={err("password")}
+          htmlFor="in-pw"
+        >
           <TextInput
             id="in-pw"
             icon={<Lock size={18} />}
@@ -226,16 +246,23 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
             value={v.password}
             placeholder="Mínimo 8 caracteres"
             autoComplete="new-password"
-            onChange={(x) => { set("password", x); touch("password"); }}
+            onChange={(x) => update("password", x)}
             error={err("password")}
-            rightSlot={<EyeToggle shown={showPw} onToggle={() => setShowPw((s) => !s)} />}
+            rightSlot={
+              <EyeToggle shown={showPw} onToggle={() => setShowPw((s) => !s)} />
+            }
           />
         </Field>
         {v.password && <PasswordMeter value={v.password} />}
       </div>
 
       <div id="fld-confirm">
-        <Field label="Confirmar contraseña" required error={err("confirm")} htmlFor="in-confirm">
+        <Field
+          label="Confirmar contraseña"
+          required
+          error={err("confirm")}
+          htmlFor="in-confirm"
+        >
           <TextInput
             id="in-confirm"
             icon={<Lock size={18} />}
@@ -243,9 +270,14 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
             value={v.confirm}
             placeholder="Repetí la contraseña"
             autoComplete="new-password"
-            onChange={(x) => { set("confirm", x); touch("confirm"); }}
+            onChange={(x) => update("confirm", x)}
             error={err("confirm")}
-            rightSlot={<EyeToggle shown={showConfirm} onToggle={() => setShowConfirm((s) => !s)} />}
+            rightSlot={
+              <EyeToggle
+                shown={showConfirm}
+                onToggle={() => setShowConfirm((s) => !s)}
+              />
+            }
           />
         </Field>
       </div>
@@ -254,44 +286,102 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
       <div id="fld-terminos" style={{ marginTop: 4 }}>
         <label
           style={{
-            display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer",
-            padding: "14px 16px", borderRadius: "var(--radius)",
-            border: "1px solid " + (touched.terminos && errors.terminos ? "var(--danger)" : "var(--outline-variant)"),
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+            cursor: "pointer",
+            padding: "14px 16px",
+            borderRadius: "var(--radius)",
+            border:
+              "1px solid " +
+              (touched.terminos && errors.terminos
+                ? "var(--danger)"
+                : "var(--outline-variant)"),
             background: v.terminos ? "var(--green-050)" : "var(--surface)",
             transition: "background-color .15s, border-color .15s",
           }}
         >
           <span
             style={{
-              width: 22, height: 22, borderRadius: 6, flexShrink: 0, marginTop: 1,
-              border: "1.5px solid " + (v.terminos ? "var(--green-800)" : "var(--sand)"),
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              flexShrink: 0,
+              marginTop: 1,
+              border:
+                "1.5px solid " +
+                (v.terminos ? "var(--green-800)" : "var(--sand)"),
               background: v.terminos ? "var(--green-800)" : "var(--surface)",
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            {v.terminos && <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7L5.5 10L11.5 4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            {v.terminos && (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path
+                  d="M2.5 7L5.5 10L11.5 4"
+                  stroke="#fff"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
           </span>
           <input
             type="checkbox"
             checked={v.terminos}
             style={{ display: "none" }}
-            onChange={(e) => { set("terminos", e.target.checked); touch("terminos"); }}
+            onChange={(e) => update("terminos", e.target.checked)}
           />
-          <span style={{ fontSize: 13.5, color: "var(--fg-1)", lineHeight: 1.5 }}>
+          <span
+            style={{ fontSize: 13.5, color: "var(--fg-1)", lineHeight: 1.5 }}
+          >
             Leí y acepto los{" "}
-            <a href="#" onClick={(e) => e.preventDefault()} style={{ color: "var(--green-800)", fontWeight: 600 }}>
+            <a
+              href="#"
+              onClick={(e) => e.preventDefault()}
+              style={{ color: "var(--green-800)", fontWeight: 600 }}
+            >
               términos y condiciones
             </a>{" "}
             y la{" "}
-            <a href="#" onClick={(e) => e.preventDefault()} style={{ color: "var(--green-800)", fontWeight: 600 }}>
+            <a
+              href="#"
+              onClick={(e) => e.preventDefault()}
+              style={{ color: "var(--green-800)", fontWeight: 600 }}
+            >
               política de privacidad
             </a>{" "}
             de Mendoza AgroTours.
           </span>
         </label>
         {touched.terminos && errors.terminos && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--danger-fg)", marginTop: 7 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 12.5,
+              color: "var(--danger-fg)",
+              marginTop: 7,
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
             {errors.terminos}
           </div>
         )}
@@ -299,13 +389,34 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
 
       {/* ---- Submit ---- */}
       <div style={{ marginTop: 6 }}>
+        {apiError && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 13.5,
+              color: "var(--danger-fg)",
+              background: "var(--danger-bg, #fff0f0)",
+              border: "1px solid var(--danger)",
+              borderRadius: "var(--radius)",
+              padding: "10px 14px",
+              marginBottom: 14,
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            {apiError}
+          </div>
+        )}
         <button
           type="submit"
-          disabled={submitting}
+          disabled={isLoading}
           className="btn btn-primary btn-lg"
           style={{ width: "100%", justifyContent: "center" }}
         >
-          {submitting ? (
+          {isLoading ? (
             "Creando tu cuenta…"
           ) : (
             <>
@@ -313,9 +424,19 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
             </>
           )}
         </button>
-        <div style={{ textAlign: "center", marginTop: 14, fontSize: 13.5, color: "var(--fg-2)" }}>
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: 14,
+            fontSize: 13.5,
+            color: "var(--fg-2)",
+          }}
+        >
           ¿Ya tenés cuenta?{" "}
-          <a href="/acceso" style={{ color: "var(--green-800)", fontWeight: 600 }}>
+          <a
+            href="/acceso"
+            style={{ color: "var(--green-800)", fontWeight: 600 }}
+          >
             Iniciá sesión
           </a>
         </div>
