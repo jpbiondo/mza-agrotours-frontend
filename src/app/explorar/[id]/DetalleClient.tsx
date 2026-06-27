@@ -242,7 +242,7 @@ function BookingWidget({ a }: { a: ActividadDetalle }) {
         </div>
 
         <Link
-          href="/acceso"
+          href={`/explorar/${a.id}/reservar`}
           aria-disabled={!puedeReservar}
           className="btn btn-primary btn-lg"
           style={{ width: "100%", justifyContent: "center", marginTop: 14, pointerEvents: puedeReservar ? "auto" : "none", opacity: puedeReservar ? 1 : 0.55 }}
@@ -250,7 +250,7 @@ function BookingWidget({ a }: { a: ActividadDetalle }) {
           Solicitar reserva
         </Link>
         <p style={{ fontSize: 12, color: "var(--fg-3)", textAlign: "center", margin: "10px 0 0", lineHeight: 1.5 }}>
-          {fechaOk ? "Iniciá sesión para confirmar tu reserva." : "Elegí una fecha disponible para continuar."}
+          {fechaOk ? "Continuá para cargar visitantes y pagar." : "Elegí una fecha disponible para continuar."}
         </p>
 
         {/* Medios de pago */}
