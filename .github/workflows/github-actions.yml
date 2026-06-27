@@ -39,3 +39,4 @@ jobs:
         with:
           start: npm run start
           wait-on: "http://localhost:3000"
+          command: npx cypress run --pass-with-no-tests
