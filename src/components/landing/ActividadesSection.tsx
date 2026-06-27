@@ -62,7 +62,7 @@ function ActividadCard({ a }: { a: Actividad }) {
             <div style={{ fontSize: 11.5, color: "var(--fg-3)" }}>por adulto</div>
           </div>
           <Link
-            href="/registro?vista=registro"
+            href={`/explorar/${a.id}`}
             className="btn btn-neutral btn-sm"
             style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
           >
@@ -87,7 +87,7 @@ export default function ActividadesSection() {
             Cosechas, degustaciones y talleres en las mejores fincas de Mendoza.
           </p>
         </div>
-        <Link href="/registro?vista=registro" className="btn btn-neutral" style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <Link href="/explorar" className="btn btn-neutral" style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           Ver todas <ArrowRight size={16} />
         </Link>
       </div>

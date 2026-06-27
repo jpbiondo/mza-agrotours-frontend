@@ -71,9 +71,9 @@ export default function Hero() {
           </p>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <a href="#actividades" className="btn btn-primary btn-lg" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Link href="/explorar" className="btn btn-primary btn-lg" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
               <Compass size={18} /> Explorar experiencias
-            </a>
+            </Link>
             <Link href="/registro?vista=registro" className="btn btn-neutral btn-lg" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
               <UserPlus size={18} /> Crear cuenta
             </Link>
