@@ -6,7 +6,7 @@ import type { Establecimiento } from "@/types/catalogo";
 
 function EstablecimientoCard({ e }: { e: Establecimiento }) {
   return (
-    <article className="card" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <Link href={`/establecimientos/${e.id}`} className="card" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", textDecoration: "none" }}>
       <Photo seed={e.seed} height={148} radius={0} />
       <div style={{ padding: "16px 18px 18px", display: "flex", flexDirection: "column", flex: 1 }}>
         <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 17, color: "var(--fg-1)", margin: 0 }}>
@@ -33,7 +33,7 @@ function EstablecimientoCard({ e }: { e: Establecimiento }) {
           ))}
         </div>
       </div>
-    </article>
+    </Link>
   );
 }
 
@@ -51,7 +51,7 @@ export default function EstablecimientosSection() {
               Familias productoras de todos los valles mendocinos abren sus puertas.
             </p>
           </div>
-          <Link href="/registro?vista=registro" className="btn btn-neutral" style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <Link href="/establecimientos" className="btn btn-neutral" style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             Ver todos <ArrowRight size={16} />
           </Link>
         </div>

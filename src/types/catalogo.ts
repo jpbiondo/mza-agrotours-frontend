@@ -12,13 +12,48 @@ export interface Actividad {
   seed: number;
 }
 
+export interface Ubicacion {
+  calle: string;
+  localidad: string;
+  provincia: string;
+  zona: string;
+}
+
+export interface Contacto {
+  email: string;
+  telefono: string;
+  web: string;
+  instagram: string;
+  facebook: string;
+}
+
+export interface ImagenEst {
+  seed: number;
+  caption: string;
+}
+
 export interface Establecimiento {
   id: string;
   nombre: string;
+  razonSocial: string;
   depto: string;
+  vigente: boolean;
+  seed: number;
   cultivos: string[];
   descripcion: string;
-  seed: number;
+  descripcionLarga: string;
+  ubicacion: Ubicacion;
+  contacto: Contacto;
+  imagenes: ImagenEst[];
+  /** IDs de actividades de @/data/actividades. */
+  actividades: string[];
+}
+
+/** Opción de un filtro de catálogo (valor + etiqueta + cantidad). */
+export interface FilterOption {
+  value: string;
+  label: string;
+  count: number;
 }
 
 export interface FaqItem {

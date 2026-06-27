@@ -1,17 +1,227 @@
-import type { Establecimiento } from "@/types/catalogo";
+import { ACTIVIDADES } from "@/data/actividades";
+import type { Actividad, Establecimiento, FilterOption } from "@/types/catalogo";
 
-/** Establecimientos destacados que se muestran en la landing. */
-export const ESTABLECIMIENTOS_DESTACADOS: Establecimiento[] = [
-  { id: "EST-ESCONDIDA", nombre: "Finca La Escondida", depto: "Luján de Cuyo", cultivos: ["Malbec", "Bonarda"], seed: 0,
-    descripcion: "Finca familiar de cuarta generación en el Valle de Uco. Cosecha, poda y degustación de Malbec y Bonarda, con almuerzos de huerta propia." },
-  { id: "EST-ALAMOS", nombre: "Finca Los Álamos", depto: "Luján de Cuyo", cultivos: ["Malbec", "Cabernet Sauvignon"], seed: 3,
-    descripcion: "Viñedos clásicos rodeados de álamos centenarios. Recorridos guiados y degustación de varietales junto a quien los produce." },
-  { id: "EST-VIENTOSUR", nombre: "Bodega Viento Sur", depto: "Tunuyán", cultivos: ["Malbec"], seed: 0,
-    descripcion: "Bodega boutique de altura en Tunuyán. Vendimias nocturnas y catas de Malbec con vista a la cordillera." },
-  { id: "EST-SANTAROSA", nombre: "Finca Santa Rosa", depto: "San Rafael", cultivos: ["Bonarda", "Malbec"], seed: 1,
-    descripcion: "Establecimiento de San Rafael pensado para familias. Vendimia participativa y elaboración artesanal de mosto." },
-  { id: "EST-LOTENORTE", nombre: "Lote Norte Olivares", depto: "Junín", cultivos: ["Olivo Arbequina"], seed: 2,
-    descripcion: "Olivar de más de cien hectáreas. Recorridos por la almazara y cata de aceite de oliva extra virgen recién prensado." },
-  { id: "EST-CERRO", nombre: "Estancia El Cerro", depto: "Tupungato", cultivos: ["Malbec", "Cabernet Franc"], seed: 3,
-    descripcion: "Viñedos de altura sobre la falda del cerro en Tupungato. Trekking entre hileras y degustación al aire libre." },
+/** Catálogo completo de establecimientos vigentes. */
+export const ESTABLECIMIENTOS: Establecimiento[] = [
+  {
+    id: "EST-ESCONDIDA", nombre: "Finca La Escondida", razonSocial: "La Escondida S.R.L.", depto: "Luján de Cuyo", vigente: true, seed: 0,
+    cultivos: ["Malbec", "Bonarda"],
+    descripcion: "Finca familiar de cuarta generación en el Valle de Uco. Cosecha, poda y degustación de Malbec y Bonarda, con almuerzos de huerta propia.",
+    descripcionLarga: "Finca familiar de cuarta generación ubicada en los cordones de Luján de Cuyo, a 1.100 metros sobre el nivel del mar. Trabajamos el viñedo de manera artesanal, respetando los tiempos de la tierra y el agua de deshielo. Recibimos a los visitantes durante todo el año para participar de la cosecha, la poda y la degustación de nuestros varietales, acompañados de almuerzos preparados con productos de la huerta y carnes de la zona.",
+    ubicacion: { calle: "Ruta Provincial 89, km 14,5", localidad: "Luján de Cuyo", provincia: "Mendoza", zona: "Valle de Uco" },
+    contacto: { email: "hola@fincalaescondida.com.ar", telefono: "+54 9 261 555-1247", web: "fincalaescondida.com.ar", instagram: "@fincalaescondida", facebook: "Finca La Escondida" },
+    imagenes: [
+      { seed: 0, caption: "viñedo al amanecer en Luján de Cuyo" },
+      { seed: 3, caption: "racimos de Malbec recién cosechados" },
+      { seed: 5, caption: "almuerzo de campo entre las hileras" },
+    ],
+    actividades: ["ACT-7K2M", "ACT-5T4N", "ACT-3F8P"],
+  },
+  {
+    id: "EST-ALAMOS", nombre: "Finca Los Álamos", razonSocial: "Los Álamos Agropecuaria S.A.", depto: "Luján de Cuyo", vigente: true, seed: 3,
+    cultivos: ["Malbec", "Cabernet Sauvignon"],
+    descripcion: "Viñedos clásicos de Maipú rodeados de álamos centenarios. Recorridos guiados y degustación de varietales junto a quien los produce.",
+    descripcionLarga: "Bodega de viñedos clásicos enmarcada por álamos centenarios que dan nombre y sombra al establecimiento. Producimos Malbec y Cabernet Sauvignon de guarda, con una sala de degustación abierta a los visitantes. Nuestros recorridos guiados muestran todo el proceso, desde la planta hasta la copa, de la mano de quienes trabajan la finca día a día.",
+    ubicacion: { calle: "Carril Norte 2200", localidad: "Mayor Drummond", provincia: "Mendoza", zona: "Primera Zona" },
+    contacto: { email: "visitas@losalamoswines.com", telefono: "+54 9 261 444-8810", web: "losalamoswines.com", instagram: "@bodegalosalamos", facebook: "Bodega Los Álamos" },
+    imagenes: [
+      { seed: 3, caption: "hilera de álamos junto al viñedo" },
+      { seed: 1, caption: "sala de degustación de varietales" },
+      { seed: 0, caption: "barricas de roble en la cava" },
+    ],
+    actividades: ["ACT-9C1R", "ACT-3F8P"],
+  },
+  {
+    id: "EST-VIENTOSUR", nombre: "Bodega Viento Sur", razonSocial: "Viento Sur Wines S.A.", depto: "Tunuyán", vigente: true, seed: 0,
+    cultivos: ["Malbec"],
+    descripcion: "Bodega boutique de altura en Tunuyán. Vendimias nocturnas y catas de Malbec con vista a la cordillera.",
+    descripcionLarga: "Bodega boutique de altura en el corazón del Valle de Uco, en Tunuyán. La amplitud térmica y el viento del sur dan a nuestro Malbec una identidad fresca y concentrada. Ofrecemos vendimias nocturnas a la luz de la luna y catas al aire libre con vista directa a la cordillera de los Andes.",
+    ubicacion: { calle: "Camino a Los Chacayes s/n", localidad: "Tunuyán", provincia: "Mendoza", zona: "Valle de Uco" },
+    contacto: { email: "reservas@vientosur.wine", telefono: "+54 9 262 233-0099", web: "vientosur.wine", instagram: "@bodegavientosur", facebook: "Bodega Viento Sur" },
+    imagenes: [
+      { seed: 0, caption: "viñedo de altura con la cordillera de fondo" },
+      { seed: 4, caption: "vendimia nocturna a la luz de la luna" },
+      { seed: 2, caption: "cata al aire libre al atardecer" },
+    ],
+    actividades: ["ACT-8N2W"],
+  },
+  {
+    id: "EST-SANTAROSA", nombre: "Finca Santa Rosa", razonSocial: "Santa Rosa del Sur S.R.L.", depto: "San Rafael", vigente: true, seed: 1,
+    cultivos: ["Bonarda", "Malbec"],
+    descripcion: "Establecimiento de San Rafael pensado para familias. Vendimia participativa y elaboración artesanal de mosto.",
+    descripcionLarga: "Establecimiento de San Rafael pensado especialmente para que las familias vivan la vendimia de cerca. Los más chicos participan de la cosecha, el pisado de la uva y la elaboración artesanal de mosto. Una experiencia educativa y sensorial que conecta a varias generaciones con el trabajo de la tierra.",
+    ubicacion: { calle: "Ruta 165, km 8", localidad: "Cuadro Benegas", provincia: "Mendoza", zona: "San Rafael" },
+    contacto: { email: "contacto@fincasantarosa.com.ar", telefono: "+54 9 260 411-5566", web: "fincasantarosa.com.ar", instagram: "@fincasantarosasr", facebook: "Finca Santa Rosa" },
+    imagenes: [
+      { seed: 1, caption: "familia cosechando entre las hileras" },
+      { seed: 3, caption: "pisado artesanal de la uva" },
+      { seed: 5, caption: "mosto recién elaborado" },
+    ],
+    actividades: ["ACT-8B3K"],
+  },
+  {
+    id: "EST-LOTENORTE", nombre: "Lote Norte Olivares", razonSocial: "Olivares del Norte S.A.", depto: "Junín", vigente: true, seed: 2,
+    cultivos: ["Olivo Arbequina"],
+    descripcion: "Olivar de más de cien hectáreas en Junín. Recorridos por la almazara y cata de aceite de oliva extra virgen recién prensado.",
+    descripcionLarga: "Olivar de más de cien hectáreas en el este mendocino, en Junín. Cultivamos aceituna Arbequina y elaboramos aceite de oliva extra virgen de primera prensada en frío. Los recorridos atraviesan el olivar y la almazara, y culminan con una cata guiada del aceite recién prensado junto a panes de campo.",
+    ubicacion: { calle: "Carril Los Barriales 4500", localidad: "Junín", provincia: "Mendoza", zona: "Zona Este" },
+    contacto: { email: "turismo@olivaresdelnorte.com", telefono: "+54 9 263 477-2233", web: "olivaresdelnorte.com", instagram: "@lotenorteolivares", facebook: "Lote Norte Olivares" },
+    imagenes: [
+      { seed: 2, caption: "hileras de olivos Arbequina" },
+      { seed: 4, caption: "almazara y proceso de molienda" },
+      { seed: 1, caption: "cata de aceite recién prensado" },
+    ],
+    actividades: ["ACT-6M9V"],
+  },
+  {
+    id: "EST-LOTESUR", nombre: "Lote Sur Frutales", razonSocial: "Frutales del Sur S.R.L.", depto: "Tunuyán", vigente: true, seed: 4,
+    cultivos: ["Durazno", "Damasco"],
+    descripcion: "Montes frutales de carozo en Tunuyán. Cosecha de duraznos y damascos de estación, con elaboración de dulces caseros.",
+    descripcionLarga: "Montes frutales de carozo en Tunuyán, dedicados al durazno y al damasco de estación. Durante el verano abrimos las puertas para cosechar la fruta directamente del árbol y aprender a preparar dulces y conservas caseras en nuestra cocina de campo, con recetas que pasan de generación en generación.",
+    ubicacion: { calle: "Calle Vistalba s/n", localidad: "Vista Flores", provincia: "Mendoza", zona: "Valle de Uco" },
+    contacto: { email: "hola@lotesurfrutales.com.ar", telefono: "+54 9 262 255-7788", web: "lotesurfrutales.com.ar", instagram: "@lotesurfrutales", facebook: "Lote Sur Frutales" },
+    imagenes: [
+      { seed: 4, caption: "duraznos maduros en el árbol" },
+      { seed: 5, caption: "cosecha de damascos de estación" },
+      { seed: 1, caption: "dulces caseros recién elaborados" },
+    ],
+    actividades: ["ACT-1D7Q", "ACT-5K9D"],
+  },
+  {
+    id: "EST-NOGALES", nombre: "Finca Los Nogales", razonSocial: "Los Nogales del Valle S.A.", depto: "San Carlos", vigente: true, seed: 4,
+    cultivos: ["Nogal"],
+    descripcion: "Nogalar de altura en San Carlos. Picnics entre los árboles y recolección artesanal de nuez Chandler en otoño.",
+    descripcionLarga: "Nogalar de altura en San Carlos, donde el otoño tiñe de dorado los árboles centenarios. Ofrecemos picnics a la sombra de los nogales y, en temporada, la recolección artesanal de nuez Chandler. Una experiencia tranquila y familiar, ideal para reconectar con la naturaleza del Valle de Uco.",
+    ubicacion: { calle: "Ruta 92, km 21", localidad: "La Consulta", provincia: "Mendoza", zona: "Valle de Uco" },
+    contacto: { email: "visitas@losnogalesdelvalle.com", telefono: "+54 9 262 466-1100", web: "losnogalesdelvalle.com", instagram: "@fincalosnogales", facebook: "Finca Los Nogales" },
+    imagenes: [
+      { seed: 4, caption: "nogalar dorado en otoño" },
+      { seed: 2, caption: "picnic bajo los árboles" },
+      { seed: 5, caption: "recolección de nuez Chandler" },
+    ],
+    actividades: ["ACT-0X5G"],
+  },
+  {
+    id: "EST-CEREZO", nombre: "Finca El Cerezo", razonSocial: "El Cerezo Producciones S.R.L.", depto: "Tunuyán", vigente: true, seed: 5,
+    cultivos: ["Cereza"],
+    descripcion: "Especialistas en cereza temprana de Tunuyán. Cosecha a mano durante noviembre y degustación de la fruta recién juntada.",
+    descripcionLarga: "Especialistas en cereza temprana de Tunuyán. Durante noviembre, el monte se llena de color y abrimos la cosecha a mano para que los visitantes junten su propia fruta directamente del árbol. La jornada cierra con una degustación de cerezas recién recolectadas y jugos naturales de la finca.",
+    ubicacion: { calle: "Camino al Manzano s/n", localidad: "Los Sauces", provincia: "Mendoza", zona: "Valle de Uco" },
+    contacto: { email: "contacto@fincaelcerezo.com.ar", telefono: "+54 9 262 244-9090", web: "fincaelcerezo.com.ar", instagram: "@fincaelcerezo", facebook: "Finca El Cerezo" },
+    imagenes: [
+      { seed: 5, caption: "cerezas rojas listas para cosechar" },
+      { seed: 1, caption: "cosecha a mano en noviembre" },
+      { seed: 3, caption: "degustación de fruta recién juntada" },
+    ],
+    actividades: ["ACT-9L1C"],
+  },
+  {
+    id: "EST-COLINA", nombre: "Almazara La Colina", razonSocial: "La Colina Olivícola S.A.", depto: "Maipú", vigente: true, seed: 2,
+    cultivos: ["Olivo Arbequina", "Olivo Frantoio"],
+    descripcion: "Almazara tradicional de Maipú. Visitas al proceso de molienda y cata comparada de aceites monovarietales.",
+    descripcionLarga: "Almazara tradicional en el corazón olivícola de Maipú. Elaboramos aceites monovarietales de Arbequina y Frantoio con métodos que combinan la tradición con la tecnología de extracción en frío. Las visitas recorren todo el proceso de molienda y terminan con una cata comparada de nuestros aceites extra vírgenes.",
+    ubicacion: { calle: "Ozamis 5500", localidad: "Coquimbito", provincia: "Mendoza", zona: "Maipú" },
+    contacto: { email: "turismo@almazaralacolina.com", telefono: "+54 9 261 488-3344", web: "almazaralacolina.com", instagram: "@almazaralacolina", facebook: "Almazara La Colina" },
+    imagenes: [
+      { seed: 2, caption: "olivar de Arbequina y Frantoio" },
+      { seed: 4, caption: "proceso de molienda en frío" },
+      { seed: 0, caption: "cata comparada de aceites" },
+    ],
+    actividades: ["ACT-2H6L", "ACT-4C7H"],
+  },
+  {
+    id: "EST-CERRO", nombre: "Estancia El Cerro", razonSocial: "Estancia El Cerro S.A.", depto: "Tupungato", vigente: true, seed: 3,
+    cultivos: ["Malbec", "Cabernet Franc"],
+    descripcion: "Viñedos de altura sobre la falda del cerro en Tupungato. Trekking entre hileras y degustación al aire libre.",
+    descripcionLarga: "Viñedos de altura plantados sobre la falda del cerro en Tupungato, a más de 1.300 metros. La altura y el suelo pedregoso dan a nuestros Malbec y Cabernet Franc una tensión y frescura únicas. Proponemos caminatas guiadas entre las hileras y degustaciones al aire libre con vista panorámica al valle.",
+    ubicacion: { calle: "Camino de los Andes s/n", localidad: "Gualtallary", provincia: "Mendoza", zona: "Tupungato" },
+    contacto: { email: "reservas@estanciaelcerro.com", telefono: "+54 9 262 215-6677", web: "estanciaelcerro.com", instagram: "@estanciaelcerro", facebook: "Estancia El Cerro" },
+    imagenes: [
+      { seed: 3, caption: "viñedo de altura en Gualtallary" },
+      { seed: 0, caption: "trekking entre las hileras" },
+      { seed: 2, caption: "degustación con vista al valle" },
+    ],
+    actividades: ["ACT-4W2J"],
+  },
+  {
+    id: "EST-TIERRAVIVA", nombre: "Finca Tierra Viva", razonSocial: "Tierra Viva Orgánicos S.R.L.", depto: "Tupungato", vigente: true, seed: 3,
+    cultivos: ["Malbec", "Bonarda"],
+    descripcion: "Viñedo orgánico certificado. Recorridos sobre manejo agroecológico y prácticas regenerativas del suelo.",
+    descripcionLarga: "Viñedo orgánico certificado en Tupungato, comprometido con la agricultura regenerativa. No usamos agroquímicos: trabajamos con cubiertas vegetales, compost propio y manejo biodinámico. Los recorridos explican nuestras prácticas agroecológicas y cómo el cuidado del suelo se traduce en vinos vivos y expresivos.",
+    ubicacion: { calle: "Callejón San Isidro s/n", localidad: "El Peral", provincia: "Mendoza", zona: "Tupungato" },
+    contacto: { email: "hola@tierravivaorganicos.com", telefono: "+54 9 262 277-4455", web: "tierravivaorganicos.com", instagram: "@fincatierraviva", facebook: "Finca Tierra Viva" },
+    imagenes: [
+      { seed: 3, caption: "viñedo orgánico con cubiertas vegetales" },
+      { seed: 5, caption: "compostera de la finca" },
+      { seed: 1, caption: "recorrido agroecológico guiado" },
+    ],
+    actividades: ["ACT-6T3L", "ACT-3F8P"],
+  },
+  {
+    id: "EST-DONAAURORA", nombre: "Finca Doña Aurora", razonSocial: "Doña Aurora e Hijos S.R.L.", depto: "San Rafael", vigente: true, seed: 5,
+    cultivos: ["Damasco", "Durazno"],
+    descripcion: "Finca frutícola de San Rafael. Talleres de elaboración de dulces y conservas con fruta cosechada en el día.",
+    descripcionLarga: "Finca frutícola de San Rafael especializada en damasco y durazno. Doña Aurora abre su cocina de campo para talleres de elaboración de dulces y conservas, donde cada participante se lleva su frasco preparado con fruta cosechada en el día. Una experiencia que rescata los saberes de la cocina rural mendocina.",
+    ubicacion: { calle: "Calle El Toledano 1200", localidad: "Rama Caída", provincia: "Mendoza", zona: "San Rafael" },
+    contacto: { email: "talleres@donaaurora.com.ar", telefono: "+54 9 260 433-2211", web: "donaaurora.com.ar", instagram: "@fincadonaaurora", facebook: "Finca Doña Aurora" },
+    imagenes: [
+      { seed: 5, caption: "damascos recién cosechados" },
+      { seed: 4, caption: "taller de dulces y conservas" },
+      { seed: 1, caption: "frascos listos para llevar" },
+    ],
+    actividades: ["ACT-5K9D", "ACT-1D7Q"],
+  },
+  {
+    id: "EST-POTRERILLOS", nombre: "Finca Potrerillos", razonSocial: "Potrerillos Altos S.A.", depto: "Las Heras", vigente: true, seed: 0,
+    cultivos: ["Malbec"],
+    descripcion: "Viñedos altos junto al dique de Potrerillos. Visita panorámica al embalse y degustación de Malbec de montaña.",
+    descripcionLarga: "Viñedos altos plantados junto al dique de Potrerillos, en Las Heras, con una de las vistas más imponentes de Mendoza. La cercanía del agua y la montaña define el carácter de nuestro Malbec. La visita combina un mirador panorámico al embalse con una degustación de vinos de montaña al pie de los Andes.",
+    ubicacion: { calle: "Ruta 7, km 50", localidad: "Potrerillos", provincia: "Mendoza", zona: "Las Heras" },
+    contacto: { email: "visitas@fincapotrerillos.com", telefono: "+54 9 261 466-7788", web: "fincapotrerillos.com", instagram: "@fincapotrerillos", facebook: "Finca Potrerillos" },
+    imagenes: [
+      { seed: 0, caption: "viñedos junto al dique de Potrerillos" },
+      { seed: 2, caption: "mirador panorámico al embalse" },
+      { seed: 3, caption: "degustación al pie de la montaña" },
+    ],
+    actividades: ["ACT-7Y8F"],
+  },
+  {
+    id: "EST-OLIVARESESTE", nombre: "Olivares del Este", razonSocial: "Olivares del Este S.R.L.", depto: "San Martín", vigente: true, seed: 5,
+    cultivos: ["Olivo Arbequina"],
+    descripcion: "Productores de aceite y conservas en San Martín. Degustación de aceites saborizados y aceitunas en salmuera.",
+    descripcionLarga: "Productores de aceite de oliva y conservas en San Martín, en plena zona este de Mendoza. Elaboramos aceites saborizados, aceitunas en salmuera y tapenades artesanales. La visita incluye un recorrido por el olivar y una degustación completa de nuestra línea de productos, ideal para llevar a casa.",
+    ubicacion: { calle: "Carril Norte 8800", localidad: "Palmira", provincia: "Mendoza", zona: "Zona Este" },
+    contacto: { email: "contacto@olivaresdeleste.com.ar", telefono: "+54 9 263 455-3322", web: "olivaresdeleste.com.ar", instagram: "@olivaresdeleste", facebook: "Olivares del Este" },
+    imagenes: [
+      { seed: 5, caption: "olivar en la zona este" },
+      { seed: 2, caption: "línea de aceites saborizados" },
+      { seed: 4, caption: "degustación de conservas artesanales" },
+    ],
+    actividades: ["ACT-4C7H", "ACT-2H6L"],
+  },
 ];
+
+/** Subconjunto destacado para la landing. */
+export const ESTABLECIMIENTOS_DESTACADOS: Establecimiento[] = [
+  "EST-ESCONDIDA", "EST-ALAMOS", "EST-VIENTOSUR", "EST-SANTAROSA", "EST-LOTENORTE", "EST-CERRO",
+].map((id) => ESTABLECIMIENTOS.find((e) => e.id === id)!).filter(Boolean);
+
+/** Opciones del filtro por cultivo, derivadas del listado. */
+export function buildCultivoOpts(list: Establecimiento[]): FilterOption[] {
+  const counts: Record<string, number> = {};
+  list.forEach((e) => e.cultivos.forEach((c) => { counts[c] = (counts[c] || 0) + 1; }));
+  return Object.keys(counts)
+    .sort((a, b) => a.localeCompare(b, "es"))
+    .map((c) => ({ value: c, label: c, count: counts[c] }));
+}
+
+export function getEstablecimiento(id: string): Establecimiento | undefined {
+  return ESTABLECIMIENTOS.find((e) => e.id === id);
+}
+
+/** Resuelve las actividades de un establecimiento contra el catálogo. */
+export function actividadesDeEst(est: Establecimiento): Actividad[] {
+  return est.actividades
+    .map((id) => ACTIVIDADES.find((a) => a.id === id))
+    .filter((a): a is Actividad => Boolean(a));
+}

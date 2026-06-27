@@ -1,4 +1,6 @@
-import type { Actividad } from "@/types/catalogo";
+import type { Actividad, FilterOption } from "@/types/catalogo";
+
+export type { FilterOption };
 
 /** Catálogo completo de actividades publicadas. */
 export const ACTIVIDADES: Actividad[] = [
@@ -26,12 +28,6 @@ export const ACTIVIDADES: Actividad[] = [
 export const ACTIVIDADES_DESTACADAS: Actividad[] = [
   "ACT-7K2M", "ACT-8B3K", "ACT-9C1R", "ACT-8N2W", "ACT-9L1C", "ACT-2H6L",
 ].map((id) => ACTIVIDADES.find((a) => a.id === id)!).filter(Boolean);
-
-export interface FilterOption {
-  value: string;
-  label: string;
-  count: number;
-}
 
 /** Opciones del filtro por cultivo, derivadas del catálogo. */
 export const CULTIVO_OPTS: FilterOption[] = (() => {
