@@ -1,0 +1,8 @@
+<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mendoza AgroTours">
+  <rect x="1" y="1" width="54" height="54" rx="14" fill="#154212"></rect>
+  <rect x="1" y="1" width="54" height="54" rx="14" fill="none" stroke="#0E2E0C" stroke-width="2"></rect>
+  <path d="M28 41 V25" stroke="#F1F6EE" stroke-width="3" stroke-linecap="round"></path>
+  <path d="M28 30 C28 23 22 18 15 18 C15 25 21 30 28 30 Z" fill="#7FA876"></path>
+  <path d="M28 27 C28 19 35 14 43 14 C43 22 36 27 28 27 Z" fill="#F1F6EE"></path>
+  <circle cx="28" cy="43.5" r="2" fill="#C77F2A"></circle>
+</svg>
