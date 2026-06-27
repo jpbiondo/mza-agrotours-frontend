@@ -32,8 +32,7 @@ export default function AccesoPage() {
         {view === "login" && (
           <LoginForm
             onSuccess={(c) => { setCuenta(c); setView("login-ok"); }}
-            // TODO: flujo de recuperación de contraseña (US: Recuperar contraseña)
-            onRecover={() => {}}
+            onRecover={() => router.push("/acceso/recuperar")}
           />
         )}
         {view === "login-ok" && cuenta && <LoginSuccess cuenta={cuenta} />}
