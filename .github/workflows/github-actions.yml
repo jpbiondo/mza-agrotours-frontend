@@ -33,10 +33,15 @@ jobs:
       - name: Build Next.js app
         run: npm run build
 
-      - name: Run Cypress E2E Tests
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
         if: github.ref == 'refs/heads/main'
-        uses: cypress-io/github-action@v6
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
         with:
-          start: npm run start
-          wait-on: "http://localhost:3000"
-          command: npx cypress run --pass-with-no-tests
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
