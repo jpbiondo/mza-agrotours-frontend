@@ -5,11 +5,12 @@ import { LogIn, UserPlus } from "lucide-react";
 const NAV_LINKS = [
   { id: "explorar", href: "/explorar", label: "Actividades" },
   { id: "establecimientos", href: "/establecimientos", label: "Establecimientos" },
+  { id: "mis-reservas", href: "/mis-reservas", label: "Mis reservas" },
   { id: "faq", href: "/#faq", label: "Preguntas frecuentes" },
 ];
 
 interface SiteHeaderProps {
-  active?: "explorar" | "establecimientos" | "faq";
+  active?: "explorar" | "establecimientos" | "mis-reservas" | "faq";
 }
 
 export default function SiteHeader({ active }: SiteHeaderProps) {

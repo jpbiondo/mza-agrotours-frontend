@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Lock, MapPin, CalendarDays, Check, AlertTriangle, RotateCcw, Compass, X, XCircle } from "lucide-react";
+import { Lock, MapPin, CalendarDays, Check, AlertTriangle, RotateCcw, Compass, Ticket, X, XCircle } from "lucide-react";
 import { moneyAr } from "@/lib/format";
 import type { ActividadDetalle } from "@/types/catalogo";
 
@@ -73,7 +73,7 @@ export function PaymentSheet({
   );
 }
 
-export function SuccessModal({ open, codigo, onClose }: { open: boolean; codigo: string | null; onClose: () => void }) {
+export function SuccessModal({ open, codigo }: { open: boolean; codigo: string | null }) {
   if (!open) return null;
   return (
     <div style={scrim}>
@@ -89,10 +89,12 @@ export function SuccessModal({ open, codigo, onClose }: { open: boolean; codigo:
           {codigo} · <span style={{ color: "var(--success-fg)", fontWeight: 600 }}>Pagada</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Link href="/explorar" className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center" }}>
-            <Compass size={20} /> Seguir explorando
+          <Link href="/mis-reservas" className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center" }}>
+            <Ticket size={20} /> Ir a mis reservas
           </Link>
-          <button type="button" className="btn btn-neutral" style={{ width: "100%", justifyContent: "center" }} onClick={onClose}>Cerrar</button>
+          <Link href="/explorar" className="btn btn-neutral" style={{ width: "100%", justifyContent: "center" }}>
+            <Compass size={18} /> Seguir explorando
+          </Link>
         </div>
       </div>
     </div>

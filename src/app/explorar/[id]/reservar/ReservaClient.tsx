@@ -336,7 +336,7 @@ export default function ReservaClient({ a }: { a: ActividadDetalle }) {
       </div>
 
       {payOpen && <PaymentSheet monto={total} actividad={a} fecha={selLabel} viajeros={totalRows} codigo={codigo} onResolve={onResolve} />}
-      <SuccessModal open={okOpen} codigo={codigo} onClose={() => setOkOpen(false)} />
+      <SuccessModal open={okOpen} codigo={codigo} />
       <FailModal open={failOpen} onRetry={onRetry} onClose={() => setFailOpen(false)} />
       <CancelToast open={toast} onClose={() => setToast(false)} />
 
