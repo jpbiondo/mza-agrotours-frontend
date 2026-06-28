@@ -45,3 +45,7 @@ export function estadoBucket(estado: EstadoActividad): EstadoBucket {
 export function normalizar(s: string): string {
   return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
+
+export function getActividad(id: string): ActividadProd | undefined {
+  return ACTIVIDADES_PROD.find((a) => a.id === id);
+}
