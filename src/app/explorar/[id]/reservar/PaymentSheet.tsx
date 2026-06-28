@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { Lock, MapPin, CalendarDays, Check, AlertTriangle, RotateCcw, Compass, Ticket, X, XCircle } from "lucide-react";
 import { moneyAr } from "@/lib/format";
+import { useProcesarPago, type Outcome } from "@/hooks/useCheckout";
 import type { ActividadDetalle } from "@/types/catalogo";
+
+export type { Outcome };
 
 const scrim: React.CSSProperties = {
   position: "fixed", inset: 0, zIndex: 110, background: "rgba(42,38,32,.5)", backdropFilter: "blur(3px)",
@@ -15,16 +18,14 @@ const modalCard: React.CSSProperties = {
   boxShadow: "var(--shadow-pop)", border: "1px solid var(--outline-variant)",
 };
 
-export type Outcome = "success" | "cancel" | "fail";
-
 export function PaymentSheet({
   monto, actividad, fecha, viajeros, codigo, onResolve,
 }: {
   monto: number; actividad: ActividadDetalle; fecha: string | null;
   viajeros: number; codigo: string | null; onResolve: (o: Outcome) => void;
 }) {
-  const [phase, setPhase] = useState<"idle" | "processing">("idle");
-  const run = (o: Outcome) => { setPhase("processing"); setTimeout(() => onResolve(o), 1500); };
+  const { procesar, isLoading } = useProcesarPago();
+  const run = (o: Outcome) => { procesar(o).then(onResolve); };
 
   return (
     <div style={scrim}>
@@ -48,7 +49,7 @@ export function PaymentSheet({
             <div style={{ display: "flex", alignItems: "center", gap: 7 }}><CalendarDays size={14} color="var(--fg-3)" /> {fecha} · {viajeros} {viajeros === 1 ? "visitante" : "visitantes"}</div>
           </div>
 
-          {phase === "processing" ? (
+          {isLoading ? (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "26px 0 12px", color: "var(--info)" }}>
               <span className="spin" style={{ width: 22, height: 22, borderRadius: "50%", border: "3px solid var(--info-fill)", borderTopColor: "var(--info)", display: "inline-block" }} />
               <span style={{ fontSize: 14, fontWeight: 600 }}>Procesando el pago…</span>

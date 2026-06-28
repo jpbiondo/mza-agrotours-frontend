@@ -6,6 +6,7 @@ import {
   AlertCircle, WifiOff, Star,
 } from "lucide-react";
 import Photo from "@/components/landing/Photo";
+import { useCancelarReserva, useValorarActividad } from "@/hooks/useReservas";
 import type { Reserva } from "@/types/reservas";
 
 export interface ToastData {
@@ -125,14 +126,14 @@ function StarRating({ value, onChange, size = 40, error = false }: { value: numb
 
 /* ---- Modal: cancelar reserva ------------------------------------------- */
 export function CancelarReservaModal({ r, onClose, onConfirm }: { r: Reserva; onClose: () => void; onConfirm: () => void }) {
-  const [sending, setSending] = useState(false);
+  const { cancelar, isLoading: sending } = useCancelarReserva();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !sending) onClose(); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [sending, onClose]);
 
-  const handle = () => { if (sending) return; setSending(true); setTimeout(onConfirm, 700); };
+  const handle = async () => { if (sending) return; await cancelar(r.id); onConfirm(); };
 
   return (
     <div style={scrim} onMouseDown={(e) => { if (e.target === e.currentTarget && !sending) onClose(); }}>
@@ -177,7 +178,7 @@ export function ValorarModal({ r, onCancel, onResult }: { r: Reserva; onCancel: 
   const [general, setGeneral] = useState(0);
   const [comentario, setComentario] = useState("");
   const [showError, setShowError] = useState(false);
-  const [sending, setSending] = useState(false);
+  const { valorar, isLoading: sending } = useValorarActividad();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !sending) onCancel(); };
@@ -185,11 +186,11 @@ export function ValorarModal({ r, onCancel, onResult }: { r: Reserva; onCancel: 
     return () => document.removeEventListener("keydown", onKey);
   }, [sending, onCancel]);
 
-  const enviar = () => {
+  const enviar = async () => {
     if (sending) return;
     if (!general) { setShowError(true); return; }
-    setSending(true);
-    setTimeout(() => onResult({ tone: "success", title: "Valoración enviada", msg: "Muchas gracias por tu valoración. Tu opinión fue enviada exitosamente." }), 1000);
+    await valorar({ reservaId: r.id, rating: general, comentario });
+    onResult({ tone: "success", title: "Valoración enviada", msg: "Muchas gracias por tu valoración. Tu opinión fue enviada exitosamente." });
   };
 
   return (

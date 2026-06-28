@@ -4,10 +4,11 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Search, X, List, Clock, CheckCircle2, XCircle, ChevronRight, CalendarDays,
-  Users, MapPin, ArrowRight, CalendarX, SearchX, RotateCcw, Compass,
+  Users, MapPin, ArrowRight, CalendarX, SearchX, RotateCcw, Compass, Loader,
 } from "lucide-react";
 import Photo from "@/components/landing/Photo";
-import { RESERVAS, ESTADO_TONE, ESTADO_LABEL, reservaTotal } from "@/data/reservas";
+import { ESTADO_TONE, ESTADO_LABEL, reservaTotal } from "@/data/reservas";
+import { useReservas } from "@/hooks/useReservas";
 import type { EstadoReserva, Reserva } from "@/types/reservas";
 
 type FilterId = "todas" | EstadoReserva;
@@ -93,15 +94,17 @@ function EmptyState({ icon, title, sub, action }: { icon: React.ReactNode; title
 }
 
 export default function MisReservasClient() {
+  const { data, isLoading } = useReservas();
+  const reservas = useMemo(() => data ?? [], [data]);
   const [filter, setFilter] = useState<FilterId>("todas");
   const [query, setQuery] = useState("");
   const [applied, setApplied] = useState("");
 
   const afterSearch = useMemo(() => {
-    if (!applied) return RESERVAS;
+    if (!applied) return reservas;
     const q = applied.trim().toLowerCase();
-    return RESERVAS.filter((r) => [r.titulo, r.finca, r.loc, r.id].some((f) => f.toLowerCase().includes(q)));
-  }, [applied]);
+    return reservas.filter((r) => [r.titulo, r.finca, r.loc, r.id].some((f) => f.toLowerCase().includes(q)));
+  }, [applied, reservas]);
 
   const counts = useMemo(() => ({
     todas: afterSearch.length,
@@ -182,7 +185,12 @@ export default function MisReservasClient() {
         </div>
       </div>
 
-      {noResults ? (
+      {isLoading ? (
+        <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: "72px 24px", textAlign: "center", color: "var(--fg-3)" }}>
+          <Loader size={24} className="spin" />
+          <div style={{ marginTop: 12, fontSize: 14 }}>Cargando tus reservas…</div>
+        </div>
+      ) : noResults ? (
         applied || filter !== "todas" ? (
           <EmptyState
             icon={<SearchX size={28} color="var(--brown-700)" />}

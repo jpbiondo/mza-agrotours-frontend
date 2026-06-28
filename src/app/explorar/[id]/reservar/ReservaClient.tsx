@@ -9,9 +9,10 @@ import {
 import { moneyAr } from "@/lib/format";
 import { CALENDARIO, CUPO_MAXIMO, NOMBRES_DIA } from "@/data/actividad-detalle";
 import {
-  RANGOS, TITULAR, precioRango, rangoPermitido, evalViajero, fechaLabel, codigoReserva,
+  RANGOS, TITULAR, precioRango, rangoPermitido, evalViajero, fechaLabel,
   type Viajero, type Precios,
 } from "@/data/reserva";
+import { useCrearReserva } from "@/hooks/useCheckout";
 import TravelersList from "./Travelers";
 import { PaymentSheet, SuccessModal, FailModal, CancelToast, type Outcome } from "./PaymentSheet";
 import type { ActividadDetalle } from "@/types/catalogo";
@@ -227,9 +228,15 @@ export default function ReservaClient({ a }: { a: ActividadDetalle }) {
     return RANGOS.map((r) => m[r.id]).filter(Boolean);
   }, [evals, precios]);
 
+  const { crear, isLoading: creando } = useCrearReserva();
   const confirmable = haySeleccion && !cuposInsuficientes && todosCompletos && evals.some((e) => e.completo);
 
-  const onConfirm = () => { setCodigo(codigoReserva()); setReservaEstado("pendiente"); setPayOpen(true); };
+  const onConfirm = async () => {
+    const cod = await crear();
+    setCodigo(cod);
+    setReservaEstado("pendiente");
+    setPayOpen(true);
+  };
   const onResolve = (o: Outcome) => {
     setPayOpen(false);
     if (o === "success") { setReservaEstado("pagada"); setOkOpen(true); }
@@ -325,8 +332,8 @@ export default function ReservaClient({ a }: { a: ActividadDetalle }) {
               </div>
             </div>
 
-            <button type="button" className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center", marginTop: 16 }} disabled={!confirmable} onClick={onConfirm}>
-              <CalendarCheck size={20} /> Confirmar reserva
+            <button type="button" className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center", marginTop: 16 }} disabled={!confirmable || creando} onClick={onConfirm}>
+              {creando ? "Procesando…" : (<><CalendarCheck size={20} /> Confirmar reserva</>)}
             </button>
             <p style={{ fontSize: 11.5, color: "var(--fg-3)", textAlign: "center", margin: "10px 0 0", lineHeight: 1.45 }}>
               Para pagar la reserva serás dirigido al servicio de pagos para realizar la transacción de manera segura.
