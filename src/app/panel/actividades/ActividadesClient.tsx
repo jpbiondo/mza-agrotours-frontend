@@ -134,12 +134,12 @@ function ActivityCard({ act, busy, onEliminar, onPublicar, onBorrador }: { act: 
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap", padding: "14px 24px", borderTop: "1px solid var(--outline-variant)", background: esBaja ? "transparent" : "var(--cream-tert)" }}>
         {esBaja ? (
-          <CardAction icon={<CalendarDays size={15} color="var(--fg-2)" />} label="Ver detalle" href={`/explorar/${act.id}`} />
+          <CardAction icon={<CalendarDays size={15} color="var(--fg-2)" />} label="Ver calendario" href={`/panel/actividades/${act.id}/calendario`} />
         ) : (
           <>
             <CardAction icon={<Settings2 size={15} color="var(--fg-2)" />} label="Modificar" href={`/panel/actividades/${act.id}/editar`} />
             <CardAction icon={<CalendarPlus size={15} color="var(--fg-2)" />} label="Agregar día" href={`/panel/actividades/${act.id}/editar`} />
-            <CardAction icon={<CalendarDays size={15} color="var(--fg-2)" />} label="Ver detalle" href={`/explorar/${act.id}`} />
+            <CardAction icon={<CalendarDays size={15} color="var(--fg-2)" />} label="Ver calendario" href={`/panel/actividades/${act.id}/calendario`} />
             <CardAction icon={<Trash2 size={15} color="var(--danger)" />} label="Eliminar" danger onClick={onEliminar} />
           </>
         )}
