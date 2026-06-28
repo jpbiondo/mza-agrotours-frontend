@@ -27,7 +27,7 @@ const NAV: { id: string; label: string; href?: string; soon?: boolean }[] = [
   { id: "calendario", label: "Calendario", soon: true },
   { id: "cultivos", label: "Cultivos", soon: true },
   { id: "reservas", label: "Reservas", href: "/panel/reservas" },
-  { id: "datos", label: "Datos", soon: true },
+  { id: "datos", label: "Datos", href: "/panel/datos" },
 ];
 
 interface ProducerShellProps {
