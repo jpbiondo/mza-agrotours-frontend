@@ -23,7 +23,7 @@ function FincaMark({ name, size = 32 }: { name: string; size?: number }) {
 /* Items de navegación del panel. `soon` = pantalla aún no implementada. */
 const NAV: { id: string; label: string; href?: string; soon?: boolean }[] = [
   { id: "panel", label: "Panel", href: "/panel" },
-  { id: "actividades", label: "Experiencias", soon: true },
+  { id: "actividades", label: "Experiencias", href: "/panel/actividades" },
   { id: "calendario", label: "Calendario", soon: true },
   { id: "cultivos", label: "Cultivos", soon: true },
   { id: "reservas", label: "Reservas", href: "/panel/reservas" },
