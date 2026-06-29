@@ -25,7 +25,7 @@ const NAV: { id: string; label: string; href?: string; soon?: boolean }[] = [
   { id: "panel", label: "Panel", href: "/panel" },
   { id: "actividades", label: "Experiencias", href: "/panel/actividades" },
   { id: "reservas", label: "Reservas", href: "/panel/reservas" },
-  { id: "cultivos", label: "Cultivos", soon: true },
+  { id: "cultivos", label: "Cultivos", href: "/cultivos" },
   { id: "datos", label: "Datos", href: "/panel/datos" },
   { id: "estadisticas", label: "Estadísticas", href: "/panel/estadisticas" },
 ];
