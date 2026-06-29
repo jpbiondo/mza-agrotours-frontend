@@ -59,7 +59,7 @@ export default function AdminPanelClient() {
                 <div style={{ fontWeight: 600, fontSize: 15.5, color: "var(--fg-1)" }}>{data.estSusp === 1 ? "Hay 1 establecimiento suspendido" : `Hay ${data.estSusp} establecimientos suspendidos`}</div>
                 <div style={{ fontSize: 14, color: "var(--fg-2)", marginTop: 3 }}>{data.suspendidos.map((e) => e.nombre).join(" · ")}</div>
               </div>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--danger-fg)", fontWeight: 600, fontSize: 14.5, whiteSpace: "nowrap" }}>Revisar <ArrowRight size={16} color="var(--danger-fg)" /></span>
+              <Link href="/admin/establecimientos" style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--danger-fg)", fontWeight: 600, fontSize: 14.5, whiteSpace: "nowrap", textDecoration: "none" }}>Revisar <ArrowRight size={16} color="var(--danger-fg)" /></Link>
             </div>
           )}
 
@@ -67,7 +67,7 @@ export default function AdminPanelClient() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
             <AccessCard icon={<UserCog size={25} color="var(--green-800)" />} title="Administradores" desc={`${data.adminCount} activos. Sumá personas al equipo, cambiá su rol o dalas de baja.`} href="/admin/administradores" cta="Gestionar administradores" />
             <AccessCard icon={<ShieldCheck size={25} color="var(--green-800)" />} title="Roles de administrador" desc={`${data.rolesActivos} roles activos. Definí qué puede hacer cada administrador dentro del sistema.`} href="/admin/roles" cta="Gestionar roles" />
-            <AccessCard icon={<Warehouse size={25} color="var(--green-800)" />} title="Establecimientos" desc={`${data.estActivos} activos. Supervisá la plataforma y suspendé los que incumplan las normas.`} href="/admin" cta="Ver establecimientos" />
+            <AccessCard icon={<Warehouse size={25} color="var(--green-800)" />} title="Establecimientos" desc={`${data.estActivos} activos. Supervisá la plataforma y suspendé los que incumplan las normas.`} href="/admin/establecimientos" cta="Ver establecimientos" />
           </div>
         </div>
       )}
