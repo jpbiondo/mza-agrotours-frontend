@@ -65,8 +65,8 @@ export default function AdminPanelClient() {
 
           <h2 style={{ margin: data.estSusp > 0 ? "0 0 16px" : "32px 0 16px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, color: "var(--fg-1)" }}>Gestiones del sistema</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-            <AccessCard icon={<UserCog size={25} color="var(--green-800)" />} title="Administradores" desc={`${data.adminCount} activos. Sumá personas al equipo, cambiá su rol o dalas de baja.`} href="/admin" cta="Gestionar administradores" />
-            <AccessCard icon={<ShieldCheck size={25} color="var(--green-800)" />} title="Roles de administrador" desc={`${data.rolesActivos} roles activos. Definí qué puede hacer cada administrador dentro del sistema.`} href="/admin" cta="Gestionar roles" />
+            <AccessCard icon={<UserCog size={25} color="var(--green-800)" />} title="Administradores" desc={`${data.adminCount} activos. Sumá personas al equipo, cambiá su rol o dalas de baja.`} href="/admin/administradores" cta="Gestionar administradores" />
+            <AccessCard icon={<ShieldCheck size={25} color="var(--green-800)" />} title="Roles de administrador" desc={`${data.rolesActivos} roles activos. Definí qué puede hacer cada administrador dentro del sistema.`} href="/admin/roles" cta="Gestionar roles" />
             <AccessCard icon={<Warehouse size={25} color="var(--green-800)" />} title="Establecimientos" desc={`${data.estActivos} activos. Supervisá la plataforma y suspendé los que incumplan las normas.`} href="/admin" cta="Ver establecimientos" />
           </div>
         </div>

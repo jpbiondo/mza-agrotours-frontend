@@ -83,3 +83,16 @@ export function estabInitials(name: string): string {
   const w = name.split(/\s+/).filter((x) => x && !skip.has(x.toLowerCase()));
   return w.slice(0, 2).map((x) => x[0]).join("").toUpperCase();
 }
+
+const USER_BY_EMAIL: Record<string, RegisteredUser> = Object.fromEntries(ADMIN_REGISTERED_USERS.map((u) => [u.email.toLowerCase(), u]));
+
+export function findRegisteredUser(email: string): RegisteredUser | undefined {
+  return USER_BY_EMAIL[email.trim().toLowerCase()];
+}
+
+/** Sello de fecha/hora actual (DD/MM/AAAA · HH:MM). */
+export function admNowStamp(): string {
+  const n = new Date();
+  const p = (x: number) => String(x).padStart(2, "0");
+  return `${p(n.getDate())}/${p(n.getMonth() + 1)}/${n.getFullYear()} · ${p(n.getHours())}:${p(n.getMinutes())}`;
+}
