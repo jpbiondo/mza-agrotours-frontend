@@ -63,6 +63,13 @@ export interface FaqItem {
   a: string;
 }
 
+export interface FaqCategoria {
+  id: string;
+  label: string;
+  /** Clave de ícono lucide. */
+  icon: string;
+}
+
 export interface Resenia {
   autor: string;
   iniciales: string;

@@ -32,8 +32,8 @@ const NAV: { section?: string; id?: string; iconC?: React.ComponentType<{ size?:
   { id: "impagas", iconC: HandCoins, label: "Reservas impagas", href: "/admin/impagas" },
   { id: "deudas", iconC: Landmark, label: "Deudas de productores", href: "/admin/deudas" },
   { section: "Soporte" },
-  { id: "incidencias", iconC: LifeBuoy, label: "Gestionar incidencias" },
-  { id: "faq", iconC: HelpCircle, label: "Preguntas frecuentes" },
+  { id: "incidencias", iconC: LifeBuoy, label: "Gestionar incidencias", href: "/admin/incidencias" },
+  { id: "faq", iconC: HelpCircle, label: "Preguntas frecuentes", href: "/admin/faq" },
 ];
 
 function SidebarItem({ entry, active }: { entry: typeof NAV[number]; active: boolean }) {
