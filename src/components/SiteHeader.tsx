@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { LogIn, UserPlus, UserCog } from "lucide-react";
+import VisitorChatDrawer from "@/components/chat/VisitorChatDrawer";
 
 const NAV_LINKS = [
   { id: "explorar", href: "/explorar", label: "Actividades" },
@@ -58,6 +59,7 @@ export default function SiteHeader({ active }: SiteHeaderProps) {
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <VisitorChatDrawer />
           <Link href="/cuenta" aria-label="Mi cuenta" title="Mi cuenta" className="btn btn-neutral btn-sm" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 10px", height: 36 }}>
             <UserCog size={16} />
           </Link>
