@@ -1,29 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { GCR_CULTIVOS_SEED, GCR_RECETAS_SEED } from "@/data/gestionCr";
 import type { GcrCultivo, GcrReceta } from "@/types/gestionCr";
 
-interface ListReturn {
-  recetas: GcrReceta[] | null;
-  cultivos: GcrCultivo[] | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Lista el recetario (+ cultivos disponibles para asociar). */
-export function useGestionRecetas(): ListReturn {
-  const [state, setState] = useState<{ recetas: GcrReceta[] | null; cultivos: GcrCultivo[] | null; error: string | null; loaded: boolean }>({
-    recetas: null, cultivos: null, error: null, loaded: false,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetch()
-      .then((d) => { if (active) setState({ recetas: d.recetas, cultivos: d.cultivos, error: null, loaded: true }); })
-      .catch((e: unknown) => { if (active) setState({ recetas: null, cultivos: null, error: e instanceof Error ? e.message : "Error inesperado", loaded: true }); });
-    return () => { active = false; };
-  }, []);
-
-  return { recetas: state.recetas, cultivos: state.cultivos, error: state.error, isLoading: !state.loaded };
+export function useGestionRecetas() {
+  const { data, isLoading, error, reload } = useAsync(mockFetch);
+  return { recetas: data?.recetas ?? null, cultivos: data?.cultivos ?? null, isLoading, error, reload };
 }
 
 // MOCK — reemplazar por fetch("/api/admin/recetas")

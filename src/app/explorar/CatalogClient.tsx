@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Sprout, MapPin, ChevronRight, RotateCcw, Star, Warehouse, ArrowRight, SearchX } from "lucide-react";
 import Photo from "@/components/landing/Photo";
@@ -88,10 +88,8 @@ export default function CatalogClient() {
   const pageSafe = Math.min(page, pages);
   const visibles = filtradas.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [cultivo, depto]);
-
   const hasFilters = !!(cultivo || depto);
-  const clearAll = () => { setCultivo(null); setDepto(null); };
+  const clearAll = () => { setCultivo(null); setDepto(null); setPage(1); };
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 28px 80px" }}>
@@ -110,8 +108,8 @@ export default function CatalogClient() {
       </div>
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: 20, marginBottom: 22, display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
-        <FilterSelect icon={<Sprout size={18} />} label="Tipo de cultivo" allLabel="Todos los cultivos" value={cultivo} options={CULTIVO_OPTS} onChange={setCultivo} />
-        <FilterSelect icon={<MapPin size={18} />} label="Departamento" allLabel="Todos los departamentos" value={depto} options={DEPTO_OPTS} onChange={setDepto} />
+        <FilterSelect icon={<Sprout size={18} />} label="Tipo de cultivo" allLabel="Todos los cultivos" value={cultivo} options={CULTIVO_OPTS} onChange={(v) => { setCultivo(v); setPage(1); }} />
+        <FilterSelect icon={<MapPin size={18} />} label="Departamento" allLabel="Todos los departamentos" value={depto} options={DEPTO_OPTS} onChange={(v) => { setDepto(v); setPage(1); }} />
         {hasFilters && (
           <button type="button" onClick={clearAll} style={{ height: 46, display: "inline-flex", alignItems: "center", gap: 7, background: "transparent", border: "none", cursor: "pointer", color: "var(--green-800)", fontFamily: "var(--font-sans)", fontSize: 14.5, fontWeight: 600, padding: "0 6px" }}>
             <RotateCcw size={16} color="var(--green-800)" /> Limpiar filtros

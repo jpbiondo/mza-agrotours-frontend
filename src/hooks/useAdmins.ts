@@ -1,28 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { ADMIN_SEED_PEOPLE } from "@/data/admin";
 import type { AdminPerson } from "@/types/admin";
 
-interface ListReturn {
-  data: AdminPerson[] | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Lista los administradores del sistema. Reemplazar el mock por un fetch real. */
-export function useAdministradores(): ListReturn {
-  const [state, setState] = useState<{ data: AdminPerson[] | null; error: string | null; loaded: boolean }>({
-    data: null, error: null, loaded: false,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetch()
-      .then((d) => { if (active) setState({ data: d, error: null, loaded: true }); })
-      .catch((e: unknown) => { if (active) setState({ data: null, error: e instanceof Error ? e.message : "Error inesperado", loaded: true }); });
-    return () => { active = false; };
-  }, []);
-
-  return { data: state.data, error: state.error, isLoading: !state.loaded };
+export function useAdministradores() {
+  return useAsync<AdminPerson[]>(mockFetch);
 }
 
 // MOCK — reemplazar por fetch("/api/admin/administradores")

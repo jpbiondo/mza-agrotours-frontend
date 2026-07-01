@@ -1,29 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { CUENTA_ACTUAL, perfilInicial, fechaHoraBaja } from "@/data/cuenta";
 import type { CuentaSesion, Perfil } from "@/data/cuenta";
 
-interface PerfilReturn {
-  cuenta: CuentaSesion | null;
-  perfil: Perfil | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Carga la cuenta en sesión y su perfil. Reemplazar el mock por fetch. */
-export function usePerfil(): PerfilReturn {
-  const [state, setState] = useState<{ cuenta: CuentaSesion | null; perfil: Perfil | null; error: string | null; loaded: boolean }>({
-    cuenta: null, perfil: null, error: null, loaded: false,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetch()
-      .then((d) => { if (active) setState({ cuenta: d.cuenta, perfil: d.perfil, error: null, loaded: true }); })
-      .catch((e: unknown) => { if (active) setState({ cuenta: null, perfil: null, error: e instanceof Error ? e.message : "Error inesperado", loaded: true }); });
-    return () => { active = false; };
-  }, []);
-
-  return { cuenta: state.cuenta, perfil: state.perfil, error: state.error, isLoading: !state.loaded };
+export function usePerfil() {
+  const { data, isLoading, error, reload } = useAsync(mockFetch);
+  return { cuenta: data?.cuenta ?? null, perfil: data?.perfil ?? null, isLoading, error, reload };
 }
 
 // MOCK — reemplazar por fetch("/api/cuenta")

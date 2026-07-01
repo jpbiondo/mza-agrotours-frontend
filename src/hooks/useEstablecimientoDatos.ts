@@ -1,29 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { FINCA_DATOS } from "@/data/datos";
 import type { EstablecimientoDatos } from "@/types/datos";
 
-interface UseEstablecimientoDatosReturn {
-  data: EstablecimientoDatos | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Carga los datos del establecimiento activo. Reemplazar el mock por fetch. */
-export function useEstablecimientoDatos(fincaId: string): UseEstablecimientoDatosReturn {
-  const [state, setState] = useState<{ fincaId: string; data: EstablecimientoDatos | null; error: string | null }>({
-    fincaId: "", data: null, error: null,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetch(fincaId)
-      .then((d) => { if (active) setState({ fincaId, data: d, error: null }); })
-      .catch((e: unknown) => { if (active) setState({ fincaId, data: null, error: e instanceof Error ? e.message : "Error inesperado" }); });
-    return () => { active = false; };
-  }, [fincaId]);
-
-  const isLoading = state.fincaId !== fincaId;
-  return { data: isLoading ? null : state.data, error: isLoading ? null : state.error, isLoading };
+export function useEstablecimientoDatos(fincaId: string) {
+  return useAsync<EstablecimientoDatos>(() => mockFetch(fincaId), [fincaId]);
 }
 
 // MOCK — reemplazar por fetch(`/api/productor/${fincaId}/establecimiento`)

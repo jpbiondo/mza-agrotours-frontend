@@ -1,28 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { RANGO_SEED } from "@/data/rangos";
 import type { RangoEtario } from "@/types/rangos";
 
-interface ListReturn {
-  data: RangoEtario[] | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Lista los rangos etarios del sistema. Reemplazar el mock por fetch. */
-export function useRangos(): ListReturn {
-  const [state, setState] = useState<{ data: RangoEtario[] | null; error: string | null; loaded: boolean }>({
-    data: null, error: null, loaded: false,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetch()
-      .then((d) => { if (active) setState({ data: d, error: null, loaded: true }); })
-      .catch((e: unknown) => { if (active) setState({ data: null, error: e instanceof Error ? e.message : "Error inesperado", loaded: true }); });
-    return () => { active = false; };
-  }, []);
-
-  return { data: state.data, error: state.error, isLoading: !state.loaded };
+export function useRangos() {
+  return useAsync<RangoEtario[]>(mockFetch);
 }
 
 // MOCK — reemplazar por fetch("/api/admin/rangos-etarios")

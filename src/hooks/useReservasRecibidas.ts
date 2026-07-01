@@ -1,29 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { RESERVAS_RECIBIDAS } from "@/data/panel-reservas";
 import type { ReservaProd } from "@/types/panel-reservas";
 
-interface UseReservasRecibidasReturn {
-  data: ReservaProd[] | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Reservas recibidas por el establecimiento activo. Reemplazar el mock por fetch. */
-export function useReservasRecibidas(fincaId: string): UseReservasRecibidasReturn {
-  const [state, setState] = useState<{ fincaId: string; data: ReservaProd[] | null; error: string | null }>({
-    fincaId: "", data: null, error: null,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetch(fincaId)
-      .then((d) => { if (active) setState({ fincaId, data: d, error: null }); })
-      .catch((e: unknown) => { if (active) setState({ fincaId, data: null, error: e instanceof Error ? e.message : "Error inesperado" }); });
-    return () => { active = false; };
-  }, [fincaId]);
-
-  const isLoading = state.fincaId !== fincaId;
-  return { data: isLoading ? null : state.data, error: isLoading ? null : state.error, isLoading };
+export function useReservasRecibidas(fincaId: string) {
+  return useAsync<ReservaProd[]>(() => mockFetch(fincaId), [fincaId]);
 }
 
 // MOCK — reemplazar por fetch(`/api/productor/${fincaId}/reservas`)

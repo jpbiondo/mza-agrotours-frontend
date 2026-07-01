@@ -1,29 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { ESTADISTICAS } from "@/data/estadisticas";
 import type { Estadisticas } from "@/types/estadisticas";
 
-interface UseEstadisticasReturn {
-  data: Estadisticas | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Carga las estadísticas del establecimiento activo. Reemplazar el mock por fetch. */
-export function useEstadisticas(fincaId: string): UseEstadisticasReturn {
-  const [state, setState] = useState<{ fincaId: string; data: Estadisticas | null; error: string | null }>({
-    fincaId: "", data: null, error: null,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetch(fincaId)
-      .then((d) => { if (active) setState({ fincaId, data: d, error: null }); })
-      .catch((e: unknown) => { if (active) setState({ fincaId, data: null, error: e instanceof Error ? e.message : "Error inesperado" }); });
-    return () => { active = false; };
-  }, [fincaId]);
-
-  const isLoading = state.fincaId !== fincaId;
-  return { data: isLoading ? null : state.data, error: isLoading ? null : state.error, isLoading };
+export function useEstadisticas(fincaId: string) {
+  return useAsync<Estadisticas>(() => mockFetch(fincaId), [fincaId]);
 }
 
 // MOCK — reemplazar por fetch(`/api/productor/${fincaId}/estadisticas`)

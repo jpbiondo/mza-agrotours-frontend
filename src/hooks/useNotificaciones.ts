@@ -1,28 +1,10 @@
-import { useEffect, useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { NOTIFICACIONES } from "@/data/notificaciones";
 import type { Notificacion } from "@/types/notificaciones";
 
-interface ListReturn {
-  data: Notificacion[] | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Lista las notificaciones (ordenadas por fecha desc). Mock → fetch. */
-export function useNotificaciones(): ListReturn {
-  const [state, setState] = useState<{ data: Notificacion[] | null; error: string | null; loaded: boolean }>({
-    data: null, error: null, loaded: false,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetch()
-      .then((d) => { if (active) setState({ data: d, error: null, loaded: true }); })
-      .catch((e: unknown) => { if (active) setState({ data: null, error: e instanceof Error ? e.message : "Error inesperado", loaded: true }); });
-    return () => { active = false; };
-  }, []);
-
-  return { data: state.data, error: state.error, isLoading: !state.loaded };
+export function useNotificaciones() {
+  return useAsync<Notificacion[]>(mockFetch);
 }
 
 // MOCK — reemplazar por fetch("/api/notificaciones")

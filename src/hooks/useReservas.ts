@@ -1,28 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { RESERVAS } from "@/data/reservas";
 import type { Reserva } from "@/types/reservas";
 
-interface UseReservasReturn {
-  data: Reserva[] | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Lista las reservas del visitante. Reemplazar mockFetch por un fetch real. */
-export function useReservas(): UseReservasReturn {
-  const [state, setState] = useState<{ data: Reserva[] | null; error: string | null; loaded: boolean }>({
-    data: null, error: null, loaded: false,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetchReservas()
-      .then((d) => { if (active) setState({ data: d, error: null, loaded: true }); })
-      .catch((e: unknown) => { if (active) setState({ data: null, error: e instanceof Error ? e.message : "Error inesperado", loaded: true }); });
-    return () => { active = false; };
-  }, []);
-
-  return { data: state.data, error: state.error, isLoading: !state.loaded };
+export function useReservas() {
+  return useAsync<Reserva[]>(mockFetchReservas);
 }
 
 // MOCK — reemplazar por fetch("/api/reservas")

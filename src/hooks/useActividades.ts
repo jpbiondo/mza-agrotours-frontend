@@ -1,29 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { ACTIVIDADES_PROD } from "@/data/actividades-prod";
 import type { ActividadProd, EstadoActividad } from "@/types/actividad-prod";
 
-interface UseActividadesReturn {
-  data: ActividadProd[] | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Lista las actividades del establecimiento activo. Reemplazar el mock por fetch. */
-export function useActividades(fincaId: string): UseActividadesReturn {
-  const [state, setState] = useState<{ fincaId: string; data: ActividadProd[] | null; error: string | null }>({
-    fincaId: "", data: null, error: null,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetch(fincaId)
-      .then((d) => { if (active) setState({ fincaId, data: d, error: null }); })
-      .catch((e: unknown) => { if (active) setState({ fincaId, data: null, error: e instanceof Error ? e.message : "Error inesperado" }); });
-    return () => { active = false; };
-  }, [fincaId]);
-
-  const isLoading = state.fincaId !== fincaId;
-  return { data: isLoading ? null : state.data, error: isLoading ? null : state.error, isLoading };
+export function useActividades(fincaId: string) {
+  return useAsync<ActividadProd[]>(() => mockFetch(fincaId), [fincaId]);
 }
 
 // MOCK — reemplazar por fetch(`/api/productor/${fincaId}/actividades`)

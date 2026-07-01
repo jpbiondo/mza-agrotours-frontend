@@ -1,28 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { FAQ_ITEMS } from "@/data/faq";
 import type { FaqItem } from "@/types/catalogo";
 
-interface ListReturn {
-  data: FaqItem[] | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Lista la base de conocimiento (FAQ). Reemplazar el mock por fetch. */
-export function useFaq(): ListReturn {
-  const [state, setState] = useState<{ data: FaqItem[] | null; error: string | null; loaded: boolean }>({
-    data: null, error: null, loaded: false,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetch()
-      .then((d) => { if (active) setState({ data: d, error: null, loaded: true }); })
-      .catch((e: unknown) => { if (active) setState({ data: null, error: e instanceof Error ? e.message : "Error inesperado", loaded: true }); });
-    return () => { active = false; };
-  }, []);
-
-  return { data: state.data, error: state.error, isLoading: !state.loaded };
+export function useFaq() {
+  return useAsync<FaqItem[]>(mockFetch);
 }
 
 // MOCK — reemplazar por fetch("/api/admin/faq")

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Sprout, MapPin, ChevronRight, RotateCcw, Building2, CalendarDays, ArrowRight, SearchX } from "lucide-react";
 import Photo from "@/components/landing/Photo";
@@ -80,8 +80,6 @@ export default function ListClient() {
   const pageSafe = Math.min(page, pages);
   const visibles = filtrados.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [cultivo]);
-
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 28px 80px" }}>
       <div style={{ marginBottom: 24, maxWidth: 720 }}>
@@ -99,9 +97,9 @@ export default function ListClient() {
       </div>
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: 20, marginBottom: 22, display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
-        <FilterSelect icon={<Sprout size={18} />} label="Tipo de cultivo" allLabel="Todos los cultivos" value={cultivo} options={cultivoOpts} onChange={setCultivo} />
+        <FilterSelect icon={<Sprout size={18} />} label="Tipo de cultivo" allLabel="Todos los cultivos" value={cultivo} options={cultivoOpts} onChange={(v) => { setCultivo(v); setPage(1); }} />
         {cultivo && (
-          <button type="button" onClick={() => setCultivo(null)} style={{ height: 46, display: "inline-flex", alignItems: "center", gap: 7, background: "transparent", border: "none", cursor: "pointer", color: "var(--green-800)", fontFamily: "var(--font-sans)", fontSize: 14.5, fontWeight: 600, padding: "0 6px" }}>
+          <button type="button" onClick={() => { setCultivo(null); setPage(1); }} style={{ height: 46, display: "inline-flex", alignItems: "center", gap: 7, background: "transparent", border: "none", cursor: "pointer", color: "var(--green-800)", fontFamily: "var(--font-sans)", fontSize: 14.5, fontWeight: 600, padding: "0 6px" }}>
             <RotateCcw size={16} color="var(--green-800)" /> Quitar filtro
           </button>
         )}

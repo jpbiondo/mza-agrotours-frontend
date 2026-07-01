@@ -1,28 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsync } from "@/hooks/useAsync";
 import { IMPAGOS } from "@/data/impagas";
 import type { Reembolso, ReembolsoForm } from "@/types/impagas";
 
-interface ListReturn {
-  data: Reembolso[] | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
 /** Lista los reembolsos (reservas impagas). Reemplazar el mock por fetch. */
-export function useImpagas(): ListReturn {
-  const [state, setState] = useState<{ data: Reembolso[] | null; error: string | null; loaded: boolean }>({
-    data: null, error: null, loaded: false,
-  });
-
-  useEffect(() => {
-    let active = true;
-    mockFetch()
-      .then((d) => { if (active) setState({ data: d, error: null, loaded: true }); })
-      .catch((e: unknown) => { if (active) setState({ data: null, error: e instanceof Error ? e.message : "Error inesperado", loaded: true }); });
-    return () => { active = false; };
-  }, []);
-
-  return { data: state.data, error: state.error, isLoading: !state.loaded };
+export function useImpagas() {
+  return useAsync<Reembolso[]>(mockFetch);
 }
 
 // MOCK — reemplazar por fetch("/api/admin/impagas")
