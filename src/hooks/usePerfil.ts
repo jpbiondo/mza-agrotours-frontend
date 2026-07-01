@@ -46,6 +46,24 @@ export function useGuardarPerfil() {
   return { guardar, isLoading };
 }
 
+// Demo: contraseña actual de la cuenta en sesión (Camila Ríos).
+const PASSWORD_ACTUAL = "Cosecha#26";
+
+/** Cambia la contraseña. Valida la actual contra el backend (mock). */
+export function useCambiarPassword() {
+  const [isLoading, setIsLoading] = useState(false);
+  async function cambiar(actual: string, _nueva: string): Promise<{ ok: boolean; code?: "badActual" }> {
+    setIsLoading(true);
+    try {
+      await new Promise<void>((res) => setTimeout(res, 750));
+      // MOCK — reemplazar por POST /api/cuenta/password
+      if (actual !== PASSWORD_ACTUAL) return { ok: false, code: "badActual" };
+      return { ok: true };
+    } finally { setIsLoading(false); }
+  }
+  return { cambiar, isLoading };
+}
+
 /** Procesa la baja de la cuenta (comunicación con backend). */
 export function useEliminarCuenta() {
   const [isLoading, setIsLoading] = useState(false);

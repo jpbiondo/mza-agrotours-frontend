@@ -2,17 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   User, Phone, BadgeCheck, CreditCard, Mail, Check, Trash2, AlertTriangle, ShieldAlert,
   CheckCircle2, CalendarClock, ArrowRight, ArrowLeft, RotateCcw, AlertOctagon, X, Loader,
-  AlertCircle, UserCog, ShieldCheck,
+  AlertCircle, UserCog, ShieldCheck, Lock,
 } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
-import { Field, TextInput, SelectInput, CountrySelect, DatePicker } from "@/app/registro/components/FormFields";
+import { Field, TextInput, SelectInput, CountrySelect, DatePicker, PasswordMeter, passwordChecks, EyeToggle } from "@/app/registro/components/FormFields";
 import { PAISES, TIPOS_IDENTIFICACION } from "@/data/registro";
 import { validarPerfil, condicionesEliminar, rolLabel } from "@/data/cuenta";
 import type { CuentaSesion, Perfil } from "@/data/cuenta";
-import { usePerfil, useGuardarPerfil, useEliminarCuenta } from "@/hooks/usePerfil";
+import { usePerfil, useGuardarPerfil, useEliminarCuenta, useCambiarPassword } from "@/hooks/usePerfil";
 
 type Toast = { tone: "success" | "danger"; title: string; sub?: string } | null;
 
@@ -216,29 +217,131 @@ function DeleteAccountFlow({ cuenta, onClose }: { cuenta: CuentaSesion; onClose:
   );
 }
 
+/* ---- Cambiar contraseña ------------------------------------------------ */
+function PasswordField({ id, label, value, error, autoComplete, forgot, onChange }: { id: string; label: string; value: string; error: string; autoComplete?: string; forgot?: React.ReactNode; onChange: (v: string) => void }) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
+        <label htmlFor={id} style={{ fontSize: 13.5, fontWeight: 600, color: "var(--fg-1)" }}>{label} <span style={{ color: "var(--danger)" }}>*</span></label>
+        {forgot}
+      </div>
+      <TextInput id={id} icon={<Lock size={18} />} type={shown ? "text" : "password"} value={value} autoComplete={autoComplete} error={error} onChange={onChange} rightSlot={<EyeToggle shown={shown} onToggle={() => setShown((s) => !s)} />} />
+      {error && <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--danger-fg)", marginTop: 7 }}><AlertCircle size={14} /> {error}</div>}
+    </div>
+  );
+}
+
+function ChangePasswordForm({ setToast }: { setToast: (t: Toast) => void }) {
+  const [actual, setActual] = useState("");
+  const [nueva, setNueva] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const [actualError, setActualError] = useState<string | null>(null);
+  const { cambiar, isLoading } = useCambiarPassword();
+
+  const checks = passwordChecks(nueva);
+  const nuevaOk = checks.length && checks.special;
+  const errors: Record<string, string> = {};
+  if (!actual) errors.actual = "Este campo es obligatorio";
+  else if (actualError) errors.actual = actualError;
+  if (!nueva) errors.nueva = "Este campo es obligatorio";
+  else if (!nuevaOk) errors.nueva = "La contraseña no cumple los requisitos.";
+  if (!confirm) errors.confirm = "Este campo es obligatorio";
+  else if (confirm !== nueva) errors.confirm = "Las contraseñas no coinciden.";
+
+  const show = (k: string) => ((touched[k] || submitted) && errors[k]) || "";
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitted(true);
+    if (errors.actual || errors.nueva || errors.confirm) return;
+    const r = await cambiar(actual, nueva);
+    if (!r.ok) { setActualError("La contraseña actual ingresada es incorrecta"); return; }
+    setActual(""); setNueva(""); setConfirm(""); setTouched({}); setSubmitted(false); setActualError(null);
+    setToast({ tone: "success", title: "Contraseña actualizada correctamente" });
+  }
+
+  const tips = ["Mínimo 8 caracteres.", "Al menos un carácter especial.", "Evitá datos fáciles de adivinar.", "No la reutilices de otros sitios."];
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 280px", gap: 28, alignItems: "start" }} className="cuenta-sec-grid">
+      <div className="card" style={{ padding: "28px 30px" }}>
+        <div style={{ marginBottom: 22 }}>
+          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 20, margin: 0, color: "var(--fg-1)" }}>Cambiar contraseña</h2>
+          <p style={{ margin: "6px 0 0", fontSize: 13.5, color: "var(--fg-2)", lineHeight: 1.5 }}>Por tu seguridad, vas a necesitar tu contraseña actual para definir una nueva.</p>
+        </div>
+        <form onSubmit={submit} noValidate style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <PasswordField id="cp-actual" label="Contraseña actual" value={actual} error={show("actual")} autoComplete="current-password"
+            forgot={<Link href="/acceso/recuperar" style={{ fontSize: 13, color: "var(--green-800)", fontWeight: 600, textDecoration: "none" }}>¿Olvidaste tu contraseña?</Link>}
+            onChange={(x) => { setActual(x); setTouched((t) => ({ ...t, actual: true })); setActualError(null); }} />
+
+          <div style={{ height: 1, background: "var(--cream-tert)", margin: "2px 0" }} />
+
+          <div>
+            <PasswordField id="cp-nueva" label="Nueva contraseña" value={nueva} error={show("nueva")} autoComplete="new-password"
+              onChange={(x) => { setNueva(x); setTouched((t) => ({ ...t, nueva: true })); }} />
+            {nueva && <PasswordMeter value={nueva} />}
+          </div>
+          <PasswordField id="cp-confirm" label="Repetí la nueva contraseña" value={confirm} error={show("confirm")} autoComplete="new-password"
+            onChange={(x) => { setConfirm(x); setTouched((t) => ({ ...t, confirm: true })); }} />
+
+          <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
+            <button type="submit" className="btn btn-primary" disabled={isLoading}>{isLoading ? <><Loader size={16} className="spin" /> Guardando…</> : <><Check size={16} /> Guardar</>}</button>
+          </div>
+        </form>
+      </div>
+
+      <aside className="card" style={{ padding: "20px 22px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
+          <ShieldCheck size={18} color="var(--green-800)" />
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--fg-1)" }}>Una buena contraseña</div>
+        </div>
+        <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 10 }}>
+          {tips.map((t) => <li key={t} style={{ display: "flex", gap: 9, fontSize: 13, color: "var(--fg-2)", lineHeight: 1.4 }}><Check size={15} color="var(--green-800)" style={{ flexShrink: 0, marginTop: 1 }} />{t}</li>)}
+        </ul>
+      </aside>
+    </div>
+  );
+}
+
 /* ---- Página ------------------------------------------------------------ */
 function Inner({ cuenta, perfil }: { cuenta: CuentaSesion; perfil: Perfil }) {
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
+  const [tab, setTab] = useState<"datos" | "seguridad">("datos");
 
   function notify(t: Toast) { setToast(t); if (t) setTimeout(() => setToast((cur) => (cur === t ? null : cur)), 4000); }
+  const tabBtn = (id: "datos" | "seguridad", label: string, Icon: typeof UserCog) => {
+    const on = tab === id;
+    return (
+      <button type="button" onClick={() => setTab(id)} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 14px", marginBottom: -1, background: "transparent", border: "none", cursor: "pointer", borderBottom: "2px solid " + (on ? "var(--green-800)" : "transparent"), color: on ? "var(--green-800)" : "var(--fg-2)", fontSize: 14.5, fontWeight: on ? 600 : 500, fontFamily: "var(--font-sans)" }}>
+        <Icon size={16} /> {label}
+      </button>
+    );
+  };
 
   return (
     <div style={{ maxWidth: 820, margin: "0 auto", padding: "40px 28px 80px" }}>
       <div style={{ marginBottom: 26 }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12.5, fontWeight: 600, color: "var(--brown-700)", background: "var(--cream-tert)", border: "1px solid var(--sand)", borderRadius: 999, padding: "6px 13px", marginBottom: 16 }}><UserCog size={14} /> {rolLabel(cuenta.rol)}</div>
         <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 32, color: "var(--fg-1)", letterSpacing: "-.01em" }}>Mi cuenta</h1>
-        <p style={{ margin: "10px 0 0", color: "var(--fg-2)", fontSize: 15.5, lineHeight: 1.5 }}>Actualizá tus datos personales o gestioná la baja de tu cuenta.</p>
+        <p style={{ margin: "10px 0 0", color: "var(--fg-2)", fontSize: 15.5, lineHeight: 1.5 }}>Actualizá tus datos personales, cambiá tu contraseña o gestioná la baja de tu cuenta.</p>
       </div>
 
       <nav style={{ display: "flex", gap: 4, marginBottom: 22, borderBottom: "1px solid var(--outline-variant)" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 4px", marginBottom: -1, borderBottom: "2px solid var(--green-800)", color: "var(--green-800)", fontSize: 14.5, fontWeight: 600 }}><UserCog size={16} /> Datos personales</span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 14px", color: "var(--fg-3)", fontSize: 14.5, fontWeight: 500 }} title="Próximamente"><ShieldCheck size={16} /> Acceso y seguridad</span>
+        {tabBtn("datos", "Datos personales", UserCog)}
+        {tabBtn("seguridad", "Acceso y seguridad", ShieldCheck)}
       </nav>
 
-      <div className="card" style={{ padding: "28px 30px" }}>
-        <DatosPersonalesForm inicial={perfil} onDelete={() => setDeleting(true)} setToast={notify} />
-      </div>
+      {tab === "datos" ? (
+        <div className="card" style={{ padding: "28px 30px" }}>
+          <DatosPersonalesForm inicial={perfil} onDelete={() => setDeleting(true)} setToast={notify} />
+        </div>
+      ) : (
+        <ChangePasswordForm setToast={notify} />
+      )}
 
       {deleting && <DeleteAccountFlow cuenta={cuenta} onClose={() => setDeleting(false)} />}
       {toast && (
@@ -247,6 +350,7 @@ function Inner({ cuenta, perfil }: { cuenta: CuentaSesion; perfil: Perfil }) {
           <div><div style={{ fontWeight: 600, fontSize: 14.5 }}>{toast.title}</div>{toast.sub && <div style={{ fontSize: 13, opacity: 0.9, marginTop: 2, fontFamily: "var(--font-mono)" }}>{toast.sub}</div>}</div>
         </div>
       )}
+      <style>{`@media (max-width: 680px){ .cuenta-sec-grid{ grid-template-columns: 1fr !important; } }`}</style>
     </div>
   );
 }
