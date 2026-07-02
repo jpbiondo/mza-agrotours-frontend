@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { UserCog, ShieldCheck, Warehouse, Ban, AlertTriangle, ArrowRight, Loader } from "lucide-react";
+import { UserCog, ShieldCheck, Warehouse, Ban, AlertTriangle, ArrowRight } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
 import { useAdminResumen } from "@/hooks/useAdminResumen";
 
@@ -29,15 +30,12 @@ function AccessCard({ icon, title, desc, href, cta }: { icon: React.ReactNode; t
 }
 
 export default function AdminPanelClient() {
-  const { data, isLoading } = useAdminResumen();
+  const { data, isLoading, error, reload } = useAdminResumen();
 
   return (
     <AdminShell active="panel">
-      {isLoading || !data ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}>
-          <Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando el resumen…</div>
-        </div>
-      ) : (
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando el resumen…">
+        {data && (
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "32px 28px 80px" }}>
           <div style={{ marginBottom: 28 }}>
             <div className="t-label" style={{ color: "var(--brown-700)", marginBottom: 10 }}>Panel del sistema</div>
@@ -70,7 +68,8 @@ export default function AdminPanelClient() {
             <AccessCard icon={<Warehouse size={25} color="var(--green-800)" />} title="Establecimientos" desc={`${data.estActivos} activos. Supervisá la plataforma y suspendé los que incumplan las normas.`} href="/admin/establecimientos" cta="Ver establecimientos" />
           </div>
         </div>
-      )}
+        )}
+      </AsyncBoundary>
 
       <style>{`
         .card-hover { transition: box-shadow .16s, border-color .16s, transform .16s; }

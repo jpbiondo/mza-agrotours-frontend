@@ -7,6 +7,7 @@ import {
   Mail, AlignLeft, Phone, Map as MapIcon, Paperclip, FileText, Image as ImageIcon, ExternalLink,
   MessageSquare, AlertCircle, Loader,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
 import { admInitials, estabInitials } from "@/data/admin";
 import { SOL_ESTADO_META, chequearCoincidencias, vigenteQueCoincide, fmtBytes } from "@/data/solicitudes";
@@ -339,14 +340,12 @@ function nowStamp(): string {
 }
 
 export default function SolicitudesClient() {
-  const { data, isLoading } = useSolicitudes();
+  const { data, isLoading, error, reload } = useSolicitudes();
   return (
     <AdminShell active="solicitudes">
-      {isLoading || !data ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando solicitudes…</div></div>
-      ) : (
-        <Inner initial={data} />
-      )}
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando solicitudes…">
+        {data && <Inner initial={data} />}
+      </AsyncBoundary>
     </AdminShell>
   );
 }

@@ -4,10 +4,11 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Search, X, List, Clock, CheckCircle2, XCircle, ChevronRight, CalendarDays,
-  Users, MapPin, ArrowRight, CalendarX, SearchX, RotateCcw, Compass, Loader,
+  Users, MapPin, ArrowRight, CalendarX, SearchX, RotateCcw, Compass,
 } from "lucide-react";
 import Photo from "@/components/landing/Photo";
 import { ESTADO_TONE, ESTADO_LABEL, reservaTotal } from "@/data/reservas";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import { useReservas } from "@/hooks/useReservas";
 import type { EstadoReserva, Reserva } from "@/types/reservas";
 
@@ -94,7 +95,7 @@ function EmptyState({ icon, title, sub, action }: { icon: React.ReactNode; title
 }
 
 export default function MisReservasClient() {
-  const { data, isLoading } = useReservas();
+  const { data, isLoading, error, reload } = useReservas();
   const reservas = useMemo(() => data ?? [], [data]);
   const [filter, setFilter] = useState<FilterId>("todas");
   const [query, setQuery] = useState("");
@@ -185,12 +186,8 @@ export default function MisReservasClient() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: "72px 24px", textAlign: "center", color: "var(--fg-3)" }}>
-          <Loader size={24} className="spin" />
-          <div style={{ marginTop: 12, fontSize: 14 }}>Cargando tus reservas…</div>
-        </div>
-      ) : noResults ? (
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando tus reservas…" pad={72}>
+        {noResults ? (
         applied || filter !== "todas" ? (
           <EmptyState
             icon={<SearchX size={28} color="var(--brown-700)" />}
@@ -215,7 +212,8 @@ export default function MisReservasClient() {
             {visible.map((r) => <ReservaCard key={r.id} r={r} />)}
           </div>
         </>
-      )}
+        )}
+      </AsyncBoundary>
 
       <style>{`
         .card-hover { transition: box-shadow .16s, border-color .16s, transform .16s; }

@@ -9,6 +9,7 @@ import {
   AlertCircle, UserCog, ShieldCheck, Lock,
 } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import { Field, TextInput, SelectInput, CountrySelect, DatePicker, PasswordMeter, passwordChecks, EyeToggle } from "@/app/registro/components/FormFields";
 import { PAISES, TIPOS_IDENTIFICACION } from "@/data/registro";
 import { validarPerfil, condicionesEliminar, rolLabel } from "@/data/cuenta";
@@ -356,15 +357,13 @@ function Inner({ cuenta, perfil }: { cuenta: CuentaSesion; perfil: Perfil }) {
 }
 
 export default function CuentaClient() {
-  const { cuenta, perfil, isLoading } = usePerfil();
+  const { cuenta, perfil, isLoading, error, reload } = usePerfil();
   return (
     <>
       <SiteHeader />
-      {isLoading || !cuenta || !perfil ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando tu cuenta…</div></div>
-      ) : (
-        <Inner cuenta={cuenta} perfil={perfil} />
-      )}
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando tu cuenta…">
+        {cuenta && perfil && <Inner cuenta={cuenta} perfil={perfil} />}
+      </AsyncBoundary>
     </>
   );
 }

@@ -5,6 +5,7 @@ import {
   ChevronRight, Search, Warehouse, Ban, List as ListIcon, User, MapPin, Grape, CalendarCheck,
   RotateCcw, AlertTriangle, Clock, AlertCircle, Check, CheckCircle2, SearchX, Loader,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
 import { admNowStamp, estabInitials } from "@/data/admin";
 import { useEstablecimientosAdmin, useModerarEstablecimiento } from "@/hooks/useEstablecimientosAdmin";
@@ -219,14 +220,12 @@ function Inner({ initial }: { initial: AdminEstab[] }) {
 }
 
 export default function EstablecimientosAdminClient() {
-  const { data, isLoading } = useEstablecimientosAdmin();
+  const { data, isLoading, error, reload } = useEstablecimientosAdmin();
   return (
     <AdminShell active="establecimientos">
-      {isLoading || !data ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando establecimientos…</div></div>
-      ) : (
-        <Inner initial={data} />
-      )}
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando establecimientos…">
+        {data && <Inner initial={data} />}
+      </AsyncBoundary>
     </AdminShell>
   );
 }

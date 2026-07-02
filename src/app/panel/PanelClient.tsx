@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import {
-  CalendarCheck, Users, Grape, Banknote, TrendingUp, Download, Plus, Loader,
+  CalendarCheck, Users, Grape, Banknote, TrendingUp, Download, Plus,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import ProducerShell from "@/components/panel/ProducerShell";
 import { FINCAS } from "@/data/panel";
 import { usePanelDashboard } from "@/hooks/usePanelDashboard";
@@ -104,30 +105,16 @@ function CultivosCard({ cultivos }: { cultivos: PanelCultivo[] }) {
   );
 }
 
-function Skeleton() {
-  return (
-    <div style={{ maxWidth: 1240, margin: "0 auto", padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}>
-      <Loader size={26} className="spin" />
-      <div style={{ marginTop: 12, fontSize: 14 }}>Cargando tu panel…</div>
-    </div>
-  );
-}
-
 export default function PanelClient() {
   const [fincaId, setFincaId] = useState(FINCAS[0].id);
-  const { data, isLoading, error } = usePanelDashboard(fincaId);
+  const { data, isLoading, error, reload } = usePanelDashboard(fincaId);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
       <ProducerShell active="panel" fincas={FINCAS} activeFincaId={fincaId} onFincaChange={setFincaId} />
 
-      {isLoading || !data ? (
-        error ? (
-          <div style={{ maxWidth: 1240, margin: "0 auto", padding: "120px 28px", textAlign: "center", color: "var(--danger-fg)" }}>{error}</div>
-        ) : (
-          <Skeleton />
-        )
-      ) : (
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando tu panel…">
+        {data && (
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "32px 28px 80px" }}>
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
             <div style={{ minWidth: 240 }}>
@@ -149,7 +136,8 @@ export default function PanelClient() {
             <CultivosCard cultivos={data.cultivos} />
           </div>
         </div>
-      )}
+        )}
+      </AsyncBoundary>
 
       <style>{`@media (max-width: 900px) { .panel-grid { grid-template-columns: 1fr !important; } }`}</style>
     </div>

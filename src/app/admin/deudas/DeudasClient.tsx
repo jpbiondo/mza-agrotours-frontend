@@ -4,8 +4,9 @@ import { useMemo, useState } from "react";
 import {
   ChevronRight, Search, Landmark, AlertCircle, Handshake, CheckCircle2, CircleDashed,
   ListTree, HandCoins, ArrowLeft, Hash, History, Calendar, ArrowRight, Receipt, ArrowRightCircle,
-  SearchX, Loader,
+  SearchX,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
 import { estabInitials } from "@/data/admin";
 import { moneyAr, fmtFecha, fmtFechaHora } from "@/lib/format";
@@ -260,14 +261,12 @@ function Inner({ initial }: { initial: Deuda[] }) {
 }
 
 export default function DeudasClient() {
-  const { data, isLoading } = useDeudas();
+  const { data, isLoading, error, reload } = useDeudas();
   return (
     <AdminShell active="deudas">
-      {isLoading || !data ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando deudas…</div></div>
-      ) : (
-        <Inner initial={data} />
-      )}
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando deudas…">
+        {data && <Inner initial={data} />}
+      </AsyncBoundary>
     </AdminShell>
   );
 }

@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, MapPin, Sprout, CreditCard, Hourglass, CheckCircle2, CalendarDays,
-  CalendarCheck, ChevronLeft, ChevronRight, Info, ListChecks, ArrowRight, Ban, Clock, Loader,
+  CalendarCheck, ChevronLeft, ChevronRight, Info, ListChecks, ArrowRight, Ban, Clock,
   Grape, Scissors, Wine, Leaf, Cherry, Nut,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import ProducerShell from "@/components/panel/ProducerShell";
 import { FINCAS } from "@/data/panel";
 import { useCalendarioActividad } from "@/hooks/useCalendarioActividad";
@@ -231,7 +232,7 @@ function DaySummaryCard({ mes, day, onVerReservas }: { mes: MesCal; day: number 
 
 export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id" | "nombre" | "icon" | "estado" | "cultivos"> }) {
   const router = useRouter();
-  const { data, isLoading } = useCalendarioActividad(act.id);
+  const { data, isLoading, error, reload } = useCalendarioActividad(act.id);
   const [mesIdx, setMesIdx] = useState(0);
   const [selDay, setSelDay] = useState<number | null>(null);
 
@@ -281,11 +282,8 @@ export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id
           </div>
         )}
 
-        {isLoading || !data ? (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: "72px 24px", textAlign: "center", color: "var(--fg-3)", marginTop: 26 }}>
-            <Loader size={24} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando calendario…</div>
-          </div>
-        ) : (
+        <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando calendario…" pad={72}>
+          {data && (
           <>
             <div style={{ display: "flex", gap: 16, flexWrap: "wrap", margin: "26px 0" }}>
               <MetricCard icon={<CreditCard size={22} color="var(--green-700)" />} label="Reservas pagadas" value={data.metricas.pagadas} sub="Confirmadas en días próximos" tone="green" />
@@ -338,6 +336,7 @@ export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id
             </div>
           </>
         )}
+        </AsyncBoundary>
       </div>
 
       <style>{`@media (max-width: 900px) { .cal-grid { grid-template-columns: 1fr !important; } }`}</style>

@@ -6,6 +6,7 @@ import {
   Search, AlertTriangle, AlertCircle, Loader, ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import ProducerShell from "@/components/panel/ProducerShell";
 import { FINCAS } from "@/data/panel";
 import {
@@ -218,7 +219,7 @@ function ToastView({ toast, onClose }: { toast: Toast; onClose: () => void }) {
 /* ---- Cliente ----------------------------------------------------------- */
 export default function DatosClient() {
   const [fincaId, setFincaId] = useState(FINCAS[0].id);
-  const { data } = useEstablecimientoDatos(fincaId);
+  const { data, isLoading, error, reload } = useEstablecimientoDatos(fincaId);
   const { guardar, isLoading: saving } = useGuardarEstablecimiento();
   const { eliminar, isLoading: eliminando } = useEliminarEstablecimiento();
 
@@ -249,9 +250,7 @@ export default function DatosClient() {
     return (
       <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
         <ProducerShell active="datos" fincas={FINCAS} activeFincaId={fincaId} onFincaChange={setFincaId} />
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}>
-          <Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando datos…</div>
-        </div>
+        <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando datos…">{null}</AsyncBoundary>
       </div>
     );
   }

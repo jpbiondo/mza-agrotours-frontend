@@ -6,6 +6,7 @@ import {
   CheckCircle2, ArrowRight, ImageOff, Loader, Image as ImageIcon, Building2, Coins, Landmark, Percent,
   CalendarPlus, Undo2, Timer, Store, Wallet, Settings2,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
 import { PARAM_ADMIN, PARAM_FIELDS, PARAM_GROUPS, paramError, paramDisplay } from "@/data/parametros";
 import { admInitials } from "@/data/admin";
@@ -288,14 +289,12 @@ function Inner({ initial }: { initial: Parametros }) {
 }
 
 export default function ParametrosClient() {
-  const { data, isLoading } = useParametros();
+  const { data, isLoading, error, reload } = useParametros();
   return (
     <AdminShell active="parametros">
-      {isLoading || !data ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando parámetros…</div></div>
-      ) : (
-        <Inner initial={data} />
-      )}
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando parámetros…">
+        {data && <Inner initial={data} />}
+      </AsyncBoundary>
     </AdminShell>
   );
 }

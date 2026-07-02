@@ -6,6 +6,7 @@ import {
   ChevronRight, AlertCircle, Clock, Landmark, Search, X, Warehouse, HandCoins, ReceiptText,
   Banknote, Hash, CalendarClock, User, SearchX, ArrowRightCircle, Loader,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
 import { moneyAr, fmtFechaHora } from "@/lib/format";
 import { genId } from "@/lib/id";
@@ -292,14 +293,12 @@ function Inner({ initial }: { initial: Reembolso[] }) {
 }
 
 export default function ImpagasClient() {
-  const { data, isLoading } = useImpagas();
+  const { data, isLoading, error, reload } = useImpagas();
   return (
     <AdminShell active="impagas">
-      {isLoading || !data ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando reembolsos…</div></div>
-      ) : (
-        <Inner initial={data} />
-      )}
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando reembolsos…">
+        {data && <Inner initial={data} />}
+      </AsyncBoundary>
     </AdminShell>
   );
 }

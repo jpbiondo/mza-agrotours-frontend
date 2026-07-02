@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, CalendarCheck, ArrowRight, Loader, Leaf } from "lucide-react";
+import { ChevronRight, CalendarCheck, ArrowRight, Leaf } from "lucide-react";
 import { enTemporada, temporadaLabel } from "@/data/cultivos";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import { useCultivos } from "@/hooks/useCultivos";
 import type { Cultivo } from "@/types/cultivos";
 
@@ -32,7 +33,7 @@ function CultivoCard({ c }: { c: Cultivo }) {
 }
 
 export default function CultivosListClient() {
-  const { data, isLoading } = useCultivos();
+  const { data, isLoading, error, reload } = useCultivos();
 
   return (
     <div style={{ maxWidth: 1160, margin: "0 auto", padding: "32px 28px 80px" }}>
@@ -50,15 +51,13 @@ export default function CultivosListClient() {
         </p>
       </div>
 
-      {isLoading || !data ? (
-        <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: "72px 24px", textAlign: "center", color: "var(--fg-3)" }}>
-          <Loader size={24} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando cultivos…</div>
-        </div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 24 }}>
-          {data.map((c) => <CultivoCard key={c.id} c={c} />)}
-        </div>
-      )}
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando cultivos…" pad={72}>
+        {data && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 24 }}>
+            {data.map((c) => <CultivoCard key={c.id} c={c} />)}
+          </div>
+        )}
+      </AsyncBoundary>
 
       <style>{`
         .card-hover { transition: box-shadow .16s, border-color .16s, transform .16s; }

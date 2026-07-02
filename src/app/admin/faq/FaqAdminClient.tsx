@@ -6,6 +6,7 @@ import {
   SearchX, RotateCcw, AlertCircle, Check, Loader, LayoutGrid, Info, CalendarCheck, UserRound,
   Tractor, Wallet,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
 import { genId } from "@/lib/id";
 import { FAQ_CATEGORIAS } from "@/data/faq";
@@ -245,14 +246,12 @@ function Inner({ initial }: { initial: FaqItem[] }) {
 }
 
 export default function FaqAdminClient() {
-  const { data, isLoading } = useFaq();
+  const { data, isLoading, error, reload } = useFaq();
   return (
     <AdminShell active="faq">
-      {isLoading || !data ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando preguntas…</div></div>
-      ) : (
-        <Inner initial={data} />
-      )}
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando preguntas…">
+        {data && <Inner initial={data} />}
+      </AsyncBoundary>
     </AdminShell>
   );
 }

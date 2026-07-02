@@ -5,6 +5,7 @@ import {
   Search, X, ChevronDown, CalendarDays, Clock, Users, Check, Loader, Inbox,
   CreditCard, RotateCcw, XCircle, CheckCircle2, Banknote, UserCheck,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import ProducerShell from "@/components/panel/ProducerShell";
 import { Pagination } from "@/components/catalog/controls";
 import { FINCAS } from "@/data/panel";
@@ -132,7 +133,7 @@ function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; 
 
 export default function ReservasRecibidasClient() {
   const [fincaId, setFincaId] = useState(FINCAS[0].id);
-  const { data, isLoading } = useReservasRecibidas(fincaId);
+  const { data, isLoading, error, reload } = useReservasRecibidas(fincaId);
   const { confirmar, pendingId } = useConfirmarReserva();
 
   const [overrides, setOverrides] = useState<Record<string, EstadoReservaProd>>({});
@@ -233,12 +234,8 @@ export default function ReservasRecibidasClient() {
           </div>
         </div>
 
-        {isLoading ? (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: "72px 24px", textAlign: "center", color: "var(--fg-3)" }}>
-            <Loader size={24} className="spin" />
-            <div style={{ marginTop: 12, fontSize: 14 }}>Cargando reservas…</div>
-          </div>
-        ) : filtradas.length === 0 ? (
+        <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando reservas…" pad={72}>
+          {filtradas.length === 0 ? (
           <div style={{ background: "var(--surface)", border: "1px dashed var(--sand)", borderRadius: "var(--radius-lg)", padding: "64px 24px", textAlign: "center" }}>
             <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--cream-tert)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
               <Inbox size={28} color="var(--brown-700)" />
@@ -261,6 +258,7 @@ export default function ReservasRecibidasClient() {
             <Pagination page={pageSafe} pages={pages} onPage={setPage} />
           </>
         )}
+        </AsyncBoundary>
       </div>
     </div>
   );

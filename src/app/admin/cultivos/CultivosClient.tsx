@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Sprout, Utensils, Leaf, Scissors, Grape, Pencil, Trash2, Lock, Loader } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
 import { genId } from "@/lib/id";
 import { gcrRecetasDeCultivo, gcrCosechaLabel } from "@/data/gestionCr";
@@ -180,14 +181,12 @@ function Inner({ initialCultivos, recetas }: { initialCultivos: GcrCultivo[]; re
 }
 
 export default function CultivosClient() {
-  const { cultivos, recetas, isLoading } = useGestionCultivos();
+  const { cultivos, recetas, isLoading, error, reload } = useGestionCultivos();
   return (
     <AdminShell active="cultivos">
-      {isLoading || !cultivos || !recetas ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando cultivos…</div></div>
-      ) : (
-        <Inner initialCultivos={cultivos} recetas={recetas} />
-      )}
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando cultivos…">
+        {cultivos && recetas && <Inner initialCultivos={cultivos} recetas={recetas} />}
+      </AsyncBoundary>
     </AdminShell>
   );
 }

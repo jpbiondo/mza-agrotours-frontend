@@ -5,6 +5,7 @@ import {
   Plus, X, AlertCircle, ShieldCheck, Lock, Pencil, Trash2, Info, ChevronRight, Check,
   CheckCircle2, KeyRound, Users, Lightbulb, UserCog, Warehouse, Loader,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
 import { ADMIN_PERM_GROUPS, ADMIN_ALL_PERMS, admNowStamp } from "@/data/admin";
 import { genId } from "@/lib/id";
@@ -319,14 +320,12 @@ function pill(tone: "success" | "neutral"): React.CSSProperties {
 }
 
 export default function RolesClient() {
-  const { data, isLoading } = useRoles();
+  const { data, isLoading, error, reload } = useRoles();
   return (
     <AdminShell active="roles">
-      {isLoading || !data ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando roles…</div></div>
-      ) : (
-        <Inner initial={data} />
-      )}
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando roles…">
+        {data && <Inner initial={data} />}
+      </AsyncBoundary>
     </AdminShell>
   );
 }

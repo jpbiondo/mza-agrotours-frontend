@@ -7,6 +7,7 @@ import {
   Ban, Settings2, CalendarPlus, CalendarDays, Trash2, Clock, Sprout, Loader, Check,
   AlertTriangle, RotateCcw, SearchX, Grape, Scissors, Wine, Leaf, Cherry, Nut, X as XIcon,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import ProducerShell from "@/components/panel/ProducerShell";
 import { Pagination } from "@/components/catalog/controls";
 import { FINCAS } from "@/data/panel";
@@ -250,7 +251,7 @@ function ToastView({ toast, onClose }: { toast: Toast; onClose: () => void }) {
 /* ---- Cliente ----------------------------------------------------------- */
 export default function ActividadesClient() {
   const [fincaId, setFincaId] = useState(FINCAS[0].id);
-  const { data, isLoading } = useActividades(fincaId);
+  const { data, isLoading, error, reload } = useActividades(fincaId);
   const { darDeBaja, cambiarEstado, pendingId } = useActividadAcciones();
 
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
@@ -326,11 +327,8 @@ export default function ActividadesClient() {
 
         <div style={{ height: 1, background: "var(--outline-variant)", margin: "22px 0 24px" }} />
 
-        {isLoading ? (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: "72px 24px", textAlign: "center", color: "var(--fg-3)" }}>
-            <Loader size={24} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando actividades…</div>
-          </div>
-        ) : sinActividades ? (
+        <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando actividades…" pad={72}>
+          {sinActividades ? (
           <div className="card" style={{ textAlign: "center", padding: "64px 32px", borderStyle: "dashed", borderColor: "var(--sand)" }}>
             <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--green-050)", border: "1px solid var(--green-100)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}><Grape size={34} color="var(--green-700)" /></div>
             <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, margin: "0 0 8px", color: "var(--fg-1)" }}>Todavía no hay actividades</h2>
@@ -373,6 +371,7 @@ export default function ActividadesClient() {
             <Pagination page={pageSafe} pages={pages} onPage={setPage} />
           </>
         )}
+        </AsyncBoundary>
       </div>
 
       {toDelete && <DeleteModal act={toDelete} busy={pendingId === toDelete.id} onConfirm={() => confirmDelete(toDelete)} onClose={() => setToDelete(null)} />}

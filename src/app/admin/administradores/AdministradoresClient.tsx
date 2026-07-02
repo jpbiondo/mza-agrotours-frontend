@@ -5,6 +5,7 @@ import {
   UserPlus, X, AlertCircle, ShieldCheck, Crown, Pencil, Trash2, UserMinus, Info,
   ChevronRight, Check, CheckCircle2, UserCog, Loader,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
 import { ADMIN_SEED_ROLES, ADMIN_ROLE_BY_ID, admInitials, findRegisteredUser } from "@/data/admin";
 import { genId } from "@/lib/id";
@@ -267,14 +268,12 @@ function Inner({ initial }: { initial: AdminPerson[] }) {
 }
 
 export default function AdministradoresClient() {
-  const { data, isLoading } = useAdministradores();
+  const { data, isLoading, error, reload } = useAdministradores();
   return (
     <AdminShell active="admins">
-      {isLoading || !data ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando administradores…</div></div>
-      ) : (
-        <Inner initial={data} />
-      )}
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando administradores…">
+        {data && <Inner initial={data} />}
+      </AsyncBoundary>
     </AdminShell>
   );
 }

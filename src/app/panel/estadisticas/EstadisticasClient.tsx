@@ -6,6 +6,7 @@ import {
   FileText, FileSpreadsheet, Table2, AlertOctagon, Check,
   Grape, Sprout, Scissors, Wheat, Apple,
 } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import ProducerShell from "@/components/panel/ProducerShell";
 import { Donut, BarChart, OccupancyBar } from "@/components/panel/charts";
 import { FINCAS } from "@/data/panel";
@@ -186,7 +187,7 @@ function ToastView({ toast, onClose }: { toast: ToastData; onClose: () => void }
 
 export default function EstadisticasClient() {
   const [fincaId, setFincaId] = useState(FINCAS[0].id);
-  const { data, isLoading } = useEstadisticas(fincaId);
+  const { data, isLoading, error, reload } = useEstadisticas(fincaId);
   const { exportar, isLoading: exporting } = useExportarReporte();
   const [period, setPeriod] = useState<Periodo>("6m");
   const [exportOpen, setExportOpen] = useState(false);
@@ -216,11 +217,9 @@ export default function EstadisticasClient() {
           </div>
         </div>
 
-        {isLoading || !data ? (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: "100px 24px", textAlign: "center", color: "var(--fg-3)" }}>
-            <Loader size={26} className="spin" /><div style={{ marginTop: 12, fontSize: 14 }}>Cargando estadísticas…</div>
-          </div>
-        ) : (() => {
+        <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando estadísticas…" pad={100}>
+          {(() => {
+          if (!data) return null;
           const kpis = data.kpisByPeriod[period];
           const series = data.seriesByPeriod[period];
           return (
@@ -264,6 +263,7 @@ export default function EstadisticasClient() {
             </>
           );
         })()}
+        </AsyncBoundary>
       </main>
 
       {exportOpen && <ExportModal busy={exporting} onClose={() => setExportOpen(false)} onConfirm={onConfirmExport} />}
