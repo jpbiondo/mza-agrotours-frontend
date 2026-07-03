@@ -158,9 +158,9 @@ function DrawerIsland({ initial, loaded }: { initial: VisitorChat[]; loaded: boo
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label="Mis chats" title="Mis chats" className="btn btn-neutral btn-sm" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 10px", height: 36 }}>
-        <MessageCircle size={16} />
-        {totalUnread > 0 && <span style={{ position: "absolute", top: -6, right: -6, minWidth: 18, height: 18, padding: "0 5px", borderRadius: 999, background: "var(--green-800)", color: "#fff", fontSize: 10.5, fontWeight: 700, fontFamily: "var(--font-mono)", display: "inline-flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--cream-bg)" }}>{totalUnread}</span>}
+      <button type="button" onClick={() => setOpen(true)} aria-label="Mis chats" title="Mis chats" style={{ width: 38, height: 38, borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", background: open ? "var(--cream-tert)" : "var(--surface)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+        <MessageCircle size={18} color="var(--fg-2)" />
+        {totalUnread > 0 && <span style={{ position: "absolute", top: -5, right: -5, minWidth: 18, height: 18, padding: "0 5px", borderRadius: 9, background: "var(--green-800)", color: "#fff", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--cream-bg)", boxSizing: "content-box", lineHeight: 1 }}>{totalUnread}</span>}
       </button>
 
       {open && (

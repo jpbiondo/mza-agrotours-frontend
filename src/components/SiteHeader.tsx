@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { LogIn, UserPlus, UserCog } from "lucide-react";
 import VisitorChatDrawer from "@/components/chat/VisitorChatDrawer";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import AccountMenu from "@/components/AccountMenu";
 import MobileNav from "@/components/MobileNav";
 
 const NAV_LINKS = [
@@ -61,22 +61,14 @@ export default function SiteHeader({ active }: SiteHeaderProps) {
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <NotificationBell />
           <VisitorChatDrawer />
-          <Link href="/cuenta" aria-label="Mi cuenta" title="Mi cuenta" className="btn btn-neutral btn-sm" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 10px", height: 36 }}>
-            <UserCog size={16} />
-          </Link>
-          <Link href="/acceso" className="btn btn-neutral btn-sm site-auth" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <LogIn size={16} /> Iniciar sesión
-          </Link>
-          <Link href="/registro?vista=registro" className="btn btn-primary btn-sm site-auth" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <UserPlus size={16} /> Registrarse
-          </Link>
+          <NotificationBell />
+          <AccountMenu />
           <MobileNav links={NAV_LINKS} active={active} />
         </div>
       </div>
 
-      <style>{`@media (max-width: 860px) { .site-nav, .site-auth { display: none !important; } .site-mobile { display: block !important; } }`}</style>
+      <style>{`@media (max-width: 860px) { .site-nav { display: none !important; } .site-mobile { display: block !important; } }`}</style>
     </header>
   );
 }

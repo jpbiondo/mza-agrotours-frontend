@@ -308,10 +308,10 @@ function ChangePasswordForm({ setToast }: { setToast: (t: Toast) => void }) {
 }
 
 /* ---- Página ------------------------------------------------------------ */
-function Inner({ cuenta, perfil }: { cuenta: CuentaSesion; perfil: Perfil }) {
+function Inner({ cuenta, perfil, initialTab }: { cuenta: CuentaSesion; perfil: Perfil; initialTab: "datos" | "seguridad" }) {
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
-  const [tab, setTab] = useState<"datos" | "seguridad">("datos");
+  const [tab, setTab] = useState<"datos" | "seguridad">(initialTab);
 
   function notify(t: Toast) { setToast(t); if (t) setTimeout(() => setToast((cur) => (cur === t ? null : cur)), 4000); }
   const tabBtn = (id: "datos" | "seguridad", label: string, Icon: typeof UserCog) => {
@@ -356,13 +356,13 @@ function Inner({ cuenta, perfil }: { cuenta: CuentaSesion; perfil: Perfil }) {
   );
 }
 
-export default function CuentaClient() {
+export default function CuentaClient({ initialTab = "datos" }: { initialTab?: "datos" | "seguridad" }) {
   const { cuenta, perfil, isLoading, error, reload } = usePerfil();
   return (
     <>
       <SiteHeader />
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando tu cuenta…">
-        {cuenta && perfil && <Inner cuenta={cuenta} perfil={perfil} />}
+        {cuenta && perfil && <Inner cuenta={cuenta} perfil={perfil} initialTab={initialTab} />}
       </AsyncBoundary>
     </>
   );

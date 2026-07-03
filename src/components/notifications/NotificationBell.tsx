@@ -17,7 +17,7 @@ const ICON: Record<string, React.ComponentType<{ size?: number; color?: string }
 
 const PAGE = 6;
 
-const iconBtn: React.CSSProperties = { width: 36, height: 36, borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" };
+const iconBtn: React.CSSProperties = { width: 38, height: 38, borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", background: "var(--surface)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative" };
 const badgeStyle: React.CSSProperties = { position: "absolute", top: -5, right: -5, minWidth: 18, height: 18, padding: "0 5px", background: "var(--green-800)", color: "#fff", borderRadius: 9, fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--cream-bg)", boxSizing: "content-box", lineHeight: 1 };
 
 export default function NotificationBell() {

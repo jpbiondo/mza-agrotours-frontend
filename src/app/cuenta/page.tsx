@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   description: "Gestioná tus datos personales y la baja de tu cuenta.",
 };
 
-export default function CuentaPage() {
-  return <CuentaClient />;
+export default async function CuentaPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab } = await searchParams;
+  return <CuentaClient initialTab={tab === "seguridad" ? "seguridad" : "datos"} />;
 }

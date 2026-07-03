@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Menu, X, LogIn, UserPlus } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 interface NavLink { id: string; href: string; label: string }
 
@@ -21,8 +21,8 @@ export default function MobileNav({ links, active }: { links: NavLink[]; active?
 
   return (
     <div ref={wrap} className="site-mobile" style={{ position: "relative", display: "none" }}>
-      <button type="button" aria-label="Menú" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="btn btn-neutral btn-sm" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 10px", height: 36, background: open ? "var(--cream-tert)" : undefined }}>
-        {open ? <X size={18} /> : <Menu size={18} />}
+      <button type="button" aria-label="Menú" aria-expanded={open} onClick={() => setOpen((o) => !o)} style={{ width: 38, height: 38, borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", background: open ? "var(--cream-tert)" : "var(--surface)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+        {open ? <X size={18} color="var(--fg-2)" /> : <Menu size={18} color="var(--fg-2)" />}
       </button>
 
       {open && (
@@ -36,11 +36,6 @@ export default function MobileNav({ links, active }: { links: NavLink[]; active?
                 </Link>
               );
             })}
-          </div>
-          <div style={{ height: 1, background: "var(--outline-variant)", margin: "2px 6px 6px" }} />
-          <div style={{ padding: "0 8px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
-            <Link href="/acceso" onClick={() => setOpen(false)} className="btn btn-neutral" style={{ textDecoration: "none", width: "100%", justifyContent: "center" }}><LogIn size={18} /> Iniciar sesión</Link>
-            <Link href="/registro?vista=registro" onClick={() => setOpen(false)} className="btn btn-primary" style={{ textDecoration: "none", width: "100%", justifyContent: "center" }}><UserPlus size={18} /> Registrarse</Link>
           </div>
         </div>
       )}
