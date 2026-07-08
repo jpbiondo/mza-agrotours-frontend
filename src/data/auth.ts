@@ -1,9 +1,19 @@
-import type { Cuenta, Rol, AuthResult } from "@/types/auth";
+import type { Rol } from "@/types/auth";
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+/** Forma de las cuentas mock (demo/recuperación); desacoplada del tipo Cuenta real. */
+interface CuentaMock {
+  email: string;
+  password: string;
+  nombre: string;
+  rol: Rol;
+  /** Fecha ISO de baja; si no es null, la cuenta fue eliminada. */
+  fechaBaja: string | null;
+}
+
 /** Cuentas registradas. fechaBaja !== null → cuenta dada de baja. */
-export const CUENTAS: Cuenta[] = [
+export const CUENTAS: CuentaMock[] = [
   {
     email: "camila.rios@gmail.com",
     password: "Cosecha#26",
@@ -40,27 +50,15 @@ export interface Destino {
   href: string;
 }
 
-/** Destino post-login según el rol (AC: "ingresar al sistema según mi rol"). */
-export const DESTINO_POR_ROL: Record<Rol, Destino> = {
-  visitante: { label: "Explorar experiencias", sub: "Inicio", href: "/explorar" },
-  productor: { label: "Panel de productor", sub: "Panel de productor", href: "/panel" },
-};
-
 /**
- * Autentica unas credenciales contra las cuentas mock.
- * code ∈ 'ok' | 'badCreds' | 'baja'
+ * Destino por defecto post-login. Como por ahora el usuario tiene todos los roles,
+ * aterriza en "Explorar"; los paneles de productor/admin se alcanzan desde el navbar.
  */
-export function autenticar(email: string, password: string): AuthResult {
-  const e = (email || "").trim().toLowerCase();
-  const cuenta = CUENTAS.find((c) => c.email.toLowerCase() === e);
-  if (!cuenta || cuenta.password !== password) {
-    return { ok: false, code: "badCreds" };
-  }
-  if (cuenta.fechaBaja !== null) {
-    return { ok: false, code: "baja", cuenta };
-  }
-  return { ok: true, code: "ok", cuenta };
-}
+export const DESTINO_DEFAULT: Destino = {
+  label: "Explorar experiencias",
+  sub: "Inicio",
+  href: "/explorar",
+};
 
 /** ¿Existe el correo de una cuenta activa? (para recuperación de contraseña) */
 export function existeCorreo(email: string): boolean {

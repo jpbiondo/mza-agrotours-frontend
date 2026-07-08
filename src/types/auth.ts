@@ -1,12 +1,20 @@
-export type Rol = "visitante" | "productor";
+export type Rol = "visitante" | "productor" | "admin";
 
-export interface Cuenta {
-  email: string;
-  password: string;
+/** Datos del usuario que devuelve el backend en el campo `data`. */
+export interface BackendProfile {
   nombre: string;
-  rol: Rol;
-  /** Fecha ISO de baja; si no es null, la cuenta fue eliminada. */
-  fechaBaja: string | null;
+  email: string;
+  telefono: string;
+  identification: string;
+  tipoIdentificacion: string;
+}
+
+/**
+ * Usuario en sesión: el perfil del backend + los roles.
+ * No incluye password (Firebase es dueño de la credencial).
+ */
+export interface Cuenta extends BackendProfile {
+  roles: Rol[];
 }
 
 export interface Credenciales {
@@ -14,8 +22,12 @@ export interface Credenciales {
   password: string;
 }
 
-/** Resultado de la autenticación. */
-export type AuthCode = "ok" | "badCreds" | "baja";
+/**
+ * Resultado de la autenticación.
+ * - `badCreds` / `baja`: resultados de dominio (Firebase o backend).
+ * - `error`: fallo técnico (red, backend caído) — mensaje genérico en la UI.
+ */
+export type AuthCode = "ok" | "badCreds" | "baja" | "error";
 
 export interface AuthResult {
   ok: boolean;

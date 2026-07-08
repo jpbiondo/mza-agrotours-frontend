@@ -66,6 +66,9 @@ export default function LoginForm({ onSuccess, onRecover }: LoginFormProps) {
       {authError === "baja" && (
         <FormAlert tone="danger">Esta cuenta ha sido eliminada.</FormAlert>
       )}
+      {authError === "error" && (
+        <FormAlert tone="danger">Ocurrió un problema al iniciar sesión. Intentá de nuevo en unos minutos.</FormAlert>
+      )}
 
       <form
         onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}

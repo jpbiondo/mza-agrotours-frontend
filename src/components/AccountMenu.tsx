@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, UserRound, LifeBuoy, ShieldCheck, LogOut } from "lucide-react";
-import { CUENTA_ACTUAL } from "@/data/cuenta";
+import { signOut } from "firebase/auth";
+import { ChevronDown, UserRound, LifeBuoy, ShieldCheck, LogOut, Sprout, LayoutDashboard } from "lucide-react";
+import { auth } from "../../firebase.config";
+import { useAuthStore } from "@/stores/authStore";
 
 const avatarStyle: React.CSSProperties = { flexShrink: 0, width: 36, height: 36, borderRadius: "50%", background: "var(--brown-700)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 13.5, boxShadow: "inset 0 -2px 0 var(--brown-800)" };
 const itemStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: 11, padding: "9px 10px", borderRadius: 10, textDecoration: "none", color: "var(--fg-1)", fontSize: 14, fontWeight: 500, cursor: "pointer" };
@@ -15,7 +17,17 @@ function initialsOf(name: string) {
 export default function AccountMenu() {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
-  const initials = initialsOf(CUENTA_ACTUAL.nombre);
+
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const nombre = useAuthStore((s) => s.nombre);
+  const email = useAuthStore((s) => s.email);
+  const roles = useAuthStore((s) => s.roles);
+
+  // Hasta rehidratar, mostramos un estado neutro que coincide con el render del servidor.
+  const ready = hasHydrated && !!nombre;
+  const displayName = ready ? nombre! : "Mi cuenta";
+  const displayEmail = ready ? email ?? "" : "";
+  const initials = ready ? initialsOf(nombre!) : "··";
 
   useEffect(() => {
     if (!open) return;
@@ -25,6 +37,13 @@ export default function AccountMenu() {
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
   }, [open]);
+
+  async function handleLogout() {
+    setOpen(false);
+    await signOut(auth);
+    useAuthStore.getState().clear();
+    window.location.href = "/acceso";
+  }
 
   const item = (Icon: typeof UserRound, label: string, href: string, danger?: boolean) => (
     <Link href={href} role="menuitem" onClick={() => setOpen(false)} style={{ ...itemStyle, color: danger ? "var(--danger-fg)" : "var(--fg-1)" }}
@@ -47,16 +66,22 @@ export default function AccountMenu() {
           <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 14px", borderBottom: "1px solid var(--outline-variant)", background: "var(--cream-tert)" }}>
             <span style={{ ...avatarStyle, width: 40, height: 40, fontSize: 15 }}>{initials}</span>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 14.5, color: "var(--fg-1)" }}>{CUENTA_ACTUAL.nombre}</div>
-              <div style={{ fontSize: 12.5, color: "var(--fg-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{CUENTA_ACTUAL.email}</div>
+              <div style={{ fontWeight: 600, fontSize: 14.5, color: "var(--fg-1)" }}>{displayName}</div>
+              <div style={{ fontSize: 12.5, color: "var(--fg-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayEmail}</div>
             </div>
           </div>
           <div style={{ padding: 6 }}>
             {item(UserRound, "Mi cuenta", "/cuenta")}
+            {ready && roles.includes("productor") && item(Sprout, "Panel de productor", "/panel")}
+            {ready && roles.includes("admin") && item(LayoutDashboard, "Panel de administrador", "/admin")}
             {item(LifeBuoy, "Ayuda", "/#faq")}
             {item(ShieldCheck, "Acceso y seguridad", "/cuenta?tab=seguridad")}
             <div style={{ height: 1, background: "var(--outline-variant)", margin: "6px 4px" }} />
-            {item(LogOut, "Cerrar sesión", "/acceso", true)}
+            <button type="button" role="menuitem" onClick={handleLogout} style={{ ...itemStyle, width: "100%", border: "none", background: "transparent", color: "var(--danger-fg)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--danger-fill)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+              <LogOut size={17} color="var(--danger-fg)" /><span style={{ flex: 1, textAlign: "left" }}>Cerrar sesión</span>
+            </button>
           </div>
         </div>
       )}

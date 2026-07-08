@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bitter, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import AssistantWidget from "@/components/chat/AssistantWidget";
+import AuthSync from "@/components/AuthSync";
 
 const bitter = Bitter({
   subsets: ["latin"],
@@ -34,6 +35,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={`${bitter.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
+        <AuthSync />
         {children}
         <AssistantWidget />
       </body>

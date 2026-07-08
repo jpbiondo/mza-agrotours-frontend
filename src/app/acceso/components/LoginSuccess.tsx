@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Check, Loader, LayoutDashboard } from "lucide-react";
-import { DESTINO_POR_ROL } from "@/data/auth";
+import { DESTINO_DEFAULT } from "@/data/auth";
 import type { Cuenta } from "@/types/auth";
 
 const REDIRECT_MS = 2600;
@@ -12,7 +12,7 @@ interface LoginSuccessProps {
 }
 
 export default function LoginSuccess({ cuenta }: LoginSuccessProps) {
-  const dest = DESTINO_POR_ROL[cuenta.rol];
+  const dest = DESTINO_DEFAULT;
 
   useEffect(() => {
     const t = setTimeout(() => { window.location.href = dest.href; }, REDIRECT_MS);
