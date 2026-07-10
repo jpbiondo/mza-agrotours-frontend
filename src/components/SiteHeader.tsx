@@ -1,11 +1,22 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { LogIn, UserPlus } from "lucide-react";
 import VisitorChatDrawer from "@/components/chat/VisitorChatDrawer";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import AccountMenu from "@/components/AccountMenu";
 import MobileNav from "@/components/MobileNav";
+import { useAuthStore } from "@/stores/authStore";
 
-const NAV_LINKS = [
+export interface NavLink {
+  id: string;
+  href: string;
+  label: string;
+}
+
+/** Links por defecto (sitio logueado / navegación por rutas). */
+const APP_LINKS: NavLink[] = [
   { id: "explorar", href: "/explorar", label: "Actividades" },
   { id: "establecimientos", href: "/establecimientos", label: "Establecimientos" },
   { id: "cultivos", href: "/cultivos", label: "Cultivos" },
@@ -14,10 +25,25 @@ const NAV_LINKS = [
 ];
 
 interface SiteHeaderProps {
-  active?: "explorar" | "establecimientos" | "cultivos" | "mis-reservas" | "faq";
+  active?: string;
+  /** Permite que el landing pase anclas de sección en lugar de rutas. */
+  navLinks?: NavLink[];
+  maxWidth?: number;
 }
 
-export default function SiteHeader({ active }: SiteHeaderProps) {
+/**
+ * Navbar única del sitio. Muestra condicionalmente el cluster de sesión
+ * (chat + notificaciones + menú de cuenta) o los CTA de invitado
+ * (Iniciar sesión / Registrarse), según el estado de auth del store.
+ *
+ * El cluster se renderiza sólo tras la hidratación para que el primer render del
+ * cliente coincida con el del servidor (evita el flash de estado incorrecto).
+ */
+export default function SiteHeader({ active, navLinks = APP_LINKS, maxWidth = 1200 }: SiteHeaderProps) {
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const nombre = useAuthStore((s) => s.nombre);
+  const loggedIn = hasHydrated && !!nombre;
+
   return (
     <header
       style={{
@@ -28,7 +54,7 @@ export default function SiteHeader({ active }: SiteHeaderProps) {
     >
       <div
         style={{
-          maxWidth: 1200, margin: "0 auto", padding: "0 28px", height: 68,
+          maxWidth, margin: "0 auto", padding: "0 28px", height: 68,
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24,
         }}
       >
@@ -41,7 +67,7 @@ export default function SiteHeader({ active }: SiteHeaderProps) {
         </Link>
 
         <nav className="site-nav" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          {NAV_LINKS.map(({ id, href, label }) => {
+          {navLinks.map(({ id, href, label }) => {
             const on = id === active;
             return (
               <Link
@@ -61,10 +87,24 @@ export default function SiteHeader({ active }: SiteHeaderProps) {
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <VisitorChatDrawer />
-          <NotificationBell />
-          <AccountMenu />
-          <MobileNav links={NAV_LINKS} active={active} />
+          {hasHydrated &&
+            (loggedIn ? (
+              <>
+                <VisitorChatDrawer />
+                <NotificationBell />
+                <AccountMenu />
+              </>
+            ) : (
+              <>
+                <Link href="/acceso" className="btn btn-neutral btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                  <LogIn size={16} /> Iniciar sesión
+                </Link>
+                <Link href="/registro" className="btn btn-primary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                  <UserPlus size={16} /> Registrarse
+                </Link>
+              </>
+            ))}
+          <MobileNav links={navLinks} active={active} />
         </div>
       </div>
 

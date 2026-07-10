@@ -16,6 +16,13 @@ import { useAuthStore } from "@/stores/authStore";
 export default function AuthSync() {
   useEffect(() => {
     useAuthStore.persist.rehydrate();
+
+    // Sólo en desarrollo: expone el store para las pruebas e2e del navbar.
+    // Next reemplaza process.env.NODE_ENV, así que esto se elimina en producción.
+    if (process.env.NODE_ENV !== "production") {
+      (window as unknown as { __authStore?: typeof useAuthStore }).__authStore = useAuthStore;
+    }
+
     const unsub = onAuthStateChanged(auth, (user) => {
       if (!user) useAuthStore.getState().clear();
     });
