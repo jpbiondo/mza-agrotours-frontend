@@ -24,7 +24,7 @@ interface UseAuthReturn {
 const ALL_ROLES: Rol[] = ["visitante", "productor", "admin"];
 
 /** Endpoint del perfil en el backend. */
-const PROFILE_PATH = "/usuarios/me";
+const PROFILE_PATH = "/usuario/me";
 
 interface ProfileResponse {
   ok: boolean;
@@ -60,7 +60,10 @@ export function useAuth(): UseAuthReturn {
  * (2) el backend Spring devuelve el perfil ({ ok, code, data }), autenticando
  * al usuario con ese ID token (Bearer). El perfil se guarda en el store global.
  */
-async function firebaseLogin({ email, password }: Credenciales): Promise<AuthResult> {
+async function firebaseLogin({
+  email,
+  password,
+}: Credenciales): Promise<AuthResult> {
   const correo = email.trim();
 
   let token: string;

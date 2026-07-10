@@ -1,36 +1,35 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Registro page", () => {
-  test("landing view loads with logo, hero text and CTA", async ({ page }) => {
+  test("carga directamente el formulario (sin vista de landing ni ?vista)", async ({ page }) => {
     await page.goto("/registro");
-    await expect(page.getByText("Mendoza").first()).toBeVisible();
-    await expect(
-      page.getByText("Viví la cosecha junto a los productores mendocinos")
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Registrarse" }).first()
-    ).toBeVisible();
-  });
 
-  test("clicking Registrarse switches to form view with all fields", async ({
-    page,
-  }) => {
-    await page.goto("/registro");
-    await page.getByRole("button", { name: "Registrarse" }).first().click();
-
+    await expect(page.getByRole("heading", { name: "Creá tu cuenta" })).toBeVisible();
     await expect(page.getByText("Nombre y apellido")).toBeVisible();
     await expect(page.getByText("Email")).toBeVisible();
-    // "País" also appears inside "Seleccionar país" — scope to the field label
+    // "País" también aparece dentro de "Seleccionar país" — acotamos al label del campo
     await expect(page.locator('label[for="in-pais"]')).toBeVisible();
     await expect(page.getByText("Fecha de nacimiento")).toBeVisible();
-    // Contraseña also appears as placeholder — use the field label
     await expect(page.locator('label[for="in-pw"]')).toBeVisible();
     await expect(page.getByText("términos y condiciones")).toBeVisible();
   });
 
+  test("usuario ya logueado es redirigido fuera de /registro", async ({ page }) => {
+    await page.goto("/registro");
+    await page.waitForFunction(() => Boolean((window as unknown as { __authStore?: unknown }).__authStore));
+    await page.evaluate(() => {
+      (window as unknown as {
+        __authStore: { getState: () => { setSession: (s: { nombre: string; email: string; roles: string[] }) => void } };
+      }).__authStore
+        .getState()
+        .setSession({ nombre: "Camila Ríos", email: "camila.rios@gmail.com", roles: ["visitante"] });
+    });
+    await page.waitForURL("**/explorar");
+    expect(page.url()).toContain("/explorar");
+  });
+
   test("empty submit shows validation errors", async ({ page }) => {
-    await page.goto("/registro?vista=registro");
-    // Scroll the submit button into view then click
+    await page.goto("/registro");
     const submitBtn = page.locator('button[type="submit"]');
     await submitBtn.scrollIntoViewIfNeeded();
     await submitBtn.click();
@@ -39,50 +38,52 @@ test.describe("Registro page", () => {
     ).toBeVisible({ timeout: 8000 });
   });
 
-  test("valid form submission shows success view", async ({ page }) => {
-    await page.goto("/registro?vista=registro");
+  test("submit válido crea la cuenta contra el backend", async ({ page }) => {
+    // El backend crea la cuenta (Firebase Admin SDK); lo stubbeamos en el e2e.
+    // El auto-login posterior usa Firebase real, así que sólo verificamos el alta.
+    await page.route("**/usuario/create", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      })
+    );
 
-    // Nombre
+    await page.goto("/registro");
+
     await page.getByPlaceholder("Ej. Camila Ríos").fill("Ana Pérez");
-
-    // Email
     await page.getByPlaceholder("nombre@dominio.com").fill("ana.perez.test@example.com");
 
-    // Country — custom dropdown, trigger button has id="in-pais"
+    // País — dropdown custom, el trigger tiene id="in-pais"
     await page.locator("#in-pais").click();
     await page.getByPlaceholder("Buscar país…").fill("Arg");
     await page.getByRole("button", { name: /Argentina/ }).click();
 
-    // Date of birth — calendar opens at Jan 2000 by default
+    // Fecha de nacimiento — el calendario abre en Enero 2000
     await page.getByText("Seleccioná una fecha").click();
-    // Click the month/year header to enter year picker mode
     await page.getByRole("button", { name: /Enero 2000/ }).click();
     await page.getByRole("button", { name: "1995" }).click();
-    // Now in Jan 1995 — pick day 15
     await page.getByRole("button", { name: "15" }).first().click();
 
-    // ID type — custom dropdown, trigger button has id="in-tipoId"
+    // Tipo de identificación
     await page.locator("#in-tipoId").click();
     await page.getByRole("button", { name: "DNI" }).click();
 
-    // ID number
     await page.getByPlaceholder(/Ej\. 30/).fill("30123456");
-
-    // Phone
     await page.getByPlaceholder("Ej. +54 261 555 1234").fill("+54261555123");
 
-    // Password
     await page.locator("#in-pw").fill("Secure@1");
     await page.locator("#in-confirm").fill("Secure@1");
-
-    // Terms — click the whole label wrapper
     await page.locator("#fld-terminos label").click();
 
-    // Submit
-    await page.locator('button[type="submit"]').click();
+    const [req] = await Promise.all([
+      page.waitForRequest("**/usuario/create"),
+      page.locator('button[type="submit"]').click(),
+    ]);
 
-    await expect(
-      page.getByText("Tu cuenta fue creada correctamente")
-    ).toBeVisible({ timeout: 5000 });
+    expect(req.method()).toBe("POST");
+    expect((req.postDataJSON() as { email?: string }).email).toBe("ana.perez.test@example.com");
+    // Tras crear la cuenta pasamos al estado de alta+login automático.
+    await expect(page.getByText("Creando tu cuenta…").first()).toBeVisible();
   });
 });

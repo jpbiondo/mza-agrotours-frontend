@@ -125,7 +125,7 @@ export default function LoginForm({ onSuccess, onRecover }: LoginFormProps) {
 
       <div style={{ textAlign: "center", marginTop: 22, fontSize: 14, color: "var(--fg-2)" }}>
         ¿No tenés cuenta?{" "}
-        <AuthLink href="/registro?vista=registro" strong>Registrate</AuthLink>
+        <AuthLink href="/registro" strong>Registrate</AuthLink>
       </div>
 
       <DemoHint />

@@ -15,7 +15,7 @@ const COLS = [
     title: "Cuenta",
     links: [
       { href: "/acceso", label: "Iniciar sesión" },
-      { href: "/registro?vista=registro", label: "Registrarse" },
+      { href: "/registro", label: "Registrarse" },
       { href: "#contacto", label: "Contacto" },
     ],
   },
