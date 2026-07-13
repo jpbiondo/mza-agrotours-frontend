@@ -3,23 +3,26 @@
 import { useMemo, useState } from "react";
 import { LockKeyhole, Check } from "lucide-react";
 import { Field, PasswordMeter } from "@/app/registro/components/FormFields";
-import { FormHead, PasswordInput } from "@/app/acceso/components/AuthShell";
+import { FormHead, PasswordInput, FormAlert } from "@/app/acceso/components/AuthShell";
 import { newPasswordSchema } from "../schema";
+import { confirmarResetPassword } from "@/lib/passwordReset";
 import z from "zod";
 
 type Errors = { pw?: string; confirm?: string };
 type Touched = { pw?: boolean; confirm?: boolean };
 
 interface RecoverResetFormProps {
+  oobCode: string;
   onSuccess: () => void;
 }
 
-export default function RecoverResetForm({ onSuccess }: RecoverResetFormProps) {
+export default function RecoverResetForm({ oobCode, onSuccess }: RecoverResetFormProps) {
   const [pw, setPw] = useState("");
   const [confirm, setConfirm] = useState("");
   const [touched, setTouched] = useState<Touched>({});
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const allErrors = useMemo<Errors>(() => {
     const r = newPasswordSchema.safeParse({ pw, confirm });
@@ -29,13 +32,20 @@ export default function RecoverResetForm({ onSuccess }: RecoverResetFormProps) {
   }, [pw, confirm]);
   const show = (k: keyof Errors) => ((touched[k] || submitted) && allErrors[k]) || null;
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitted(true);
     if (allErrors.pw || allErrors.confirm) return;
     setLoading(true);
-    // MOCK — simula el guardado de la nueva contraseña
-    setTimeout(() => { setLoading(false); onSuccess(); }, 750);
+    setApiError(null);
+    const r = await confirmarResetPassword(oobCode, pw);
+    setLoading(false);
+    if (r.ok) { onSuccess(); return; }
+    setApiError(
+      r.code === "expired"
+        ? "El enlace expiró o no es válido. Solicitá uno nuevo desde «Recuperar contraseña»."
+        : "No pudimos actualizar la contraseña. Intentá de nuevo en unos minutos.",
+    );
   }
 
   return (
@@ -45,6 +55,7 @@ export default function RecoverResetForm({ onSuccess }: RecoverResetFormProps) {
         title="Creá una contraseña nueva"
         sub="Elegí una contraseña robusta para tu cuenta. Vas a usarla la próxima vez que inicies sesión."
       />
+      {apiError && <FormAlert tone="danger">{apiError}</FormAlert>}
       <form onSubmit={submit} noValidate style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <div>
           <Field label="Contraseña nueva" required error={show("pw")} htmlFor="rr-pw">

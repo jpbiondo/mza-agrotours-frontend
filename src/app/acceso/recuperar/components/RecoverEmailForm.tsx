@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { KeyRound, Mail, Send } from "lucide-react";
 import { Field, TextInput } from "@/app/registro/components/FormFields";
-import { FormHead, BackLink } from "@/app/acceso/components/AuthShell";
+import { FormHead, BackLink, FormAlert } from "@/app/acceso/components/AuthShell";
 import { recoverEmailSchema } from "../schema";
+import { enviarResetEmail } from "@/lib/passwordReset";
 import z from "zod";
 
 interface RecoverEmailFormProps {
@@ -17,6 +18,7 @@ export default function RecoverEmailForm({ onSent, onBack }: RecoverEmailFormPro
   const [touched, setTouched] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const error = useMemo(() => {
     const r = recoverEmailSchema.safeParse({ email });
@@ -25,13 +27,20 @@ export default function RecoverEmailForm({ onSent, onBack }: RecoverEmailFormPro
   }, [email]);
   const show = (touched || submitted) && error;
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitted(true);
     if (error) return;
     setLoading(true);
-    // MOCK — simula el envío del correo de recuperación
-    setTimeout(() => { setLoading(false); onSent(email.trim()); }, 700);
+    setApiError(null);
+    const r = await enviarResetEmail(email);
+    setLoading(false);
+    if (r.ok) { onSent(email.trim()); return; }
+    setApiError(
+      r.code === "invalidEmail"
+        ? "El correo ingresado no es válido."
+        : "No pudimos enviar el correo. Intentá de nuevo en unos minutos.",
+    );
   }
 
   return (
@@ -42,6 +51,8 @@ export default function RecoverEmailForm({ onSent, onBack }: RecoverEmailFormPro
         title="Recuperá tu contraseña"
         sub="Ingresá el correo asociado a tu cuenta y te enviaremos un enlace para crear una nueva contraseña."
       />
+
+      {apiError && <FormAlert tone="danger">{apiError}</FormAlert>}
 
       <form onSubmit={submit} noValidate style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <Field label="Correo" required error={show} htmlFor="rc-email">
