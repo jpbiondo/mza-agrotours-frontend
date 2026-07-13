@@ -5,8 +5,10 @@ export interface BackendProfile {
   nombre: string;
   email: string;
   telefono: string;
-  identification: string;
+  identificacion: string;
   tipoIdentificacion: string;
+  /** Fecha de nacimiento en ISO (o null si el backend no la tiene). */
+  fechaNacimiento: string | null;
 }
 
 /**

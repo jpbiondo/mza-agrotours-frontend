@@ -25,9 +25,14 @@ function rolPrimario(roles: Rol[]): RolCuenta {
 }
 
 /** Campos extra que el backend podría (aún no) incluir en /usuario/me. */
-type PerfilData = BackendProfile & { fechaNacimiento?: string | null; paisIso2?: string };
+type PerfilData = BackendProfile & {
+  paisIso2?: string;
+};
 
-function aModelos(data: PerfilData, roles: Rol[]): { cuenta: CuentaSesion; perfil: Perfil } {
+function aModelos(
+  data: PerfilData,
+  roles: Rol[],
+): { cuenta: CuentaSesion; perfil: Perfil } {
   return {
     cuenta: {
       nombre: data.nombre,
@@ -40,9 +45,8 @@ function aModelos(data: PerfilData, roles: Rol[]): { cuenta: CuentaSesion; perfi
       nombre: data.nombre,
       email: data.email,
       telefono: data.telefono,
-      identificacion: data.identification,
+      identificacion: data.identificacion,
       tipoIdent: data.tipoIdentificacion,
-      // TODO backend: /usuario/me todavía no devuelve fecha de nacimiento.
       fechaNac: data.fechaNacimiento ? new Date(data.fechaNacimiento) : null,
       // El backend devuelve el iso2 en `paisIso2`.
       pais: data.paisIso2 ?? "",
@@ -61,7 +65,10 @@ interface ProfileResponse {
  * Protege la pantalla: si no hay sesión de Firebase, marca `unauthenticated`.
  */
 export function usePerfil(): PerfilState {
-  const [models, setModels] = useState<{ cuenta: CuentaSesion; perfil: Perfil } | null>(null);
+  const [models, setModels] = useState<{
+    cuenta: CuentaSesion;
+    perfil: Perfil;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unauthenticated, setUnauthenticated] = useState(false);
@@ -87,13 +94,17 @@ export function usePerfil(): PerfilState {
           setModels(aModelos(res.data, useAuthStore.getState().roles));
         }
       } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : "Error inesperado");
+        if (active)
+          setError(e instanceof Error ? e.message : "Error inesperado");
       } finally {
         if (active) setIsLoading(false);
       }
     });
 
-    return () => { active = false; unsub(); };
+    return () => {
+      active = false;
+      unsub();
+    };
   }, [nonce]);
 
   const reload = useCallback(() => {
@@ -116,13 +127,17 @@ export function usePerfil(): PerfilState {
 /** Guarda los datos del perfil. Simula un fallo de servidor opcional. */
 export function useGuardarPerfil() {
   const [isLoading, setIsLoading] = useState(false);
-  async function guardar(_perfil: Perfil): Promise<{ ok: boolean; code?: string }> {
+  async function guardar(
+    _perfil: Perfil,
+  ): Promise<{ ok: boolean; code?: string }> {
     setIsLoading(true);
     try {
       await new Promise<void>((res) => setTimeout(res, 800));
       // MOCK — reemplazar por PUT /api/cuenta; devolver { ok:false, code } en error
       return { ok: true };
-    } finally { setIsLoading(false); }
+    } finally {
+      setIsLoading(false);
+    }
   }
   return { guardar, isLoading };
 }
@@ -133,14 +148,19 @@ const PASSWORD_ACTUAL = "Cosecha#26";
 /** Cambia la contraseña. Valida la actual contra el backend (mock). */
 export function useCambiarPassword() {
   const [isLoading, setIsLoading] = useState(false);
-  async function cambiar(actual: string, _nueva: string): Promise<{ ok: boolean; code?: "badActual" }> {
+  async function cambiar(
+    actual: string,
+    _nueva: string,
+  ): Promise<{ ok: boolean; code?: "badActual" }> {
     setIsLoading(true);
     try {
       await new Promise<void>((res) => setTimeout(res, 750));
       // MOCK — reemplazar por POST /api/cuenta/password
       if (actual !== PASSWORD_ACTUAL) return { ok: false, code: "badActual" };
       return { ok: true };
-    } finally { setIsLoading(false); }
+    } finally {
+      setIsLoading(false);
+    }
   }
   return { cambiar, isLoading };
 }
@@ -154,7 +174,9 @@ export function useEliminarCuenta() {
       await new Promise<void>((res) => setTimeout(res, 1400));
       // MOCK — reemplazar por DELETE /api/cuenta; en error devolver { ok:false, ts:null }
       return { ok: true, ts: fechaHoraBaja() };
-    } finally { setIsLoading(false); }
+    } finally {
+      setIsLoading(false);
+    }
   }
   return { procesar, isLoading };
 }
