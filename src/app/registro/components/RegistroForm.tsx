@@ -19,11 +19,12 @@ import {
   PasswordMeter,
   EyeToggle,
 } from "./FormFields";
-import { PAISES, TIPOS_IDENTIFICACION, EMPTY_FORM } from "@/data/registro";
+import { TIPOS_IDENTIFICACION, EMPTY_FORM } from "@/data/registro";
 import type { FormData } from "@/types/registro";
 import { registroSchema } from "../schema";
 import z from "zod";
 import { useRegistro } from "@/hooks/useRegistro";
+import { usePaises } from "@/hooks/usePaises";
 
 type Errors = Partial<Record<keyof FormData, string>>;
 type Touched = Partial<Record<keyof FormData, boolean>>;
@@ -52,6 +53,7 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const { register, isLoading, apiError } = useRegistro();
+  const { paises, isLoading: paisesLoading, error: paisesError } = usePaises();
 
   // Setea el valor y marca el campo como tocado en un solo paso.
   const update = <K extends keyof FormData>(k: K, val: FormData[K]) => {
@@ -139,9 +141,15 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
             <CountrySelect
               id="in-pais"
               value={v.pais}
-              options={PAISES}
+              options={paises}
               error={err("pais")}
-              placeholder="Seleccionar país"
+              placeholder={
+                paisesLoading
+                  ? "Cargando países…"
+                  : paisesError
+                  ? "No se pudieron cargar los países"
+                  : "Seleccionar país"
+              }
               onChange={(x) => update("pais", x)}
             />
           </Field>

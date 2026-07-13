@@ -6,7 +6,12 @@ import {
   Check, CheckCircle2, Circle, ShieldCheck, Info, CalendarDays,
   Eye, EyeOff, Flag as FlagIcon,
 } from "lucide-react";
-import type { Pais } from "@/data/registro";
+
+/** Opción de país: `code` es el iso2 (para la bandera), `name` el nombre visible. */
+export interface CountryOption {
+  code: string;
+  name: string;
+}
 
 /* ---- Field wrapper --------------------------------------------------- */
 interface FieldProps {
@@ -268,7 +273,7 @@ interface CountrySelectProps {
   id?: string;
   value: string;
   onChange: (val: string) => void;
-  options: readonly Pais[];
+  options: readonly CountryOption[];
   placeholder?: string;
   error?: string | false | null;
 }

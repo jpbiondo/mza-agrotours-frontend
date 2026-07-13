@@ -1,6 +1,25 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Registro page", () => {
+  // El listado de países se trae del backend (GET /pais/); lo stubbeamos.
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/pais/", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          code: "ok",
+          data: [
+            { nombre: "Argentina", iso2: "AR" },
+            { nombre: "Chile", iso2: "CL" },
+            { nombre: "Uruguay", iso2: "UY" },
+          ],
+        }),
+      })
+    );
+  });
+
   test("carga directamente el formulario (sin vista de landing ni ?vista)", async ({ page }) => {
     await page.goto("/registro");
 
