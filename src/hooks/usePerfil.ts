@@ -29,6 +29,17 @@ type PerfilData = BackendProfile & {
   paisIso2?: string;
 };
 
+/**
+ * Parsea una fecha del backend a Date local.
+ * `new Date("2002-11-10")` la interpreta como medianoche UTC y, en zonas al
+ * oeste de UTC, se corre un día; por eso las fechas "YYYY-MM-DD" se arman
+ * con componentes locales.
+ */
+function parseFecha(s: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(s);
+}
+
 function aModelos(
   data: PerfilData,
   roles: Rol[],
@@ -47,7 +58,7 @@ function aModelos(
       telefono: data.telefono,
       identificacion: data.identificacion,
       tipoIdent: data.tipoIdentificacion,
-      fechaNac: data.fechaNacimiento ? new Date(data.fechaNacimiento) : null,
+      fechaNac: data.fechaNacimiento ? parseFecha(data.fechaNacimiento) : null,
       // El backend devuelve el iso2 en `paisIso2`.
       pais: data.paisIso2 ?? "",
     },
