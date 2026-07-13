@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -357,13 +357,27 @@ function Inner({ cuenta, perfil, initialTab }: { cuenta: CuentaSesion; perfil: P
 }
 
 export default function CuentaClient({ initialTab = "datos" }: { initialTab?: "datos" | "seguridad" }) {
-  const { cuenta, perfil, isLoading, error, reload } = usePerfil();
+  const router = useRouter();
+  const { cuenta, perfil, isLoading, error, unauthenticated, reload } = usePerfil();
+
+  // Ruta protegida: sin sesión, a la pantalla de login.
+  useEffect(() => {
+    if (unauthenticated) router.replace("/acceso");
+  }, [unauthenticated, router]);
+
   return (
     <>
       <SiteHeader />
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando tu cuenta…">
-        {cuenta && perfil && <Inner cuenta={cuenta} perfil={perfil} initialTab={initialTab} />}
-      </AsyncBoundary>
+      {unauthenticated ? (
+        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}>
+          <Loader size={26} className="spin" />
+          <div style={{ marginTop: 12, fontSize: 14 }}>Redirigiendo…</div>
+        </div>
+      ) : (
+        <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando tu cuenta…">
+          {cuenta && perfil && <Inner cuenta={cuenta} perfil={perfil} initialTab={initialTab} />}
+        </AsyncBoundary>
+      )}
     </>
   );
 }
