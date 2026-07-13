@@ -41,8 +41,8 @@ function toPayload(d: FormData) {
     telefono: d.telefono.trim(),
     identificacion: d.numeroId.trim(),
     tipoIdentificacion: d.tipoId,
-    // `pais` es el iso2 del país seleccionado (no el nombre).
-    pais: d.pais,
+    // iso2 del país seleccionado (no el nombre).
+    paisIso2: d.pais,
     fechaNacimiento: d.fecha ? d.fecha.toISOString() : null,
   };
 }

@@ -25,7 +25,7 @@ function rolPrimario(roles: Rol[]): RolCuenta {
 }
 
 /** Campos extra que el backend podría (aún no) incluir en /usuario/me. */
-type PerfilData = BackendProfile & { fechaNacimiento?: string | null; pais?: string };
+type PerfilData = BackendProfile & { fechaNacimiento?: string | null; paisIso2?: string };
 
 function aModelos(data: PerfilData, roles: Rol[]): { cuenta: CuentaSesion; perfil: Perfil } {
   return {
@@ -42,9 +42,10 @@ function aModelos(data: PerfilData, roles: Rol[]): { cuenta: CuentaSesion; perfi
       telefono: data.telefono,
       identificacion: data.identification,
       tipoIdent: data.tipoIdentificacion,
-      // TODO backend: /usuario/me todavía no devuelve fecha de nacimiento ni país.
+      // TODO backend: /usuario/me todavía no devuelve fecha de nacimiento.
       fechaNac: data.fechaNacimiento ? new Date(data.fechaNacimiento) : null,
-      pais: data.pais ?? "",
+      // El backend devuelve el iso2 en `paisIso2`.
+      pais: data.paisIso2 ?? "",
     },
   };
 }

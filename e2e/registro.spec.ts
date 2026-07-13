@@ -101,10 +101,10 @@ test.describe("Registro page", () => {
     ]);
 
     expect(req.method()).toBe("POST");
-    const body = req.postDataJSON() as { email?: string; pais?: string };
+    const body = req.postDataJSON() as { email?: string; paisIso2?: string };
     expect(body.email).toBe("ana.perez.test@example.com");
-    // Se envía el iso2 del país (Argentina → AR), no el nombre.
-    expect(body.pais).toBe("AR");
+    // Se envía el iso2 del país (Argentina → AR) en `paisIso2`, no el nombre.
+    expect(body.paisIso2).toBe("AR");
     // Tras crear la cuenta pasamos al estado de alta+login automático.
     await expect(page.getByText("Creando tu cuenta…").first()).toBeVisible();
   });
