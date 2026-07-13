@@ -259,7 +259,11 @@ function ChangePasswordForm({ setToast }: { setToast: (t: Toast) => void }) {
     setSubmitted(true);
     if (errors.actual || errors.nueva || errors.confirm) return;
     const r = await cambiar(actual, nueva);
-    if (!r.ok) { setActualError("La contraseña actual ingresada es incorrecta"); return; }
+    if (!r.ok) {
+      if (r.code === "badActual") setActualError("La contraseña actual ingresada es incorrecta");
+      else setToast({ tone: "danger", title: "No se pudo cambiar la contraseña", sub: "Intentá de nuevo en unos minutos." });
+      return;
+    }
     setActual(""); setNueva(""); setConfirm(""); setTouched({}); setSubmitted(false); setActualError(null);
     setToast({ tone: "success", title: "Contraseña actualizada correctamente" });
   }

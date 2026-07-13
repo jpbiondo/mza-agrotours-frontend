@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+} from "firebase/auth";
+import { FirebaseError } from "firebase/app";
 import { auth } from "../../firebase.config";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
@@ -153,26 +159,48 @@ export function useGuardarPerfil() {
   return { guardar, isLoading };
 }
 
-// Demo: contraseña actual de la cuenta en sesión (Camila Ríos).
-const PASSWORD_ACTUAL = "Cosecha#26";
-
-/** Cambia la contraseña. Valida la actual contra el backend (mock). */
+/**
+ * Cambia la contraseña del usuario logueado.
+ * Requiere la contraseña actual: se reautentica con ella antes de actualizar,
+ * así Firebase verifica que el usuario la conoce (code "badActual" si no).
+ */
 export function useCambiarPassword() {
   const [isLoading, setIsLoading] = useState(false);
+
   async function cambiar(
     actual: string,
-    _nueva: string,
-  ): Promise<{ ok: boolean; code?: "badActual" }> {
+    nueva: string,
+  ): Promise<{ ok: boolean; code?: "badActual" | "error" }> {
     setIsLoading(true);
     try {
-      await new Promise<void>((res) => setTimeout(res, 750));
-      // MOCK — reemplazar por POST /api/cuenta/password
-      if (actual !== PASSWORD_ACTUAL) return { ok: false, code: "badActual" };
+      const user = auth.currentUser;
+      if (!user || !user.email) return { ok: false, code: "error" };
+
+      // 1) Reautenticar con la contraseña actual.
+      try {
+        const cred = EmailAuthProvider.credential(user.email, actual);
+        await reauthenticateWithCredential(user, cred);
+      } catch (err) {
+        if (
+          err instanceof FirebaseError &&
+          (err.code === "auth/wrong-password" ||
+            err.code === "auth/invalid-credential")
+        ) {
+          return { ok: false, code: "badActual" };
+        }
+        return { ok: false, code: "error" };
+      }
+
+      // 2) Ya reautenticado: actualizar la contraseña.
+      await updatePassword(user, nueva);
       return { ok: true };
+    } catch {
+      return { ok: false, code: "error" };
     } finally {
       setIsLoading(false);
     }
   }
+
   return { cambiar, isLoading };
 }
 
