@@ -46,7 +46,8 @@ export function usePaises(): UsePaisesReturn {
           setError(res.code ?? "No pudimos cargar los países");
           return;
         }
-        setPaises(res.data.map((p) => ({ code: p.iso2.toLowerCase(), name: p.nombre })));
+        // Conservamos el iso2 tal cual (es lo que se envía al backend); el flag lo pasa a minúsculas.
+        setPaises(res.data.map((p) => ({ code: p.iso2, name: p.nombre })));
       })
       .catch((e: unknown) => {
         if (active) setError(e instanceof Error ? e.message : "Error inesperado");
