@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
-import { Bitter, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Bitter, IBM_Plex_Sans, IBM_Plex_Mono, Geist } from "next/font/google";
 import "./globals.css";
 import AssistantWidget from "@/components/chat/AssistantWidget";
 import AuthSync from "@/components/AuthSync";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+
 
 // next/font inyecta estas variables "crudas"; globals.css (@theme) las expone
 // como --font-display / --font-sans / --font-mono y genera las utilidades font-*.
@@ -35,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${bitter.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
+    <html lang="es" className={cn(bitter.variable, ibmPlexSans.variable, ibmPlexMono.variable, "font-sans", geist.variable)}>
       <body>
         <AuthSync />
         {children}
