@@ -4,22 +4,24 @@ import "./globals.css";
 import AssistantWidget from "@/components/chat/AssistantWidget";
 import AuthSync from "@/components/AuthSync";
 
+// next/font inyecta estas variables "crudas"; globals.css (@theme) las expone
+// como --font-display / --font-sans / --font-mono y genera las utilidades font-*.
 const bitter = Bitter({
   subsets: ["latin"],
   weight: ["400", "600", "700"],
-  variable: "--font-display",
+  variable: "--font-bitter",
 });
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-sans",
+  variable: "--font-plex-sans",
 });
 
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
-  variable: "--font-mono",
+  variable: "--font-plex-mono",
 });
 
 export const metadata: Metadata = {
