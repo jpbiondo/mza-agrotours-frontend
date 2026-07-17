@@ -11,7 +11,9 @@
    ============================================================================ */
 
 @theme {
-  /* Tipografías (next/font inyecta las variables --font-*-src en <body>) */
+  /* Tipografías: next/font inyecta --font-bitter/-plex-sans/-plex-mono en <html>
+     (layout.tsx). DEBEN estar en <html> = :root, porque estas líneas se emiten a
+     :root y las referencian con var(); si estuvieran en <body> no resolverían. */
   --font-display: var(--font-bitter), "Bitter", Georgia, serif;
   --font-sans:    var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
   --font-mono:    var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;

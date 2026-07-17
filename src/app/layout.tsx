@@ -35,8 +35,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <body className={`${bitter.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
+    <html lang="es" className={`${bitter.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
+      <body>
         <AuthSync />
         {children}
         <AssistantWidget />
