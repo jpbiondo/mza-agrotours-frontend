@@ -26,8 +26,17 @@ interface TipoIdSelectProps {
  * Reenvía ref/onBlur/aria-* para integrarse con react-hook-form (<FormControl>).
  */
 export function TipoIdSelect({
-  id, name, value, onChange, onBlur, ref, options, placeholder, icon,
-  "aria-invalid": ariaInvalid, "aria-describedby": describedBy,
+  id,
+  name,
+  value,
+  onChange,
+  onBlur,
+  ref,
+  options,
+  placeholder,
+  icon,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": describedBy,
 }: TipoIdSelectProps) {
   const errored = ariaInvalid === true;
   return (
@@ -43,8 +52,8 @@ export function TipoIdSelect({
         aria-invalid={ariaInvalid}
         aria-describedby={describedBy}
         className={cn(
-          "h-11 w-full rounded-md bg-surface pl-3.5 text-base",
-          errored && "bg-danger-fill"
+          "h-11! w-full rounded-md bg-surface pl-3.5 text-base",
+          errored && "bg-danger-fill",
         )}
       >
         <span className="flex items-center gap-2.5">
@@ -53,7 +62,7 @@ export function TipoIdSelect({
               className={cn(
                 "inline-flex text-fg-3 [&>svg]:size-[18px]",
                 value && "text-green-800",
-                errored && "text-danger"
+                errored && "text-danger",
               )}
             >
               {icon}
