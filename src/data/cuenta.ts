@@ -10,7 +10,7 @@ export interface Perfil {
   identificacion: string;
   email: string;
   telefono: string;
-  pais: string;
+  paisIso2: string;
 }
 
 /** Cuenta en sesión (mock). En stateless demo, por defecto un visitante. */
@@ -32,8 +32,8 @@ export const CUENTA_ACTUAL: CuentaSesion = {
 /** Perfil precargado según la cuenta en sesión. */
 export function perfilInicial(cuenta: CuentaSesion): Perfil {
   const base = cuenta.rol === "productor"
-    ? { nombre: "Lucía Funes", fechaNac: new Date(1986, 2, 22), tipoIdent: "DNI", identificacion: "32.118.745", telefono: "2614778820", pais: "Argentina" }
-    : { nombre: "Camila Ríos", fechaNac: new Date(1994, 6, 15), tipoIdent: "DNI", identificacion: "38.422.190", telefono: "2615558842", pais: "Argentina" };
+    ? { nombre: "Lucía Funes", fechaNac: new Date(1986, 2, 22), tipoIdent: "DNI", identificacion: "32.118.745", telefono: "2614778820", paisIso2: "AR" }
+    : { nombre: "Camila Ríos", fechaNac: new Date(1994, 6, 15), tipoIdent: "DNI", identificacion: "38.422.190", telefono: "2615558842", paisIso2: "AR" };
   return { ...base, email: cuenta.email };
 }
 

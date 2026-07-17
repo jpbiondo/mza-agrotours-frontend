@@ -66,7 +66,7 @@ function aModelos(
       tipoIdent: data.tipoIdentificacion,
       fechaNac: data.fechaNacimiento ? parseFecha(data.fechaNacimiento) : null,
       // El backend devuelve el iso2 en `paisIso2`.
-      pais: data.paisIso2 ?? "",
+      paisIso2: data.paisIso2 ?? "",
     },
   };
 }

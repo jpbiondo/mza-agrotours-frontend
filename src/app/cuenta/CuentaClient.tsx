@@ -11,10 +11,11 @@ import {
 import SiteHeader from "@/components/SiteHeader";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Field, TextInput, SelectInput, CountrySelect, DatePicker, PasswordMeter, passwordChecks, EyeToggle } from "@/app/registro/components/FormFields";
-import { PAISES, TIPOS_IDENTIFICACION } from "@/data/registro";
+import { TIPOS_IDENTIFICACION } from "@/data/registro";
 import { validarPerfil, condicionesEliminar, rolLabel } from "@/data/cuenta";
 import type { CuentaSesion, Perfil } from "@/data/cuenta";
 import { usePerfil, useGuardarPerfil, useEliminarCuenta, useCambiarPassword } from "@/hooks/usePerfil";
+import { usePaises } from "@/hooks/usePaises";
 
 type Toast = { tone: "success" | "danger"; title: string; sub?: string } | null;
 
@@ -24,6 +25,7 @@ function DatosPersonalesForm({ inicial, onDelete, setToast }: { inicial: Perfil;
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitted, setSubmitted] = useState(false);
   const { guardar, isLoading } = useGuardarPerfil();
+  const { paises } = usePaises();
 
   const errors = validarPerfil(v);
   const show = (k: keyof Perfil) => ((touched[k] || submitted) && errors[k]) || "";
@@ -75,7 +77,7 @@ function DatosPersonalesForm({ inicial, onDelete, setToast }: { inicial: Perfil;
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
           <Field label="País" htmlFor="dp-pais">
-            <CountrySelect id="dp-pais" value={v.pais} options={PAISES} placeholder="Seleccioná tu país" onChange={set("pais")} />
+            <CountrySelect id="dp-pais" value={v.paisIso2} options={paises} placeholder="Seleccioná tu país" onChange={set("paisIso2")} />
           </Field>
         </div>
       </div>
