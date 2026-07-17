@@ -103,7 +103,7 @@
   --info:    var(--color-info);     --info-fill:    var(--color-info-fill);     --info-fg:    var(--color-info-fg);
 
   /* --radius (0.5rem) mapea a la escala rounded-md de Tailwind */
-  --radius: 0.625rem;
+  --radius: var(--radius-md);
 
   --btn-tactile-primary:   inset 0 -2px 0 var(--green-900);
   --btn-tactile-secondary: inset 0 -2px 0 var(--brown-800);
@@ -118,24 +118,25 @@
   --body:    1rem;
   --body-sm: 0.875rem;
   --label:   0.8125rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* shadcn tokens → mapeados a la paleta Agrotours (mismos píxeles, arquitectura shadcn) */
+  --background:            var(--cream-bg);
+  --foreground:            var(--fg-1);
+  --card:                  var(--surface);
+  --card-foreground:       var(--fg-1);
+  --popover:               var(--surface);
+  --popover-foreground:    var(--fg-1);
+  --primary:               var(--green-800);
+  --primary-foreground:    var(--fg-on-dark);
+  --secondary:             var(--cream-tert);
+  --secondary-foreground:  var(--fg-1);
+  --muted:                 var(--cream-tert);
+  --muted-foreground:      var(--fg-2);
+  --accent:                var(--green-050);
+  --accent-foreground:     var(--fg-1);
+  --destructive:           var(--danger);
+  --border:                var(--outline-variant);
+  --input:                 var(--sand);
+  --ring:                  var(--green-800);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -236,8 +237,9 @@ button { font-family: inherit; }
 .btn:disabled { background: var(--cream-tert); color: var(--fg-3); box-shadow: none; cursor: not-allowed; border-color: var(--outline-variant); }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
+  /* Headings usan Bitter (display); el sans por defecto sigue siendo IBM Plex Sans
+     definido en el @theme de arriba (no lo re-declaramos aquí para no pisarlo). */
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -269,9 +271,8 @@ button { font-family: inherit; }
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
+  /* --radius-sm/md/lg los define el @theme Agrotours (0.375 / 0.5 / 1rem); no los
+     re-declaramos para no romper .card ni las utilidades existentes. */
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
