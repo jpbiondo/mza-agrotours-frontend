@@ -1,14 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, ChevronDown } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+
+const DIAS_SEMANA = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
+const MESES_LARGOS = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
 
 function fmtFecha(d: Date) {
   const p = (x: number) => String(x).padStart(2, "0");
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/** Lunes = 0 … Domingo = 6 (JS usa Domingo = 0). */
+function mondayIndex(jsDay: number) {
+  return (jsDay + 6) % 7;
 }
 
 interface DateFieldProps {
@@ -18,16 +34,56 @@ interface DateFieldProps {
   placeholder?: string;
 }
 
-/** Fecha con shadcn Popover + Calendar (react-day-picker). Deshabilita el futuro. */
+const NAV_BTN =
+  "inline-flex size-8 items-center justify-center rounded-md border border-outline-variant bg-surface text-fg-2 transition-colors hover:bg-cream-tert";
+
+/**
+ * Fecha con shadcn Popover + calendario propio (grilla mensual estilo Agrotours):
+ * semana desde lunes, selector de año, día seleccionado en verde, futuro deshabilitado.
+ */
 export function DateField({
   value, onChange, error, placeholder = "Seleccioná una fecha",
 }: DateFieldProps) {
   const [open, setOpen] = useState(false);
-  const errored = !!error;
+  const [yearMode, setYearMode] = useState(false);
   const today = new Date();
+  const [view, setView] = useState(() => value ?? new Date(2000, 0, 1));
+  const errored = !!error;
+
+  const y = view.getFullYear();
+  const m = view.getMonth();
+  const firstDay = mondayIndex(new Date(y, m, 1).getDay());
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const selDay =
+    value && value.getFullYear() === y && value.getMonth() === m
+      ? value.getDate()
+      : null;
+  const isFuture = (d: number) => new Date(y, m, d) > today;
+
+  const goMonth = (delta: number) => {
+    let nm = m + delta;
+    let ny = y;
+    if (nm < 0) { nm = 11; ny--; } else if (nm > 11) { nm = 0; ny++; }
+    setView(new Date(ny, nm, 1));
+  };
+
+  const limit = today.getFullYear();
+  const years: number[] = [];
+  for (let yr = limit; yr >= limit - 100; yr--) years.push(yr);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) setYearMode(false);
+      }}
+    >
       <PopoverTrigger
         aria-invalid={errored}
         className={cn(
@@ -48,22 +104,91 @@ export function DateField({
         <ChevronDown className="size-4 shrink-0 text-fg-3" />
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="w-auto p-2">
-        <Calendar
-          mode="single"
-          selected={value ?? undefined}
-          onSelect={(d) => {
-            if (d) {
-              onChange(d);
-              setOpen(false);
-            }
-          }}
-          defaultMonth={value ?? new Date(2000, 0, 1)}
-          startMonth={new Date(1920, 0)}
-          endMonth={today}
-          disabled={{ after: today }}
-          autoFocus
-        />
+      <PopoverContent align="start" className="w-80 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <button type="button" onClick={() => goMonth(-1)} className={NAV_BTN}>
+            <ChevronLeft className="size-[18px]" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setYearMode((v) => !v)}
+            className="inline-flex cursor-pointer items-center gap-1.5 font-display text-[15.5px] font-semibold text-fg-1"
+          >
+            {MESES_LARGOS[m]} {y}
+            {yearMode ? (
+              <ChevronUp className="size-[15px] text-fg-3" />
+            ) : (
+              <ChevronDown className="size-[15px] text-fg-3" />
+            )}
+          </button>
+          <button type="button" onClick={() => goMonth(1)} className={NAV_BTN}>
+            <ChevronRight className="size-[18px]" />
+          </button>
+        </div>
+
+        {yearMode ? (
+          <div className="grid max-h-60 grid-cols-4 gap-1.5 overflow-y-auto">
+            {years.map((yr) => (
+              <button
+                key={yr}
+                type="button"
+                onClick={() => {
+                  setView(new Date(yr, m, 1));
+                  setYearMode(false);
+                }}
+                className={cn(
+                  "cursor-pointer rounded-md py-2 font-mono text-[13.5px] transition-colors",
+                  yr === y
+                    ? "bg-green-800 font-bold text-white"
+                    : "font-medium text-fg-2 hover:bg-green-050"
+                )}
+              >
+                {yr}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="mb-1.5 grid grid-cols-7 gap-0.5">
+              {DIAS_SEMANA.map((d) => (
+                <div
+                  key={d}
+                  className="py-1 text-center text-[11px] font-bold tracking-wide text-fg-3 uppercase"
+                >
+                  {d}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-0.5">
+              {cells.map((d, i) => {
+                if (d === null) return <div key={i} />;
+                const sel = d === selDay;
+                const future = isFuture(d);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    disabled={future}
+                    onClick={() => {
+                      onChange(new Date(y, m, d));
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      "aspect-square rounded-md text-[13.5px] transition-colors",
+                      future
+                        ? "cursor-not-allowed text-fg-3 opacity-35"
+                        : sel
+                        ? "bg-green-800 font-bold text-white"
+                        : "cursor-pointer font-medium text-fg-1 hover:bg-green-050"
+                    )}
+                  >
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
       </PopoverContent>
     </Popover>
   );

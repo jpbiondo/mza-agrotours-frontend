@@ -78,12 +78,11 @@ test.describe("Registro page", () => {
     await page.getByPlaceholder("Buscar país…").fill("Arg");
     await page.getByRole("option", { name: /Argentina/ }).click();
 
-    // Fecha de nacimiento — Popover + Calendar (react-day-picker), abre en Enero 2000.
-    // Elegimos el año 1995 en el dropdown y clickeamos el día por su data-day.
+    // Fecha de nacimiento — calendario propio (Popover), abre en Enero 2000
     await page.getByText("Seleccioná una fecha").click();
-    const cal = page.locator('[data-slot="popover-content"]');
-    await cal.locator("select").last().selectOption("1995");
-    await cal.locator('[data-day="1995-01-15"] button').click();
+    await page.getByRole("button", { name: /Enero 2000/ }).click();
+    await page.getByRole("button", { name: "1995" }).click();
+    await page.getByRole("button", { name: "15" }).first().click();
 
     // Tipo de identificación — Select de Base UI; los ítems tienen role="option"
     await page.locator("#in-tipoId").click();
