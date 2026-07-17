@@ -9,16 +9,20 @@ import {
   BadgeCheck,
   Fingerprint,
   UserPlus,
+  AlertCircle,
 } from "lucide-react";
 import {
   Field,
-  TextInput,
-  SelectInput,
+  TextField,
+  TipoIdSelect,
   CountrySelect,
-  DatePicker,
+  DateField,
   PasswordMeter,
   EyeToggle,
-} from "./FormFields";
+} from "./fields";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { TIPOS_IDENTIFICACION, EMPTY_FORM } from "@/data/registro";
 import type { FormData } from "@/types/registro";
 import { registroSchema } from "../schema";
@@ -83,6 +87,7 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
   }
 
   const err = (k: keyof FormData) => errors[k];
+  const termsError = touched.terminos && errors.terminos;
 
   return (
     <form
@@ -91,266 +96,195 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
         handleSubmit();
       }}
       noValidate
-      style={{ display: "flex", flexDirection: "column", gap: 22 }}
+      className="flex flex-col gap-[22px]"
     >
       {/* ---- Datos personales ---- */}
-      <div className="t-label" style={{ color: "var(--brown-700)" }}>
-        DATOS PERSONALES
+      <div className="text-[13px] font-semibold tracking-[0.06em] text-brown-700 uppercase">
+        Datos personales
       </div>
 
-      <div id="fld-nombre">
-        <Field
-          label="Nombre y apellido"
-          required
+      <Field
+        label="Nombre y apellido"
+        required
+        error={err("nombre")}
+        hint="Como figura en tu documento"
+        htmlFor="in-nombre"
+      >
+        <TextField
+          id="in-nombre"
+          icon={<User />}
+          value={v.nombre}
+          maxLength={40}
+          placeholder="Ej. Camila Ríos"
+          autoComplete="name"
+          onChange={(x) => update("nombre", x)}
           error={err("nombre")}
-          hint="Como figura en tu documento"
-          htmlFor="in-nombre"
-        >
-          <TextInput
-            id="in-nombre"
-            icon={<User size={18} />}
-            value={v.nombre}
-            maxLength={40}
-            placeholder="Ej. Camila Ríos"
-            autoComplete="name"
-            onChange={(x) => update("nombre", x)}
-            error={err("nombre")}
+        />
+      </Field>
+
+      <Field label="Email" required error={err("email")} htmlFor="in-email">
+        <TextField
+          id="in-email"
+          icon={<Mail />}
+          type="email"
+          value={v.email}
+          placeholder="nombre@dominio.com"
+          inputMode="email"
+          autoComplete="email"
+          onChange={(x) => update("email", x)}
+          error={err("email")}
+        />
+      </Field>
+
+      <div className="grid grid-cols-2 gap-[18px]">
+        <Field label="País" required error={err("pais")} htmlFor="in-pais">
+          <CountrySelect
+            id="in-pais"
+            value={v.pais}
+            options={paises}
+            error={err("pais")}
+            placeholder={
+              paisesLoading
+                ? "Cargando países…"
+                : paisesError
+                ? "No se pudieron cargar los países"
+                : "Seleccionar país"
+            }
+            onChange={(x) => update("pais", x)}
+          />
+        </Field>
+
+        <Field label="Fecha de nacimiento" required error={err("fecha")}>
+          <DateField
+            value={v.fecha}
+            error={err("fecha")}
+            onChange={(d) => update("fecha", d)}
           />
         </Field>
       </div>
 
-      <div id="fld-email">
-        <Field label="Email" required error={err("email")} htmlFor="in-email">
-          <TextInput
-            id="in-email"
-            icon={<Mail size={18} />}
-            type="email"
-            value={v.email}
-            placeholder="nombre@dominio.com"
-            inputMode="email"
-            autoComplete="email"
-            onChange={(x) => update("email", x)}
-            error={err("email")}
-          />
-        </Field>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-        <div id="fld-pais">
-          <Field label="País" required error={err("pais")} htmlFor="in-pais">
-            <CountrySelect
-              id="in-pais"
-              value={v.pais}
-              options={paises}
-              error={err("pais")}
-              placeholder={
-                paisesLoading
-                  ? "Cargando países…"
-                  : paisesError
-                  ? "No se pudieron cargar los países"
-                  : "Seleccionar país"
-              }
-              onChange={(x) => update("pais", x)}
-            />
-          </Field>
-        </div>
-
-        <div id="fld-fecha">
-          <Field label="Fecha de nacimiento" required error={err("fecha")}>
-            <DatePicker
-              value={v.fecha}
-              error={err("fecha")}
-              onChange={(d) => update("fecha", d)}
-            />
-          </Field>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-        <div id="fld-tipoId">
-          <Field
-            label="Tipo de identificación"
-            required
-            error={err("tipoId")}
-            htmlFor="in-tipoId"
-          >
-            <SelectInput
-              id="in-tipoId"
-              icon={<BadgeCheck size={18} />}
-              value={v.tipoId}
-              options={TIPOS_IDENTIFICACION}
-              placeholder="Seleccionar tipo"
-              error={err("tipoId")}
-              onChange={(x) => update("tipoId", x)}
-            />
-          </Field>
-        </div>
-
-        <div id="fld-numeroId">
-          <Field
-            label="Número de identificación"
-            required
-            error={err("numeroId")}
-            htmlFor="in-numeroId"
-          >
-            <TextInput
-              id="in-numeroId"
-              icon={<Fingerprint size={18} />}
-              value={v.numeroId}
-              maxLength={20}
-              placeholder={
-                v.tipoId === "Pasaporte" ? "Ej. AB123456" : "Ej. 30.123.456"
-              }
-              autoComplete="off"
-              onChange={(x) => update("numeroId", x)}
-              error={err("numeroId")}
-            />
-          </Field>
-        </div>
-      </div>
-
-      <div id="fld-telefono">
+      <div className="grid grid-cols-2 gap-[18px]">
         <Field
-          label="Teléfono"
+          label="Tipo de identificación"
           required
-          error={err("telefono")}
-          hint="Entre 7 y 15 caracteres, podés incluir el código de área"
-          htmlFor="in-tel"
+          error={err("tipoId")}
+          htmlFor="in-tipoId"
         >
-          <TextInput
-            id="in-tel"
-            icon={<Phone size={18} />}
-            type="tel"
-            value={v.telefono}
-            maxLength={15}
-            placeholder="Ej. +54 261 555 1234"
-            inputMode="tel"
-            autoComplete="tel"
-            onChange={(x) => update("telefono", x)}
-            error={err("telefono")}
+          <TipoIdSelect
+            id="in-tipoId"
+            icon={<BadgeCheck />}
+            value={v.tipoId}
+            options={TIPOS_IDENTIFICACION}
+            placeholder="Seleccionar tipo"
+            error={err("tipoId")}
+            onChange={(x) => update("tipoId", x)}
+          />
+        </Field>
+
+        <Field
+          label="Número de identificación"
+          required
+          error={err("numeroId")}
+          htmlFor="in-numeroId"
+        >
+          <TextField
+            id="in-numeroId"
+            icon={<Fingerprint />}
+            value={v.numeroId}
+            maxLength={20}
+            placeholder={v.tipoId === "Pasaporte" ? "Ej. AB123456" : "Ej. 30.123.456"}
+            autoComplete="off"
+            onChange={(x) => update("numeroId", x)}
+            error={err("numeroId")}
           />
         </Field>
       </div>
+
+      <Field
+        label="Teléfono"
+        required
+        error={err("telefono")}
+        hint="Entre 7 y 15 caracteres, podés incluir el código de área"
+        htmlFor="in-tel"
+      >
+        <TextField
+          id="in-tel"
+          icon={<Phone />}
+          type="tel"
+          value={v.telefono}
+          maxLength={15}
+          placeholder="Ej. +54 261 555 1234"
+          inputMode="tel"
+          autoComplete="tel"
+          onChange={(x) => update("telefono", x)}
+          error={err("telefono")}
+        />
+      </Field>
 
       {/* ---- Seguridad ---- */}
-      <div
-        className="t-label"
-        style={{ color: "var(--brown-700)", marginTop: 8 }}
-      >
-        SEGURIDAD
+      <div className="mt-2 text-[13px] font-semibold tracking-[0.06em] text-brown-700 uppercase">
+        Seguridad
       </div>
 
-      <div id="fld-password">
-        <Field
-          label="Contraseña"
-          required
-          error={err("password")}
-          htmlFor="in-pw"
-        >
-          <TextInput
+      <div>
+        <Field label="Contraseña" required error={err("password")} htmlFor="in-pw">
+          <TextField
             id="in-pw"
-            icon={<Lock size={18} />}
+            icon={<Lock />}
             type={showPw ? "text" : "password"}
             value={v.password}
             placeholder="Mínimo 8 caracteres"
             autoComplete="new-password"
             onChange={(x) => update("password", x)}
             error={err("password")}
-            rightSlot={
-              <EyeToggle shown={showPw} onToggle={() => setShowPw((s) => !s)} />
-            }
+            rightSlot={<EyeToggle shown={showPw} onToggle={() => setShowPw((s) => !s)} />}
           />
         </Field>
         {v.password && <PasswordMeter value={v.password} />}
       </div>
 
-      <div id="fld-confirm">
-        <Field
-          label="Confirmar contraseña"
-          required
+      <Field
+        label="Confirmar contraseña"
+        required
+        error={err("confirm")}
+        htmlFor="in-confirm"
+      >
+        <TextField
+          id="in-confirm"
+          icon={<Lock />}
+          type={showConfirm ? "text" : "password"}
+          value={v.confirm}
+          placeholder="Repetí la contraseña"
+          autoComplete="new-password"
+          onChange={(x) => update("confirm", x)}
           error={err("confirm")}
-          htmlFor="in-confirm"
-        >
-          <TextInput
-            id="in-confirm"
-            icon={<Lock size={18} />}
-            type={showConfirm ? "text" : "password"}
-            value={v.confirm}
-            placeholder="Repetí la contraseña"
-            autoComplete="new-password"
-            onChange={(x) => update("confirm", x)}
-            error={err("confirm")}
-            rightSlot={
-              <EyeToggle
-                shown={showConfirm}
-                onToggle={() => setShowConfirm((s) => !s)}
-              />
-            }
-          />
-        </Field>
-      </div>
+          rightSlot={
+            <EyeToggle shown={showConfirm} onToggle={() => setShowConfirm((s) => !s)} />
+          }
+        />
+      </Field>
 
       {/* ---- Términos y condiciones ---- */}
-      <div id="fld-terminos" style={{ marginTop: 4 }}>
+      <div id="fld-terminos" className="mt-1">
         <label
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 12,
-            cursor: "pointer",
-            padding: "14px 16px",
-            borderRadius: "var(--radius)",
-            border:
-              "1px solid " +
-              (touched.terminos && errors.terminos
-                ? "var(--danger)"
-                : "var(--outline-variant)"),
-            background: v.terminos ? "var(--green-050)" : "var(--surface)",
-            transition: "background-color .15s, border-color .15s",
-          }}
+          className={cn(
+            "flex cursor-pointer items-start gap-3 rounded-md border p-4 transition-colors",
+            termsError ? "border-danger" : "border-outline-variant",
+            v.terminos ? "bg-green-050" : "bg-surface"
+          )}
         >
-          <span
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 6,
-              flexShrink: 0,
-              marginTop: 1,
-              border:
-                "1.5px solid " +
-                (v.terminos ? "var(--green-800)" : "var(--sand)"),
-              background: v.terminos ? "var(--green-800)" : "var(--surface)",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {v.terminos && (
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path
-                  d="M2.5 7L5.5 10L11.5 4"
-                  stroke="#fff"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            )}
-          </span>
-          <input
-            type="checkbox"
+          <Checkbox
             checked={v.terminos}
-            style={{ display: "none" }}
-            onChange={(e) => update("terminos", e.target.checked)}
+            onCheckedChange={(ck) => update("terminos", ck === true)}
+            aria-invalid={!!termsError}
+            className="mt-0.5 size-5"
           />
-          <span
-            style={{ fontSize: 13.5, color: "var(--fg-1)", lineHeight: 1.5 }}
-          >
+          <span className="text-[13.5px] leading-relaxed text-fg-1">
             Leí y acepto los{" "}
             <a
               href="#"
               onClick={(e) => e.preventDefault()}
-              style={{ color: "var(--green-800)", fontWeight: 600 }}
+              className="font-semibold text-green-800"
             >
               términos y condiciones
             </a>{" "}
@@ -358,93 +292,47 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
             <a
               href="#"
               onClick={(e) => e.preventDefault()}
-              style={{ color: "var(--green-800)", fontWeight: 600 }}
+              className="font-semibold text-green-800"
             >
               política de privacidad
             </a>{" "}
             de Mendoza AgroTours.
           </span>
         </label>
-        {touched.terminos && errors.terminos && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 12.5,
-              color: "var(--danger-fg)",
-              marginTop: 7,
-            }}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
+        {termsError && (
+          <div className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-danger-fg">
+            <AlertCircle className="size-3.5 shrink-0" />
             {errors.terminos}
           </div>
         )}
       </div>
 
       {/* ---- Submit ---- */}
-      <div style={{ marginTop: 6 }}>
+      <div className="mt-1.5">
         {apiError && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              fontSize: 13.5,
-              color: "var(--danger-fg)",
-              background: "var(--danger-bg, #fff0f0)",
-              border: "1px solid var(--danger)",
-              borderRadius: "var(--radius)",
-              padding: "10px 14px",
-              marginBottom: 14,
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
+          <div className="mb-3.5 flex items-center gap-2 rounded-md border border-danger bg-danger-fill px-3.5 py-2.5 text-[13.5px] text-danger-fg">
+            <AlertCircle className="size-[15px] shrink-0" />
             {apiError}
           </div>
         )}
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          size="lg"
           disabled={isLoading}
-          className="btn btn-primary btn-lg"
-          style={{ width: "100%", justifyContent: "center" }}
+          className="w-full"
         >
           {isLoading ? (
             "Creando tu cuenta…"
           ) : (
             <>
-              <UserPlus size={18} /> Registrarse
+              <UserPlus className="size-[18px]" /> Registrarse
             </>
           )}
-        </button>
-        <div
-          style={{
-            textAlign: "center",
-            marginTop: 14,
-            fontSize: 13.5,
-            color: "var(--fg-2)",
-          }}
-        >
+        </Button>
+        <div className="mt-3.5 text-center text-[13.5px] text-fg-2">
           ¿Ya tenés cuenta?{" "}
-          <a
-            href="/acceso"
-            style={{ color: "var(--green-800)", fontWeight: 600 }}
-          >
+          <a href="/acceso" className="font-semibold text-green-800">
             Iniciá sesión
           </a>
         </div>

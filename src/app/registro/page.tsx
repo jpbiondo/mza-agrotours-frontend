@@ -43,12 +43,12 @@ export default function RegistroPage() {
   const showLoader = !hasHydrated || loggedIn || finishing;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
+    <div className="min-h-screen bg-cream-bg">
       <SiteHeader />
       {showLoader ? (
-        <div style={{ padding: "120px 28px", textAlign: "center", color: "var(--fg-3)" }}>
-          <Loader size={26} className="spin" />
-          <div style={{ marginTop: 12, fontSize: 14 }}>
+        <div className="px-7 py-30 text-center text-fg-3">
+          <Loader className="mx-auto size-[26px] animate-spin" />
+          <div className="mt-3 text-sm">
             {finishing ? "Creando tu cuenta…" : "Cargando…"}
           </div>
         </div>

@@ -73,20 +73,21 @@ test.describe("Registro page", () => {
     await page.getByPlaceholder("Ej. Camila Ríos").fill("Ana Pérez");
     await page.getByPlaceholder("nombre@dominio.com").fill("ana.perez.test@example.com");
 
-    // País — dropdown custom, el trigger tiene id="in-pais"
+    // País — Popover + Command (cmdk); los ítems tienen role="option"
     await page.locator("#in-pais").click();
     await page.getByPlaceholder("Buscar país…").fill("Arg");
-    await page.getByRole("button", { name: /Argentina/ }).click();
+    await page.getByRole("option", { name: /Argentina/ }).click();
 
-    // Fecha de nacimiento — el calendario abre en Enero 2000
+    // Fecha de nacimiento — Popover + Calendar (react-day-picker), abre en Enero 2000.
+    // Elegimos el año 1995 en el dropdown y clickeamos el día por su data-day.
     await page.getByText("Seleccioná una fecha").click();
-    await page.getByRole("button", { name: /Enero 2000/ }).click();
-    await page.getByRole("button", { name: "1995" }).click();
-    await page.getByRole("button", { name: "15" }).first().click();
+    const cal = page.locator('[data-slot="popover-content"]');
+    await cal.locator("select").last().selectOption("1995");
+    await cal.locator('[data-day="1995-01-15"] button').click();
 
-    // Tipo de identificación
+    // Tipo de identificación — Select de Base UI; los ítems tienen role="option"
     await page.locator("#in-tipoId").click();
-    await page.getByRole("button", { name: "DNI" }).click();
+    await page.getByRole("option", { name: "DNI" }).click();
 
     await page.getByPlaceholder(/Ej\. 30/).fill("30123456");
     await page.getByPlaceholder("Ej. +54 261 555 1234").fill("+54261555123");
