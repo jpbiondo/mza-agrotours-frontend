@@ -62,9 +62,18 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
   const tipoId = useWatch({ control: form.control, name: "tipoId" });
 
   async function onValid(data: FormData) {
+    // Limpiamos espacios sobrantes antes de enviar al backend (las contraseñas no
+    // se recortan). El email trimmeado también se usa para el auto-login posterior.
+    const payload: FormData = {
+      ...data,
+      nombre: data.nombre.trim(),
+      email: data.email.trim(),
+      numeroId: data.numeroId.trim(),
+      telefono: data.telefono.trim(),
+    };
     try {
-      await registrar(data);
-      onSuccess(data);
+      await registrar(payload);
+      onSuccess(payload);
     } catch {
       // apiError ya fue seteado por el hook
     }
