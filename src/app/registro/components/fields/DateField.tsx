@@ -28,10 +28,15 @@ function mondayIndex(jsDay: number) {
 }
 
 interface DateFieldProps {
+  id?: string;
+  name?: string;
   value: Date | null;
   onChange: (d: Date) => void;
-  error?: string | false | null;
+  onBlur?: () => void;
+  ref?: React.Ref<HTMLButtonElement>;
   placeholder?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
 const NAV_BTN =
@@ -40,15 +45,17 @@ const NAV_BTN =
 /**
  * Fecha con shadcn Popover + calendario propio (grilla mensual estilo Agrotours):
  * semana desde lunes, selector de año, día seleccionado en verde, futuro deshabilitado.
+ * Reenvía ref/onBlur/aria-* para integrarse con react-hook-form (<FormControl>).
  */
 export function DateField({
-  value, onChange, error, placeholder = "Seleccioná una fecha",
+  id, name, value, onChange, onBlur, ref, placeholder = "Seleccioná una fecha",
+  "aria-invalid": ariaInvalid, "aria-describedby": describedBy,
 }: DateFieldProps) {
   const [open, setOpen] = useState(false);
   const [yearMode, setYearMode] = useState(false);
   const today = new Date();
   const [view, setView] = useState(() => value ?? new Date(2000, 0, 1));
-  const errored = !!error;
+  const errored = ariaInvalid === true;
 
   const y = view.getFullYear();
   const m = view.getMonth();
@@ -85,7 +92,12 @@ export function DateField({
       }}
     >
       <PopoverTrigger
-        aria-invalid={errored}
+        ref={ref}
+        id={id}
+        name={name}
+        onBlur={onBlur}
+        aria-invalid={ariaInvalid}
+        aria-describedby={describedBy}
         className={cn(
           "flex h-11 w-full items-center justify-between gap-2.5 rounded-md border border-input bg-surface px-3.5 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
           errored && "bg-danger-fill",

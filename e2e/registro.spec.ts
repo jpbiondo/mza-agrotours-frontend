@@ -26,10 +26,10 @@ test.describe("Registro page", () => {
     await expect(page.getByRole("heading", { name: "Creá tu cuenta" })).toBeVisible();
     await expect(page.getByText("Nombre y apellido")).toBeVisible();
     await expect(page.getByText("Email")).toBeVisible();
-    // "País" también aparece dentro de "Seleccionar país" — acotamos al label del campo
-    await expect(page.locator('label[for="in-pais"]')).toBeVisible();
+    // El label "País" está asociado al control (react-hook-form genera el id)
+    await expect(page.getByLabel("País")).toBeVisible();
     await expect(page.getByText("Fecha de nacimiento")).toBeVisible();
-    await expect(page.locator('label[for="in-pw"]')).toBeVisible();
+    await expect(page.getByPlaceholder("Mínimo 8 caracteres")).toBeVisible();
     await expect(page.getByText("términos y condiciones")).toBeVisible();
   });
 
@@ -74,7 +74,7 @@ test.describe("Registro page", () => {
     await page.getByPlaceholder("nombre@dominio.com").fill("ana.perez.test@example.com");
 
     // País — Popover + Command (cmdk); los ítems tienen role="option"
-    await page.locator("#in-pais").click();
+    await page.getByLabel("País").click();
     await page.getByPlaceholder("Buscar país…").fill("Arg");
     await page.getByRole("option", { name: /Argentina/ }).click();
 
@@ -85,14 +85,14 @@ test.describe("Registro page", () => {
     await page.getByRole("button", { name: "15" }).first().click();
 
     // Tipo de identificación — Select de Base UI; los ítems tienen role="option"
-    await page.locator("#in-tipoId").click();
+    await page.getByLabel("Tipo de identificación").click();
     await page.getByRole("option", { name: "DNI" }).click();
 
     await page.getByPlaceholder(/Ej\. 30/).fill("30123456");
     await page.getByPlaceholder("Ej. +54 261 555 1234").fill("+54261555123");
 
-    await page.locator("#in-pw").fill("Secure@1");
-    await page.locator("#in-confirm").fill("Secure@1");
+    await page.getByPlaceholder("Mínimo 8 caracteres").fill("Secure@1");
+    await page.getByPlaceholder("Repetí la contraseña").fill("Secure@1");
     await page.locator("#fld-terminos label").click();
 
     const [req] = await Promise.all([

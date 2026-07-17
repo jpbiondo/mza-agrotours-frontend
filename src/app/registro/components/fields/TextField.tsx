@@ -4,9 +4,11 @@ import { cn } from "@/lib/utils";
 
 interface TextFieldProps {
   id?: string;
+  name?: string;
   value: string;
   onChange: (val: string) => void;
-  error?: string | false | null;
+  onBlur?: () => void;
+  ref?: React.Ref<HTMLInputElement>;
   icon?: React.ReactNode;
   type?: string;
   placeholder?: string;
@@ -14,18 +16,21 @@ interface TextFieldProps {
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   autoComplete?: string;
   rightSlot?: React.ReactNode;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
 /**
  * Input de texto Agrotours sobre el <Input> de shadcn: icono a la izquierda,
- * slot opcional a la derecha, aro de foco verde y relleno danger en error
- * (los da el propio Input vía focus-visible / aria-invalid + tokens reconciliados).
+ * slot opcional a la derecha, aro de foco verde y relleno danger en error.
+ * Reenvía ref/onBlur/aria-* para integrarse con react-hook-form (<FormControl>).
  */
 export function TextField({
-  id, value, onChange, error, icon, type = "text",
+  id, name, value, onChange, onBlur, ref, icon, type = "text",
   placeholder, maxLength, inputMode, autoComplete, rightSlot,
+  "aria-invalid": ariaInvalid, "aria-describedby": describedBy,
 }: TextFieldProps) {
-  const errored = !!error;
+  const errored = ariaInvalid === true;
   return (
     <div className="group relative flex items-center">
       {icon && (
@@ -39,15 +44,19 @@ export function TextField({
         </span>
       )}
       <Input
+        ref={ref}
         id={id}
+        name={name}
         type={type}
         value={value}
         placeholder={placeholder}
         maxLength={maxLength}
         inputMode={inputMode}
         autoComplete={autoComplete}
-        aria-invalid={errored}
+        aria-invalid={ariaInvalid}
+        aria-describedby={describedBy}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         className={cn(
           "h-11 rounded-md bg-surface text-base",
           icon && "pl-11",

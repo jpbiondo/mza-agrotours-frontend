@@ -9,27 +9,39 @@ import { cn } from "@/lib/utils";
 
 interface TipoIdSelectProps {
   id?: string;
+  name?: string;
   value: string;
   onChange: (val: string) => void;
+  onBlur?: () => void;
+  ref?: React.Ref<HTMLButtonElement>;
   options: readonly string[];
   placeholder?: string;
   icon?: React.ReactNode;
-  error?: string | false | null;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
-/** Select simple (pocas opciones) sobre el Select de shadcn/Base UI. */
+/**
+ * Select simple (pocas opciones) sobre el Select de shadcn/Base UI.
+ * Reenvía ref/onBlur/aria-* para integrarse con react-hook-form (<FormControl>).
+ */
 export function TipoIdSelect({
-  id, value, onChange, options, placeholder, icon, error,
+  id, name, value, onChange, onBlur, ref, options, placeholder, icon,
+  "aria-invalid": ariaInvalid, "aria-describedby": describedBy,
 }: TipoIdSelectProps) {
-  const errored = !!error;
+  const errored = ariaInvalid === true;
   return (
     <Select
       value={value || null}
       onValueChange={(v) => onChange((v as string) ?? "")}
     >
       <SelectTrigger
+        ref={ref}
         id={id}
-        aria-invalid={errored}
+        name={name}
+        onBlur={onBlur}
+        aria-invalid={ariaInvalid}
+        aria-describedby={describedBy}
         className={cn(
           "h-11 w-full rounded-md bg-surface pl-3.5 text-base",
           errored && "bg-danger-fill"

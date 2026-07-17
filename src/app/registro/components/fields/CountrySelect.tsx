@@ -41,27 +41,36 @@ function Flag({ code, size = 24 }: { code: string; size?: number }) {
 
 interface CountrySelectProps {
   id?: string;
+  name?: string;
   value: string;
   onChange: (val: string) => void;
+  onBlur?: () => void;
+  ref?: React.Ref<HTMLButtonElement>;
   options: readonly CountryOption[];
   placeholder?: string;
-  error?: string | false | null;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
 /** País + bandera, buscable. Trigger de shadcn Popover + lista con Command (cmdk). */
 export function CountrySelect({
-  id, value, onChange, options, placeholder, error,
+  id, name, value, onChange, onBlur, ref, options, placeholder,
+  "aria-invalid": ariaInvalid, "aria-describedby": describedBy,
 }: CountrySelectProps) {
   const [open, setOpen] = useState(false);
-  const errored = !!error;
+  const errored = ariaInvalid === true;
   const selected =
     options.find((o) => o.code.toLowerCase() === value.toLowerCase()) ?? null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        ref={ref}
         id={id}
-        aria-invalid={errored}
+        name={name}
+        onBlur={onBlur}
+        aria-invalid={ariaInvalid}
+        aria-describedby={describedBy}
         className={cn(
           "flex h-11 w-full items-center justify-between gap-2.5 rounded-md border border-input bg-surface px-3.5 text-base text-fg-1 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
           errored && "bg-danger-fill",

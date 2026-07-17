@@ -1,4 +1,3 @@
-export { Field } from "./Field";
 export { TextField, EyeToggle } from "./TextField";
 export { TipoIdSelect } from "./TipoIdSelect";
 export { CountrySelect } from "./CountrySelect";
