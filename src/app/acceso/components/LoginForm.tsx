@@ -1,13 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  LogIn, Mail, AlertCircle, KeyRound, ChevronDown, ChevronUp,
-} from "lucide-react";
+import { LogIn, Mail, AlertCircle } from "lucide-react";
 import { Field, TextInput } from "@/app/registro/components/FormFields";
 import { FormHead, FormAlert, AuthLink, PasswordInput } from "./AuthShell";
 import { loginSchema } from "../schema";
-import { CREDENCIALES_DEMO } from "@/data/auth";
 import { useAuth } from "@/hooks/useAuth";
 import type { Cuenta } from "@/types/auth";
 import z from "zod";
@@ -127,45 +124,6 @@ export default function LoginForm({ onSuccess, onRecover }: LoginFormProps) {
         ¿No tenés cuenta?{" "}
         <AuthLink href="/registro" strong>Registrate</AuthLink>
       </div>
-
-      <DemoHint />
-    </div>
-  );
-}
-
-/* Tarjeta plegable con credenciales de prueba (ayuda para la demo). */
-function DemoHint() {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ marginTop: 28, borderTop: "1px dashed var(--outline-variant)", paddingTop: 18 }}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          display: "flex", alignItems: "center", gap: 8, background: "transparent",
-          border: "none", cursor: "pointer", color: "var(--fg-3)", fontSize: 12.5, fontWeight: 600, padding: 0,
-        }}
-      >
-        <KeyRound size={14} /> Credenciales de prueba
-        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-      </button>
-      {open && (
-        <div className="pop" style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-          {CREDENCIALES_DEMO.map(({ rol, email, password }) => (
-            <div
-              key={email}
-              style={{
-                padding: "10px 12px", borderRadius: 8, background: "var(--cream-tert)",
-                border: "1px solid var(--outline-variant)", fontSize: 12, lineHeight: 1.5,
-              }}
-            >
-              <div style={{ fontWeight: 700, color: "var(--brown-700)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 3 }}>{rol}</div>
-              <div style={{ fontFamily: "var(--font-mono)", color: "var(--fg-1)" }}>{email}</div>
-              <div style={{ fontFamily: "var(--font-mono)", color: "var(--fg-2)" }}>{password}</div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

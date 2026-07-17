@@ -37,13 +37,6 @@ export const CUENTAS: CuentaMock[] = [
   },
 ];
 
-/** Credenciales de prueba mostradas en la ayuda de la demo. */
-export const CREDENCIALES_DEMO = [
-  { rol: "Visitante", email: "camila.rios@gmail.com", password: "Cosecha#26" },
-  { rol: "Productor", email: "productor@fincalaescondida.com.ar", password: "Vendimia.2026" },
-  { rol: "Cuenta dada de baja", email: "baja@gmail.com", password: "Tierra*2024" },
-] as const;
-
 export interface Destino {
   label: string;
   sub: string;
