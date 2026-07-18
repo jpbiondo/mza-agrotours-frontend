@@ -3,4 +3,4 @@ export { TipoIdSelect } from "./TipoIdSelect";
 export { CountrySelect } from "./CountrySelect";
 export type { CountryOption } from "./CountrySelect";
 export { DateField } from "./DateField";
-export { PasswordMeter, passwordChecks } from "./PasswordMeter";
+export { PasswordMeter, passwordChecks } from "@/components/ui/password-meter";
