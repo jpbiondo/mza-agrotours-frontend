@@ -1,4 +1,4 @@
-export { TextField, EyeToggle } from "./TextField";
+export { TextField, EyeToggle } from "@/components/ui/text-field";
 export { TipoIdSelect } from "./TipoIdSelect";
 export { CountrySelect } from "./CountrySelect";
 export type { CountryOption } from "./CountrySelect";
