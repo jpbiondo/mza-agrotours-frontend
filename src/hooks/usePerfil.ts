@@ -141,21 +141,55 @@ export function usePerfil(): PerfilState {
   };
 }
 
-/** Guarda los datos del perfil. Simula un fallo de servidor opcional. */
+/** Payload de PUT /usuario/me (mismos nombres que /usuario/create, sin password). */
+function toPerfilPayload(p: Perfil) {
+  return {
+    nombre: p.nombre.trim(),
+    email: p.email.trim().toLowerCase(),
+    telefono: p.telefono.trim(),
+    identificacion: p.identificacion.trim(),
+    tipoIdentificacion: p.tipoIdent,
+    paisIso2: p.paisIso2,
+    fechaNacimiento: p.fechaNac ? p.fechaNac.toISOString() : null,
+  };
+}
+
+interface SavePerfilResponse {
+  ok: boolean;
+  code?: string;
+}
+
+/**
+ * Guarda los datos del perfil (PUT /usuario/me con el ID token de Firebase).
+ * Errores de dominio esperados (2xx con ok:false): `emailAlreadyExists`,
+ * `validationError`. Un fallo técnico (red / non-2xx) hace throw en apiFetch y
+ * se devuelve `{ ok:false }` sin code → el llamador muestra un mensaje genérico.
+ */
 export function useGuardarPerfil() {
   const [isLoading, setIsLoading] = useState(false);
-  async function guardar(
-    _perfil: Perfil,
-  ): Promise<{ ok: boolean; code?: string }> {
+
+  async function guardar(perfil: Perfil): Promise<SavePerfilResponse> {
     setIsLoading(true);
     try {
-      await new Promise<void>((res) => setTimeout(res, 800));
-      // MOCK — reemplazar por PUT /api/cuenta; devolver { ok:false, code } en error
-      return { ok: true };
+      const user = auth.currentUser;
+      if (!user) return { ok: false };
+      const token = await user.getIdToken();
+      try {
+        const res = await apiFetch<SavePerfilResponse>("/usuario/me", {
+          method: "PUT",
+          token,
+          body: JSON.stringify(toPerfilPayload(perfil)),
+        });
+        return res.ok ? { ok: true } : { ok: false, code: res.code };
+      } catch {
+        // Fallo técnico (red / 5xx / 4xx inesperado): sin code → mensaje genérico.
+        return { ok: false };
+      }
     } finally {
       setIsLoading(false);
     }
   }
+
   return { guardar, isLoading };
 }
 

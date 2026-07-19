@@ -48,13 +48,25 @@ export default function DatosPersonalesForm({
     const r = await guardar(data);
     if (r.ok) {
       setToast({ tone: "success", title: "Cambios guardados exitosamente" });
-    } else {
-      setToast({
-        tone: "danger",
-        title: "No se pudieron guardar los cambios",
-        sub: "Error: ERR_DB_TIMEOUT",
-      });
+      return;
     }
+    // Email duplicado → error en el propio campo (mejor UX que un toast).
+    if (r.code === "emailAlreadyExists") {
+      form.setError(
+        "email",
+        { message: "Este correo ya está registrado." },
+        { shouldFocus: true },
+      );
+      return;
+    }
+    setToast({
+      tone: "danger",
+      title: "No se pudieron guardar los cambios",
+      sub:
+        r.code === "validationError"
+          ? "Revisá los datos e intentá de nuevo."
+          : "Intentá de nuevo en unos minutos.",
+    });
   }
 
   const showErrorAlert =
