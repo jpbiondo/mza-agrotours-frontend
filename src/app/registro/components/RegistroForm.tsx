@@ -13,14 +13,11 @@ import {
   UserPlus,
   AlertCircle,
 } from "lucide-react";
-import {
-  TextField,
-  TipoIdSelect,
-  CountrySelect,
-  DateField,
-  PasswordMeter,
-  EyeToggle,
-} from "./fields";
+import { TextField, EyeToggle } from "@/components/ui/text-field";
+import { TipoIdSelect } from "@/components/ui/tipo-id-select";
+import { CountrySelect } from "@/components/ui/country-select";
+import { DateField } from "@/components/ui/date-field";
+import { PasswordMeter } from "@/components/ui/password-meter";
 import {
   Form,
   FormControl,
