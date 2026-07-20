@@ -2,7 +2,16 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User, Phone, BadgeCheck, CreditCard, Mail, Check, Trash2, Loader } from "lucide-react";
+import {
+  User,
+  Phone,
+  BadgeCheck,
+  CreditCard,
+  Mail,
+  Check,
+  Trash2,
+  Loader,
+} from "lucide-react";
 import { TextField } from "@/components/ui/text-field";
 import { TipoIdSelect } from "@/components/ui/tipo-id-select";
 import { CountrySelect } from "@/components/ui/country-select";
@@ -51,7 +60,7 @@ export default function DatosPersonalesForm({
       return;
     }
     // Email duplicado → error en el propio campo (mejor UX que un toast).
-    if (r.code === "emailAlreadyExists") {
+    if (r.code === "userAlreadyExists") {
       form.setError(
         "email",
         { message: "Este correo ya está registrado." },
@@ -77,7 +86,8 @@ export default function DatosPersonalesForm({
       <form onSubmit={form.handleSubmit(onValid)} noValidate>
         {showErrorAlert && (
           <Alert tone="danger" className="mb-[22px]">
-            Revisá los campos marcados en rojo: hay datos obligatorios o inválidos.
+            Revisá los campos marcados en rojo: hay datos obligatorios o
+            inválidos.
           </Alert>
         )}
         <SectionLabel>Datos de la cuenta</SectionLabel>
@@ -140,7 +150,9 @@ export default function DatosPersonalesForm({
                   />
                 </FormControl>
                 {!fieldState.error && (
-                  <FormDescription>Solo números (7 a 16 dígitos)</FormDescription>
+                  <FormDescription>
+                    Solo números (7 a 16 dígitos)
+                  </FormDescription>
                 )}
                 <FormMessage />
               </FormItem>

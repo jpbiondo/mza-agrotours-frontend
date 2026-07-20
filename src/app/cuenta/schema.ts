@@ -22,9 +22,16 @@ export const perfilSchema = z.object({
         return;
       }
       const hoy = new Date();
-      const min = new Date(hoy.getFullYear() - 120, hoy.getMonth(), hoy.getDate());
+      const min = new Date(
+        hoy.getFullYear() - 120,
+        hoy.getMonth(),
+        hoy.getDate(),
+      );
       if (v > hoy) {
-        ctx.addIssue({ code: "custom", message: "La fecha debe ser del pasado" });
+        ctx.addIssue({
+          code: "custom",
+          message: "La fecha debe ser del pasado",
+        });
       } else if (v < min) {
         ctx.addIssue({
           code: "custom",
@@ -48,7 +55,8 @@ export const perfilSchema = z.object({
     .string()
     .trim()
     .min(1, "Este campo es obligatorio")
-    .regex(/^\d{7,16}$/, "Ingresá entre 7 y 16 dígitos"),
+    .min(7, "El teléfono debe tener entre 7 y 15 caracteres")
+    .max(15, "El teléfono debe tener entre 7 y 15 caracteres"),
   paisIso2: z.string(),
 });
 

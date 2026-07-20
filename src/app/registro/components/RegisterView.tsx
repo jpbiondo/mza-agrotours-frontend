@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { ArrowLeft, CalendarCheck, Heart, Ticket } from "lucide-react";
 import RegistroForm from "./RegistroForm";
+import { Toast } from "@/components/ui";
+import type { ToastData } from "@/components/ui";
 import type { FormData } from "@/types/registro";
 
 interface RegisterViewProps {
@@ -28,6 +31,13 @@ const BENEFITS = [
 ];
 
 export default function RegisterView({ onSuccess, onBack }: RegisterViewProps) {
+  const [toast, setToast] = useState<ToastData | null>(null);
+
+  function notify(t: ToastData | null) {
+    setToast(t);
+    if (t) setTimeout(() => setToast((cur) => (cur === t ? null : cur)), 4000);
+  }
+
   return (
     <div
       data-screen-label="Registro de cuenta"
@@ -52,7 +62,7 @@ export default function RegisterView({ onSuccess, onBack }: RegisterViewProps) {
             experiencias en las fincas de Mendoza.
           </p>
           <div className="rounded-lg border border-outline-variant bg-surface px-8 py-[30px]">
-            <RegistroForm onSuccess={onSuccess} />
+            <RegistroForm onSuccess={onSuccess} setToast={notify} />
           </div>
         </div>
 
@@ -89,6 +99,8 @@ export default function RegisterView({ onSuccess, onBack }: RegisterViewProps) {
           </div>
         </aside>
       </div>
+
+      {toast && <Toast {...toast} />}
     </div>
   );
 }

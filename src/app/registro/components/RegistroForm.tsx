@@ -11,7 +11,6 @@ import {
   BadgeCheck,
   Fingerprint,
   UserPlus,
-  AlertCircle,
 } from "lucide-react";
 import { TextField, EyeToggle } from "@/components/ui/text-field";
 import { TipoIdSelect } from "@/components/ui/tipo-id-select";
@@ -29,6 +28,7 @@ import {
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/Button";
+import type { ToastData } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { TIPOS_IDENTIFICACION, EMPTY_FORM } from "@/data/registro";
 import type { FormData } from "@/types/registro";
@@ -38,15 +38,16 @@ import { usePaises } from "@/hooks/usePaises";
 
 interface RegistroFormProps {
   onSuccess: (data: FormData) => void;
+  setToast: (t: ToastData | null) => void;
 }
 
 const SECTION_LABEL =
   "text-[13px] font-semibold tracking-[0.06em] text-brown-700 uppercase";
 
-export default function RegistroForm({ onSuccess }: RegistroFormProps) {
+export default function RegistroForm({ onSuccess, setToast }: RegistroFormProps) {
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const { register: registrar, apiError } = useRegistro();
+  const { register: registrar } = useRegistro();
   const { paises, isLoading: paisesLoading, error: paisesError } = usePaises();
 
   const form = useForm<FormData>({
@@ -68,12 +69,30 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
       numeroId: data.numeroId.trim(),
       telefono: data.telefono.trim(),
     };
-    try {
-      await registrar(payload);
-      onSuccess(payload);
-    } catch {
-      // apiError ya fue seteado por el hook
+
+    const r = await registrar(payload);
+
+    if (r.ok) {
+      onSuccess(data);
+      return;
     }
+
+    if (r.code === "userAlreadyExists") {
+      form.setError(
+        "email",
+        { message: "Este correo ya está registrado" },
+        { shouldFocus: true },
+      );
+      return;
+    }
+    setToast({
+      tone: "danger",
+      title: "No se pudo crear el usuario",
+      sub:
+        r.code === "validationError"
+          ? "Revisá los datos e intentá de nuevo."
+          : "Intentá de nuevo en unos minutos.",
+    });
   }
 
   return (
@@ -143,8 +162,8 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
                       paisesLoading
                         ? "Cargando países…"
                         : paisesError
-                        ? "No se pudieron cargar los países"
-                        : "Seleccionar país"
+                          ? "No se pudieron cargar los países"
+                          : "Seleccionar país"
                     }
                   />
                 </FormControl>
@@ -253,7 +272,10 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
                   placeholder="Mínimo 8 caracteres"
                   autoComplete="new-password"
                   rightSlot={
-                    <EyeToggle shown={showPw} onToggle={() => setShowPw((s) => !s)} />
+                    <EyeToggle
+                      shown={showPw}
+                      onToggle={() => setShowPw((s) => !s)}
+                    />
                   }
                 />
               </FormControl>
@@ -299,7 +321,7 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
                 className={cn(
                   "flex cursor-pointer items-start gap-3 rounded-md border p-4 transition-colors",
                   fieldState.error ? "border-danger" : "border-outline-variant",
-                  field.value ? "bg-green-050" : "bg-surface"
+                  field.value ? "bg-green-050" : "bg-surface",
                 )}
               >
                 <Checkbox
@@ -343,12 +365,6 @@ export default function RegistroForm({ onSuccess }: RegistroFormProps) {
 
         {/* ---- Submit ---- */}
         <div className="mt-1.5">
-          {apiError && (
-            <div className="mb-3.5 flex items-center gap-2 rounded-md border border-danger bg-danger-fill px-3.5 py-2.5 text-[13.5px] text-danger-fg">
-              <AlertCircle className="size-[15px] shrink-0" />
-              {apiError}
-            </div>
-          )}
           <Button
             type="submit"
             variant="primary"

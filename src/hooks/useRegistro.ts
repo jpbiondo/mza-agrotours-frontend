@@ -1,32 +1,19 @@
 import { useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import type { FormData } from "@/types/registro";
-
-interface UseRegistroReturn {
-  register: (data: FormData) => Promise<void>;
-  isLoading: boolean;
-  apiError: string | null;
-}
-
-/** El backend crea la cuenta completa (Firebase Admin SDK) en este endpoint. */
-const CREATE_PATH = "/usuario/create";
 
 interface CreateResponse {
   ok: boolean;
   code?: string;
 }
 
-/** Mapea el code del backend a copy en español (el frontend es dueño del texto). */
-const MENSAJE_POR_CODE: Record<string, string> = {
-  userAlreadyExists: "Este correo ya está registrado.",
-};
-
-function mensajeDe(code?: string): string {
-  return (
-    (code && MENSAJE_POR_CODE[code]) ||
-    "No pudimos crear la cuenta. Revisá los datos e intentá de nuevo."
-  );
+interface UseRegistroReturn {
+  register: (data: FormData) => Promise<CreateResponse>;
+  isLoading: boolean;
 }
+
+/** El backend crea la cuenta completa (Firebase Admin SDK) en este endpoint. */
+const CREATE_PATH = "/usuario/create";
 
 /**
  * Arma el payload que espera /usuario/create. Se envía la contraseña en texto plano
@@ -47,37 +34,30 @@ function toPayload(d: FormData) {
   };
 }
 
+/**
+ * Alta de cuenta. Devuelve `{ ok, code }`: el llamador decide el texto y dónde
+ * mostrarlo (toast / error de campo). Los errores de dominio llegan como 2xx
+ * `{ ok:false, code }` o como 4xx (ApiError con `code`); un fallo técnico sin
+ * code vuelve como `{ ok:false }` → mensaje genérico.
+ */
 export function useRegistro(): UseRegistroReturn {
   const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
 
-  async function register(data: FormData): Promise<void> {
+  async function register(data: FormData): Promise<CreateResponse> {
     setIsLoading(true);
-    setApiError(null);
     try {
-      let res: CreateResponse;
-      try {
-        res = await apiFetch<CreateResponse>(CREATE_PATH, {
-          method: "POST",
-          body: JSON.stringify(toPayload(data)),
-        });
-      } catch {
-        // Fallo técnico (red / backend caído): mensaje genérico, no de dominio.
-        const msg =
-          "Ocurrió un problema al crear la cuenta. Intentá de nuevo en unos minutos.";
-        setApiError(msg);
-        throw new Error(msg);
-      }
-
-      if (!res.ok) {
-        const msg = mensajeDe(res.code);
-        setApiError(msg);
-        throw new Error(msg);
-      }
+      const res = await apiFetch<CreateResponse>(CREATE_PATH, {
+        method: "POST",
+        body: JSON.stringify(toPayload(data)),
+      });
+      return res.ok ? { ok: true } : { ok: false, code: res.code };
+    } catch (e) {
+      if (e instanceof ApiError) return { ok: false, code: e.code };
+      return { ok: false };
     } finally {
       setIsLoading(false);
     }
   }
 
-  return { register, isLoading, apiError };
+  return { register, isLoading };
 }

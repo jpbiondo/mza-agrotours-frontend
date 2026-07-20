@@ -7,7 +7,7 @@ import {
 } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import { auth } from "../../firebase.config";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { fechaHoraBaja } from "@/data/cuenta";
 import type { CuentaSesion, Perfil, RolCuenta } from "@/data/cuenta";
@@ -181,8 +181,10 @@ export function useGuardarPerfil() {
           body: JSON.stringify(toPerfilPayload(perfil)),
         });
         return res.ok ? { ok: true } : { ok: false, code: res.code };
-      } catch {
-        // Fallo técnico (red / 5xx / 4xx inesperado): sin code → mensaje genérico.
+      } catch (e) {
+        // El backend modela errores de dominio con 4xx + `code` en el cuerpo:
+        // ApiError lo expone. Sin code (fallo técnico) → mensaje genérico.
+        if (e instanceof ApiError) return { ok: false, code: e.code };
         return { ok: false };
       }
     } finally {
