@@ -1,11 +1,8 @@
 import { z } from "zod";
 import { EMAILS_REGISTRADOS } from "@/data/registro";
+import { NOMBRE_RE } from "@/data/auth";
 
 const SPECIAL_RE = /[!@#$%^&*(),.?":{}|<>_\-[\]\\/;'`~+=]/;
-
-// Nombres: letras (con acentos y ñ), marcas de acento, espacios, guiones y
-// apóstrofos (Ana-María, O'Brien). Sin números ni otros caracteres especiales.
-const NOMBRE_RE = /^[\p{L}\p{M}\s'’-]+$/u;
 
 export const registroSchema = z
   .object({

@@ -43,7 +43,9 @@ type PerfilData = BackendProfile & {
  */
 function parseFecha(s: string): Date {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(s);
+  return m
+    ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    : new Date(s);
 }
 
 function aModelos(
@@ -160,10 +162,11 @@ interface SavePerfilResponse {
 }
 
 /**
- * Guarda los datos del perfil (PUT /usuario/me con el ID token de Firebase).
- * Errores de dominio esperados (2xx con ok:false): `emailAlreadyExists`,
- * `validationError`. Un fallo técnico (red / non-2xx) hace throw en apiFetch y
- * se devuelve `{ ok:false }` sin code → el llamador muestra un mensaje genérico.
+ * Guarda los datos del perfil (PUT /usuario/me con el ID token de Firebase) y,
+ * si sale bien, refleja el nombre/email nuevos en el store de sesión.
+ * Errores de dominio (2xx `{ ok:false, code }` o 4xx vía ApiError): p. ej.
+ * `userAlreadyExists`, `validationError`. Un fallo técnico sin code vuelve como
+ * `{ ok:false }` → el llamador muestra un mensaje genérico.
  */
 export function useGuardarPerfil() {
   const [isLoading, setIsLoading] = useState(false);
@@ -180,7 +183,21 @@ export function useGuardarPerfil() {
           token,
           body: JSON.stringify(toPerfilPayload(perfil)),
         });
-        return res.ok ? { ok: true } : { ok: false, code: res.code };
+
+        if (!res.ok) {
+          return { ok: false, code: res.code };
+        }
+
+        // Reflejar el nombre/email nuevos en el store de sesión (navbar, menú de
+        // cuenta), con los mismos valores canónicos que se enviaron al backend.
+        const store = useAuthStore.getState();
+        store.setSession({
+          nombre: perfil.nombre.trim(),
+          email: perfil.email.trim().toLowerCase(),
+          roles: store.roles,
+        });
+
+        return { ok: true };
       } catch (e) {
         // El backend modela errores de dominio con 4xx + `code` en el cuerpo:
         // ApiError lo expone. Sin code (fallo técnico) → mensaje genérico.

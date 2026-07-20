@@ -2,6 +2,10 @@ import type { Rol } from "@/types/auth";
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+/** Nombres: letras (con acentos y ñ), marcas de acento, espacios, guiones y
+ *  apóstrofos (Ana-María, O'Brien). Sin números ni otros caracteres especiales. */
+export const NOMBRE_RE = /^[\p{L}\p{M}\s'’-]+$/u;
+
 /** Forma de las cuentas mock (demo/recuperación); desacoplada del tipo Cuenta real. */
 interface CuentaMock {
   email: string;

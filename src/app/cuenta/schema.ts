@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EMAIL_RE } from "@/data/auth";
+import { EMAIL_RE, NOMBRE_RE } from "@/data/auth";
 
 const SPECIAL_RE = /[!@#$%^&*(),.?":{}|<>_\-[\]\\/;'`~+=]/;
 
@@ -12,7 +12,11 @@ export const perfilSchema = z.object({
     .string()
     .trim()
     .min(1, "Este campo es obligatorio")
-    .max(40, "Máximo 40 caracteres"),
+    .max(40, "Máximo 40 caracteres")
+    .regex(
+      NOMBRE_RE,
+      "El nombre solo puede contener letras, espacios, guiones y apóstrofos",
+    ),
   fechaNac: z
     .date()
     .nullable()
