@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import { auth } from "../../firebase.config";
 import { apiFetch } from "@/lib/api";
@@ -52,6 +52,20 @@ export function useAuth(): UseAuthReturn {
   }
 
   return { login, isLoading, authError, clearError: () => setAuthError(null) };
+}
+
+/**
+ * Cierra la sesión: signOut de Firebase + limpia el store, y navega con recarga
+ * dura para resetear la UI (navbar en estado deslogueado). `destino` permite pasar
+ * un motivo por query (p. ej. tras cambiar el email, que obliga a re-loguearse).
+ */
+export async function cerrarSesion(destino = "/acceso"): Promise<void> {
+  try {
+    await signOut(auth);
+  } finally {
+    useAuthStore.getState().clear();
+    window.location.href = destino;
+  }
 }
 
 /**

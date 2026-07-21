@@ -31,6 +31,7 @@ import { TIPOS_IDENTIFICACION } from "@/data/registro";
 import { perfilSchema } from "../schema";
 import type { Perfil } from "@/data/cuenta";
 import { useGuardarPerfil } from "@/hooks/usePerfil";
+import { cerrarSesion } from "@/hooks/useAuth";
 import { usePaises } from "@/hooks/usePaises";
 
 interface DatosPersonalesFormProps {
@@ -54,8 +55,17 @@ export default function DatosPersonalesForm({
   });
 
   async function onValid(data: Perfil) {
+    const emailCambio =
+      data.email.trim().toLowerCase() !== inicial.email.trim().toLowerCase();
+
     const r = await guardar(data);
     if (r.ok) {
+      // Al cambiar el email, Firebase revoca el refresh token de esta sesión:
+      // cerramos sesión y pedimos re-login con el correo nuevo.
+      if (emailCambio) {
+        await cerrarSesion("/acceso?motivo=email-actualizado");
+        return;
+      }
       setToast({ tone: "success", title: "Cambios guardados exitosamente" });
       return;
     }

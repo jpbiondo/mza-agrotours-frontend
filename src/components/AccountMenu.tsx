@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { signOut } from "firebase/auth";
 import {
   ChevronDown,
   UserRound,
@@ -12,8 +11,8 @@ import {
   Sprout,
   LayoutDashboard,
 } from "lucide-react";
-import { auth } from "../../firebase.config";
 import { useAuthStore } from "@/stores/authStore";
+import { cerrarSesion } from "@/hooks/useAuth";
 
 const avatarStyle: React.CSSProperties = {
   flexShrink: 0,
@@ -85,12 +84,7 @@ export default function AccountMenu() {
 
   async function handleLogout() {
     setOpen(false);
-    try {
-      await signOut(auth);
-    } finally {
-      useAuthStore.getState().clear();
-      window.location.href = "/acceso";
-    }
+    await cerrarSesion("/acceso");
   }
 
   const item = (

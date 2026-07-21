@@ -22,9 +22,11 @@ import type { Cuenta } from "@/types/auth";
 interface LoginFormProps {
   onSuccess: (cuenta: Cuenta) => void;
   onRecover: () => void;
+  /** Aviso informativo (p. ej. tras cambiar el email en Mi cuenta). */
+  notice?: string;
 }
 
-export default function LoginForm({ onSuccess, onRecover }: LoginFormProps) {
+export default function LoginForm({ onSuccess, onRecover, notice }: LoginFormProps) {
   const [showPw, setShowPw] = useState(false);
   const { login, authError, clearError } = useAuth();
 
@@ -51,6 +53,8 @@ export default function LoginForm({ onSuccess, onRecover }: LoginFormProps) {
         title="Iniciá sesión"
         sub="Ingresá con tus credenciales para acceder a tus reservas y experiencias."
       />
+
+      {notice && <FormAlert tone="info">{notice}</FormAlert>}
 
       {authError === "badCreds" && (
         <FormAlert tone="danger">El correo o contraseña ingresado no son correctos.</FormAlert>
