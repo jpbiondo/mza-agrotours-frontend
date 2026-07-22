@@ -298,15 +298,30 @@ export function useVerificarCondicionesBaja() {
   return { verificar, isLoading };
 }
 
-/** Procesa la baja de la cuenta (comunicación con backend). */
+interface DeleteCuentaResponse {
+  ok: boolean;
+}
+
+/**
+ * Da de baja la cuenta (DELETE /usuario/me con el ID token). Si el backend
+ * responde !ok devuelve las condiciones incumplidas, pero acá se ignoran (sólo
+ * debug: ya se verifican al abrir el modal). Un fallo técnico → { ok:false }.
+ */
 export function useEliminarCuenta() {
   const [isLoading, setIsLoading] = useState(false);
   async function procesar(): Promise<{ ok: boolean; ts: string | null }> {
     setIsLoading(true);
     try {
-      await new Promise<void>((res) => setTimeout(res, 1400));
-      // MOCK — reemplazar por DELETE /api/cuenta; en error devolver { ok:false, ts:null }
-      return { ok: true, ts: fechaHoraBaja() };
+      const user = auth.currentUser;
+      if (!user) return { ok: false, ts: null };
+      const token = await user.getIdToken();
+      const res = await apiFetch<DeleteCuentaResponse>("/usuario/me", {
+        method: "DELETE",
+        token,
+      });
+      return res.ok ? { ok: true, ts: fechaHoraBaja() } : { ok: false, ts: null };
+    } catch {
+      return { ok: false, ts: null };
     } finally {
       setIsLoading(false);
     }

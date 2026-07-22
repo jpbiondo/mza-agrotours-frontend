@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Trash2, ShieldAlert, Check, X, CheckCircle2, ArrowLeft, Loader,
   CalendarClock, ArrowRight, AlertOctagon, RotateCcw,
@@ -10,6 +9,7 @@ import { Modal, Alert, Button, IconCircle } from "@/components/ui";
 import { condicionIncumplidaMsg, esBloqueoAdmin, rolLabel } from "@/data/cuenta";
 import type { CondicionIncumplida, CuentaSesion } from "@/data/cuenta";
 import { useEliminarCuenta, useVerificarCondicionesBaja } from "@/hooks/usePerfil";
+import { cerrarSesion } from "@/hooks/useAuth";
 
 type Step = "checking" | "warn" | "blocked" | "processing" | "success" | "error";
 
@@ -34,7 +34,6 @@ const condList = "flex list-none flex-col gap-2.5 p-0";
 const modalActions = "flex flex-wrap justify-end gap-3";
 
 export default function DeleteAccountFlow({ cuenta, onClose }: { cuenta: CuentaSesion; onClose: () => void }) {
-  const router = useRouter();
   const [step, setStep] = useState<Step>("checking");
   const [bajaTs, setBajaTs] = useState<string | null>(null);
   const [condiciones, setCondiciones] = useState<CondicionIncumplida[]>([]);
@@ -149,7 +148,7 @@ export default function DeleteAccountFlow({ cuenta, onClose }: { cuenta: CuentaS
           <span className="font-mono text-[13px] font-semibold text-fg-1">{bajaTs}</span>
         </div>
         <div className="flex justify-center">
-          <Button onClick={() => router.push("/explorar")}>Continuar <ArrowRight size={16} /></Button>
+          <Button onClick={() => cerrarSesion("/explorar")}>Continuar <ArrowRight size={16} /></Button>
         </div>
       </Modal>
     );
