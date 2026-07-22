@@ -44,7 +44,10 @@ interface RegistroFormProps {
 const SECTION_LABEL =
   "text-[13px] font-semibold tracking-[0.06em] text-brown-700 uppercase";
 
-export default function RegistroForm({ onSuccess, setToast }: RegistroFormProps) {
+export default function RegistroForm({
+  onSuccess,
+  setToast,
+}: RegistroFormProps) {
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const { register: registrar } = useRegistro();
@@ -81,6 +84,14 @@ export default function RegistroForm({ onSuccess, setToast }: RegistroFormProps)
       form.setError(
         "email",
         { message: "Este correo ya está registrado" },
+        { shouldFocus: true },
+      );
+      return;
+    }
+    if (r.code === "PHONE_NUMBER_ALREADY_EXISTS") {
+      form.setError(
+        "telefono",
+        { message: "Este teléfono ya está registrado" },
         { shouldFocus: true },
       );
       return;
