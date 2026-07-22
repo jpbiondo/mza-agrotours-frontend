@@ -71,40 +71,44 @@ export function validarPerfil(v: Perfil): Partial<Record<keyof Perfil, string>> 
 }
 
 /* ---- Condiciones para dar de baja la cuenta ---------------------------- */
-export interface CondicionBaja {
-  label: string;
-  met: boolean;
-  detail: string;
+/** Condición incumplida devuelta por el backend (GET meets-delete-conditions).
+ *  `nombre` es un código; `descripcion` es el texto del backend (respaldo). */
+export interface CondicionIncumplida {
+  nombre: string;
+  descripcion: string;
 }
-export interface CondicionesBaja {
-  adminBlock?: boolean;
-  intro: string;
-  items: CondicionBaja[];
+
+/** Copia (título + detalle) por cada `nombre` conocido; para códigos nuevos usa
+ *  la `descripcion` del backend como respaldo. */
+const COPY_CONDICION: Record<string, { label: string; detail: string }> = {
+  reservasActivas: {
+    label: "No debés tener reservas en estado «Pendiente»",
+    detail:
+      "Tenés reservas en estado Pendiente. Cancelalas o esperá su resolución para continuar.",
+  },
+  administradorSistemas: {
+    label: "Un administrador no puede autoeliminar su cuenta",
+    detail:
+      "Pedí a otro administrador del sistema que gestione la baja de tu cuenta.",
+  },
+};
+
+export function condicionIncumplidaMsg(c: CondicionIncumplida): {
+  label: string;
+  detail: string;
+} {
+  return (
+    COPY_CONDICION[c.nombre] ?? { label: c.descripcion, detail: c.descripcion }
+  );
+}
+
+/** Bloqueo "duro" (no algo que el usuario pueda resolver): cuenta de admin. */
+export function esBloqueoAdmin(condiciones: CondicionIncumplida[]): boolean {
+  return condiciones.some((c) => c.nombre === "administradorSistemas");
 }
 
 export function rolLabel(rol: RolCuenta): string {
   return rol === "productor" ? "productor líder" : rol === "admin" ? "administrador" : "visitante";
-}
-
-export function condicionesEliminar(cuenta: CuentaSesion): CondicionesBaja {
-  const { rol, condicionesOk } = cuenta;
-  if (rol === "admin") {
-    return {
-      adminBlock: true,
-      intro: "Las cuentas con rol de administrador no pueden darse de baja a sí mismas.",
-      items: [{ label: "Un administrador no puede autoeliminar su cuenta", met: false, detail: "Pedí a otro administrador del sistema que gestione la baja de tu cuenta." }],
-    };
-  }
-  if (rol === "productor") {
-    return {
-      intro: "Estado de las condiciones para dar de baja una cuenta de productor líder:",
-      items: [{ label: "El establecimiento debe estar dado de baja", met: condicionesOk, detail: condicionesOk ? "Tu establecimiento figura como dado de baja." : "Tu establecimiento «Finca La Escondida» sigue activo. Dalo de baja antes de continuar." }],
-    };
-  }
-  return {
-    intro: "Estado de las condiciones para dar de baja tu cuenta de visitante:",
-    items: [{ label: "No debés tener reservas en estado «Pendiente»", met: condicionesOk, detail: condicionesOk ? "No tenés reservas en estado Pendiente." : "Tenés 2 reservas en estado Pendiente. Cancelalas o esperá su resolución para continuar." }],
-  };
 }
 
 /** dd/mm/aaaa HH:MM (convención AR). */

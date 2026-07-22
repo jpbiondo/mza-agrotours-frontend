@@ -10,7 +10,12 @@ import { auth } from "../../firebase.config";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { fechaHoraBaja } from "@/data/cuenta";
-import type { CuentaSesion, Perfil, RolCuenta } from "@/data/cuenta";
+import type {
+  CondicionIncumplida,
+  CuentaSesion,
+  Perfil,
+  RolCuenta,
+} from "@/data/cuenta";
 import type { BackendProfile, Rol } from "@/types/auth";
 
 interface PerfilState {
@@ -255,6 +260,42 @@ export function useCambiarPassword() {
   }
 
   return { cambiar, isLoading };
+}
+
+interface MeetsDeleteResponse {
+  ok: boolean;
+  code?: string;
+  data?: CondicionIncumplida[];
+}
+
+/**
+ * Verifica si la cuenta puede darse de baja (GET /usuario/me/meets-delete-conditions).
+ * `ok` con data vacía → cumple todo; `!ok` con data → condiciones incumplidas.
+ * Un fallo técnico hace throw en apiFetch → el llamador muestra un error.
+ */
+export function useVerificarCondicionesBaja() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function verificar(): Promise<{
+    ok: boolean;
+    condiciones: CondicionIncumplida[];
+  }> {
+    setIsLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Sin sesión");
+      const token = await user.getIdToken();
+      const res = await apiFetch<MeetsDeleteResponse>(
+        "/usuario/me/meets-delete-conditions",
+        { token },
+      );
+      return { ok: res.ok, condiciones: res.data ?? [] };
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return { verificar, isLoading };
 }
 
 /** Procesa la baja de la cuenta (comunicación con backend). */
