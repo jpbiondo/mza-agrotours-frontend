@@ -1,13 +1,6 @@
 import { Home, Building2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-/** Los 18 departamentos de la provincia de Mendoza. */
-export const DEPARTAMENTOS_MZA = [
-  "Capital", "General Alvear", "Godoy Cruz", "Guaymallén", "Junín", "La Paz",
-  "Las Heras", "Lavalle", "Luján de Cuyo", "Maipú", "Malargüe", "Rivadavia",
-  "San Carlos", "San Martín", "San Rafael", "Santa Rosa", "Tunuyán", "Tupungato",
-] as const;
-
 /** Requisitos documentales que se muestran junto al uploader de pruebas. */
 export interface RequisitoDoc {
   id: string;

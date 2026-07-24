@@ -18,8 +18,9 @@ import {
 import { Button, Modal, SectionLabel } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
-  DEPARTAMENTOS_MZA, REQUISITOS_DOC, UPLOAD_MAX_FILES, UPLOAD_MAX_BYTES,
+  REQUISITOS_DOC, UPLOAD_MAX_FILES, UPLOAD_MAX_BYTES,
 } from "@/data/establecimiento";
+import { useDepartamentos } from "@/hooks/useDepartamentos";
 import {
   solicitarAltaSchema, SOLICITAR_ALTA_INICIAL, type SolicitarAltaForm,
 } from "./schema";
@@ -108,6 +109,7 @@ function Confirmacion({ nombre }: { nombre: string }) {
 
 export default function SolicitarAltaClient() {
   const router = useRouter();
+  const { departamentos, isLoading: deptoLoading, error: deptoError } = useDepartamentos();
   const [files, setFiles] = useState<File[]>([]);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -256,9 +258,15 @@ export default function SolicitarAltaClient() {
                         <FormControl>
                           <SearchableSelect
                             {...field}
-                            options={DEPARTAMENTOS_MZA}
+                            options={departamentos}
                             icon={<MapPin />}
-                            placeholder="Seleccioná un departamento"
+                            placeholder={
+                              deptoLoading
+                                ? "Cargando departamentos…"
+                                : deptoError
+                                ? "No se pudieron cargar los departamentos"
+                                : "Seleccioná un departamento"
+                            }
                             searchPlaceholder="Buscar departamento…"
                           />
                         </FormControl>
