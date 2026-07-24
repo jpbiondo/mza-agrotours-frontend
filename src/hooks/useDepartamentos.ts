@@ -6,6 +6,12 @@ interface DepartamentoBackend {
   nombre: string;
 }
 
+interface DepartamentosResponse {
+  ok: boolean;
+  code?: string;
+  data?: DepartamentoBackend[];
+}
+
 interface UseDepartamentosReturn {
   departamentos: string[];
   isLoading: boolean;
@@ -26,10 +32,14 @@ export function useDepartamentos(): UseDepartamentosReturn {
   useEffect(() => {
     let active = true;
 
-    apiFetch<DepartamentoBackend[]>("/departamentos/")
+    apiFetch<DepartamentosResponse>("/departamentos/")
       .then((res) => {
         if (!active) return;
-        setDepartamentos(res.map((d) => d.nombre));
+        if (!res.ok || !res.data) {
+          setError(res.code ?? "No pudimos cargar los departamentos");
+          return;
+        }
+        setDepartamentos(res.data.map((d) => d.nombre));
       })
       .catch((e: unknown) => {
         if (active) setError(e instanceof Error ? e.message : "Error inesperado");
