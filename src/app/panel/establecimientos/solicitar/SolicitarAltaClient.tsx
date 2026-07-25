@@ -6,7 +6,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Building2, MapPin, Mail, Phone, Landmark, ArrowLeft, Send, Check, Clock,
-  LayoutDashboard, AlertTriangle,
+  LayoutDashboard, AlertTriangle, AlertCircle,
 } from "lucide-react";
 import ProducerPanelShell from "@/components/panel/ProducerPanelShell";
 import { TextField } from "@/components/ui/text-field";
@@ -21,6 +21,7 @@ import {
   REQUISITOS_DOC, UPLOAD_MAX_FILES, UPLOAD_MAX_BYTES,
 } from "@/data/establecimiento";
 import { useDepartamentos } from "@/hooks/useDepartamentos";
+import { useSolicitarEstablecimiento } from "@/hooks/useSolicitarEstablecimiento";
 import {
   solicitarAltaSchema, SOLICITAR_ALTA_INICIAL, type SolicitarAltaForm,
 } from "./schema";
@@ -110,8 +111,10 @@ function Confirmacion({ nombre }: { nombre: string }) {
 export default function SolicitarAltaClient() {
   const router = useRouter();
   const { departamentos, isLoading: deptoLoading, error: deptoError } = useDepartamentos();
+  const { solicitar } = useSolicitarEstablecimiento();
   const [files, setFiles] = useState<File[]>([]);
   const [filesError, setFilesError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [leaving, setLeaving] = useState<string | null>(null); // destino pendiente del modal de abandono
 
@@ -142,16 +145,23 @@ export default function SolicitarAltaClient() {
     setFiles(next);
   }
 
-  function onValid(data: SolicitarAltaForm) {
+  async function onValid(data: SolicitarAltaForm) {
     const fErr = validarArchivos(files);
     if (fErr) {
       setFilesError(fErr);
       return;
     }
-    // Mock: sin envío al backend todavía → pantalla de confirmación (Pendiente).
-    void data;
-    setSubmitted(true);
-    window.scrollTo({ top: 0, behavior: "auto" });
+    setSubmitError(null);
+    const r = await solicitar(data);
+    if (r.ok) {
+      setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: "auto" });
+      return;
+    }
+    setSubmitError(
+      "No pudimos registrar la solicitud. Revisá los datos e intentá de nuevo en unos minutos.",
+    );
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   }
 
   // Salir del formulario: si hay datos cargados, confirmar el abandono.
@@ -383,11 +393,25 @@ export default function SolicitarAltaClient() {
               </div>
 
               {/* Acciones */}
-              <div className="mt-6 flex justify-end gap-3">
-                <Button variant="neutral" onClick={() => irA("/panel")}>Cancelar</Button>
-                <Button type="submit" variant="primary" disabled={form.formState.isSubmitting}>
-                  <Send className="size-[18px]" /> Enviar solicitud
-                </Button>
+              <div className="mt-6">
+                {submitError && (
+                  <div className="mb-3.5 flex items-center gap-2 rounded-md border border-danger bg-danger-fill px-3.5 py-2.5 text-[13.5px] text-danger-fg">
+                    <AlertCircle className="size-[15px] shrink-0" />
+                    {submitError}
+                  </div>
+                )}
+                <div className="flex justify-end gap-3">
+                  <Button variant="neutral" onClick={() => irA("/panel")}>Cancelar</Button>
+                  <Button type="submit" variant="primary" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? (
+                      "Enviando…"
+                    ) : (
+                      <>
+                        <Send className="size-[18px]" /> Enviar solicitud
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>
