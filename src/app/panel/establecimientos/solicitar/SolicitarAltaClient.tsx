@@ -18,7 +18,8 @@ import {
 import { Button, Modal, SectionLabel } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
-  REQUISITOS_DOC, UPLOAD_MAX_FILES, UPLOAD_MAX_BYTES,
+  REQUISITOS_DOC, UPLOAD_MAX_FILES, UPLOAD_MAX_BYTES, UPLOAD_ACCEPT,
+  esArchivoPermitido,
 } from "@/data/establecimiento";
 import { useDepartamentos } from "@/hooks/useDepartamentos";
 import { useSolicitarEstablecimiento } from "@/hooks/useSolicitarEstablecimiento";
@@ -27,10 +28,14 @@ import {
 } from "./schema";
 
 const LABEL = "font-display text-[15px]";
+const FORMATOS_LABEL = "PDF, JPG o PNG";
 
 function validarArchivos(files: File[]): string | null {
   if (files.length === 0) return "Cargá al menos un archivo de prueba.";
   if (files.length > UPLOAD_MAX_FILES) return `Podés cargar hasta ${UPLOAD_MAX_FILES} archivos.`;
+  const invalidos = files.filter((f) => !esArchivoPermitido(f));
+  if (invalidos.length > 0)
+    return `Sólo se aceptan archivos ${FORMATOS_LABEL}. Quitá: ${invalidos.map((f) => f.name).join(", ")}.`;
   if (files.reduce((s, f) => s + f.size, 0) > UPLOAD_MAX_BYTES)
     return "El conjunto de archivos no puede superar los 30 MB.";
   return null;
@@ -131,17 +136,33 @@ export default function SolicitarAltaClient() {
   function addFiles(incoming: File[]) {
     setFilesError(null);
     const next = [...files];
+    const rechazados: string[] = [];
+    let errorLimite: string | null = null;
+
     for (const f of incoming) {
+      // El atributo accept no cubre el drag & drop: revalidamos siempre.
+      if (!esArchivoPermitido(f)) {
+        rechazados.push(f.name);
+        continue;
+      }
       if (next.length >= UPLOAD_MAX_FILES) {
-        setFilesError(`Podés cargar hasta ${UPLOAD_MAX_FILES} archivos.`);
+        errorLimite = `Podés cargar hasta ${UPLOAD_MAX_FILES} archivos.`;
         break;
       }
       if (next.reduce((s, x) => s + x.size, 0) + f.size > UPLOAD_MAX_BYTES) {
-        setFilesError("El conjunto de archivos no puede superar los 30 MB. Se omitieron algunos archivos.");
+        errorLimite = "El conjunto de archivos no puede superar los 30 MB. Se omitieron algunos archivos.";
         continue;
       }
       next.push(f);
     }
+
+    const mensajes = [];
+    if (rechazados.length > 0)
+      mensajes.push(
+        `Sólo se aceptan archivos ${FORMATOS_LABEL}. Se rechazó: ${rechazados.join(", ")}.`,
+      );
+    if (errorLimite) mensajes.push(errorLimite);
+    setFilesError(mensajes.length > 0 ? mensajes.join(" ") : null);
     setFiles(next);
   }
 
@@ -389,6 +410,8 @@ export default function SolicitarAltaClient() {
                   error={filesError}
                   maxFiles={UPLOAD_MAX_FILES}
                   maxBytes={UPLOAD_MAX_BYTES}
+                  accept={UPLOAD_ACCEPT}
+                  acceptLabel={FORMATOS_LABEL}
                 />
               </div>
 

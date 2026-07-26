@@ -26,11 +26,15 @@ interface FileUploaderProps {
   error?: string | null;
   maxFiles: number;
   maxBytes: number;
+  /** Valor del atributo `accept` del input. Ej: ".pdf,.png,.jpg,.jpeg" */
+  accept: string;
+  /** Formatos permitidos, para el texto de ayuda. Ej: "PDF, JPG o PNG" */
+  acceptLabel: string;
 }
 
 /** Uploader de pruebas: drop zone + lista con barra de tamaño total. */
 export function FileUploader({
-  files, onAdd, onRemove, error, maxFiles, maxBytes,
+  files, onAdd, onRemove, error, maxFiles, maxBytes, accept, acceptLabel,
 }: FileUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
@@ -65,13 +69,13 @@ export function FileUploader({
           Arrastrá y soltá los archivos aquí, o examiná tu equipo
         </div>
         <div className="text-[12.5px] text-brown-800/85">
-          Hasta {maxFiles} archivos · máximo {fmtBytes(maxBytes)} en total · PDF, JPG o PNG
+          Hasta {maxFiles} archivos · máximo {fmtBytes(maxBytes)} en total · sólo {acceptLabel}
         </div>
         <input
           ref={inputRef}
           type="file"
           multiple
-          accept=".pdf,.png,.jpg,.jpeg,.webp"
+          accept={accept}
           className="hidden"
           onChange={(e) => pick(e.target.files)}
         />

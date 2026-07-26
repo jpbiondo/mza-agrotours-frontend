@@ -34,3 +34,17 @@ export const REQUISITOS_DOC: RequisitoDoc[] = [
 /** Límites del uploader de pruebas. */
 export const UPLOAD_MAX_FILES = 10;
 export const UPLOAD_MAX_BYTES = 30 * 1024 * 1024; // 30 MB
+
+/** Únicos formatos aceptados como prueba documental. */
+export const UPLOAD_EXTENSIONES = ["pdf", "png", "jpg", "jpeg"] as const;
+export const UPLOAD_MIMES = ["application/pdf", "image/png", "image/jpeg"] as const;
+/** Valor del atributo `accept` del input file. */
+export const UPLOAD_ACCEPT = UPLOAD_EXTENSIONES.map((e) => "." + e).join(",");
+
+/** Acepta sólo PDF, PNG y JPG. Valida por extensión y, si el navegador lo informa, por MIME. */
+export function esArchivoPermitido(file: File): boolean {
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  if (!UPLOAD_EXTENSIONES.includes(ext as (typeof UPLOAD_EXTENSIONES)[number])) return false;
+  const mime = file.type.toLowerCase();
+  return mime === "" || UPLOAD_MIMES.includes(mime as (typeof UPLOAD_MIMES)[number]);
+}
