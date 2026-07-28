@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import SiteHeader from "@/components/SiteHeader";
 import SolicitarAltaClient from "./SolicitarAltaClient";
 
 export const metadata: Metadata = {
@@ -8,5 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default function SolicitarAltaPage() {
-  return <SolicitarAltaClient />;
+  return (
+    <div className="min-h-screen bg-cream-bg">
+      <SiteHeader active="mis-solicitudes" />
+      <SolicitarAltaClient />
+    </div>
+  );
 }

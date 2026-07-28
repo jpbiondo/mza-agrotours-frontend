@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ChevronDown,
   UserRound,
+  ClipboardList,
   LifeBuoy,
   ShieldCheck,
   LogOut,
@@ -203,6 +204,9 @@ export default function AccountMenu() {
           </div>
           <div style={{ padding: 6 }}>
             {item(UserRound, "Mi cuenta", "/cuenta")}
+            {/* Sin gating por rol: el alta de establecimiento es del espacio de
+                visitante y cualquier usuario logueado puede pedirla. */}
+            {item(ClipboardList, "Mis solicitudes", "/mis-solicitudes")}
             {ready &&
               roles.includes("productor") &&
               item(Sprout, "Panel de productor", "/panel")}

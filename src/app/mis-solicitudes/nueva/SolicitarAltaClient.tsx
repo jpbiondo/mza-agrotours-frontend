@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Building2, MapPin, Mail, Phone, Landmark, ArrowLeft, Send, Check, Clock,
-  LayoutDashboard, AlertTriangle, AlertCircle, RefreshCw,
+  ClipboardList, AlertTriangle, AlertCircle, RefreshCw, Loader,
 } from "lucide-react";
-import ProducerPanelShell from "@/components/panel/ProducerPanelShell";
 import { TextField } from "@/components/ui/text-field";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { FileUploader } from "@/components/ui/file-uploader";
@@ -22,6 +21,7 @@ import {
   esArchivoPermitido,
 } from "@/data/establecimiento";
 import { useDepartamentos } from "@/hooks/useDepartamentos";
+import { useSesionRequerida } from "@/hooks/useSesionRequerida";
 import { useSolicitarEstablecimiento } from "@/hooks/useSolicitarEstablecimiento";
 import { useSubirArchivos } from "@/hooks/useSubirArchivos";
 import type { ArchivoFallido } from "@/types/establecimiento";
@@ -82,9 +82,11 @@ interface ConfirmacionProps {
   fallidos: ArchivoFallido[];
   onReintentar: () => void;
   reintentando: boolean;
+  /** Navegación del padre. Acá nunca abre el modal de abandono: ya se envió. */
+  onIr: (destino: string) => void;
 }
 
-function Confirmacion({ nombre, fallidos, onReintentar, reintentando }: ConfirmacionProps) {
+function Confirmacion({ nombre, fallidos, onReintentar, reintentando, onIr }: ConfirmacionProps) {
   // Si ningún fallido tiene URL (el backend no devolvió archivoUploadResponses),
   // reintentar es imposible: no hay a dónde subir.
   const puedeReintentar = fallidos.some((f) => f.uploadUrl !== null);
@@ -162,10 +164,10 @@ function Confirmacion({ nombre, fallidos, onReintentar, reintentando }: Confirma
           </span>
         </div>
         <div className="flex flex-wrap justify-center gap-3">
-          <Button variant="primary" onClick={() => (window.location.href = "/panel")}>
-            <LayoutDashboard className="size-[17px]" /> Ir al panel
+          <Button variant="primary" onClick={() => onIr("/mis-solicitudes")}>
+            <ClipboardList className="size-[17px]" /> Ver mis solicitudes
           </Button>
-          <Button variant="neutral" onClick={() => (window.location.href = "/explorar")}>
+          <Button variant="neutral" onClick={() => onIr("/explorar")}>
             Explorar experiencias
           </Button>
         </div>
@@ -176,6 +178,7 @@ function Confirmacion({ nombre, fallidos, onReintentar, reintentando }: Confirma
 
 export default function SolicitarAltaClient() {
   const router = useRouter();
+  const { checking, unauthenticated } = useSesionRequerida();
   const { departamentos, isLoading: deptoLoading, error: deptoError } = useDepartamentos();
   const { solicitar } = useSolicitarEstablecimiento();
   const { subir, reintentar, isLoading: subiendo, progreso } = useSubirArchivos();
@@ -201,6 +204,10 @@ export default function SolicitarAltaClient() {
   const dirty =
     !submitted &&
     (files.length > 0 || form.formState.isDirty);
+
+  useEffect(() => {
+    if (unauthenticated) router.replace("/acceso");
+  }, [unauthenticated, router]);
 
   function addFiles(incoming: File[]) {
     setFilesError(null);
@@ -282,23 +289,37 @@ export default function SolicitarAltaClient() {
     else router.push(destino);
   }
 
+  // Ruta protegida: sin sesión, a la pantalla de login. Se espera a que Firebase
+  // resuelva para no mostrar el formulario entero y redirigir un instante después.
+  if (checking || unauthenticated) {
+    return (
+      <div className="px-7 py-[120px] text-center text-fg-3">
+        <Loader size={26} className="spin" />
+        <div className="mt-3 text-sm">
+          {unauthenticated ? "Redirigiendo…" : "Verificando tu sesión…"}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <ProducerPanelShell active="datos">
+    <>
       {resultado ? (
         <Confirmacion
           nombre={resultado.nombre}
           fallidos={resultado.fallidos}
           onReintentar={onReintentar}
           reintentando={subiendo}
+          onIr={irA}
         />
       ) : (
         <div className="mx-auto max-w-[820px] px-7 pt-7 pb-24">
           <button
             type="button"
-            onClick={() => irA("/panel")}
+            onClick={() => irA("/mis-solicitudes")}
             className="mb-3.5 inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold text-green-800"
           >
-            <ArrowLeft className="size-4" /> Volver
+            <ArrowLeft className="size-4" /> Volver a mis solicitudes
           </button>
 
           <div className="mb-7">
@@ -307,7 +328,8 @@ export default function SolicitarAltaClient() {
             </h1>
             <p className="mt-1.5 text-[15px] text-fg-2">
               Completá los datos del establecimiento y cargá la documentación de respaldo. Un
-              administrador revisará tu solicitud.
+              administrador revisará tu solicitud y vas a poder seguir su estado en Mis
+              solicitudes.
             </p>
           </div>
 
@@ -518,7 +540,7 @@ export default function SolicitarAltaClient() {
                   </div>
                 )}
                 <div className="flex justify-end gap-3">
-                  <Button variant="neutral" onClick={() => irA("/panel")}>Cancelar</Button>
+                  <Button variant="neutral" onClick={() => irA("/mis-solicitudes")}>Cancelar</Button>
                   <Button type="submit" variant="primary" disabled={form.formState.isSubmitting}>
                     {/* isSubmitting sigue en true durante la subida (RHF espera a
                         onValid), así que la fase de archivos se chequea primero. */}
@@ -559,6 +581,6 @@ export default function SolicitarAltaClient() {
           </div>
         </Modal>
       )}
-    </ProducerPanelShell>
+    </>
   );
 }

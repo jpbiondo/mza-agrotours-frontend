@@ -15,10 +15,11 @@ export default function EmptyEstablecimiento() {
         </h1>
         <p className="mt-3 max-w-[480px] text-[15.5px] leading-relaxed text-fg-2">
           Para publicar experiencias agroturísticas necesitás dar de alta tu finca o bodega.
-          Solicitá el alta y un administrador verificará tu documentación.
+          Solicitá el alta y un administrador verificará tu documentación. Vas a poder seguir
+          el estado en <strong className="font-semibold text-fg-1">Mis solicitudes</strong>.
         </p>
         <Link
-          href="/panel/establecimientos/solicitar"
+          href="/mis-solicitudes/nueva"
           className="btn btn-primary btn-lg mt-7 inline-flex"
         >
           <PlusCircle className="size-[18px]" /> Solicitar alta de un establecimiento

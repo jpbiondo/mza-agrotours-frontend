@@ -40,7 +40,9 @@ const SIDEBAR: Row[] = [
   { id: "cultivos", icon: Sprout, label: "Cultivos", href: "/cultivos" },
 ];
 
-const SOLICITAR_HREF = "/panel/establecimientos/solicitar";
+// El alta de establecimiento vive en el espacio de visitante: el panel es sólo
+// para establecimientos ya existentes.
+const SOLICITAR_HREF = "/mis-solicitudes/nueva";
 
 function fincaInitials(name: string): string {
   const skip = new Set(["finca", "bodega", "la", "el", "los", "las", "de", "del"]);
