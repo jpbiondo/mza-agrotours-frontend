@@ -41,10 +41,41 @@ export const UPLOAD_MIMES = ["application/pdf", "image/png", "image/jpeg"] as co
 /** Valor del atributo `accept` del input file. */
 export const UPLOAD_ACCEPT = UPLOAD_EXTENSIONES.map((e) => "." + e).join(",");
 
+/**
+ * MIME por extensión aceptada. `jpg` y `jpeg` comparten `image/jpeg`.
+ * Tipado contra UPLOAD_EXTENSIONES: si se agrega una extensión al tuple,
+ * TypeScript exige completarla acá.
+ */
+export const UPLOAD_MIME_POR_EXT: Record<
+  (typeof UPLOAD_EXTENSIONES)[number],
+  (typeof UPLOAD_MIMES)[number]
+> = { pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg" };
+
+/** Extensión en minúsculas y sin punto. "" si el nombre no tiene extensión. */
+export function extensionDe(nombre: string): string {
+  const partes = nombre.split(".");
+  return partes.length > 1 ? (partes.pop() as string).toLowerCase() : "";
+}
+
 /** Acepta sólo PDF, PNG y JPG. Valida por extensión y, si el navegador lo informa, por MIME. */
 export function esArchivoPermitido(file: File): boolean {
-  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  const ext = extensionDe(file.name);
   if (!UPLOAD_EXTENSIONES.includes(ext as (typeof UPLOAD_EXTENSIONES)[number])) return false;
   const mime = file.type.toLowerCase();
   return mime === "" || UPLOAD_MIMES.includes(mime as (typeof UPLOAD_MIMES)[number]);
+}
+
+/**
+ * Content-Type a declarar al backend y a repetir en el PUT prefirmado. El
+ * navegador puede informar `file.type` vacío (drag & drop, SO sin el MIME
+ * registrado), así que se deriva de la extensión.
+ *
+ * Debe llamarse SIEMPRE sobre el mismo File en ambos pasos: el backend firma
+ * la URL con este valor y el object storage lo verifica.
+ */
+export function contentTypeDe(file: File): string {
+  const informado = file.type.trim().toLowerCase();
+  if (informado) return informado;
+  const ext = extensionDe(file.name);
+  return (UPLOAD_MIME_POR_EXT as Record<string, string>)[ext] ?? "application/octet-stream";
 }

@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Building2, MapPin, Mail, Phone, Landmark, ArrowLeft, Send, Check, Clock,
-  LayoutDashboard, AlertTriangle, AlertCircle,
+  LayoutDashboard, AlertTriangle, AlertCircle, RefreshCw,
 } from "lucide-react";
 import ProducerPanelShell from "@/components/panel/ProducerPanelShell";
 import { TextField } from "@/components/ui/text-field";
@@ -23,6 +23,8 @@ import {
 } from "@/data/establecimiento";
 import { useDepartamentos } from "@/hooks/useDepartamentos";
 import { useSolicitarEstablecimiento } from "@/hooks/useSolicitarEstablecimiento";
+import { useSubirArchivos } from "@/hooks/useSubirArchivos";
+import type { ArchivoFallido } from "@/types/establecimiento";
 import {
   solicitarAltaSchema, SOLICITAR_ALTA_INICIAL, type SolicitarAltaForm,
 } from "./schema";
@@ -75,7 +77,18 @@ function RequisitosDoc() {
   );
 }
 
-function Confirmacion({ nombre }: { nombre: string }) {
+interface ConfirmacionProps {
+  nombre: string;
+  fallidos: ArchivoFallido[];
+  onReintentar: () => void;
+  reintentando: boolean;
+}
+
+function Confirmacion({ nombre, fallidos, onReintentar, reintentando }: ConfirmacionProps) {
+  // Si ningún fallido tiene URL (el backend no devolvió archivoUploadResponses),
+  // reintentar es imposible: no hay a dónde subir.
+  const puedeReintentar = fallidos.some((f) => f.uploadUrl !== null);
+
   return (
     <div className="mx-auto max-w-[640px] px-7 pt-12 pb-20">
       <div className="rounded-lg border border-outline-variant bg-surface px-10 py-12 text-center">
@@ -93,6 +106,54 @@ function Confirmacion({ nombre }: { nombre: string }) {
         <div className="mb-7 inline-flex items-center gap-2.5 rounded-pill bg-warning-fill px-4 py-2.5 text-[13.5px] font-semibold text-warning-fg">
           <Clock className="size-[15px]" /> Estado de la solicitud: Pendiente
         </div>
+
+        {fallidos.length > 0 && (
+          <div className="mb-7 rounded-md border border-warning bg-warning-fill px-4 py-3.5 text-left">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="mt-px size-[17px] shrink-0 text-warning-fg" />
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display text-[14.5px] font-semibold text-warning-fg">
+                  {fallidos.length === 1
+                    ? "No pudimos subir 1 archivo"
+                    : `No pudimos subir ${fallidos.length} archivos`}
+                </h2>
+                <p className="mt-1 text-[13.5px] leading-normal text-warning-fg/85">
+                  Tu solicitud quedó registrada igual, pero la documentación no llegó completa.
+                  Reintentá la subida sin salir de esta pantalla.
+                </p>
+                <ul className="mt-2.5 flex flex-col gap-1">
+                  {fallidos.map((f, i) => (
+                    <li
+                      key={f.storageKey ?? `${f.nombre}-${i}`}
+                      className="flex items-center gap-2 text-[13px] text-warning-fg"
+                    >
+                      <AlertCircle className="size-[13px] shrink-0" />
+                      <span className="truncate">{f.nombre}</span>
+                    </li>
+                  ))}
+                </ul>
+                {puedeReintentar && (
+                  <Button
+                    variant="neutral"
+                    size="sm"
+                    className="mt-3.5"
+                    onClick={onReintentar}
+                    disabled={reintentando}
+                  >
+                    {reintentando ? (
+                      "Subiendo archivos…"
+                    ) : (
+                      <>
+                        <RefreshCw className="size-[15px]" /> Reintentar subida
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mb-7 flex items-start gap-2.5 rounded-md border border-outline-variant bg-cream-tert px-4 py-3.5 text-left">
           <Mail className="size-[17px] shrink-0 text-green-800" />
           <span className="text-[13.5px] leading-normal text-fg-2">
@@ -117,11 +178,19 @@ export default function SolicitarAltaClient() {
   const router = useRouter();
   const { departamentos, isLoading: deptoLoading, error: deptoError } = useDepartamentos();
   const { solicitar } = useSolicitarEstablecimiento();
+  const { subir, reintentar, isLoading: subiendo, progreso } = useSubirArchivos();
   const [files, setFiles] = useState<File[]>([]);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  // Resultado del envío: null mientras se edita. Al confirmarse, congela el
+  // nombre a mostrar y qué archivos quedaron sin subir.
+  const [resultado, setResultado] = useState<{
+    nombre: string;
+    fallidos: ArchivoFallido[];
+  } | null>(null);
   const [leaving, setLeaving] = useState<string | null>(null); // destino pendiente del modal de abandono
+
+  const submitted = resultado !== null;
 
   const form = useForm<SolicitarAltaForm>({
     resolver: zodResolver(solicitarAltaSchema),
@@ -173,16 +242,38 @@ export default function SolicitarAltaClient() {
       return;
     }
     setSubmitError(null);
-    const r = await solicitar(data);
-    if (r.ok) {
-      setSubmitted(true);
-      window.scrollTo({ top: 0, behavior: "auto" });
+
+    const r = await solicitar(data, files);
+    if (!r.ok) {
+      setSubmitError(
+        "No pudimos registrar la solicitud. Revisá los datos e intentá de nuevo en unos minutos.",
+      );
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
       return;
     }
-    setSubmitError(
-      "No pudimos registrar la solicitud. Revisá los datos e intentá de nuevo en unos minutos.",
+
+    // La solicitud ya quedó creada: se confirma pase lo que pase con los archivos.
+    // Si no vinieron URLs prefirmadas, todos quedan como fallidos no reintentables.
+    const res = await subir(files, r.data?.archivoUploadResponses ?? []);
+    setResultado({ nombre: data.nombre, fallidos: res.fallidos });
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  // Resube sólo los que fallaron, reusando el mismo File y su URL prefirmada.
+  async function onReintentar() {
+    if (!resultado) return;
+    const res = await reintentar(resultado.fallidos);
+    const aunFallan = new Set(res.fallidos.map((f) => f.file));
+    // Se compara por referencia al File, identidad robusta aunque dos archivos
+    // se llamen igual. Los que nunca tuvieron URL siguen en la lista.
+    setResultado((prev) =>
+      prev
+        ? {
+            ...prev,
+            fallidos: prev.fallidos.filter((f) => f.uploadUrl === null || aunFallan.has(f.file)),
+          }
+        : prev,
     );
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   }
 
   // Salir del formulario: si hay datos cargados, confirmar el abandono.
@@ -191,12 +282,15 @@ export default function SolicitarAltaClient() {
     else router.push(destino);
   }
 
-  const nombre = useWatch({ control: form.control, name: "nombre" });
-
   return (
     <ProducerPanelShell active="datos">
-      {submitted ? (
-        <Confirmacion nombre={nombre} />
+      {resultado ? (
+        <Confirmacion
+          nombre={resultado.nombre}
+          fallidos={resultado.fallidos}
+          onReintentar={onReintentar}
+          reintentando={subiendo}
+        />
       ) : (
         <div className="mx-auto max-w-[820px] px-7 pt-7 pb-24">
           <button
@@ -426,7 +520,11 @@ export default function SolicitarAltaClient() {
                 <div className="flex justify-end gap-3">
                   <Button variant="neutral" onClick={() => irA("/panel")}>Cancelar</Button>
                   <Button type="submit" variant="primary" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? (
+                    {/* isSubmitting sigue en true durante la subida (RHF espera a
+                        onValid), así que la fase de archivos se chequea primero. */}
+                    {subiendo ? (
+                      `Subiendo archivos… ${progreso.hechos}/${progreso.total}`
+                    ) : form.formState.isSubmitting ? (
                       "Enviando…"
                     ) : (
                       <>
