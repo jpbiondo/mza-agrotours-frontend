@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,6 +32,28 @@ import {
 
 const LABEL = "font-display text-[15px]";
 const FORMATOS_LABEL = "PDF, JPG o PNG";
+
+/**
+ * Errores de dominio de POST /solicitudes-establecimiento/create. Los dos son
+ * conflictos por CUIT, así que además del aviso se marca ese campo: es el único
+ * dato que el usuario tiene que corregir.
+ */
+const CONFLICTOS_CUIT: Record<
+  string,
+  { campo: string; banner: string; verSolicitudes?: boolean }
+> = {
+  "SE.establecimientoAlreadyExists": {
+    campo: "Ya hay un establecimiento registrado con este CUIT.",
+    banner:
+      "Ya existe un establecimiento dado de alta con este CUIT. Revisá el número ingresado; si el establecimiento es tuyo, ya no hace falta solicitar el alta.",
+  },
+  "SE.SEAlreadyExists": {
+    campo: "Ya enviaste una solicitud con este CUIT.",
+    banner:
+      "Ya hay una solicitud en curso para este CUIT. No hace falta que envíes otra: podés seguir su estado desde Mis solicitudes.",
+    verSolicitudes: true,
+  },
+};
 
 function validarArchivos(files: File[]): string | null {
   if (files.length === 0) return "Cargá al menos un archivo de prueba.";
@@ -184,7 +207,12 @@ export default function SolicitarAltaClient() {
   const { subir, reintentar, isLoading: subiendo, progreso } = useSubirArchivos();
   const [files, setFiles] = useState<File[]>([]);
   const [filesError, setFilesError] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  // Aviso del envío. `verSolicitudes` agrega el enlace a la lista cuando el
+  // conflicto es con una solicitud que el usuario ya mandó.
+  const [submitError, setSubmitError] = useState<{
+    texto: string;
+    verSolicitudes?: boolean;
+  } | null>(null);
   // Resultado del envío: null mientras se edita. Al confirmarse, congela el
   // nombre a mostrar y qué archivos quedaron sin subir.
   const [resultado, setResultado] = useState<{
@@ -252,9 +280,18 @@ export default function SolicitarAltaClient() {
 
     const r = await solicitar(data, files);
     if (!r.ok) {
-      setSubmitError(
-        "No pudimos registrar la solicitud. Revisá los datos e intentá de nuevo en unos minutos.",
-      );
+      const conflicto = r.code ? CONFLICTOS_CUIT[r.code] : undefined;
+      if (conflicto) {
+        // Ambos códigos se resuelven corrigiendo el CUIT: se marca el campo y se
+        // enfoca (el foco ya lleva el scroll ahí, por eso no se scrollea al pie).
+        form.setError("cuit", { message: conflicto.campo }, { shouldFocus: true });
+        setSubmitError({ texto: conflicto.banner, verSolicitudes: conflicto.verSolicitudes });
+        return;
+      }
+      setSubmitError({
+        texto:
+          "No pudimos registrar la solicitud. Revisá los datos e intentá de nuevo en unos minutos.",
+      });
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
       return;
     }
@@ -534,9 +571,22 @@ export default function SolicitarAltaClient() {
               {/* Acciones */}
               <div className="mt-6">
                 {submitError && (
-                  <div className="mb-3.5 flex items-center gap-2 rounded-md border border-danger bg-danger-fill px-3.5 py-2.5 text-[13.5px] text-danger-fg">
-                    <AlertCircle className="size-[15px] shrink-0" />
-                    {submitError}
+                  <div className="mb-3.5 flex items-start gap-2 rounded-md border border-danger bg-danger-fill px-3.5 py-2.5 text-[13.5px] leading-normal text-danger-fg">
+                    <AlertCircle className="mt-px size-[15px] shrink-0" />
+                    <span>
+                      {submitError.texto}
+                      {submitError.verSolicitudes && (
+                        <>
+                          {" "}
+                          <Link
+                            href="/mis-solicitudes"
+                            className="font-semibold underline underline-offset-2"
+                          >
+                            Ver mis solicitudes
+                          </Link>
+                        </>
+                      )}
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-end gap-3">
