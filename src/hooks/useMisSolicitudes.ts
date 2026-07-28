@@ -6,10 +6,13 @@ import type { EstadoSolicitud, SolicitudResumen } from "@/types/solicitudes";
 
 /** Item crudo de GET /solicitudes-establecimiento/me. Campos opcionales: defensivo. */
 interface SolicitudBackend {
+  id?: string;
+  nombreEstablecimiento?: string;
   razonSocial?: string;
   cuit?: string;
   domicilioLegal?: string;
   estado?: string;
+  fechaCreacion?: string | null;
 }
 
 interface MisSolicitudesResponse {
@@ -28,8 +31,12 @@ interface UseMisSolicitudesReturn {
   reload: () => void;
 }
 
-function aResumen(s: SolicitudBackend): SolicitudResumen {
+function aResumen(s: SolicitudBackend, i: number): SolicitudResumen {
   return {
+    // El `id` sólo faltaría si el backend cambiara el contrato; el fallback evita
+    // keys duplicadas en React en ese caso.
+    id: s.id ?? `sin-id-${i}`,
+    nombreEstablecimiento: s.nombreEstablecimiento ?? "",
     razonSocial: s.razonSocial ?? "",
     cuit: s.cuit ?? "",
     domicilioLegal: s.domicilioLegal ?? "",
@@ -37,7 +44,28 @@ function aResumen(s: SolicitudBackend): SolicitudResumen {
     // se normaliza por si el enum del backend se serializara en mayúsculas.
     // Un valor desconocido no rompe: la pantalla cae a un tono neutro.
     estado: String(s.estado ?? "").trim().toLowerCase() as EstadoSolicitud,
+    // Se guarda el ISO crudo y se formatea al renderizar. Vacío → null para que
+    // `fmtFechaHora` muestre "—" en vez de "NaN/NaN/NaN".
+    fechaCreacion: s.fechaCreacion?.trim() ? s.fechaCreacion : null,
   };
+}
+
+/** Instante de la fecha, o NaN si falta o no se puede parsear. */
+function ts(s: SolicitudResumen): number {
+  return s.fechaCreacion ? Date.parse(s.fechaCreacion) : NaN;
+}
+
+/**
+ * Más recientes primero. Se compara por instante y no lexicográficamente: dos
+ * ISO con distinto offset no ordenan bien como texto. Las que no traen fecha
+ * (o la traen inválida) van al final, en el orden del backend.
+ */
+function porFechaDesc(a: SolicitudResumen, b: SolicitudResumen): number {
+  const ta = ts(a);
+  const tb = ts(b);
+  if (Number.isNaN(ta)) return Number.isNaN(tb) ? 0 : 1;
+  if (Number.isNaN(tb)) return -1;
+  return tb - ta;
 }
 
 /**
@@ -75,7 +103,9 @@ export function useMisSolicitudes(): UseMisSolicitudesReturn {
         }
         // `ok` sin `data` (o con `data: null`) es una lista vacía, NO un error:
         // el estado vacío tiene que ser distinguible de un fallo de carga.
-        setSolicitudes(Array.isArray(res.data) ? res.data.map(aResumen) : []);
+        setSolicitudes(
+          Array.isArray(res.data) ? res.data.map(aResumen).sort(porFechaDesc) : [],
+        );
       } catch (e) {
         if (active) setError(e instanceof Error ? e.message : "Error inesperado");
       } finally {

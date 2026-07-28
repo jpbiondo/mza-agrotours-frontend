@@ -3,10 +3,13 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader, PlusCircle, Building2, Hash, MapPin, FileSearch } from "lucide-react";
+import {
+  Loader, PlusCircle, Building2, Hash, MapPin, CalendarDays, FileSearch,
+} from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Card, EstadoBadge } from "@/components/ui";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
+import { fmtFechaHora } from "@/lib/format";
 import { useMisSolicitudes } from "@/hooks/useMisSolicitudes";
 import type { SolicitudResumen } from "@/types/solicitudes";
 
@@ -20,8 +23,9 @@ function SolicitudCard({ s }: { s: SolicitudResumen }) {
     | undefined;
 
   return (
-    // Sin `id` en el endpoint no hay detalle al que enlazar: la tarjeta es
-    // informativa, no clickeable (sin hover, sin chevron, sin cursor-pointer).
+    // TODO: cuando exista GET /solicitudes-establecimiento/{id}, envolver en un
+    // <Link href={`/mis-solicitudes/${s.id}`}> y agregar la afordancia de click.
+    // Por ahora la tarjeta es informativa: enlazar a una ruta inexistente daría 404.
     <Card className="px-[22px] py-[18px]">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-start gap-3">
@@ -30,8 +34,11 @@ function SolicitudCard({ s }: { s: SolicitudResumen }) {
           </span>
           <div className="min-w-0">
             <h2 className="truncate font-display text-[18.5px] leading-tight font-semibold text-fg-1">
-              {s.razonSocial || "Sin razón social"}
+              {s.nombreEstablecimiento || s.razonSocial || "Establecimiento sin nombre"}
             </h2>
+            {s.razonSocial && (
+              <p className="mt-0.5 truncate text-[13.5px] text-fg-2">{s.razonSocial}</p>
+            )}
             <dl className="mt-2.5 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-x-6">
               <div className="flex min-w-0 items-center gap-1.5">
                 <Hash className="size-[13px] shrink-0 text-fg-3" />
@@ -42,6 +49,11 @@ function SolicitudCard({ s }: { s: SolicitudResumen }) {
                 <MapPin className="size-[13px] shrink-0 text-fg-3" />
                 <dt className="sr-only">Domicilio legal</dt>
                 <dd className="truncate text-[13px] text-fg-2">{s.domicilioLegal || "—"}</dd>
+              </div>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <CalendarDays className="size-[13px] shrink-0 text-fg-3" />
+                <dt className="sr-only">Enviada</dt>
+                <dd className="text-[13px] text-fg-3">{fmtFechaHora(s.fechaCreacion)}</dd>
               </div>
             </dl>
           </div>
@@ -126,11 +138,9 @@ export default function MisSolicitudesClient() {
               {solicitudes.length === 1 ? "solicitud" : "solicitudes"}
             </div>
             <div className="flex flex-col gap-4">
-              {/* TODO backend: el endpoint no devuelve `id` ni fecha. Sin `id` no hay
-                  detalle al que enlazar ni key estable, y sin fecha no se puede ordenar
-                  por recencia: se respeta el orden del backend tal cual llega. */}
-              {solicitudes.map((s, i) => (
-                <SolicitudCard key={`${s.cuit}|${s.razonSocial}|${i}`} s={s} />
+              {/* Ordenadas por fechaCreacion desc en el hook: las más nuevas arriba. */}
+              {solicitudes.map((s) => (
+                <SolicitudCard key={s.id} s={s} />
               ))}
             </div>
           </>
