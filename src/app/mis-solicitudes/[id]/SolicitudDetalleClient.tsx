@@ -1,53 +1,56 @@
 "use client";
 
 import { useEffect } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Loader, ArrowLeft, Download, FileText, Image as ImageIcon, File as FileIcon,
-  AlertTriangle, CalendarDays, PlusCircle, FileSearch, Clock, CheckCircle2,
+  CalendarDays, PlusCircle, FileSearch, Clock, CheckCircle2, XCircle, Send,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Card, EstadoBadge, SectionLabel } from "@/components/ui";
+import { EstadoBadge } from "@/components/ui";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { fmtFechaHora } from "@/lib/format";
 import { storageConfigurado, urlDeArchivo } from "@/lib/storage";
+import { cn } from "@/lib/utils";
 import { useSolicitudDetalle } from "@/hooks/useSolicitudDetalle";
 import type { ArchivoSolicitud, EstadoSolicitud, SolicitudDetalle } from "@/types/solicitudes";
 
 const NUEVA_HREF = "/mis-solicitudes/nueva";
 const LISTA_HREF = "/mis-solicitudes";
 
-/** Qué le decimos al usuario según en qué punto está la verificación. */
-const RESUMEN_ESTADO: Record<EstadoSolicitud, { icon: typeof Clock; texto: string }> = {
-  pendiente: {
-    icon: Clock,
-    texto:
-      "Un administrador todavía está revisando tu documentación. Te avisamos por correo apenas haya una resolución.",
-  },
-  validada: {
-    icon: CheckCircle2,
-    texto:
-      "Verificamos tu documentación y el establecimiento quedó dado de alta. Ya podés gestionarlo desde el panel de productor.",
-  },
-  rechazada: {
-    icon: AlertTriangle,
-    texto:
-      "Revisamos tu documentación y no pudimos validar el establecimiento. Podés corregir lo observado y enviar una solicitud nueva.",
-  },
+type Tono = "neutral" | "info" | "warning" | "success" | "danger";
+
+/** Relleno del círculo de la línea de tiempo. El icono hereda por currentColor. */
+const TONO_CIRCULO: Record<Tono, string> = {
+  neutral: "bg-cream-tert text-fg-2",
+  info: "bg-info-fill text-info-fg",
+  warning: "bg-warning-fill text-warning-fg",
+  success: "bg-success-fill text-success-fg",
+  danger: "bg-danger-fill text-danger-fg",
 };
 
-/** Estilo del bloque de estado: mismo tono que el badge, en versión bloque. */
-const ESTADO_BLOQUE: Record<EstadoSolicitud, { caja: string; texto: string }> = {
-  pendiente: { caja: "border-warning bg-warning-fill", texto: "text-warning-fg" },
-  validada: { caja: "border-success bg-success-fill", texto: "text-success-fg" },
-  rechazada: { caja: "border-danger bg-danger-fill", texto: "text-danger-fg" },
+/** Texto por defecto del hito cuando el backend no mandó observación. */
+const MOTIVO_POR_ESTADO: Record<EstadoSolicitud, string> = {
+  pendiente:
+    "Un administrador va a verificar la documentación que cargaste. Te avisamos por correo apenas haya una resolución.",
+  validada:
+    "Verificamos la documentación y el establecimiento quedó dado de alta.",
+  rechazada:
+    "Revisamos la documentación y no pudimos validar el establecimiento.",
 };
+
+function iconoEstado(estado: EstadoSolicitud, cls: string): ReactNode {
+  if (estado === "validada") return <CheckCircle2 className={cls} />;
+  if (estado === "rechazada") return <XCircle className={cls} />;
+  return <Clock className={cls} />;
+}
 
 function IconoArchivo({ extension }: { extension: string }) {
-  const cls = "size-[17px] text-green-800";
+  const cls = "size-[17px] text-brown-700";
   if (extension === "pdf") return <FileText className={cls} />;
-  if (["png", "jpg", "jpeg"].includes(extension)) return <ImageIcon className={cls} />;
+  if (["png", "jpg", "jpeg", "webp"].includes(extension)) return <ImageIcon className={cls} />;
   return <FileIcon className={cls} />;
 }
 
@@ -58,17 +61,56 @@ function cvuEnmascarado(cvu: string): string {
   return "•".repeat(cvu.length - 4) + cvu.slice(-4);
 }
 
-function Dato({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Seccion({
+  title,
+  cols = 2,
+  children,
+}: {
+  title: string;
+  cols?: 1 | 2;
+  children: ReactNode;
+}) {
   return (
-    <div className="min-w-0">
-      <dt className="text-[11px] font-bold tracking-[0.06em] text-brown-700 uppercase">
+    <div className="mt-7">
+      <h2 className="mb-[18px] border-b border-outline-variant pb-2.5 font-display text-[15.5px] font-bold text-green-800">
+        {title}
+      </h2>
+      <div
+        className={cn(
+          "grid gap-x-7 gap-y-5",
+          cols === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2",
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Dato({
+  label,
+  value,
+  mono,
+  span,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  span?: boolean;
+}) {
+  return (
+    <div className={cn("min-w-0", span && "sm:col-span-2")}>
+      <div className="mb-1.5 text-[11px] font-semibold tracking-[0.06em] text-fg-2 uppercase">
         {label}
-      </dt>
-      <dd
-        className={`mt-1 break-words text-[14.5px] text-fg-1 ${mono ? "font-mono text-[13.5px]" : ""}`}
+      </div>
+      <div
+        className={cn(
+          "leading-normal break-words text-fg-1",
+          mono ? "font-mono text-[14px]" : "text-[15px]",
+        )}
       >
         {value || "—"}
-      </dd>
+      </div>
     </div>
   );
 }
@@ -77,16 +119,16 @@ function ArchivoRow({ a }: { a: ArchivoSolicitud }) {
   const href = urlDeArchivo(a.key);
 
   return (
-    <div className="flex items-center gap-3 rounded-md border border-outline-variant bg-surface px-3 py-2.5">
-      <span className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-lg bg-green-050">
+    <div className="flex items-center gap-3 rounded-md border border-outline-variant bg-cream-tert px-3.5 py-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-sand bg-surface">
         <IconoArchivo extension={a.extension} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13.5px] font-medium text-fg-1">
+        <span className="block truncate text-[14px] font-medium text-fg-1">
           {a.nombre || "Archivo sin nombre"}
         </span>
         {a.extension && (
-          <span className="mt-px block font-mono text-[11.5px] text-fg-3 uppercase">
+          <span className="mt-0.5 block font-mono text-[12px] text-fg-3 uppercase">
             {a.extension}
           </span>
         )}
@@ -99,7 +141,7 @@ function ArchivoRow({ a }: { a: ArchivoSolicitud }) {
           download={a.nombre || undefined}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn btn-neutral btn-sm inline-flex shrink-0"
+          className="btn btn-neutral btn-sm shrink-0 no-underline"
         >
           <Download className="size-[15px]" /> Descargar
         </a>
@@ -110,116 +152,148 @@ function ArchivoRow({ a }: { a: ArchivoSolicitud }) {
   );
 }
 
+interface Hito {
+  label: string;
+  tono: Tono;
+  icono: ReactNode;
+  fecha: string | null;
+  motivo: string;
+}
+
+/**
+ * Línea de tiempo del estado, del hito más reciente al más antiguo.
+ *
+ * El backend no devuelve un historial: sólo el estado actual, la observación y
+ * la fecha de alta. Se arman los dos hitos que sí tienen respaldo — el envío y
+ * la situación actual — sin inventar fechas ni autores para los que no hay dato.
+ * TODO backend: un array de cambios de estado (fecha, autor, motivo) permitiría
+ * mostrar el recorrido completo.
+ */
+function hitosDe(s: SolicitudDetalle): Hito[] {
+  const meta = SOL_ESTADO_META[s.estado] as
+    | (typeof SOL_ESTADO_META)[keyof typeof SOL_ESTADO_META]
+    | undefined;
+
+  return [
+    {
+      label: meta?.label ?? "Sin estado",
+      tono: (meta?.tone as Tono) ?? "neutral",
+      icono: iconoEstado(s.estado, "size-4"),
+      fecha: null,
+      motivo: s.observacion || MOTIVO_POR_ESTADO[s.estado] || "",
+    },
+    {
+      label: "Enviada",
+      tono: "info",
+      icono: <Send className="size-4" />,
+      fecha: fmtFechaHora(s.fechaHoraAlta),
+      motivo: "Enviaste la solicitud de alta con la documentación de respaldo.",
+    },
+  ];
+}
+
 function Detalle({ s }: { s: SolicitudDetalle }) {
   const meta = SOL_ESTADO_META[s.estado] as
     | (typeof SOL_ESTADO_META)[keyof typeof SOL_ESTADO_META]
     | undefined;
-  const resumen = RESUMEN_ESTADO[s.estado] as
-    | (typeof RESUMEN_ESTADO)[EstadoSolicitud]
-    | undefined;
-  const ResumenIcon = resumen?.icon;
-  const bloque = ESTADO_BLOQUE[s.estado] as
-    | (typeof ESTADO_BLOQUE)[EstadoSolicitud]
-    | undefined;
-  const rechazada = s.estado === "rechazada";
+  const hitos = hitosDe(s);
 
   return (
-    <>
-      {/* Cabecera */}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div className="rounded-lg border border-outline-variant bg-surface px-[30px] pt-7 pb-8">
+      {/* Encabezado: título a la izquierda · estado actual arriba a la derecha */}
+      <div className="flex flex-wrap items-start justify-between gap-5">
         <div className="min-w-0">
-          <h1 className="font-display text-[30px] leading-tight font-bold tracking-[-.01em] text-fg-1">
+          <h1 className="font-display text-[27px] leading-tight font-bold text-fg-1">
             {s.nombreEstablecimiento || s.razonSocial || "Solicitud de establecimiento"}
           </h1>
-          <p className="mt-2 flex items-center gap-1.5 text-[13.5px] text-fg-3">
-            <CalendarDays className="size-[14px] shrink-0" />
-            Enviada el {fmtFechaHora(s.fechaHoraAlta)}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-3.5 text-[13.5px] text-fg-3">
+            <span className="font-mono text-fg-2">{s.id}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarDays className="size-[14px]" /> Enviada el {fmtFechaHora(s.fechaHoraAlta)}
+            </span>
+          </div>
         </div>
-        <EstadoBadge tone={meta?.tone ?? "neutral"} className="mt-1">
+        <EstadoBadge tone={meta?.tone ?? "neutral"} size="lg">
+          {iconoEstado(s.estado, "size-4")}
           {meta?.label ?? "Sin estado"}
         </EstadoBadge>
       </div>
 
-      {/* Estado de la verificación. Si fue rechazada, la observación del admin es
-          lo más importante de la pantalla, así que va acá arriba y destacada. */}
-      {resumen && ResumenIcon && (
-        <div className={`mb-6 rounded-lg border px-5 py-4 ${bloque?.caja ?? ""}`}>
-          <div className="flex items-start gap-3">
-            <ResumenIcon className={`mt-px size-[19px] shrink-0 ${bloque?.texto ?? ""}`} />
-            <div className="min-w-0 flex-1">
-              <p className={`text-[14px] leading-relaxed ${bloque?.texto ?? ""}`}>
-                {resumen.texto}
-              </p>
-              {s.observacion && (
-                <div className="mt-3 rounded-md border border-outline-variant bg-surface px-4 py-3">
-                  <div className="text-[11px] font-bold tracking-[0.06em] text-brown-700 uppercase">
-                    Devolución del administrador
-                  </div>
-                  <p className="mt-1.5 text-[14px] leading-relaxed whitespace-pre-line text-fg-2">
-                    {s.observacion}
-                  </p>
-                </div>
-              )}
-              {rechazada && (
-                <Link href={NUEVA_HREF} className="btn btn-primary btn-sm mt-3.5 inline-flex">
-                  <PlusCircle className="size-[15px]" /> Enviar una nueva solicitud
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <Seccion title="Datos del establecimiento">
+        <Dato label="Nombre del establecimiento" value={s.nombreEstablecimiento} span />
+        <Dato label="Razón social" value={s.razonSocial} />
+        <Dato label="CUIT" value={s.cuit} mono />
+      </Seccion>
 
-      {/* Datos enviados */}
-      <Card className="px-[30px] pt-7 pb-[30px]">
-        <SectionLabel>Datos del establecimiento</SectionLabel>
-        <dl className="mt-3.5 mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Dato label="Nombre del establecimiento" value={s.nombreEstablecimiento} />
-          <Dato label="Razón social" value={s.razonSocial} />
-          <Dato label="CUIT" value={s.cuit} mono />
-        </dl>
+      <Seccion title="Ubicación">
+        <Dato label="Departamento" value={s.departamento} />
+        <Dato label="Domicilio legal" value={s.domicilioLegal} />
+      </Seccion>
 
-        <SectionLabel>Ubicación</SectionLabel>
-        <dl className="mt-3.5 mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Dato label="Departamento" value={s.departamento} />
-          <Dato label="Domicilio legal" value={s.domicilioLegal} />
-        </dl>
+      <Seccion title="Contacto">
+        <Dato label="Correo electrónico" value={s.email} />
+        <Dato label="Teléfono" value={s.telefono} />
+      </Seccion>
 
-        <SectionLabel>Contacto</SectionLabel>
-        <dl className="mt-3.5 mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Dato label="Correo electrónico" value={s.email} />
-          <Dato label="Teléfono" value={s.telefono} />
-        </dl>
+      <Seccion title="Datos bancarios" cols={1}>
+        <Dato label="CVU" value={cvuEnmascarado(s.cvu)} mono />
+      </Seccion>
 
-        <SectionLabel>Datos bancarios</SectionLabel>
-        <dl className="mt-3.5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Dato label="CVU" value={cvuEnmascarado(s.cvu)} mono />
-        </dl>
-
-        <div className="my-[22px] h-px bg-cream-tert" />
-
-        <SectionLabel>Documentación cargada</SectionLabel>
+      <Seccion title="Archivos enviados" cols={1}>
         {s.archivos.length === 0 ? (
-          <p className="mt-2 text-[13.5px] text-fg-2">
-            No hay archivos asociados a esta solicitud.
-          </p>
+          <p className="text-[14px] text-fg-2">No hay archivos asociados a esta solicitud.</p>
         ) : (
-          <>
+          <div className="flex flex-col gap-2.5">
             {!storageConfigurado && (
-              <p className="mt-2 mb-3 text-[12.5px] text-fg-3">
+              <p className="text-[12.5px] text-fg-3">
                 La descarga no está disponible: falta configurar la URL del almacenamiento.
               </p>
             )}
-            <div className="mt-3 flex flex-col gap-2">
-              {s.archivos.map((a, i) => (
-                <ArchivoRow key={a.key || `${a.nombre}-${i}`} a={a} />
-              ))}
-            </div>
-          </>
+            {s.archivos.map((a, i) => (
+              <ArchivoRow key={a.key || `${a.nombre}-${i}`} a={a} />
+            ))}
+          </div>
         )}
-      </Card>
-    </>
+      </Seccion>
+
+      <Seccion title="Estado de la solicitud" cols={1}>
+        <div className="flex flex-col">
+          {hitos.map((h, i) => {
+            const last = i === hitos.length - 1;
+            return (
+              <div key={i} className="flex gap-4">
+                <div className="flex shrink-0 flex-col items-center">
+                  <span
+                    className={cn(
+                      "flex size-[34px] items-center justify-center rounded-full",
+                      TONO_CIRCULO[h.tono],
+                    )}
+                  >
+                    {h.icono}
+                  </span>
+                  {!last && <span className="my-1 w-px flex-1 bg-outline-variant" />}
+                </div>
+                <div className={cn("min-w-0", last ? "pb-0" : "pb-6")}>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="text-[14.5px] font-semibold text-fg-1">{h.label}</span>
+                    {h.fecha && <span className="text-[12.5px] text-fg-3">{h.fecha}</span>}
+                  </div>
+                  {h.motivo && (
+                    <p className="mt-2 text-[14px] leading-relaxed text-fg-2">{h.motivo}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Seccion>
+
+      {s.estado === "rechazada" && (
+        <Link href={NUEVA_HREF} className="btn btn-primary mt-7 inline-flex no-underline">
+          <PlusCircle className="size-[17px]" /> Enviar una nueva solicitud
+        </Link>
+      )}
+    </div>
   );
 }
 
@@ -236,7 +310,7 @@ function NoEncontrada() {
         Puede que el enlace esté mal o que la solicitud no sea tuya. Revisá el listado de tus
         solicitudes.
       </p>
-      <Link href={LISTA_HREF} className="btn btn-primary mt-2 inline-flex">
+      <Link href={LISTA_HREF} className="btn btn-primary mt-2 inline-flex no-underline">
         Ver mis solicitudes
       </Link>
     </div>
@@ -263,10 +337,10 @@ export default function SolicitudDetalleClient({ id }: { id: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-[820px] px-7 pt-7 pb-24">
+    <div className="mx-auto max-w-[900px] px-7 pt-7 pb-24">
       <Link
         href={LISTA_HREF}
-        className="mb-5 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-green-800"
+        className="mb-3.5 inline-flex items-center gap-[7px] text-[13.5px] font-semibold text-green-800 no-underline"
       >
         <ArrowLeft className="size-4" /> Volver a mis solicitudes
       </Link>
