@@ -10,6 +10,7 @@ import {
   Hash,
   MapPin,
   CalendarDays,
+  ChevronRight,
   FileSearch,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
@@ -29,56 +30,48 @@ function SolicitudCard({ s }: { s: SolicitudResumen }) {
     | undefined;
 
   return (
-    // TODO: cuando exista GET /solicitudes-establecimiento/{id}, envolver en un
-    // <Link href={`/mis-solicitudes/${s.id}`}> y agregar la afordancia de click.
-    // Por ahora la tarjeta es informativa: enlazar a una ruta inexistente daría 404.
-    <Card className="px-[22px] py-[18px]">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-md bg-green-050">
-            <Building2 className="size-[18px] text-green-800" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="truncate font-display text-[18.5px] leading-tight font-semibold text-fg-1">
-              {s.nombreEstablecimiento ||
-                s.razonSocial ||
-                "Establecimiento sin nombre"}
-            </h2>
-            {s.razonSocial && (
-              <p className="mt-0.5 truncate text-[13.5px] text-fg-2">
-                {s.razonSocial}
-              </p>
-            )}
-            <dl className="mt-2.5 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-x-6">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <Hash className="size-[13px] shrink-0 text-fg-3" />
-                <dt className="sr-only">CUIT</dt>
-                <dd className="font-mono text-[12.5px] text-fg-2">
-                  {s.cuit || "—"}
-                </dd>
-              </div>
-              <div className="flex min-w-0 items-center gap-1.5">
-                <MapPin className="size-[13px] shrink-0 text-fg-3" />
-                <dt className="sr-only">Domicilio legal</dt>
-                <dd className="truncate text-[13px] text-fg-2">
-                  {s.domicilioLegal || "—"}
-                </dd>
-              </div>
-              <div className="flex min-w-0 items-center gap-1.5">
-                <CalendarDays className="size-[13px] shrink-0 text-fg-3" />
-                <dt className="sr-only">Enviada</dt>
-                <dd className="text-[13px] text-fg-3">
-                  {fmtFechaHora(s.fechaHoraAlta)}
-                </dd>
-              </div>
-            </dl>
+    <Link href={`/mis-solicitudes/${s.id}`} className="block">
+      <Card className="px-[22px] py-[18px] transition-[box-shadow,border-color] hover:border-sand hover:shadow-[var(--shadow-hover)]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-md bg-green-050">
+              <Building2 className="size-[18px] text-green-800" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="truncate font-display text-[18.5px] leading-tight font-semibold text-fg-1">
+                {s.nombreEstablecimiento || s.razonSocial || "Establecimiento sin nombre"}
+              </h2>
+              {s.razonSocial && (
+                <p className="mt-0.5 truncate text-[13.5px] text-fg-2">{s.razonSocial}</p>
+              )}
+              <dl className="mt-2.5 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-x-6">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <Hash className="size-[13px] shrink-0 text-fg-3" />
+                  <dt className="sr-only">CUIT</dt>
+                  <dd className="font-mono text-[12.5px] text-fg-2">{s.cuit || "—"}</dd>
+                </div>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <MapPin className="size-[13px] shrink-0 text-fg-3" />
+                  <dt className="sr-only">Domicilio legal</dt>
+                  <dd className="truncate text-[13px] text-fg-2">{s.domicilioLegal || "—"}</dd>
+                </div>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <CalendarDays className="size-[13px] shrink-0 text-fg-3" />
+                  <dt className="sr-only">Enviada</dt>
+                  <dd className="text-[13px] text-fg-3">{fmtFechaHora(s.fechaHoraAlta)}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <EstadoBadge tone={meta?.tone ?? "neutral"}>
+              {meta?.label ?? "Sin estado"}
+            </EstadoBadge>
+            <ChevronRight className="size-[18px] text-fg-3" />
           </div>
         </div>
-        <EstadoBadge tone={meta?.tone ?? "neutral"}>
-          {meta?.label ?? "Sin estado"}
-        </EstadoBadge>
-      </div>
-    </Card>
+      </Card>
+    </Link>
   );
 }
 
