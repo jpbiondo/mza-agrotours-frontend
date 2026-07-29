@@ -4,7 +4,13 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Loader, PlusCircle, Building2, Hash, MapPin, CalendarDays, FileSearch,
+  Loader,
+  PlusCircle,
+  Building2,
+  Hash,
+  MapPin,
+  CalendarDays,
+  FileSearch,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Card, EstadoBadge } from "@/components/ui";
@@ -34,31 +40,43 @@ function SolicitudCard({ s }: { s: SolicitudResumen }) {
           </span>
           <div className="min-w-0">
             <h2 className="truncate font-display text-[18.5px] leading-tight font-semibold text-fg-1">
-              {s.nombreEstablecimiento || s.razonSocial || "Establecimiento sin nombre"}
+              {s.nombreEstablecimiento ||
+                s.razonSocial ||
+                "Establecimiento sin nombre"}
             </h2>
             {s.razonSocial && (
-              <p className="mt-0.5 truncate text-[13.5px] text-fg-2">{s.razonSocial}</p>
+              <p className="mt-0.5 truncate text-[13.5px] text-fg-2">
+                {s.razonSocial}
+              </p>
             )}
             <dl className="mt-2.5 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-x-6">
               <div className="flex min-w-0 items-center gap-1.5">
                 <Hash className="size-[13px] shrink-0 text-fg-3" />
                 <dt className="sr-only">CUIT</dt>
-                <dd className="font-mono text-[12.5px] text-fg-2">{s.cuit || "—"}</dd>
+                <dd className="font-mono text-[12.5px] text-fg-2">
+                  {s.cuit || "—"}
+                </dd>
               </div>
               <div className="flex min-w-0 items-center gap-1.5">
                 <MapPin className="size-[13px] shrink-0 text-fg-3" />
                 <dt className="sr-only">Domicilio legal</dt>
-                <dd className="truncate text-[13px] text-fg-2">{s.domicilioLegal || "—"}</dd>
+                <dd className="truncate text-[13px] text-fg-2">
+                  {s.domicilioLegal || "—"}
+                </dd>
               </div>
               <div className="flex min-w-0 items-center gap-1.5">
                 <CalendarDays className="size-[13px] shrink-0 text-fg-3" />
                 <dt className="sr-only">Enviada</dt>
-                <dd className="text-[13px] text-fg-3">{fmtFechaHora(s.fechaCreacion)}</dd>
+                <dd className="text-[13px] text-fg-3">
+                  {fmtFechaHora(s.fechaHoraAlta)}
+                </dd>
               </div>
             </dl>
           </div>
         </div>
-        <EstadoBadge tone={meta?.tone ?? "neutral"}>{meta?.label ?? "Sin estado"}</EstadoBadge>
+        <EstadoBadge tone={meta?.tone ?? "neutral"}>
+          {meta?.label ?? "Sin estado"}
+        </EstadoBadge>
       </div>
     </Card>
   );
@@ -74,11 +92,15 @@ function EmptyState() {
         Todavía no enviaste solicitudes
       </h2>
       <p className="max-w-[440px] text-[14.5px] leading-relaxed text-fg-2">
-        Cuando pidas el alta de una finca o bodega vas a poder seguir acá el estado de la
-        verificación.
+        Cuando pidas el alta de una finca o bodega vas a poder seguir acá el
+        estado de la verificación.
       </p>
-      <Link href={NUEVA_HREF} className="btn btn-primary btn-lg mt-2 inline-flex">
-        <PlusCircle className="size-[18px]" /> Solicitar alta de un establecimiento
+      <Link
+        href={NUEVA_HREF}
+        className="btn btn-primary btn-lg mt-2 inline-flex"
+      >
+        <PlusCircle className="size-[18px]" /> Solicitar alta de un
+        establecimiento
       </Link>
     </div>
   );
@@ -86,7 +108,8 @@ function EmptyState() {
 
 export default function MisSolicitudesClient() {
   const router = useRouter();
-  const { solicitudes, isLoading, error, unauthenticated, reload } = useMisSolicitudes();
+  const { solicitudes, isLoading, error, unauthenticated, reload } =
+    useMisSolicitudes();
 
   // Ruta protegida: sin sesión, a la pantalla de login.
   useEffect(() => {
@@ -112,12 +135,15 @@ export default function MisSolicitudesClient() {
             Mis solicitudes
           </h1>
           <p className="mt-2 max-w-[620px] text-[15.5px] leading-relaxed text-fg-2">
-            Acá vas a ver las solicitudes de alta de establecimiento que enviaste y en qué
-            estado está la verificación de cada una. Te avisamos por correo cuando un
-            administrador la resuelva.
+            Acá vas a ver las solicitudes de alta de establecimiento que
+            enviaste y en qué estado está la verificación de cada una. Te
+            avisamos por correo cuando un administrador la resuelva.
           </p>
         </div>
-        <Link href={NUEVA_HREF} className="btn btn-primary inline-flex shrink-0">
+        <Link
+          href={NUEVA_HREF}
+          className="btn btn-primary inline-flex shrink-0"
+        >
           <PlusCircle className="size-[18px]" /> Nueva solicitud
         </Link>
       </div>
@@ -134,11 +160,12 @@ export default function MisSolicitudesClient() {
         ) : (
           <>
             <div className="mb-3.5 text-[13.5px] text-fg-3">
-              Mostrando <strong className="text-fg-2">{solicitudes.length}</strong>{" "}
+              Mostrando{" "}
+              <strong className="text-fg-2">{solicitudes.length}</strong>{" "}
               {solicitudes.length === 1 ? "solicitud" : "solicitudes"}
             </div>
             <div className="flex flex-col gap-4">
-              {/* Ordenadas por fechaCreacion desc en el hook: las más nuevas arriba. */}
+              {/* Ordenadas por fechaHoraAlta desc en el hook: las más nuevas arriba. */}
               {solicitudes.map((s) => (
                 <SolicitudCard key={s.id} s={s} />
               ))}

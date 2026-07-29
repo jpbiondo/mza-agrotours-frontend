@@ -16,7 +16,7 @@ export interface SolicitudResumen {
   domicilioLegal: string;
   estado: EstadoSolicitud;
   /** ISO-8601 con offset (Instant). `null` si el backend no la mandó. */
-  fechaCreacion: string | null;
+  fechaHoraAlta: string | null;
 }
 
 export interface PruebaArchivo {

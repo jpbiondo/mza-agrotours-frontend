@@ -12,7 +12,8 @@ interface SolicitudBackend {
   cuit?: string;
   domicilioLegal?: string;
   estado?: string;
-  fechaCreacion?: string | null;
+  /** `unknown`: si el backend serializa la fecha como array/objeto en vez de string, se descarta. */
+  fechaHoraAlta?: unknown;
 }
 
 interface MisSolicitudesResponse {
@@ -43,16 +44,23 @@ function aResumen(s: SolicitudBackend, i: number): SolicitudResumen {
     // El contrato dice minúsculas ("pendiente" | "validada" | "rechazada");
     // se normaliza por si el enum del backend se serializara en mayúsculas.
     // Un valor desconocido no rompe: la pantalla cae a un tono neutro.
-    estado: String(s.estado ?? "").trim().toLowerCase() as EstadoSolicitud,
-    // Se guarda el ISO crudo y se formatea al renderizar. Vacío → null para que
-    // `fmtFechaHora` muestre "—" en vez de "NaN/NaN/NaN".
-    fechaCreacion: s.fechaCreacion?.trim() ? s.fechaCreacion : null,
+    estado: String(s.estado ?? "")
+      .trim()
+      .toLowerCase() as EstadoSolicitud,
+    // Se guarda el ISO crudo y se formatea al renderizar. Se exige string: si
+    // llegara vacío —o como array/objeto, que es lo que hace Jackson con un
+    // LocalDateTime sin jackson-datatype-jsr310— queda en null y `fmtFechaHora`
+    // muestra "—" en vez de "NaN/NaN/NaN" o de romper el map entero.
+    fechaHoraAlta:
+      typeof s.fechaHoraAlta === "string" && s.fechaHoraAlta.trim()
+        ? s.fechaHoraAlta
+        : null,
   };
 }
 
 /** Instante de la fecha, o NaN si falta o no se puede parsear. */
 function ts(s: SolicitudResumen): number {
-  return s.fechaCreacion ? Date.parse(s.fechaCreacion) : NaN;
+  return s.fechaHoraAlta ? Date.parse(s.fechaHoraAlta) : NaN;
 }
 
 /**
@@ -104,10 +112,13 @@ export function useMisSolicitudes(): UseMisSolicitudesReturn {
         // `ok` sin `data` (o con `data: null`) es una lista vacía, NO un error:
         // el estado vacío tiene que ser distinguible de un fallo de carga.
         setSolicitudes(
-          Array.isArray(res.data) ? res.data.map(aResumen).sort(porFechaDesc) : [],
+          Array.isArray(res.data)
+            ? res.data.map(aResumen).sort(porFechaDesc)
+            : [],
         );
       } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : "Error inesperado");
+        if (active)
+          setError(e instanceof Error ? e.message : "Error inesperado");
       } finally {
         if (active) setIsLoading(false);
       }
