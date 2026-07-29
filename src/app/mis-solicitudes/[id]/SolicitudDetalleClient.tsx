@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Loader, ArrowLeft, Download, FileText, Image as ImageIcon, File as FileIcon,
-  CalendarDays, PlusCircle, FileSearch, Clock, CheckCircle2, XCircle, Send,
+  CalendarDays, PlusCircle, FileSearch, Clock, CheckCircle2, XCircle,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { EstadoBadge } from "@/components/ui";
@@ -15,7 +15,9 @@ import { fmtFechaHora } from "@/lib/format";
 import { storageConfigurado, urlDeArchivo } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { useSolicitudDetalle } from "@/hooks/useSolicitudDetalle";
-import type { ArchivoSolicitud, EstadoSolicitud, SolicitudDetalle } from "@/types/solicitudes";
+import type {
+  CambioEstado, EstadoSolicitud, PruebaSolicitud, SolicitudDetalle,
+} from "@/types/solicitudes";
 
 const NUEVA_HREF = "/mis-solicitudes/nueva";
 const LISTA_HREF = "/mis-solicitudes";
@@ -115,7 +117,7 @@ function Dato({
   );
 }
 
-function ArchivoRow({ a }: { a: ArchivoSolicitud }) {
+function PruebaRow({ a }: { a: PruebaSolicitud }) {
   const href = urlDeArchivo(a.key);
 
   return (
@@ -152,6 +154,7 @@ function ArchivoRow({ a }: { a: ArchivoSolicitud }) {
   );
 }
 
+/** Un paso del historial, ya resuelto a lo que se dibuja. */
 interface Hito {
   label: string;
   tono: Tono;
@@ -160,34 +163,37 @@ interface Hito {
   motivo: string;
 }
 
+function aHito(c: CambioEstado): Hito {
+  const meta = SOL_ESTADO_META[c.estado] as
+    | (typeof SOL_ESTADO_META)[keyof typeof SOL_ESTADO_META]
+    | undefined;
+  return {
+    label: meta?.label ?? "Sin estado",
+    tono: (meta?.tone as Tono) ?? "neutral",
+    icono: iconoEstado(c.estado, "size-4"),
+    fecha: fmtFechaHora(c.fecha),
+    motivo: c.observaciones,
+  };
+}
+
 /**
- * Línea de tiempo del estado, del hito más reciente al más antiguo.
- *
- * El backend no devuelve un historial: sólo el estado actual, la observación y
- * la fecha de alta. Se arman los dos hitos que sí tienen respaldo — el envío y
- * la situación actual — sin inventar fechas ni autores para los que no hay dato.
- * TODO backend: un array de cambios de estado (fecha, autor, motivo) permitiría
- * mostrar el recorrido completo.
+ * Historial a dibujar, del cambio más reciente al más antiguo (el hook ya lo
+ * ordena). Si el backend no mandara `estados`, se cae a un único hito armado
+ * con el estado actual y la fecha de alta, para no dejar la sección vacía.
  */
 function hitosDe(s: SolicitudDetalle): Hito[] {
+  if (s.estados.length > 0) return s.estados.map(aHito);
+
   const meta = SOL_ESTADO_META[s.estado] as
     | (typeof SOL_ESTADO_META)[keyof typeof SOL_ESTADO_META]
     | undefined;
-
   return [
     {
       label: meta?.label ?? "Sin estado",
       tono: (meta?.tone as Tono) ?? "neutral",
       icono: iconoEstado(s.estado, "size-4"),
-      fecha: null,
-      motivo: s.observacion || MOTIVO_POR_ESTADO[s.estado] || "",
-    },
-    {
-      label: "Enviada",
-      tono: "info",
-      icono: <Send className="size-4" />,
       fecha: fmtFechaHora(s.fechaHoraAlta),
-      motivo: "Enviaste la solicitud de alta con la documentación de respaldo.",
+      motivo: MOTIVO_POR_ESTADO[s.estado] ?? "",
     },
   ];
 }
@@ -239,9 +245,9 @@ function Detalle({ s }: { s: SolicitudDetalle }) {
         <Dato label="CVU" value={cvuEnmascarado(s.cvu)} mono />
       </Seccion>
 
-      <Seccion title="Archivos enviados" cols={1}>
-        {s.archivos.length === 0 ? (
-          <p className="text-[14px] text-fg-2">No hay archivos asociados a esta solicitud.</p>
+      <Seccion title="Pruebas enviadas" cols={1}>
+        {s.pruebas.length === 0 ? (
+          <p className="text-[14px] text-fg-2">No hay pruebas asociadas a esta solicitud.</p>
         ) : (
           <div className="flex flex-col gap-2.5">
             {!storageConfigurado && (
@@ -249,14 +255,14 @@ function Detalle({ s }: { s: SolicitudDetalle }) {
                 La descarga no está disponible: falta configurar la URL del almacenamiento.
               </p>
             )}
-            {s.archivos.map((a, i) => (
-              <ArchivoRow key={a.key || `${a.nombre}-${i}`} a={a} />
+            {s.pruebas.map((a, i) => (
+              <PruebaRow key={a.key || `${a.nombre}-${i}`} a={a} />
             ))}
           </div>
         )}
       </Seccion>
 
-      <Seccion title="Estado de la solicitud" cols={1}>
+      <Seccion title="Historial de estados" cols={1}>
         <div className="flex flex-col">
           {hitos.map((h, i) => {
             const last = i === hitos.length - 1;

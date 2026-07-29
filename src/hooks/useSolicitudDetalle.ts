@@ -3,16 +3,24 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch } from "@/lib/api";
 import type {
-  ArchivoSolicitud,
+  CambioEstado,
   EstadoSolicitud,
+  PruebaSolicitud,
   SolicitudDetalle,
 } from "@/types/solicitudes";
 
-/** Archivo crudo del backend. Campos opcionales: defensivo. */
-interface ArchivoBackend {
+/** Prueba cruda del backend. Campos opcionales: defensivo. */
+interface PruebaBackend {
   nombre?: string;
   extension?: string;
   key?: string;
+}
+
+/** Paso del historial tal como llega. */
+interface CambioEstadoBackend {
+  estado?: string;
+  fecha?: unknown;
+  observaciones?: string;
 }
 
 /** Registro crudo de GET /solicitudes-establecimiento/me/{id}. */
@@ -29,8 +37,8 @@ interface DetalleBackend {
   estado?: string;
   /** `unknown`: si el backend la serializa como array/objeto en vez de string, se descarta. */
   fechaHoraAlta?: unknown;
-  observacion?: string;
-  archivos?: ArchivoBackend[] | null;
+  estados?: CambioEstadoBackend[] | null;
+  pruebas?: PruebaBackend[] | null;
 }
 
 interface DetalleResponse {
@@ -49,12 +57,47 @@ interface UseSolicitudDetalleReturn {
   reload: () => void;
 }
 
-function aArchivo(a: ArchivoBackend): ArchivoSolicitud {
+/** Fecha sólo si vino como string no vacío; si no, null (ver `fmtFechaHora`). */
+function aFecha(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v : null;
+}
+
+/** El backend manda el estado en mayúsculas ("PENDIENTE"); acá se normaliza. */
+function aEstado(v: unknown): EstadoSolicitud {
+  return String(v ?? "").trim().toLowerCase() as EstadoSolicitud;
+}
+
+function aPrueba(p: PruebaBackend): PruebaSolicitud {
   return {
-    nombre: a.nombre ?? "",
-    extension: (a.extension ?? "").trim().toLowerCase().replace(/^\.+/, ""),
-    key: a.key ?? "",
+    nombre: p.nombre ?? "",
+    extension: (p.extension ?? "").trim().toLowerCase().replace(/^\.+/, ""),
+    key: p.key ?? "",
   };
+}
+
+function aCambio(c: CambioEstadoBackend): CambioEstado {
+  return {
+    estado: aEstado(c.estado),
+    fecha: aFecha(c.fecha),
+    observaciones: c.observaciones ?? "",
+  };
+}
+
+/** Instante del cambio, o NaN si falta o no se puede parsear. */
+function tsCambio(c: CambioEstado): number {
+  return c.fecha ? Date.parse(c.fecha) : NaN;
+}
+
+/**
+ * Historial del cambio más reciente al más antiguo. No se confía en el orden
+ * del backend, y los pasos sin fecha quedan al final en el orden recibido.
+ */
+function porFechaDesc(a: CambioEstado, b: CambioEstado): number {
+  const ta = tsCambio(a);
+  const tb = tsCambio(b);
+  if (Number.isNaN(ta)) return Number.isNaN(tb) ? 0 : 1;
+  if (Number.isNaN(tb)) return -1;
+  return tb - ta;
 }
 
 function aDetalle(d: DetalleBackend): SolicitudDetalle {
@@ -69,13 +112,10 @@ function aDetalle(d: DetalleBackend): SolicitudDetalle {
     telefono: d.telefono ?? "",
     cvu: d.cvu ?? "",
     // Se normaliza igual que en la lista: un valor fuera del enum cae a tono neutro.
-    estado: String(d.estado ?? "").trim().toLowerCase() as EstadoSolicitud,
-    fechaHoraAlta:
-      typeof d.fechaHoraAlta === "string" && d.fechaHoraAlta.trim()
-        ? d.fechaHoraAlta
-        : null,
-    observacion: d.observacion ?? "",
-    archivos: Array.isArray(d.archivos) ? d.archivos.map(aArchivo) : [],
+    estado: aEstado(d.estado),
+    fechaHoraAlta: aFecha(d.fechaHoraAlta),
+    estados: Array.isArray(d.estados) ? d.estados.map(aCambio).sort(porFechaDesc) : [],
+    pruebas: Array.isArray(d.pruebas) ? d.pruebas.map(aPrueba) : [],
   };
 }
 

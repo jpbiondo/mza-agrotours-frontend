@@ -19,18 +19,27 @@ export interface SolicitudResumen {
   fechaHoraAlta: string | null;
 }
 
-/** Archivo de prueba ya subido al object storage. */
-export interface ArchivoSolicitud {
-  /** Nombre visible del archivo. */
+/** Prueba documental ya subida al object storage. */
+export interface PruebaSolicitud {
+  /** Nombre visible del archivo, tal como lo cargó el usuario. */
   nombre: string;
   extension: string;
   /** Ruta del objeto en el proveedor; se combina con la URL base para descargarlo. */
   key: string;
 }
 
+/** Un paso del historial: por qué estado pasó la solicitud y cuándo. */
+export interface CambioEstado {
+  estado: EstadoSolicitud;
+  /** ISO-8601. `null` si el backend no la mandó. */
+  fecha: string | null;
+  /** Devolución del administrador en ese cambio. */
+  observaciones: string;
+}
+
 /**
  * Item de GET /solicitudes-establecimiento/me/{id}: el registro completo de una
- * solicitud propia, con la documentación cargada.
+ * solicitud propia, con la documentación cargada y el historial de estados.
  */
 export interface SolicitudDetalle {
   id: string;
@@ -43,11 +52,11 @@ export interface SolicitudDetalle {
   telefono: string;
   cvu: string;
   estado: EstadoSolicitud;
-  /** ISO-8601 con offset. `null` si el backend no la mandó. */
+  /** ISO-8601. `null` si el backend no la mandó. */
   fechaHoraAlta: string | null;
-  /** Devolución del administrador. Relevante sobre todo cuando fue rechazada. */
-  observacion: string;
-  archivos: ArchivoSolicitud[];
+  /** Del cambio más reciente al más antiguo. */
+  estados: CambioEstado[];
+  pruebas: PruebaSolicitud[];
 }
 
 export interface PruebaArchivo {
