@@ -8,6 +8,7 @@ import {
 import { FirebaseError } from "firebase/app";
 import { auth } from "../../firebase.config";
 import { apiFetch, ApiError } from "@/lib/api";
+import { aRoles } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import { fechaHoraBaja } from "@/data/cuenta";
 import type {
@@ -115,7 +116,15 @@ export function usePerfil(): PerfilState {
         if (!res.ok || !res.data) {
           setError(res.code ?? "No pudimos cargar tu cuenta");
         } else {
-          setModels(aModelos(res.data, useAuthStore.getState().roles));
+          // Los permisos llegan con el perfil: se refresca el store para que el
+          // navbar y los guards no queden con lo cacheado en localStorage.
+          const roles = aRoles(res.data.tipoPermisos);
+          useAuthStore.getState().setSession({
+            nombre: res.data.nombre,
+            email: res.data.email,
+            roles,
+          });
+          setModels(aModelos(res.data, roles));
         }
       } catch (e) {
         if (active)

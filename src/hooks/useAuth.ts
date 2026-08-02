@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import { auth } from "../../firebase.config";
 import { apiFetch } from "@/lib/api";
+import { aRoles } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import type {
   Cuenta,
@@ -10,7 +11,6 @@ import type {
   AuthCode,
   AuthResult,
   BackendProfile,
-  Rol,
 } from "@/types/auth";
 
 interface UseAuthReturn {
@@ -19,9 +19,6 @@ interface UseAuthReturn {
   authError: AuthCode | null;
   clearError: () => void;
 }
-
-/** El backend aún no tiene roles: asumimos que el usuario tiene todos. */
-const ALL_ROLES: Rol[] = ["visitante", "productor", "admin"];
 
 /** Endpoint del perfil en el backend. */
 const PROFILE_PATH = "/usuario/me";
@@ -105,7 +102,7 @@ async function firebaseLogin({
     return { ok: false, code: res.code ?? "error" };
   }
 
-  const cuenta: Cuenta = { ...res.data, roles: ALL_ROLES };
+  const cuenta: Cuenta = { ...res.data, roles: aRoles(res.data.tipoPermisos) };
 
   useAuthStore.getState().setSession({
     nombre: cuenta.nombre,

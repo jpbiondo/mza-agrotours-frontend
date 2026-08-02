@@ -9,6 +9,8 @@ export interface BackendProfile {
   tipoIdentificacion: string;
   /** Fecha de nacimiento en ISO (o null si el backend no la tiene). */
   fechaNacimiento: string | null;
+  /** Permisos del usuario: "ADMIN" | "PRODUCTOR" | "VISITANTE". Normalizar con `aRoles`. */
+  tipoPermisos?: string[];
 }
 
 /**
