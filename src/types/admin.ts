@@ -1,3 +1,34 @@
+/* ---- Contratos reales de /administradores-sistemas ---------------------- */
+
+/** Item de GET /administradores-sistemas/ y respuesta de .../create. */
+export interface AdminSistema {
+  id: string;
+  nombreUsuario: string;
+  emailUsuario: string;
+  identificacion: string;
+  nombreRol: string;
+  esLider: boolean;
+}
+
+/** Item de GET /administradores-sistemas/roles. */
+export interface RolAdmin {
+  id: string;
+  nombre: string;
+  descripcion: string;
+}
+
+/**
+ * GET /usuario/card/{email}: sólo confirma que la cuenta existe. No dice si ya
+ * es administradora — eso se resuelve comparando la identificación contra la
+ * lista vigente.
+ */
+export interface UsuarioCard {
+  nombre: string;
+  identificacion: string;
+}
+
+/* ---- Mock del resto del panel de administración ------------------------- */
+
 export interface PermItem {
   id: string;
   label: string;
