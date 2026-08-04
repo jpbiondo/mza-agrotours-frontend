@@ -55,12 +55,15 @@ export function useAdministradores(): UseAdministradoresReturn {
       }
       try {
         const token = await user.getIdToken();
-        const res = await apiFetch<unknown>("/administradores-sistemas/", { token });
+        const res = await apiFetch<unknown>("/administradores-sistemas/", {
+          token,
+        });
         if (!active) return;
         const data = desenvolver<AdminSistema[]>(res);
         setAdministradores(Array.isArray(data) ? data : []);
       } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : "Error inesperado");
+        if (active)
+          setError(e instanceof Error ? e.message : "Error inesperado");
       } finally {
         if (active) setIsLoading(false);
       }
@@ -87,7 +90,11 @@ export function useAdministradores(): UseAdministradoresReturn {
 
 /* ---- Roles asignables ---------------------------------------------------- */
 
-export function useRolesAdmin(): { roles: RolAdmin[]; isLoading: boolean; error: string | null } {
+export function useRolesAdmin(): {
+  roles: RolAdmin[];
+  isLoading: boolean;
+  error: string | null;
+} {
   const [roles, setRoles] = useState<RolAdmin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,12 +110,17 @@ export function useRolesAdmin(): { roles: RolAdmin[]; isLoading: boolean; error:
       }
       try {
         const token = await user.getIdToken();
-        const res = await apiFetch<unknown>("/administradores-sistemas/roles", { token });
+        const res = await apiFetch<unknown>("/administradores-sistemas/roles", {
+          token,
+        });
         if (!active) return;
         const data = desenvolver<RolAdmin[]>(res);
         setRoles(Array.isArray(data) ? data : []);
       } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : "No pudimos cargar los roles");
+        if (active)
+          setError(
+            e instanceof Error ? e.message : "No pudimos cargar los roles",
+          );
       } finally {
         if (active) setIsLoading(false);
       }
@@ -141,7 +153,7 @@ export function useCrearAdmin() {
         apiFetch<unknown>("/administradores-sistemas/create", {
           method: "POST",
           token,
-          body: JSON.stringify({ email, rolId }),
+          body: JSON.stringify({ emailUsuario: email, rolId }),
         }),
       );
       const admin = desenvolver<AdminSistema>(res);
@@ -171,12 +183,19 @@ interface UseUsuarioCardReturn {
  * para no pegarle al backend en cada tecla. `habilitado` lo controla el llamador
  * para no consultar mientras el email todavía no es válido.
  */
-export function useUsuarioCard(email: string, habilitado: boolean): UseUsuarioCardReturn {
+export function useUsuarioCard(
+  email: string,
+  habilitado: boolean,
+): UseUsuarioCardReturn {
   const clave = habilitado && email ? email : "";
   // El resultado se guarda junto a la clave que lo produjo: así el estado de
   // carga se deriva comparando (como en `useAsync`) en vez de setearlo dentro
   // del efecto, que dispara renders en cascada.
-  const [res, setRes] = useState<{ clave: string; card: UsuarioCard | null; estado: EstadoCard }>({
+  const [res, setRes] = useState<{
+    clave: string;
+    card: UsuarioCard | null;
+    estado: EstadoCard;
+  }>({
     clave: "",
     card: null,
     estado: "idle",
@@ -189,7 +208,9 @@ export function useUsuarioCard(email: string, habilitado: boolean): UseUsuarioCa
     const t = setTimeout(async () => {
       try {
         const raw = await conToken((token) =>
-          apiFetch<unknown>(`/usuario/card/${encodeURIComponent(clave)}`, { token }),
+          apiFetch<unknown>(`/usuario/card/${encodeURIComponent(clave)}`, {
+            token,
+          }),
         );
         if (!active) return;
         const data = desenvolver<UsuarioCard>(raw);
