@@ -4,18 +4,26 @@ import { auth } from "../../firebase.config";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AdminSistema, RolAdmin, UsuarioCard } from "@/types/admin";
 
+interface Envelope<T> {
+  ok: boolean;
+  code?: string;
+  data?: T;
+}
+
 /**
- * Estos endpoints devuelven el payload crudo (un array o un objeto), a
- * diferencia de /departamentos/ y compañía que lo envuelven en { ok, code, data }.
- * `desenvolver` acepta las dos formas para que un cambio de contrato de este
- * lado no rompa la pantalla en silencio.
+ * Normaliza la respuesta al envelope `{ ok, code, data }`. Sigue aceptando el
+ * payload crudo —un array o un objeto suelto— por si algún endpoint todavía no
+ * lo envuelve; en ese caso se asume éxito.
+ *
+ * Importante: conserva el `code` cuando `ok` es false, que es como el backend
+ * manda los errores de dominio con status 2xx.
  */
-function desenvolver<T>(res: unknown): T | null {
+function comoEnvelope<T>(res: unknown): Envelope<T> {
   if (res && typeof res === "object" && "ok" in res) {
-    const env = res as { ok: boolean; data?: T };
-    return env.ok ? (env.data ?? null) : null;
+    const env = res as Envelope<T>;
+    return { ok: env.ok, code: env.code, data: env.data };
   }
-  return (res as T) ?? null;
+  return { ok: true, data: (res as T) ?? undefined };
 }
 
 /** Corre `fn` con el ID token de Firebase; lanza si no hay sesión. */
@@ -61,8 +69,14 @@ export function useAdministradores(): UseAdministradoresReturn {
           token,
         });
         if (!active) return;
-        const data = desenvolver<AdminSistema[]>(res);
-        setAdministradores(Array.isArray(data) ? data : []);
+        const env = comoEnvelope<AdminSistema[]>(res);
+        if (!env.ok) {
+          setError(env.code ?? "No pudimos cargar los administradores");
+          return;
+        }
+        // Envelope ok sin `data` es lista vacía, no error: el estado vacío tiene
+        // que ser distinguible de un fallo de carga.
+        setAdministradores(Array.isArray(env.data) ? env.data : []);
       } catch (e) {
         if (active)
           setError(e instanceof Error ? e.message : "Error inesperado");
@@ -120,8 +134,12 @@ export function useRolesAdmin(): {
           token,
         });
         if (!active) return;
-        const data = desenvolver<RolAdmin[]>(res);
-        setRoles(Array.isArray(data) ? data : []);
+        const env = comoEnvelope<RolAdmin[]>(res);
+        if (!env.ok) {
+          setError(env.code ?? "No pudimos cargar los roles");
+          return;
+        }
+        setRoles(Array.isArray(env.data) ? env.data : []);
       } catch (e) {
         if (active)
           setError(
@@ -162,8 +180,11 @@ export function useCrearAdmin() {
           body: JSON.stringify({ emailUsuario: email, rolId }),
         }),
       );
-      const admin = desenvolver<AdminSistema>(res);
-      return admin ? { ok: true, admin } : { ok: false };
+      const env = comoEnvelope<AdminSistema>(res);
+      // El code viaja tanto en el envelope 2xx como en el ApiError de un 4xx.
+      return env.ok && env.data
+        ? { ok: true, admin: env.data }
+        : { ok: false, code: env.code };
     } catch (e) {
       if (e instanceof ApiError) return { ok: false, code: e.code };
       return { ok: false };
@@ -191,8 +212,10 @@ export function useActualizarAdmin() {
           body: JSON.stringify({ rolId }),
         }),
       );
-      const admin = desenvolver<AdminSistema>(res);
-      return admin ? { ok: true, admin } : { ok: false };
+      const env = comoEnvelope<AdminSistema>(res);
+      return env.ok && env.data
+        ? { ok: true, admin: env.data }
+        : { ok: false, code: env.code };
     } catch (e) {
       if (e instanceof ApiError) return { ok: false, code: e.code };
       return { ok: false };
@@ -248,7 +271,10 @@ export function useUsuarioCard(
           }),
         );
         if (!active) return;
-        const data = desenvolver<UsuarioCard>(raw);
+        // Sin cuenta, el backend responde 404 o un envelope ok:false; las dos
+        // formas significan lo mismo acá: no hay usuario con ese correo.
+        const env = comoEnvelope<UsuarioCard>(raw);
+        const data = env.ok ? (env.data ?? null) : null;
         setRes(
           data?.nombre
             ? { clave, card: data, estado: "encontrado" }
