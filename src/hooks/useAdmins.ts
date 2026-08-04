@@ -35,6 +35,8 @@ interface UseAdministradoresReturn {
   reload: () => void;
   /** Agrega el recién creado sin volver a pedir la lista entera. */
   agregar: (a: AdminSistema) => void;
+  /** Reemplaza el actualizado, respetando la posición que tenía en la tabla. */
+  reemplazar: (a: AdminSistema) => void;
 }
 
 export function useAdministradores(): UseAdministradoresReturn {
@@ -85,7 +87,11 @@ export function useAdministradores(): UseAdministradoresReturn {
     setAdministradores((prev) => [...prev, a]);
   }, []);
 
-  return { administradores, isLoading, error, reload, agregar };
+  const reemplazar = useCallback((a: AdminSistema) => {
+    setAdministradores((prev) => prev.map((x) => (x.id === a.id ? a : x)));
+  }, []);
+
+  return { administradores, isLoading, error, reload, agregar, reemplazar };
 }
 
 /* ---- Roles asignables ---------------------------------------------------- */
@@ -167,6 +173,35 @@ export function useCrearAdmin() {
   }
 
   return { crear, isLoading };
+}
+
+/* ---- Cambio de rol ------------------------------------------------------- */
+
+export function useActualizarAdmin() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  /** El adminId va en la URL; el body sólo lleva el rol nuevo. */
+  async function actualizar(adminId: string, rolId: string): Promise<CrearResult> {
+    setIsLoading(true);
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(`/administradores-sistemas/update/${encodeURIComponent(adminId)}`, {
+          method: "PUT",
+          token,
+          body: JSON.stringify({ rolId }),
+        }),
+      );
+      const admin = desenvolver<AdminSistema>(res);
+      return admin ? { ok: true, admin } : { ok: false };
+    } catch (e) {
+      if (e instanceof ApiError) return { ok: false, code: e.code };
+      return { ok: false };
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return { actualizar, isLoading };
 }
 
 /* ---- Búsqueda de la cuenta por email ------------------------------------- */
