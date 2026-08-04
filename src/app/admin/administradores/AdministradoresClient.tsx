@@ -5,7 +5,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   UserPlus, X, AlertCircle, ShieldCheck, Crown, Pencil, Trash2, Info,
-  ChevronRight, CheckCircle2, UserCog, Loader, Check, User, Mail, BadgeCheck,
+  ChevronRight, CheckCircle2, UserCog, Loader, Check, User, Mail, BadgeCheck, UserMinus,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
@@ -17,7 +17,8 @@ import { Button } from "@/components/ui";
 import { EMAIL_RE } from "@/data/auth";
 import { admInitials } from "@/data/admin";
 import {
-  useActualizarAdmin, useAdministradores, useCrearAdmin, useRolesAdmin, useUsuarioCard,
+  useActualizarAdmin, useAdministradores, useCrearAdmin, useEliminarAdmin,
+  useRolesAdmin, useUsuarioCard,
 } from "@/hooks/useAdmins";
 import type { AdminSistema, RolAdmin } from "@/types/admin";
 import { nuevoAdminSchema, NUEVO_ADMIN_INICIAL, type NuevoAdminForm } from "./schema";
@@ -290,6 +291,39 @@ function ActionBtn({ icon, label, danger, disabled, title, onClick }: { icon: Re
   );
 }
 
+function ConfirmarBaja({
+  admin,
+  busy,
+  error,
+  onCancel,
+  onConfirm,
+}: {
+  admin: AdminSistema;
+  busy: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div style={{ padding: 26 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+        <span style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--danger-fill)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><UserMinus size={22} color="var(--danger)" /></span>
+        <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>Borrar administrador</h3>
+      </div>
+      <p style={{ margin: "0 0 22px", color: "var(--fg-2)", fontSize: 15, lineHeight: 1.55 }}>
+        ¿Seguro que querés quitar a <strong style={{ color: "var(--fg-1)" }}>{admin.nombreUsuario}</strong> del sistema? Perderá el acceso al panel de administración.
+      </p>
+      {error && <div style={{ marginBottom: 16 }}><ErrMsg>{error}</ErrMsg></div>}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+        <Button variant="neutral" onClick={onCancel} disabled={busy}>No, volver</Button>
+        <Button variant="danger" onClick={onConfirm} disabled={busy}>
+          {busy ? <Loader size={17} className="spin" /> : <Trash2 size={17} />} Sí, borrar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function Scrim({ onClose, children, width = 620 }: { onClose: () => void; children: React.ReactNode; width?: number }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -304,10 +338,14 @@ function Scrim({ onClose, children, width = 620 }: { onClose: () => void; childr
 }
 
 function Inner() {
-  const { administradores, isLoading, error, reload, agregar, reemplazar } = useAdministradores();
+  const { administradores, isLoading, error, reload, agregar, reemplazar, quitar } =
+    useAdministradores();
   const { roles, isLoading: rolesLoading } = useRolesAdmin();
+  const { eliminar, isLoading: borrando } = useEliminarAdmin();
   // `null` = cerrado; "nuevo" = alta; un administrador = cambio de rol.
   const [modal, setModal] = useState<"nuevo" | AdminSistema | null>(null);
+  const [aBorrar, setABorrar] = useState<AdminSistema | null>(null);
+  const [errorBaja, setErrorBaja] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
   function notify(msg: string) {
@@ -317,6 +355,23 @@ function Inner() {
 
   function setEditando(a: AdminSistema) {
     setModal(a);
+  }
+
+  async function confirmarBaja() {
+    if (!aBorrar) return;
+    setErrorBaja(null);
+    const r = await eliminar(aBorrar.id);
+    if (!r.ok) {
+      setErrorBaja(
+        (r.code && CODIGO_ALTA[r.code]) ??
+          "No pudimos quitar al administrador. Intentá de nuevo en unos minutos.",
+      );
+      return;
+    }
+    quitar(aBorrar.id);
+    const nombre = aBorrar.nombreUsuario;
+    setABorrar(null);
+    notify(`Se quitó a ${nombre} del sistema.`);
   }
 
   function onGuardado(a: AdminSistema, editando: boolean) {
@@ -395,8 +450,14 @@ function Inner() {
                           title={p.esLider ? "El rol del administrador líder no se puede cambiar" : "Cambiar el rol asignado"}
                           onClick={() => setEditando(p)}
                         />
-                        {/* TODO backend: falta el endpoint de baja. */}
-                        <ActionBtn icon={<Trash2 size={17} />} label="Borrar" danger disabled title="Próximamente" />
+                        <ActionBtn
+                          icon={<Trash2 size={17} />}
+                          label="Borrar"
+                          danger
+                          disabled={p.esLider}
+                          title={p.esLider ? "El administrador líder no se puede borrar" : "Quitar este administrador del sistema"}
+                          onClick={() => { setErrorBaja(null); setABorrar(p); }}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -420,6 +481,18 @@ function Inner() {
             existentes={administradores}
             onCancel={() => setModal(null)}
             onGuardado={onGuardado}
+          />
+        </Scrim>
+      )}
+
+      {aBorrar && (
+        <Scrim onClose={() => setABorrar(null)} width={460}>
+          <ConfirmarBaja
+            admin={aBorrar}
+            busy={borrando}
+            error={errorBaja}
+            onCancel={() => setABorrar(null)}
+            onConfirm={confirmarBaja}
           />
         </Scrim>
       )}

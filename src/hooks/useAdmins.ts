@@ -45,6 +45,8 @@ interface UseAdministradoresReturn {
   agregar: (a: AdminSistema) => void;
   /** Reemplaza el actualizado, respetando la posición que tenía en la tabla. */
   reemplazar: (a: AdminSistema) => void;
+  /** Saca al dado de baja sin volver a pedir la lista entera. */
+  quitar: (adminId: string) => void;
 }
 
 export function useAdministradores(): UseAdministradoresReturn {
@@ -105,7 +107,11 @@ export function useAdministradores(): UseAdministradoresReturn {
     setAdministradores((prev) => prev.map((x) => (x.id === a.id ? a : x)));
   }, []);
 
-  return { administradores, isLoading, error, reload, agregar, reemplazar };
+  const quitar = useCallback((adminId: string) => {
+    setAdministradores((prev) => prev.filter((x) => x.id !== adminId));
+  }, []);
+
+  return { administradores, isLoading, error, reload, agregar, reemplazar, quitar };
 }
 
 /* ---- Roles asignables ---------------------------------------------------- */
@@ -225,6 +231,37 @@ export function useActualizarAdmin() {
   }
 
   return { actualizar, isLoading };
+}
+
+/* ---- Baja ---------------------------------------------------------------- */
+
+export function useEliminarAdmin() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function eliminar(adminId: string): Promise<{ ok: boolean; code?: string }> {
+    setIsLoading(true);
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(`/administradores-sistemas/${encodeURIComponent(adminId)}`, {
+          method: "DELETE",
+          token,
+        }),
+      );
+      const env = comoEnvelope<unknown>(res);
+      return env.ok ? { ok: true } : { ok: false, code: env.code };
+    } catch (e) {
+      if (e instanceof ApiError) return { ok: false, code: e.code };
+      // `apiFetch` sólo llega a res.json() con un 2xx, así que un error de
+      // parseo significa que la baja se hizo y el backend contestó sin cuerpo
+      // (204). Un fallo de red tira TypeError antes y cae abajo.
+      if (e instanceof SyntaxError) return { ok: true };
+      return { ok: false };
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return { eliminar, isLoading };
 }
 
 /* ---- Búsqueda de la cuenta por email ------------------------------------- */
