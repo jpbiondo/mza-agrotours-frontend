@@ -1,30 +1,43 @@
-import type { Rol } from "@/types/auth";
+import type { Acceso, Rol } from "@/types/auth";
 
-/** `tipoPermisos` de GET /usuario/me → rol interno. */
-const POR_PERMISO: Record<string, Rol> = {
+/** `tipoPermiso` de cada acceso → rol interno. */
+const POR_TIPO: Record<string, Rol> = {
   ADMIN: "admin",
   PRODUCTOR: "productor",
   VISITANTE: "visitante",
 };
 
 /**
- * Normaliza la lista de permisos del backend. Descarta lo que no reconoce en
- * lugar de arriesgar un rol inventado —de un permiso nuevo es preferible no dar
- * acceso a darlo de más— y deduplica.
+ * Roles que surgen de los accesos del usuario. Descarta los tipos que no
+ * reconoce en lugar de arriesgar un rol inventado —de un tipo nuevo es
+ * preferible no dar acceso a darlo de más— y deduplica.
  */
-export function aRoles(tipoPermisos: unknown): Rol[] {
-  if (!Array.isArray(tipoPermisos)) return [];
-  const roles = tipoPermisos
-    .map((p) => POR_PERMISO[String(p ?? "").trim().toUpperCase()])
+export function rolesDe(accesos: Acceso[] | undefined): Rol[] {
+  if (!Array.isArray(accesos)) return [];
+  const roles = accesos
+    .map((a) => POR_TIPO[String(a?.tipoPermiso ?? "").trim().toUpperCase()])
     .filter((r): r is Rol => Boolean(r));
   return [...new Set(roles)];
 }
 
 /**
- * Chequeo de acceso del lado del cliente. Sirve para no mostrar pantallas que
- * no corresponden, NO como control de seguridad: los roles viajan en el store
- * persistido y son editables desde el navegador. Quien tiene que rechazar cada
- * request es el backend.
+ * `true` si alguno de los accesos incluye el permiso.
+ *
+ * Hace la unión sobre todos los accesos. Para los permisos de ADMIN es exacto,
+ * porque hay un único acceso de ese tipo; cuando lleguen permisos de PRODUCTOR
+ * va a hacer falta scopear por `establecimientoId`, ya que alguien puede
+ * gestionar un establecimiento y no otro.
+ */
+export function puede(accesos: Acceso[] | undefined, permiso: string): boolean {
+  if (!Array.isArray(accesos)) return false;
+  return accesos.some((a) => Array.isArray(a?.permisos) && a.permisos.includes(permiso));
+}
+
+/**
+ * Chequeo de acceso del lado del cliente. Sirve para no mostrar pantallas ni
+ * acciones que no corresponden, NO como control de seguridad: los accesos
+ * viajan en el store persistido y son editables desde el navegador. Quien tiene
+ * que rechazar cada request es el backend.
  */
 export function tieneRol(roles: Rol[], requerido: Rol): boolean {
   return roles.includes(requerido);

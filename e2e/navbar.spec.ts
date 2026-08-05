@@ -4,22 +4,44 @@ import { test, expect } from "@playwright/test";
 // según el estado de sesión del store, y en TODAS las pantallas (landing + app).
 // Las aserciones se acotan al <header> (el footer también tiene links de sesión).
 
+interface TestAcceso {
+  rolId: string;
+  rolNombre: string;
+  tipoPermiso: string;
+  permisos: string[];
+  establecimientoId: string | null;
+  establecimientoNombre: string | null;
+}
+
 type TestStore = {
   getState: () => {
-    setSession: (s: { nombre: string; email: string; roles: string[] }) => void;
+    setSession: (s: { nombre: string; email: string; accesos: TestAcceso[] }) => void;
     clear: () => void;
   };
 };
 
+/** Sesión con los tres roles: el navbar deriva de acá qué paneles ofrecer. */
 async function simularLogin(page: import("@playwright/test").Page) {
   await page.waitForFunction(() => Boolean((window as unknown as { __authStore?: unknown }).__authStore));
   await page.evaluate(() => {
+    const acceso = (tipoPermiso: string, permisos: string[] = []): TestAcceso => ({
+      rolId: "r-" + tipoPermiso,
+      rolNombre: tipoPermiso,
+      tipoPermiso,
+      permisos,
+      establecimientoId: null,
+      establecimientoNombre: null,
+    });
     (window as unknown as { __authStore: TestStore }).__authStore
       .getState()
       .setSession({
         nombre: "Camila Ríos",
         email: "camila.rios@gmail.com",
-        roles: ["visitante", "productor", "admin"],
+        accesos: [
+          acceso("VISITANTE"),
+          acceso("PRODUCTOR"),
+          acceso("ADMIN", ["LEER_ADMIN", "GESTIONAR_ADMIN"]),
+        ],
       });
   });
 }

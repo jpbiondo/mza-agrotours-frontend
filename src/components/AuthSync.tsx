@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { apiFetch } from "@/lib/api";
-import { aRoles } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import type { BackendProfile } from "@/types/auth";
 
@@ -50,7 +49,7 @@ export default function AuthSync() {
         useAuthStore.getState().setSession({
           nombre: res.data.nombre,
           email: res.data.email,
-          roles: aRoles(res.data.tipoPermisos),
+          accesos: res.data.accesos ?? [],
         });
       } catch {
         // Backend caído o sin red: se conserva el perfil cacheado.

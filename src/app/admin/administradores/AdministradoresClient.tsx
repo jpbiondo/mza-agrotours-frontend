@@ -16,12 +16,17 @@ import { TextField } from "@/components/ui/text-field";
 import { Button } from "@/components/ui";
 import { EMAIL_RE } from "@/data/auth";
 import { admInitials } from "@/data/admin";
+import { puede } from "@/lib/roles";
+import { useAuthStore } from "@/stores/authStore";
 import {
   useActualizarAdmin, useAdministradores, useCrearAdmin, useEliminarAdmin,
   useRolesAdmin, useUsuarioCard,
 } from "@/hooks/useAdmins";
 import type { AdminSistema, RolAdmin } from "@/types/admin";
 import { nuevoAdminSchema, NUEVO_ADMIN_INICIAL, type NuevoAdminForm } from "./schema";
+
+/** Motivo de los botones deshabilitados cuando falta GESTIONAR_ADMIN. */
+const SIN_GESTION = "Necesitás el permiso de gestión de administradores";
 
 /** Mensajes de error del alta que devuelve el backend. */
 const CODIGO_ALTA: Record<string, string> = {
@@ -342,6 +347,9 @@ function Inner() {
     useAdministradores();
   const { roles, isLoading: rolesLoading } = useRolesAdmin();
   const { eliminar, isLoading: borrando } = useEliminarAdmin();
+  // LEER_ADMIN ya lo exige el guard de la ruta; acá se distingue quién puede actuar.
+  const accesos = useAuthStore((s) => s.accesos);
+  const gestionar = puede(accesos, "GESTIONAR_ADMIN");
   // `null` = cerrado; "nuevo" = alta; un administrador = cambio de rol.
   const [modal, setModal] = useState<"nuevo" | AdminSistema | null>(null);
   const [aBorrar, setABorrar] = useState<AdminSistema | null>(null);
@@ -395,7 +403,15 @@ function Inner() {
           <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 34, color: "var(--fg-1)", letterSpacing: "-.01em" }}>Administradores del sistema</h1>
           <p style={{ margin: "10px 0 0", color: "var(--fg-2)", fontSize: 15.5, lineHeight: 1.5, maxWidth: 660 }}>Sumá a las personas del equipo de administración y asignales un rol. Quedan activas de inmediato; el rol define qué puede hacer cada una.</p>
         </div>
-        <button type="button" className="btn btn-primary btn-lg" onClick={() => setModal("nuevo")}><UserPlus size={18} /> Agregar administrador</button>
+        <button
+          type="button"
+          className="btn btn-primary btn-lg"
+          disabled={!gestionar}
+          title={gestionar ? undefined : SIN_GESTION}
+          onClick={() => setModal("nuevo")}
+        >
+          <UserPlus size={18} /> Agregar administrador
+        </button>
       </div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
         {[
@@ -446,16 +462,28 @@ function Inner() {
                         <ActionBtn
                           icon={<Pencil size={17} />}
                           label="Modificar rol"
-                          disabled={p.esLider}
-                          title={p.esLider ? "El rol del administrador líder no se puede cambiar" : "Cambiar el rol asignado"}
+                          disabled={p.esLider || !gestionar}
+                          title={
+                            p.esLider
+                              ? "El rol del administrador líder no se puede cambiar"
+                              : !gestionar
+                                ? SIN_GESTION
+                                : "Cambiar el rol asignado"
+                          }
                           onClick={() => setEditando(p)}
                         />
                         <ActionBtn
                           icon={<Trash2 size={17} />}
                           label="Borrar"
                           danger
-                          disabled={p.esLider}
-                          title={p.esLider ? "El administrador líder no se puede borrar" : "Quitar este administrador del sistema"}
+                          disabled={p.esLider || !gestionar}
+                          title={
+                            p.esLider
+                              ? "El administrador líder no se puede borrar"
+                              : !gestionar
+                                ? SIN_GESTION
+                                : "Quitar este administrador del sistema"
+                          }
                           onClick={() => { setErrorBaja(null); setABorrar(p); }}
                         />
                       </div>

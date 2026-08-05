@@ -1,16 +1,24 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Rol } from "@/types/auth";
+import { rolesDe } from "@/lib/roles";
+import type { Acceso, Rol } from "@/types/auth";
 
 interface SesionData {
   nombre: string;
   email: string;
-  roles: Rol[];
+  accesos: Acceso[];
 }
 
 interface AuthState {
   nombre: string | null;
   email: string | null;
+  /** Roles con sus permisos, tal como los devuelve /usuario/me. */
+  accesos: Acceso[];
+  /**
+   * Derivado de `accesos` al setear la sesión, no en un selector: un selector
+   * que arma el array en cada render devuelve una referencia nueva cada vez y
+   * hace re-renderizar a todo el que lo lea.
+   */
   roles: Rol[];
   /** true una vez que se rehidrató desde localStorage (evita el flash de SSR). */
   hasHydrated: boolean;
@@ -31,16 +39,23 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       nombre: null,
       email: null,
+      accesos: [],
       roles: [],
       hasHydrated: false,
-      setSession: ({ nombre, email, roles }) => set({ nombre, email, roles }),
-      clear: () => set({ nombre: null, email: null, roles: [] }),
+      setSession: ({ nombre, email, accesos }) =>
+        set({ nombre, email, accesos, roles: rolesDe(accesos) }),
+      clear: () => set({ nombre: null, email: null, accesos: [], roles: [] }),
     }),
     {
       name: "agrotours-auth",
       storage: createJSONStorage(() => localStorage),
       // Solo persistimos los datos de sesión, no la bandera de hidratación.
-      partialize: (s) => ({ nombre: s.nombre, email: s.email, roles: s.roles }),
+      partialize: (s) => ({
+        nombre: s.nombre,
+        email: s.email,
+        accesos: s.accesos,
+        roles: s.roles,
+      }),
       skipHydration: true,
       onRehydrateStorage: () => () => {
         useAuthStore.setState({ hasHydrated: true });

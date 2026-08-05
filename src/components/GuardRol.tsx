@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader, ShieldAlert } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
-import { tieneRol } from "@/lib/roles";
+import { puede, tieneRol } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import type { Rol } from "@/types/auth";
 
@@ -16,6 +16,9 @@ const MOTIVO: Record<Rol, string> = {
     "Esta sección es sólo para productores. Si diste de alta un establecimiento, vas a poder entrar cuando se apruebe la solicitud.",
   visitante: "Necesitás una cuenta para ver esta sección.",
 };
+
+/** Tiene el rol pero no el permiso fino: el motivo es otro. */
+const SIN_PERMISO = "Tu rol no incluye acceso a esta sección. Pedile a un administrador que te lo habilite.";
 
 function Centrado({ children }: { children: ReactNode }) {
   return (
@@ -37,7 +40,7 @@ function Cargando({ texto }: { texto: string }) {
   );
 }
 
-function SinPermiso({ rol }: { rol: Rol }) {
+function SinPermiso({ motivo }: { motivo: string }) {
   return (
     <Centrado>
       <div className="mx-auto max-w-[640px] px-7 pt-16 pb-24">
@@ -48,7 +51,7 @@ function SinPermiso({ rol }: { rol: Rol }) {
           <h1 className="font-display text-[24px] font-bold text-fg-1">
             No tenés acceso a esta sección
           </h1>
-          <p className="max-w-[440px] text-[14.5px] leading-relaxed text-fg-2">{MOTIVO[rol]}</p>
+          <p className="max-w-[440px] text-[14.5px] leading-relaxed text-fg-2">{motivo}</p>
           <Link href="/explorar" className="btn btn-primary mt-2 inline-flex no-underline">
             Volver al inicio
           </Link>
@@ -59,19 +62,29 @@ function SinPermiso({ rol }: { rol: Rol }) {
 }
 
 /**
- * Deja pasar sólo si la cuenta en sesión tiene `rol`. Sin sesión redirige a
- * /acceso; con sesión pero sin el rol muestra el aviso, sin sacar al usuario de
- * la URL, para que entienda qué pasó.
+ * Deja pasar sólo si la cuenta en sesión tiene `rol` y, si se pide, el permiso
+ * fino. Sin sesión redirige a /acceso; con sesión pero sin acceso muestra el
+ * aviso sin sacar al usuario de la URL, para que entienda qué pasó.
  *
- * Es control de navegación, no de seguridad: los roles salen del store
+ * Es control de navegación, no de seguridad: los accesos salen del store
  * persistido y se pueden editar desde el navegador. La barrera real es que el
  * backend rechace los requests (ver `tieneRol`).
  */
-export default function GuardRol({ rol, children }: { rol: Rol; children: ReactNode }) {
+export default function GuardRol({
+  rol,
+  permiso,
+  children,
+}: {
+  rol: Rol;
+  /** Permiso adicional, p. ej. "LEER_ADMIN". Sin él alcanza con el rol. */
+  permiso?: string;
+  children: ReactNode;
+}) {
   const router = useRouter();
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const nombre = useAuthStore((s) => s.nombre);
   const roles = useAuthStore((s) => s.roles);
+  const accesos = useAuthStore((s) => s.accesos);
 
   const sinSesion = hasHydrated && !nombre;
 
@@ -80,10 +93,11 @@ export default function GuardRol({ rol, children }: { rol: Rol; children: ReactN
   }, [sinSesion, router]);
 
   // Antes de rehidratar no se sabe nada: mostrar el aviso acá haría que parpadee
-  // en cada carga incluso para quien sí tiene permiso.
+  // en cada carga incluso para quien sí tiene acceso.
   if (!hasHydrated) return <Cargando texto="Verificando tu sesión…" />;
   if (sinSesion) return <Cargando texto="Redirigiendo…" />;
-  if (!tieneRol(roles, rol)) return <SinPermiso rol={rol} />;
+  if (!tieneRol(roles, rol)) return <SinPermiso motivo={MOTIVO[rol]} />;
+  if (permiso && !puede(accesos, permiso)) return <SinPermiso motivo={SIN_PERMISO} />;
 
   return <>{children}</>;
 }

@@ -3,7 +3,7 @@ import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import { auth } from "../../firebase.config";
 import { apiFetch } from "@/lib/api";
-import { aRoles } from "@/lib/roles";
+import { rolesDe } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import type {
   Cuenta,
@@ -102,12 +102,13 @@ async function firebaseLogin({
     return { ok: false, code: res.code ?? "error" };
   }
 
-  const cuenta: Cuenta = { ...res.data, roles: aRoles(res.data.tipoPermisos) };
+  const accesos = res.data.accesos ?? [];
+  const cuenta: Cuenta = { ...res.data, roles: rolesDe(accesos) };
 
   useAuthStore.getState().setSession({
     nombre: cuenta.nombre,
     email: cuenta.email,
-    roles: cuenta.roles,
+    accesos,
   });
 
   return { ok: true, code: "ok", cuenta };

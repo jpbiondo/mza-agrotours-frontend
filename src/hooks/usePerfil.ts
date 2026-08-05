@@ -8,7 +8,7 @@ import {
 import { FirebaseError } from "firebase/app";
 import { auth } from "../../firebase.config";
 import { apiFetch, ApiError } from "@/lib/api";
-import { aRoles } from "@/lib/roles";
+import { rolesDe } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import { fechaHoraBaja } from "@/data/cuenta";
 import type {
@@ -118,13 +118,13 @@ export function usePerfil(): PerfilState {
         } else {
           // Los permisos llegan con el perfil: se refresca el store para que el
           // navbar y los guards no queden con lo cacheado en localStorage.
-          const roles = aRoles(res.data.tipoPermisos);
+          const accesos = res.data.accesos ?? [];
           useAuthStore.getState().setSession({
             nombre: res.data.nombre,
             email: res.data.email,
-            roles,
+            accesos,
           });
-          setModels(aModelos(res.data, roles));
+          setModels(aModelos(res.data, rolesDe(accesos)));
         }
       } catch (e) {
         if (active)
@@ -208,7 +208,7 @@ export function useGuardarPerfil() {
         store.setSession({
           nombre: perfil.nombre.trim(),
           email: perfil.email.trim().toLowerCase(),
-          roles: store.roles,
+          accesos: store.accesos,
         });
 
         return { ok: true };

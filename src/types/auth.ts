@@ -1,5 +1,21 @@
 export type Rol = "visitante" | "productor" | "admin";
 
+/**
+ * Un rol del usuario junto con los permisos que ese rol le da. Un mismo usuario
+ * puede tener varios: uno de ADMIN y uno por establecimiento como PRODUCTOR.
+ */
+export interface Acceso {
+  rolId: string;
+  rolNombre: string;
+  /** "ADMIN" | "PRODUCTOR" | "VISITANTE". Normalizar con `rolesDe`. */
+  tipoPermiso: string;
+  /** Permisos finos del rol, p. ej. "LEER_ADMIN", "GESTIONAR_ADMIN". */
+  permisos: string[];
+  /** Sólo en accesos de PRODUCTOR; alimenta el switcher del panel. */
+  establecimientoId: string | null;
+  establecimientoNombre: string | null;
+}
+
 /** Datos del usuario que devuelve el backend en el campo `data`. */
 export interface BackendProfile {
   nombre: string;
@@ -9,8 +25,8 @@ export interface BackendProfile {
   tipoIdentificacion: string;
   /** Fecha de nacimiento en ISO (o null si el backend no la tiene). */
   fechaNacimiento: string | null;
-  /** Permisos del usuario: "ADMIN" | "PRODUCTOR" | "VISITANTE". Normalizar con `aRoles`. */
-  tipoPermisos?: string[];
+  /** Roles del usuario con sus permisos. Derivar con `rolesDe` / `puede`. */
+  accesos?: Acceso[];
 }
 
 /**
