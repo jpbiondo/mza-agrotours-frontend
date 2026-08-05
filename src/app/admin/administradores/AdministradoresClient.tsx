@@ -100,6 +100,9 @@ function CuentaPreview({
   if (!email || !EMAIL_RE.test(email)) {
     return hint("Debe ser el correo de un usuario ya registrado en la plataforma.");
   }
+  // Se chequea antes que la card: ese correo ya está en la tabla, no hace falta
+  // ninguna consulta para saberlo.
+  if (yaEsAdmin) return <ErrMsg>Esa persona ya es administradora del sistema.</ErrMsg>;
   if (estado === "buscando") {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--fg-3)" }}>
@@ -110,7 +113,6 @@ function CuentaPreview({
   if (estado === "no-existe") return <ErrMsg>No hay ninguna cuenta registrada con ese correo.</ErrMsg>;
   if (estado === "error") return hint("No pudimos verificar la cuenta. Se validará al confirmar el alta.");
   if (!card) return hint("Debe ser el correo de un usuario ya registrado en la plataforma.");
-  if (yaEsAdmin) return <ErrMsg>Esa persona ya es administradora del sistema.</ErrMsg>;
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: "var(--radius)", padding: "10px 12px" }}>
@@ -170,12 +172,15 @@ function AdminForm({
 
   const email = useWatch({ control: form.control, name: "email" }).trim();
   const emailValido = !editando && EMAIL_RE.test(email);
-  const { card, estado } = useUsuarioCard(email, emailValido);
 
-  // El endpoint de la card no dice si ya es administradora: se compara por
-  // identificación contra la lista vigente, que es el dato que ambos comparten.
+  // Se compara contra la lista vigente por email, que es lo que el usuario
+  // acaba de tipear: el aviso sale al instante, sin esperar a la card.
+  const norm = (s: string) => s.trim().toLowerCase();
   const yaEsAdmin =
-    !editando && !!card && existentes.some((a) => a.identificacion === card.identificacion);
+    emailValido && existentes.some((a) => norm(a.emailUsuario) === norm(email));
+
+  // Si ya es administradora no hace falta buscar la cuenta: el alta no va a ir.
+  const { card, estado } = useUsuarioCard(email, emailValido && !yaEsAdmin);
 
   const bloqueado =
     saving || (!editando && (estado === "buscando" || estado === "no-existe" || yaEsAdmin));
