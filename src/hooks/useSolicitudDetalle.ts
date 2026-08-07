@@ -119,12 +119,23 @@ function aDetalle(d: DetalleBackend): SolicitudDetalle {
   };
 }
 
+/** Ruta del visitante: sólo devuelve solicitudes propias. */
+export const BASE_MIS_SOLICITUDES = "/solicitudes-establecimiento/me";
+/** Ruta del administrador: cualquier solicitud, para la cola de revisión. */
+export const BASE_ADMIN_SOLICITUDES = "/solicitudes-establecimiento";
+
 /**
- * Detalle de una solicitud propia (GET /solicitudes-establecimiento/me/{id} con
- * el ID token de Firebase). Distingue el 404 del fallo técnico para poder
- * mostrar "no encontramos esa solicitud" en vez del panel de error genérico.
+ * Detalle de una solicitud con el ID token de Firebase. Distingue el 404 del
+ * fallo técnico para poder mostrar "no encontramos esa solicitud" en vez del
+ * panel de error genérico.
+ *
+ * El `base` elige el endpoint: las dos rutas devuelven el mismo DTO, así que
+ * comparten el mapeo, el orden del historial y el manejo de errores.
  */
-export function useSolicitudDetalle(id: string): UseSolicitudDetalleReturn {
+export function useSolicitudDetalle(
+  id: string,
+  base: string = BASE_MIS_SOLICITUDES,
+): UseSolicitudDetalleReturn {
   const [solicitud, setSolicitud] = useState<SolicitudDetalle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +156,7 @@ export function useSolicitudDetalle(id: string): UseSolicitudDetalleReturn {
       try {
         const token = await user.getIdToken();
         const res = await apiFetch<DetalleResponse>(
-          `/solicitudes-establecimiento/me/${encodeURIComponent(id)}`,
+          `${base}/${encodeURIComponent(id)}`,
           { token },
         );
         if (!active) return;
@@ -173,7 +184,7 @@ export function useSolicitudDetalle(id: string): UseSolicitudDetalleReturn {
       active = false;
       unsub();
     };
-  }, [id, nonce]);
+  }, [id, base, nonce]);
 
   const reload = useCallback(() => {
     setIsLoading(true);

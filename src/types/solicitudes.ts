@@ -19,6 +19,20 @@ export interface SolicitudResumen {
   fechaHoraAlta: string | null;
 }
 
+/**
+ * Item de GET /solicitudes-establecimiento/ : la cola de revisión del admin.
+ * Es un resumen; el detalle completo sale de `SolicitudDetalle`.
+ */
+export interface SolicitudAdminItem {
+  id: string;
+  nombreEstablecimiento: string;
+  /** ISO-8601. `null` si el backend no la mandó. */
+  fechaHoraAlta: string | null;
+  estado: EstadoSolicitud;
+  departamento: string;
+  nombreSolicitante: string;
+}
+
 /** Prueba documental ya subida al object storage. */
 export interface PruebaSolicitud {
   /** Nombre visible del archivo, tal como lo cargó el usuario. */

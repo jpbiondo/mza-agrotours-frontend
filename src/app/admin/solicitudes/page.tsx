@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GuardRol from "@/components/GuardRol";
 import SolicitudesClient from "./SolicitudesClient";
 
 export const metadata: Metadata = {
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SolicitudesPage() {
-  return <SolicitudesClient />;
+  // El layout de /admin ya exige el rol; acá se suma el permiso de lectura.
+  return (
+    <GuardRol rol="admin" permiso="LEER_SOLICITUD_ESTABLECIMIENTO">
+      <SolicitudesClient />
+    </GuardRol>
+  );
 }

@@ -26,7 +26,7 @@ const NAV: { section?: string; id?: string; iconC?: React.ComponentType<{ size?:
   { id: "admins", iconC: UserCog, label: "Administradores", href: "/admin/administradores", permiso: "LEER_ADMIN" },
   { id: "roles", iconC: ShieldCheck, label: "Roles de administrador", href: "/admin/roles" },
   { section: "Plataforma" },
-  { id: "solicitudes", iconC: ClipboardCheck, label: "Solicitudes de establecimientos", href: "/admin/solicitudes", badge: 3 },
+  { id: "solicitudes", iconC: ClipboardCheck, label: "Solicitudes de establecimientos", href: "/admin/solicitudes", permiso: "LEER_SOLICITUD_ESTABLECIMIENTO" },
   { id: "establecimientos", iconC: Warehouse, label: "Establecimientos", href: "/admin/establecimientos" },
   { section: "Contenido" },
   { id: "cultivos", iconC: Sprout, label: "Cultivos", href: "/admin/cultivos" },
