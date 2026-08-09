@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   User,
   Mail,
@@ -10,437 +12,393 @@ import {
   Fingerprint,
   UserPlus,
 } from "lucide-react";
+import { TextField, EyeToggle } from "@/components/ui/text-field";
+import { TipoIdSelect } from "@/components/ui/tipo-id-select";
+import { CountrySelect } from "@/components/ui/country-select";
+import { DateField } from "@/components/ui/date-field";
+import { PasswordMeter } from "@/components/ui/password-meter";
 import {
-  Field,
-  TextInput,
-  SelectInput,
-  CountrySelect,
-  DatePicker,
-  PasswordMeter,
-  EyeToggle,
-} from "./FormFields";
-import { PAISES, TIPOS_IDENTIFICACION, EMPTY_FORM } from "@/data/registro";
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/Button";
+import type { ToastData } from "@/components/ui";
+import { cn } from "@/lib/utils";
+import { TIPOS_IDENTIFICACION, EMPTY_FORM } from "@/data/registro";
 import type { FormData } from "@/types/registro";
 import { registroSchema } from "../schema";
-import z from "zod";
 import { useRegistro } from "@/hooks/useRegistro";
-
-type Errors = Partial<Record<keyof FormData, string>>;
-type Touched = Partial<Record<keyof FormData, boolean>>;
-
-function parseErrors(data: FormData): Errors {
-  const result = registroSchema.safeParse(data);
-  if (result.success) return {};
-  const flat = z.flattenError(result.error);
-  const out: Errors = {};
-  (Object.keys(flat.fieldErrors) as (keyof FormData)[]).forEach((k) => {
-    const msgs = flat.fieldErrors[k as keyof typeof flat.fieldErrors];
-    if (msgs?.[0]) out[k] = msgs[0];
-  });
-  return out;
-}
-
-const ALL_FIELDS = Object.keys(EMPTY_FORM) as (keyof FormData)[];
+import { usePaises } from "@/hooks/usePaises";
 
 interface RegistroFormProps {
   onSuccess: (data: FormData) => void;
+  setToast: (t: ToastData | null) => void;
 }
 
-export default function RegistroForm({ onSuccess }: RegistroFormProps) {
-  const [v, setV] = useState<FormData>(EMPTY_FORM);
-  const [touched, setTouched] = useState<Touched>({});
+const SECTION_LABEL =
+  "text-[13px] font-semibold tracking-[0.06em] text-brown-700 uppercase";
+
+export default function RegistroForm({
+  onSuccess,
+  setToast,
+}: RegistroFormProps) {
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const { register, isLoading, apiError } = useRegistro();
+  const { register: registrar } = useRegistro();
+  const { paises, isLoading: paisesLoading, error: paisesError } = usePaises();
 
-  // Setea el valor y marca el campo como tocado en un solo paso.
-  const update = <K extends keyof FormData>(k: K, val: FormData[K]) => {
-    setV((s) => ({ ...s, [k]: val }));
-    setTouched((s) => ({ ...s, [k]: true }));
-  };
+  const form = useForm<FormData>({
+    resolver: zodResolver(registroSchema),
+    defaultValues: EMPTY_FORM,
+    mode: "onTouched",
+  });
 
-  // Validamos siempre, pero sólo recalculamos cuando cambian los valores.
-  const allErrors = useMemo(() => parseErrors(v), [v]);
-  const errors = useMemo<Errors>(() => {
-    const out: Errors = {};
-    (Object.keys(touched) as (keyof FormData)[]).forEach((k) => {
-      if (allErrors[k]) out[k] = allErrors[k];
-    });
-    return out;
-  }, [allErrors, touched]);
+  // Suscripción reactiva (compatible con React Compiler, a diferencia de form.watch()).
+  const tipoId = useWatch({ control: form.control, name: "tipoId" });
 
-  async function handleSubmit() {
-    setTouched(Object.fromEntries(ALL_FIELDS.map((k) => [k, true])) as Touched);
-    if (Object.keys(allErrors).length > 0) return;
-    try {
-      await register(v);
-      onSuccess({ ...v });
-    } catch {
-      // apiError ya fue seteado por el hook
+  async function onValid(data: FormData) {
+    // Limpiamos espacios sobrantes antes de enviar al backend (las contraseñas no
+    // se recortan). El email trimmeado también se usa para el auto-login posterior.
+    const payload: FormData = {
+      ...data,
+      nombre: data.nombre.trim(),
+      email: data.email.trim(),
+      numeroId: data.numeroId.trim(),
+      telefono: data.telefono.trim(),
+    };
+
+    const r = await registrar(payload);
+
+    if (r.ok) {
+      onSuccess(data);
+      return;
     }
+
+    if (r.code === "userAlreadyExists") {
+      form.setError(
+        "email",
+        { message: "Este correo ya está registrado" },
+        { shouldFocus: true },
+      );
+      return;
+    }
+    if (r.code === "PHONE_NUMBER_ALREADY_EXISTS") {
+      form.setError(
+        "telefono",
+        { message: "Este teléfono ya está registrado" },
+        { shouldFocus: true },
+      );
+      return;
+    }
+    setToast({
+      tone: "danger",
+      title: "No se pudo crear el usuario",
+      sub:
+        r.code === "validationError"
+          ? "Revisá los datos e intentá de nuevo."
+          : "Intentá de nuevo en unos minutos.",
+    });
   }
 
-  const err = (k: keyof FormData) => errors[k];
-
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        handleSubmit();
-      }}
-      noValidate
-      style={{ display: "flex", flexDirection: "column", gap: 22 }}
-    >
-      {/* ---- Datos personales ---- */}
-      <div className="t-label" style={{ color: "var(--brown-700)" }}>
-        DATOS PERSONALES
-      </div>
-
-      <div id="fld-nombre">
-        <Field
-          label="Nombre y apellido"
-          required
-          error={err("nombre")}
-          hint="Como figura en tu documento"
-          htmlFor="in-nombre"
-        >
-          <TextInput
-            id="in-nombre"
-            icon={<User size={18} />}
-            value={v.nombre}
-            maxLength={40}
-            placeholder="Ej. Camila Ríos"
-            autoComplete="name"
-            onChange={(x) => update("nombre", x)}
-            error={err("nombre")}
-          />
-        </Field>
-      </div>
-
-      <div id="fld-email">
-        <Field label="Email" required error={err("email")} htmlFor="in-email">
-          <TextInput
-            id="in-email"
-            icon={<Mail size={18} />}
-            type="email"
-            value={v.email}
-            placeholder="nombre@dominio.com"
-            inputMode="email"
-            autoComplete="email"
-            onChange={(x) => update("email", x)}
-            error={err("email")}
-          />
-        </Field>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-        <div id="fld-pais">
-          <Field label="País" required error={err("pais")} htmlFor="in-pais">
-            <CountrySelect
-              id="in-pais"
-              value={v.pais}
-              options={PAISES}
-              error={err("pais")}
-              placeholder="Seleccionar país"
-              onChange={(x) => update("pais", x)}
-            />
-          </Field>
-        </div>
-
-        <div id="fld-fecha">
-          <Field label="Fecha de nacimiento" required error={err("fecha")}>
-            <DatePicker
-              value={v.fecha}
-              error={err("fecha")}
-              onChange={(d) => update("fecha", d)}
-            />
-          </Field>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-        <div id="fld-tipoId">
-          <Field
-            label="Tipo de identificación"
-            required
-            error={err("tipoId")}
-            htmlFor="in-tipoId"
-          >
-            <SelectInput
-              id="in-tipoId"
-              icon={<BadgeCheck size={18} />}
-              value={v.tipoId}
-              options={TIPOS_IDENTIFICACION}
-              placeholder="Seleccionar tipo"
-              error={err("tipoId")}
-              onChange={(x) => update("tipoId", x)}
-            />
-          </Field>
-        </div>
-
-        <div id="fld-numeroId">
-          <Field
-            label="Número de identificación"
-            required
-            error={err("numeroId")}
-            htmlFor="in-numeroId"
-          >
-            <TextInput
-              id="in-numeroId"
-              icon={<Fingerprint size={18} />}
-              value={v.numeroId}
-              maxLength={20}
-              placeholder={
-                v.tipoId === "Pasaporte" ? "Ej. AB123456" : "Ej. 30.123.456"
-              }
-              autoComplete="off"
-              onChange={(x) => update("numeroId", x)}
-              error={err("numeroId")}
-            />
-          </Field>
-        </div>
-      </div>
-
-      <div id="fld-telefono">
-        <Field
-          label="Teléfono"
-          required
-          error={err("telefono")}
-          hint="Entre 7 y 15 caracteres, podés incluir el código de área"
-          htmlFor="in-tel"
-        >
-          <TextInput
-            id="in-tel"
-            icon={<Phone size={18} />}
-            type="tel"
-            value={v.telefono}
-            maxLength={15}
-            placeholder="Ej. +54 261 555 1234"
-            inputMode="tel"
-            autoComplete="tel"
-            onChange={(x) => update("telefono", x)}
-            error={err("telefono")}
-          />
-        </Field>
-      </div>
-
-      {/* ---- Seguridad ---- */}
-      <div
-        className="t-label"
-        style={{ color: "var(--brown-700)", marginTop: 8 }}
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onValid)}
+        noValidate
+        className="flex flex-col gap-[22px]"
       >
-        SEGURIDAD
-      </div>
+        {/* ---- Datos personales ---- */}
+        <div className={SECTION_LABEL}>Datos personales</div>
 
-      <div id="fld-password">
-        <Field
-          label="Contraseña"
-          required
-          error={err("password")}
-          htmlFor="in-pw"
-        >
-          <TextInput
-            id="in-pw"
-            icon={<Lock size={18} />}
-            type={showPw ? "text" : "password"}
-            value={v.password}
-            placeholder="Mínimo 8 caracteres"
-            autoComplete="new-password"
-            onChange={(x) => update("password", x)}
-            error={err("password")}
-            rightSlot={
-              <EyeToggle shown={showPw} onToggle={() => setShowPw((s) => !s)} />
-            }
-          />
-        </Field>
-        {v.password && <PasswordMeter value={v.password} />}
-      </div>
-
-      <div id="fld-confirm">
-        <Field
-          label="Confirmar contraseña"
-          required
-          error={err("confirm")}
-          htmlFor="in-confirm"
-        >
-          <TextInput
-            id="in-confirm"
-            icon={<Lock size={18} />}
-            type={showConfirm ? "text" : "password"}
-            value={v.confirm}
-            placeholder="Repetí la contraseña"
-            autoComplete="new-password"
-            onChange={(x) => update("confirm", x)}
-            error={err("confirm")}
-            rightSlot={
-              <EyeToggle
-                shown={showConfirm}
-                onToggle={() => setShowConfirm((s) => !s)}
-              />
-            }
-          />
-        </Field>
-      </div>
-
-      {/* ---- Términos y condiciones ---- */}
-      <div id="fld-terminos" style={{ marginTop: 4 }}>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 12,
-            cursor: "pointer",
-            padding: "14px 16px",
-            borderRadius: "var(--radius)",
-            border:
-              "1px solid " +
-              (touched.terminos && errors.terminos
-                ? "var(--danger)"
-                : "var(--outline-variant)"),
-            background: v.terminos ? "var(--green-050)" : "var(--surface)",
-            transition: "background-color .15s, border-color .15s",
-          }}
-        >
-          <span
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 6,
-              flexShrink: 0,
-              marginTop: 1,
-              border:
-                "1.5px solid " +
-                (v.terminos ? "var(--green-800)" : "var(--sand)"),
-              background: v.terminos ? "var(--green-800)" : "var(--surface)",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {v.terminos && (
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path
-                  d="M2.5 7L5.5 10L11.5 4"
-                  stroke="#fff"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+        <FormField
+          control={form.control}
+          name="nombre"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel required>Nombre y apellido</FormLabel>
+              <FormControl>
+                <TextField
+                  {...field}
+                  icon={<User />}
+                  maxLength={40}
+                  placeholder="Ej. Camila Ríos"
+                  autoComplete="name"
                 />
-              </svg>
-            )}
-          </span>
-          <input
-            type="checkbox"
-            checked={v.terminos}
-            style={{ display: "none" }}
-            onChange={(e) => update("terminos", e.target.checked)}
-          />
-          <span
-            style={{ fontSize: 13.5, color: "var(--fg-1)", lineHeight: 1.5 }}
-          >
-            Leí y acepto los{" "}
-            <a
-              href="#"
-              onClick={(e) => e.preventDefault()}
-              style={{ color: "var(--green-800)", fontWeight: 600 }}
-            >
-              términos y condiciones
-            </a>{" "}
-            y la{" "}
-            <a
-              href="#"
-              onClick={(e) => e.preventDefault()}
-              style={{ color: "var(--green-800)", fontWeight: 600 }}
-            >
-              política de privacidad
-            </a>{" "}
-            de Mendoza AgroTours.
-          </span>
-        </label>
-        {touched.terminos && errors.terminos && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 12.5,
-              color: "var(--danger-fg)",
-              marginTop: 7,
-            }}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            {errors.terminos}
-          </div>
-        )}
-      </div>
-
-      {/* ---- Submit ---- */}
-      <div style={{ marginTop: 6 }}>
-        {apiError && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              fontSize: 13.5,
-              color: "var(--danger-fg)",
-              background: "var(--danger-bg, #fff0f0)",
-              border: "1px solid var(--danger)",
-              borderRadius: "var(--radius)",
-              padding: "10px 14px",
-              marginBottom: 14,
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            {apiError}
-          </div>
-        )}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="btn btn-primary btn-lg"
-          style={{ width: "100%", justifyContent: "center" }}
-        >
-          {isLoading ? (
-            "Creando tu cuenta…"
-          ) : (
-            <>
-              <UserPlus size={18} /> Registrarse
-            </>
+              </FormControl>
+              <FormDescription>Como figura en tu documento</FormDescription>
+              <FormMessage />
+            </FormItem>
           )}
-        </button>
-        <div
-          style={{
-            textAlign: "center",
-            marginTop: 14,
-            fontSize: 13.5,
-            color: "var(--fg-2)",
-          }}
-        >
-          ¿Ya tenés cuenta?{" "}
-          <a
-            href="/acceso"
-            style={{ color: "var(--green-800)", fontWeight: 600 }}
-          >
-            Iniciá sesión
-          </a>
+        />
+
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel required>Email</FormLabel>
+              <FormControl>
+                <TextField
+                  {...field}
+                  icon={<Mail />}
+                  type="email"
+                  placeholder="nombre@dominio.com"
+                  inputMode="email"
+                  autoComplete="email"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="pais"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>País</FormLabel>
+                <FormControl>
+                  <CountrySelect
+                    {...field}
+                    options={paises}
+                    placeholder={
+                      paisesLoading
+                        ? "Cargando países…"
+                        : paisesError
+                          ? "No se pudieron cargar los países"
+                          : "Seleccionar país"
+                    }
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="fecha"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Fecha de nacimiento</FormLabel>
+                <FormControl>
+                  <DateField {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
-      </div>
-    </form>
+
+        <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="tipoId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Tipo de identificación</FormLabel>
+                <FormControl>
+                  <TipoIdSelect
+                    {...field}
+                    icon={<BadgeCheck />}
+                    options={TIPOS_IDENTIFICACION}
+                    placeholder="Seleccionar tipo"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="numeroId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Número de identificación</FormLabel>
+                <FormControl>
+                  <TextField
+                    {...field}
+                    icon={<Fingerprint />}
+                    maxLength={20}
+                    placeholder={
+                      tipoId === "Pasaporte" ? "Ej. AB123456" : "Ej. 30.123.456"
+                    }
+                    autoComplete="off"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="telefono"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel required>Teléfono</FormLabel>
+              <FormControl>
+                <TextField
+                  {...field}
+                  icon={<Phone />}
+                  type="tel"
+                  maxLength={15}
+                  placeholder="Ej. +54 261 555 1234"
+                  inputMode="tel"
+                  autoComplete="tel"
+                />
+              </FormControl>
+              <FormDescription>
+                Entre 7 y 15 caracteres, podés incluir el código de área
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* ---- Seguridad ---- */}
+        <div className={cn(SECTION_LABEL, "mt-2")}>Seguridad</div>
+
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel required>Contraseña</FormLabel>
+              <FormControl>
+                <TextField
+                  {...field}
+                  icon={<Lock />}
+                  type={showPw ? "text" : "password"}
+                  placeholder="Mínimo 8 caracteres"
+                  autoComplete="new-password"
+                  rightSlot={
+                    <EyeToggle
+                      shown={showPw}
+                      onToggle={() => setShowPw((s) => !s)}
+                    />
+                  }
+                />
+              </FormControl>
+              {field.value && <PasswordMeter value={field.value} />}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="confirm"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel required>Confirmar contraseña</FormLabel>
+              <FormControl>
+                <TextField
+                  {...field}
+                  icon={<Lock />}
+                  type={showConfirm ? "text" : "password"}
+                  placeholder="Repetí la contraseña"
+                  autoComplete="new-password"
+                  rightSlot={
+                    <EyeToggle
+                      shown={showConfirm}
+                      onToggle={() => setShowConfirm((s) => !s)}
+                    />
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* ---- Términos y condiciones ---- */}
+        <FormField
+          control={form.control}
+          name="terminos"
+          render={({ field, fieldState }) => (
+            <FormItem id="fld-terminos" className="mt-1">
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-md border p-4 transition-colors",
+                  fieldState.error ? "border-danger" : "border-outline-variant",
+                  field.value ? "bg-green-050" : "bg-surface",
+                )}
+              >
+                <Checkbox
+                  ref={field.ref}
+                  checked={field.value}
+                  onCheckedChange={(ck) => field.onChange(ck === true)}
+                  onBlur={field.onBlur}
+                  aria-invalid={!!fieldState.error}
+                  className="mt-0.5 size-5"
+                />
+                <span className="text-[13.5px] leading-relaxed text-fg-1">
+                  Leí y acepto los{" "}
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    className="font-semibold text-green-800"
+                  >
+                    términos y condiciones
+                  </a>{" "}
+                  y la{" "}
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    className="font-semibold text-green-800"
+                  >
+                    política de privacidad
+                  </a>{" "}
+                  de Mendoza AgroTours.
+                </span>
+              </label>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* ---- Submit ---- */}
+        <div className="mt-1.5">
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            disabled={form.formState.isSubmitting}
+            className="w-full"
+          >
+            {form.formState.isSubmitting ? (
+              "Creando tu cuenta…"
+            ) : (
+              <>
+                <UserPlus className="size-[18px]" /> Registrarse
+              </>
+            )}
+          </Button>
+          <div className="mt-3.5 text-center text-[13.5px] text-fg-2">
+            ¿Ya tenés cuenta?{" "}
+            <a href="/acceso" className="font-semibold text-green-800">
+              Iniciá sesión
+            </a>
+          </div>
+        </div>
+      </form>
+    </Form>
   );
 }

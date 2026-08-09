@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -8,19 +8,25 @@ import {
   UsersRound, SlidersHorizontal, HandCoins, Landmark, LifeBuoy, HelpCircle, Compass,
   Bell, LogOut, Lock,
 } from "lucide-react";
+import { puede } from "@/lib/roles";
+import { useAuthStore } from "@/stores/authStore";
 
 const SIDEBAR_W = 264;
 const TOPBAR_H = 64;
 
-/** Estructura del nav; los ítems sin href aún no están implementados (badge "pronto"). */
-const NAV: { section?: string; id?: string; iconC?: React.ComponentType<{ size?: number; color?: string }>; label?: string; href?: string; badge?: number }[] = [
+/**
+ * Estructura del nav; los ítems sin href aún no están implementados (badge "pronto").
+ * `permiso` esconde la entrada a quien no lo tiene; los ítems que no lo declaran
+ * quedan visibles para cualquier administrador.
+ */
+const NAV: { section?: string; id?: string; iconC?: React.ComponentType<{ size?: number; color?: string }>; label?: string; href?: string; badge?: number; permiso?: string }[] = [
   { section: "General" },
   { id: "panel", iconC: LayoutDashboard, label: "Resumen del sistema", href: "/admin" },
   { section: "Acceso" },
-  { id: "admins", iconC: UserCog, label: "Administradores", href: "/admin/administradores" },
+  { id: "admins", iconC: UserCog, label: "Administradores", href: "/admin/administradores", permiso: "LEER_ADMIN" },
   { id: "roles", iconC: ShieldCheck, label: "Roles de administrador", href: "/admin/roles" },
   { section: "Plataforma" },
-  { id: "solicitudes", iconC: ClipboardCheck, label: "Solicitudes de establecimientos", href: "/admin/solicitudes", badge: 3 },
+  { id: "solicitudes", iconC: ClipboardCheck, label: "Solicitudes de establecimientos", href: "/admin/solicitudes", permiso: "LEER_SOLICITUD_ESTABLECIMIENTO" },
   { id: "establecimientos", iconC: Warehouse, label: "Establecimientos", href: "/admin/establecimientos" },
   { section: "Contenido" },
   { id: "cultivos", iconC: Sprout, label: "Cultivos", href: "/admin/cultivos" },
@@ -114,6 +120,19 @@ function AccountBar() {
 }
 
 export default function AdminShell({ active, children }: { active: string; children: React.ReactNode }) {
+  const accesos = useAuthStore((s) => s.accesos);
+
+  const navVisible = useMemo(() => {
+    const conPermiso = NAV.filter((e) => !e.permiso || puede(accesos, e.permiso));
+    // Si los ítems de una sección se filtraron todos, su rótulo quedaría suelto:
+    // se conserva sólo cuando lo sigue un ítem.
+    return conPermiso.filter((e, i) => {
+      if (!e.section) return true;
+      const siguiente = conPermiso[i + 1];
+      return !!siguiente && !siguiente.section;
+    });
+  }, [accesos]);
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
       <aside className="admin-sidebar" style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: SIDEBAR_W, background: "var(--surface)", borderRight: "1px solid var(--outline-variant)", display: "flex", flexDirection: "column", zIndex: 30 }}>
@@ -135,7 +154,7 @@ export default function AdminShell({ active, children }: { active: string; child
         </div>
         <div style={{ height: 1, background: "var(--outline-variant)", margin: "0 16px 6px" }} />
         <nav style={{ paddingBottom: 16, overflowY: "auto", flex: 1 }}>
-          {NAV.map((e, i) => e.section
+          {navVisible.map((e, i) => e.section
             ? <div key={"s" + i} style={{ padding: "14px 20px 6px", fontSize: 11, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--fg-3)" }}>{e.section}</div>
             : <SidebarItem key={e.id} entry={e} active={active === e.id} />)}
         </nav>

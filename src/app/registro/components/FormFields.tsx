@@ -6,7 +6,12 @@ import {
   Check, CheckCircle2, Circle, ShieldCheck, Info, CalendarDays,
   Eye, EyeOff, Flag as FlagIcon,
 } from "lucide-react";
-import type { Pais } from "@/data/registro";
+
+/** Opción de país: `code` es el iso2 (para la bandera), `name` el nombre visible. */
+export interface CountryOption {
+  code: string;
+  name: string;
+}
 
 /* ---- Field wrapper --------------------------------------------------- */
 interface FieldProps {
@@ -250,8 +255,8 @@ function Flag({ code, size = 22 }: { code: string; size?: number }) {
   const w = size, h = Math.round(size * 0.75);
   return (
     <img
-      src={`https://flagcdn.com/w40/${code}.png`}
-      srcSet={`https://flagcdn.com/w80/${code}.png 2x`}
+      src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
+      srcSet={`https://flagcdn.com/w80/${code.toLowerCase()}.png 2x`}
       width={w}
       height={h}
       alt=""
@@ -268,7 +273,7 @@ interface CountrySelectProps {
   id?: string;
   value: string;
   onChange: (val: string) => void;
-  options: readonly Pais[];
+  options: readonly CountryOption[];
   placeholder?: string;
   error?: string | false | null;
 }
@@ -290,7 +295,7 @@ export function CountrySelect({ id, value, onChange, options, placeholder, error
   }, [open]);
 
   const errored = !!error;
-  const selected = options.find((o) => o.name === value) ?? null;
+  const selected = options.find((o) => o.code.toLowerCase() === value.toLowerCase()) ?? null;
   const filtered = options.filter((o) => o.name.toLowerCase().includes(q.toLowerCase()));
 
   return (
@@ -361,12 +366,12 @@ export function CountrySelect({ id, value, onChange, options, placeholder, error
               </div>
             ) : (
               filtered.map((o) => {
-                const sel = o.name === value;
+                const sel = o.code.toLowerCase() === value.toLowerCase();
                 return (
                   <button
                     key={o.code}
                     type="button"
-                    onClick={() => { onChange(o.name); setOpen(false); setQ(""); }}
+                    onClick={() => { onChange(o.code); setOpen(false); setQ(""); }}
                     onMouseEnter={(e) => { if (!sel) (e.currentTarget as HTMLButtonElement).style.background = "var(--cream-tert)"; }}
                     onMouseLeave={(e) => { if (!sel) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
                     style={{

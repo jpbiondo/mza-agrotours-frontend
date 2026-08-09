@@ -74,7 +74,7 @@ export default function Hero() {
             <Link href="/explorar" className="btn btn-primary btn-lg" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
               <Compass size={18} /> Explorar experiencias
             </Link>
-            <Link href="/registro?vista=registro" className="btn btn-neutral btn-lg" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Link href="/registro" className="btn btn-neutral btn-lg" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
               <UserPlus size={18} /> Crear cuenta
             </Link>
           </div>
