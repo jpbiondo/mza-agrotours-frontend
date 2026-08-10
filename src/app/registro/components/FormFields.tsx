@@ -6,6 +6,7 @@ import {
   Check, CheckCircle2, Circle, ShieldCheck, Info, CalendarDays,
   Eye, EyeOff, Flag as FlagIcon,
 } from "lucide-react";
+import Image from "next/image"
 
 /** Opción de país: `code` es el iso2 (para la bandera), `name` el nombre visible. */
 export interface CountryOption {
@@ -254,9 +255,8 @@ export function SelectInput({ id, value, onChange, options, placeholder, icon, e
 function Flag({ code, size = 22 }: { code: string; size?: number }) {
   const w = size, h = Math.round(size * 0.75);
   return (
-    <img
+    <Image
       src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
-      srcSet={`https://flagcdn.com/w80/${code.toLowerCase()}.png 2x`}
       width={w}
       height={h}
       alt=""
