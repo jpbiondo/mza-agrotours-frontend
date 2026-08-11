@@ -5,13 +5,13 @@ import {
   ChevronRight, Clock, CheckCircle2, XCircle, Search, Inbox, User, MapPin,
   ArrowLeft, Hash, Building2, Mail, Phone, Map, Paperclip, Info, ShieldCheck,
   MessageSquare, AlertCircle, Loader, ClipboardCheck, Eye, FileText,
-  Image as ImageIcon, ExternalLink, Landmark,
+  Image as ImageIcon, ExternalLink, Landmark, BadgeCheck,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { admInitials } from "@/data/admin";
-import { fmtFechaHora } from "@/lib/format";
+import { fmtFecha, fmtFechaHora } from "@/lib/format";
 import { puede } from "@/lib/roles";
 import { storageConfigurado, urlDeArchivo } from "@/lib/storage";
 import { useAuthStore } from "@/stores/authStore";
@@ -260,7 +260,6 @@ function PruebaCard({ p }: { p: PruebaSolicitud }) {
 
 function Detail({
   sol,
-  solicitante,
   gestionar,
   busy,
   error,
@@ -268,7 +267,6 @@ function Detail({
   onResolver,
 }: {
   sol: SolicitudDetalle;
-  solicitante: string;
   gestionar: boolean;
   busy: boolean;
   error: string | null;
@@ -298,7 +296,6 @@ function Detail({
             <EstadoPill estado={sol.estado} big />
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Hash size={14} color="var(--fg-3)" /><span style={{ fontFamily: "var(--font-mono)" }}>{sol.id}</span></span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Clock size={14} color="var(--fg-3)" />Solicitado el {fmtFechaHora(sol.fechaHoraAlta)}</span>
-            {solicitante && <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><User size={14} color="var(--fg-3)" />{solicitante}</span>}
           </div>
         </div>
       </div>
@@ -337,6 +334,27 @@ function Detail({
         </div>
 
         <aside style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <SectionBox icon={<User size={16} color="var(--green-800)" />} title="Datos del solicitante">
+            <div style={{ display: "flex", alignItems: "center", gap: 13, padding: "8px 0 14px", borderBottom: "1px dashed var(--cream-tert)" }}>
+              <span style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--brown-700)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 15, flexShrink: 0 }}>{admInitials(sol.nombreSolicitante || "?")}</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "var(--fg-1)" }}>{sol.nombreSolicitante || "—"}</div>
+                {sol.fechaHoraAltaSolicitante && (
+                  <div style={{ fontSize: 12.5, color: "var(--fg-3)", marginTop: 2 }}>Miembro desde {fmtFecha(sol.fechaHoraAltaSolicitante)}</div>
+                )}
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13.5, color: "var(--fg-1)" }}>
+                <BadgeCheck size={15} color="var(--fg-3)" />
+                <span style={{ fontFamily: "var(--font-mono)" }}>{sol.identificacionSolicitante || "—"}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13.5, color: "var(--fg-1)", wordBreak: "break-all" }}>
+                <Mail size={15} color="var(--fg-3)" />{sol.emailSolicitante || "—"}
+              </div>
+            </div>
+          </SectionBox>
+
           <SectionBox icon={<MessageSquare size={16} color="var(--green-800)" />} title="Observaciones">
             {readOnly ? (
               <div style={{ paddingTop: 8 }}>
@@ -408,13 +426,11 @@ function Detail({
 /** Carga el detalle de la solicitud abierta y delega el render. */
 function DetalleCargado({
   id,
-  solicitante,
   gestionar,
   onBack,
   onResuelta,
 }: {
   id: string;
-  solicitante: string;
   gestionar: boolean;
   onBack: () => void;
   onResuelta: (estado: Resolucion) => void;
@@ -450,7 +466,6 @@ function DetalleCargado({
         ) : (
           <Detail
             sol={solicitud}
-            solicitante={solicitante}
             gestionar={gestionar}
             busy={resolviendo}
             error={errorResolver}
@@ -490,15 +505,11 @@ function Inner() {
     );
   }
 
-  // El nombre del solicitante sólo viene en el listado, no en el detalle.
-  const solicitante = solicitudes.find((s) => s.id === abierta)?.nombreSolicitante ?? "";
-
   return (
     <>
       {abierta ? (
         <DetalleCargado
           id={abierta}
-          solicitante={solicitante}
           gestionar={gestionar}
           onBack={() => setAbierta(null)}
           onResuelta={onResuelta}

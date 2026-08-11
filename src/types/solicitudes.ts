@@ -71,6 +71,15 @@ export interface SolicitudDetalle {
   /** Del cambio más reciente al más antiguo. */
   estados: CambioEstado[];
   pruebas: PruebaSolicitud[];
+  /**
+   * Datos de quien envió la solicitud. Los devuelve la vista de administración;
+   * en la del visitante llegan vacíos, porque ahí el solicitante es uno mismo.
+   */
+  nombreSolicitante: string;
+  identificacionSolicitante: string;
+  emailSolicitante: string;
+  /** Alta de la cuenta del solicitante, en ISO-8601. `null` si no vino. */
+  fechaHoraAltaSolicitante: string | null;
 }
 
 export interface PruebaArchivo {

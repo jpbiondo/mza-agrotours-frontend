@@ -39,6 +39,10 @@ interface DetalleBackend {
   fechaHoraAlta?: unknown;
   estados?: CambioEstadoBackend[] | null;
   pruebas?: PruebaBackend[] | null;
+  nombreSolicitante?: string;
+  identificacionSolicitante?: string;
+  emailSolicitante?: string;
+  fechaHoraAltaSolicitante?: unknown;
 }
 
 interface DetalleResponse {
@@ -116,6 +120,11 @@ function aDetalle(d: DetalleBackend): SolicitudDetalle {
     fechaHoraAlta: aFecha(d.fechaHoraAlta),
     estados: Array.isArray(d.estados) ? d.estados.map(aCambio).sort(porFechaDesc) : [],
     pruebas: Array.isArray(d.pruebas) ? d.pruebas.map(aPrueba) : [],
+    // Sólo los manda la vista de administración; en la del visitante quedan vacíos.
+    nombreSolicitante: d.nombreSolicitante ?? "",
+    identificacionSolicitante: d.identificacionSolicitante ?? "",
+    emailSolicitante: d.emailSolicitante ?? "",
+    fechaHoraAltaSolicitante: aFecha(d.fechaHoraAltaSolicitante),
   };
 }
 
