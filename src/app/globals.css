@@ -189,6 +189,44 @@ button { font-family: inherit; }
 /* ---- Form field wrapper ---- */
 .field { display: flex; flex-direction: column; gap: var(--space-2); }
 
+/* ---- Inputs ----
+   Las pantallas nuevas usan el componente <TextField>; estas clases son para
+   las de estilos inline, que las heredan del design system. */
+.input, .textarea, .select {
+  font-family: var(--font-sans);
+  font-size: var(--body);
+  color: var(--fg-1);
+  background: var(--surface);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius);
+  padding: 14px var(--space-3);
+  transition: border-color .16s, box-shadow .16s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.input::placeholder, .textarea::placeholder { color: var(--fg-3); }
+.input:focus, .textarea:focus, .select:focus {
+  outline: none;
+  /* El borde crece 1px al enfocar: se descuenta del padding para que no salte. */
+  border: 2px solid var(--green-800);
+  padding: 13px 15px;
+}
+.textarea { resize: vertical; min-height: 88px; line-height: 1.5; }
+
+/* Campo con error. Gana por especificidad, sin necesidad de !important. */
+.input.err, .textarea.err { border-color: var(--danger); }
+.input.err:focus, .textarea.err:focus { border: 2px solid var(--danger); padding: 13px 15px; }
+
+/* ---- Mensaje de error de un campo ---- */
+.err-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--danger-fg);
+}
+
 /* ---- Section labels (UPPERCASE) ---- */
 .t-label {
   font-family: var(--font-sans, sans-serif);

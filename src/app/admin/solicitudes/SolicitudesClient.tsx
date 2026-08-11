@@ -418,7 +418,7 @@ function Detail({
         </aside>
       </div>
 
-      <style>{`@media (max-width: 900px) { .sol-detail-grid { grid-template-columns: minmax(0,1fr) !important; } }`}</style>
+      <style>{`@media (max-width: 920px) { .sol-detail-grid { grid-template-columns: minmax(0,1fr) !important; } }`}</style>
     </div>
   );
 }
