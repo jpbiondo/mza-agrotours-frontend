@@ -428,6 +428,20 @@ function Detail({
   // observación con la que se resolvió.
   const ultimo = sol.estados[0];
 
+  // "Validada el 12/08/2026 · 14:30 por Ana Pérez". El revisor falta mientras
+  // nadie la miró y la fecha puede no venir, así que se omite lo que falte; sin
+  // ninguno de los dos no se dibuja la línea.
+  const sello =
+    ultimo && (ultimo.fecha || ultimo.revisor)
+      ? [
+          metaDe(sol.estado)?.label,
+          ultimo.fecha && `el ${fmtFechaHora(ultimo.fecha)}`,
+          ultimo.revisor && `por ${ultimo.revisor}`,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : "";
+
   return (
     <div className="mx-auto max-w-[1080px] px-7 pt-6 pb-24">
       <button
@@ -536,10 +550,10 @@ function Detail({
                 >
                   {ultimo?.observaciones || "Sin observaciones."}
                 </p>
-                {ultimo?.fecha && (
+                {sello && (
                   <div className="mt-3 flex items-center gap-1.5 text-[12.5px] text-fg-3">
                     <Clock className="size-[13px]" />
-                    {metaDe(sol.estado)?.label} el {fmtFechaHora(ultimo.fecha)}
+                    {sello}
                   </div>
                 )}
               </div>
