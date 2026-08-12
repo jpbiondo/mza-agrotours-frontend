@@ -159,7 +159,9 @@ interface Hito {
   label: string;
   tono: Tono;
   icono: ReactNode;
+  /** Ya formateada, o `null` si el backend no la mandó. */
   fecha: string | null;
+  revisor: string;
   motivo: string;
 }
 
@@ -171,9 +173,20 @@ function aHito(c: CambioEstado): Hito {
     label: meta?.label ?? "Sin estado",
     tono: (meta?.tone as Tono) ?? "neutral",
     icono: iconoEstado(c.estado, "size-4"),
-    fecha: fmtFechaHora(c.fecha),
+    fecha: c.fecha ? fmtFechaHora(c.fecha) : null,
+    revisor: c.revisor,
     motivo: c.observaciones,
   };
+}
+
+/**
+ * Línea al lado del título del hito: "12/08/2026 · 14:30 por Ana Pérez". El
+ * revisor falta mientras la solicitud está pendiente, y la fecha puede faltar
+ * si el backend no la mandó; se omite la parte que no haya.
+ */
+function selloDe(h: Hito): string {
+  if (!h.revisor) return h.fecha ?? "";
+  return h.fecha ? `${h.fecha} por ${h.revisor}` : `por ${h.revisor}`;
 }
 
 /**
@@ -192,7 +205,9 @@ function hitosDe(s: SolicitudDetalle): Hito[] {
       label: meta?.label ?? "Sin estado",
       tono: (meta?.tone as Tono) ?? "neutral",
       icono: iconoEstado(s.estado, "size-4"),
-      fecha: fmtFechaHora(s.fechaHoraAlta),
+      fecha: s.fechaHoraAlta ? fmtFechaHora(s.fechaHoraAlta) : null,
+      // El hito de respaldo se arma con el estado actual, que no trae revisor.
+      revisor: "",
       motivo: MOTIVO_POR_ESTADO[s.estado] ?? "",
     },
   ];
@@ -266,6 +281,7 @@ function Detalle({ s }: { s: SolicitudDetalle }) {
         <div className="flex flex-col">
           {hitos.map((h, i) => {
             const last = i === hitos.length - 1;
+            const sello = selloDe(h);
             return (
               <div key={i} className="flex gap-4">
                 <div className="flex shrink-0 flex-col items-center">
@@ -282,7 +298,7 @@ function Detalle({ s }: { s: SolicitudDetalle }) {
                 <div className={cn("min-w-0", last ? "pb-0" : "pb-6")}>
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span className="text-[14.5px] font-semibold text-fg-1">{h.label}</span>
-                    {h.fecha && <span className="text-[12.5px] text-fg-3">{h.fecha}</span>}
+                    {sello && <span className="text-[12.5px] text-fg-3">{sello}</span>}
                   </div>
                   {h.motivo && (
                     <p className="mt-2 text-[14px] leading-relaxed text-fg-2">{h.motivo}</p>

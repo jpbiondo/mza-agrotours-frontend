@@ -49,6 +49,12 @@ export interface CambioEstado {
   fecha: string | null;
   /** Devolución del administrador en ese cambio. */
   observaciones: string;
+  /**
+   * Administrador que revisó el cambio. `""` cuando no lo hubo —el alta queda
+   * en pendiente sin que nadie la haya mirado todavía—, igual que
+   * `observaciones`.
+   */
+  revisor: string;
 }
 
 /**

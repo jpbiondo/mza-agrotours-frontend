@@ -21,6 +21,8 @@ interface CambioEstadoBackend {
   estado?: string;
   fecha?: unknown;
   observaciones?: string;
+  /** `null` en los cambios que nadie revisó (el alta, que nace pendiente). */
+  revisor?: string | null;
 }
 
 /** Registro crudo de GET /solicitudes-establecimiento/me/{id}. */
@@ -84,6 +86,7 @@ function aCambio(c: CambioEstadoBackend): CambioEstado {
     estado: aEstado(c.estado),
     fecha: aFecha(c.fecha),
     observaciones: c.observaciones ?? "",
+    revisor: (c.revisor ?? "").trim(),
   };
 }
 
