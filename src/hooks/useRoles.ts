@@ -200,20 +200,44 @@ export function useCrearRol() {
   return { crear, isLoading };
 }
 
-/* ---- Modificación y baja ------------------------------------------------- */
-// TODO backend: faltan la modificación (PUT /roles/admin/{id}) y la baja
-// (DELETE /roles/admin/{id}). Hasta que existan, estos dos siguen siendo mocks:
-// simulan la demora y la pantalla actualiza su copia local, así que lo que se
-// edite o borre acá vuelve atrás al recargar.
+/* ---- Modificación -------------------------------------------------------- */
 
-export function useGuardarRol() {
+export function useActualizarRol() {
   const [isLoading, setIsLoading] = useState(false);
-  async function guardar(_rol: RolAdminDetalle): Promise<void> {
+
+  /** El id va en la URL; el cuerpo es el mismo del alta. */
+  async function actualizar(
+    rolId: string,
+    datos: DatosRol,
+  ): Promise<{ ok: boolean; code?: string }> {
     setIsLoading(true);
-    try { await new Promise<void>((res) => setTimeout(res, 600)); } finally { setIsLoading(false); }
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(`${ROLES}/${encodeURIComponent(rolId)}`, {
+          method: "PUT",
+          token,
+          body: JSON.stringify(datos),
+        }),
+      );
+      const env = comoEnvelope<unknown>(res);
+      // La respuesta confirma id, nombre y descripción: nada que la pantalla no
+      // tenga ya, así que sólo interesa si salió bien.
+      return env.ok ? { ok: true } : { ok: false, code: env.code };
+    } catch (e) {
+      if (e instanceof ApiError) return { ok: false, code: e.code };
+      return { ok: false };
+    } finally {
+      setIsLoading(false);
+    }
   }
-  return { guardar, isLoading };
+
+  return { actualizar, isLoading };
 }
+
+/* ---- Baja ---------------------------------------------------------------- */
+// TODO backend: falta DELETE /roles/admin/{id}. Hasta que exista esto sigue
+// siendo un mock: simula la demora y la pantalla saca la fila de su copia
+// local, así que el rol vuelve a aparecer al recargar.
 
 export function useDarBajaRol() {
   const [isLoading, setIsLoading] = useState(false);

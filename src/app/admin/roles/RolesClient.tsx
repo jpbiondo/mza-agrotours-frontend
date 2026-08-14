@@ -13,21 +13,24 @@ import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { genId } from "@/lib/id";
 import { cn } from "@/lib/utils";
-import { useRoles, useCrearRol, useGuardarRol, useDarBajaRol } from "@/hooks/useRoles";
+import { useRoles, useCrearRol, useActualizarRol, useDarBajaRol } from "@/hooks/useRoles";
 import type { GrupoPermiso, RolAdminDetalle } from "@/types/admin";
 
 /**
- * Errores de dominio del alta. Lo que no esté acá cae en el mensaje genérico:
+ * Errores de dominio al guardar. Lo que no esté acá cae en el mensaje genérico:
  * hablar de reintentar sólo tiene sentido si el problema puede ser pasajero.
  */
-const ERROR_ALTA: Record<string, string> = {
+const ERROR_GUARDAR: Record<string, string> = {
+  // Vale para el alta y para el renombre.
   "rol.rolAlreadyExists": "Ya existe un rol con ese nombre. Elegí otro.",
 };
 
-function mensajeAlta(code?: string): string {
+function mensajeGuardar(code: string | undefined, editando: boolean): string {
   return (
-    (code && ERROR_ALTA[code]) ||
-    "No pudimos crear el rol. Probá de nuevo en unos minutos."
+    (code && ERROR_GUARDAR[code]) ||
+    (editando
+      ? "No pudimos guardar los cambios. Probá de nuevo en unos minutos."
+      : "No pudimos crear el rol. Probá de nuevo en unos minutos.")
   );
 }
 
@@ -452,7 +455,7 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
   const [formError, setFormError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
   const { crear, isLoading: creating } = useCrearRol();
-  const { guardar, isLoading: saving } = useGuardarRol();
+  const { actualizar, isLoading: saving } = useActualizarRol();
   const { darBaja, isLoading: deleting } = useDarBajaRol();
 
   const totalAdmins = roles.reduce((s, r) => s + r.cantidadUsuarios, 0);
@@ -482,25 +485,31 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
 
   async function saveRole(role: RolAdminDetalle) {
     setFormError(null);
+    const editando = !!form.initial;
+    // El cuerpo es el mismo para el alta y la modificación.
+    const datos = {
+      nombre: role.nombre,
+      descripcion: role.descripcion,
+      permisos: role.permisos,
+    };
 
-    // Edición: todavía contra el mock (ver useRoles).
-    if (form.initial) {
-      await guardar(role);
+    if (editando) {
+      const res = await actualizar(role.id, datos);
+      if (!res.ok) {
+        setFormError(mensajeGuardar(res.code, true));
+        return;
+      }
       setRoles((prev) => prev.map((r) => (r.id === role.id ? role : r)));
       cerrarForm();
       notify(`Se guardaron los cambios del rol «${role.nombre}».`);
       return;
     }
 
-    const res = await crear({
-      nombre: role.nombre,
-      descripcion: role.descripcion,
-      permisos: role.permisos,
-    });
+    const res = await crear(datos);
     if (!res.ok) {
       // El panel queda abierto con lo cargado: reescribir todo sería cruel,
       // sobre todo con los permisos ya tildados.
-      setFormError(mensajeAlta(res.code));
+      setFormError(mensajeGuardar(res.code, false));
       return;
     }
     // El id lo asigna el backend; el de `role` es el provisorio de genId.
