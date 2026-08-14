@@ -62,3 +62,26 @@ export async function apiFetch<T>(path: string, opts: ApiOptions = {}): Promise<
 
   return res.json() as Promise<T>;
 }
+
+/** Respuesta 2xx del backend: `data` sólo es fiable cuando `ok` es true. */
+export interface Envelope<T> {
+  ok: boolean;
+  code?: string;
+  data?: T;
+}
+
+/**
+ * Normaliza la respuesta al envelope `{ ok, code, data }`. Sigue aceptando el
+ * payload crudo —un array o un objeto suelto— por si algún endpoint todavía no
+ * lo envuelve; en ese caso se asume éxito.
+ *
+ * Importante: conserva el `code` cuando `ok` es false, que es como el backend
+ * manda los errores de dominio con status 2xx.
+ */
+export function comoEnvelope<T>(res: unknown): Envelope<T> {
+  if (res && typeof res === "object" && "ok" in res) {
+    const env = res as Envelope<T>;
+    return { ok: env.ok, code: env.code, data: env.data };
+  }
+  return { ok: true, data: (res as T) ?? undefined };
+}

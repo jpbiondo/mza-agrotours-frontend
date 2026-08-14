@@ -1,27 +1,28 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus, X, AlertCircle, ShieldCheck, Lock, Pencil, Trash2, Info, ChevronRight, Check,
-  CheckCircle2, KeyRound, Users, Lightbulb, UserCog, Warehouse, Loader,
+  CheckCircle2, KeyRound, Users, Lightbulb, UserCog, Loader,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
-import { ADMIN_PERM_GROUPS, ADMIN_ALL_PERMS, admNowStamp } from "@/data/admin";
 import { genId } from "@/lib/id";
+import { etiquetaPermiso } from "@/lib/permisos";
 import { useRoles, useGuardarRol, useDarBajaRol } from "@/hooks/useRoles";
-import type { AdminRole, PermGroup } from "@/types/admin";
-
-const GROUP_ICON: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
-  "user-cog": UserCog, "shield-check": ShieldCheck, warehouse: Warehouse,
-};
-const GROUP_BY_PERM: Record<string, PermGroup> = Object.fromEntries(ADMIN_PERM_GROUPS.flatMap((g) => g.perms.map((p) => [p.id, g])));
+import type { GrupoPermiso, RolAdminDetalle } from "@/types/admin";
 
 const inputStyle: React.CSSProperties = {
   width: "100%", fontFamily: "var(--font-sans)", fontSize: 15, color: "var(--fg-1)",
   borderRadius: "var(--radius)", background: "var(--surface)", border: "1px solid var(--sand)",
   padding: "12px 14px", outline: "none", boxSizing: "border-box",
 };
+
+/** "Gestión de administradores" → "Administradores", para las píldoras de la tabla. */
+function etiquetaGrupo(nombre: string): string {
+  const corto = nombre.replace(/^gesti[oó]n de\s+/i, "").trim();
+  return corto ? corto[0].toUpperCase() + corto.slice(1) : nombre;
+}
 
 function ErrMsg({ children }: { children: React.ReactNode }) {
   return <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--danger-fg)" }}><AlertCircle size={15} color="var(--danger)" /> {children}</div>;
@@ -37,29 +38,32 @@ function BigCheck({ state, size = 24 }: { state: "on" | "off" | "mixed"; size?: 
   );
 }
 
-function PermGroupEditor({ group, selected, onToggleGroup, onTogglePerm }: { group: PermGroup; selected: Set<string>; onToggleGroup: (g: PermGroup) => void; onTogglePerm: (id: string) => void }) {
-  const ids = group.perms.map((p) => p.id);
-  const count = ids.filter((id) => selected.has(id)).length;
-  const groupState = count === 0 ? "off" : count === ids.length ? "on" : "mixed";
-  const GIcon = GROUP_ICON[group.icon] ?? ShieldCheck;
+function PermGroupEditor({ group, selected, onToggleGroup, onTogglePerm }: { group: GrupoPermiso; selected: Set<string>; onToggleGroup: (g: GrupoPermiso) => void; onTogglePerm: (codigo: string) => void }) {
+  const count = group.permisos.filter((p) => selected.has(p)).length;
+  const groupState = count === 0 ? "off" : count === group.permisos.length ? "on" : "mixed";
   return (
     <div style={{ border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "var(--surface)" }}>
       <button type="button" onClick={() => onToggleGroup(group)} style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", textAlign: "left", background: groupState !== "off" ? "var(--green-050)" : "var(--cream-tert)", border: "none", borderBottom: "1px solid var(--outline-variant)", padding: "14px 16px", cursor: "pointer" }}>
         <BigCheck state={groupState} size={25} />
-        <span style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: "var(--surface)", border: "1px solid var(--outline-variant)", display: "flex", alignItems: "center", justifyContent: "center" }}><GIcon size={19} color="var(--green-800)" /></span>
+        <span style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: "var(--surface)", border: "1px solid var(--outline-variant)", display: "flex", alignItems: "center", justifyContent: "center" }}><ShieldCheck size={19} color="var(--green-800)" /></span>
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: "block", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16.5, color: "var(--fg-1)" }}>{group.label}</span>
-          <span style={{ display: "block", fontSize: 12.5, color: "var(--fg-3)", marginTop: 2 }}>{group.desc}</span>
+          <span style={{ display: "block", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16.5, color: "var(--fg-1)" }}>{group.nombre}</span>
+          <span style={{ display: "block", fontSize: 12.5, color: "var(--fg-3)", marginTop: 2 }}>{group.descripcion}</span>
         </span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, fontWeight: 600, color: count ? "var(--green-800)" : "var(--fg-3)", background: count ? "var(--green-100)" : "var(--surface)", border: "1px solid " + (count ? "var(--green-300)" : "var(--outline-variant)"), borderRadius: "var(--radius-pill)", padding: "4px 11px", whiteSpace: "nowrap" }}>{count}/{ids.length}</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, fontWeight: 600, color: count ? "var(--green-800)" : "var(--fg-3)", background: count ? "var(--green-100)" : "var(--surface)", border: "1px solid " + (count ? "var(--green-300)" : "var(--outline-variant)"), borderRadius: "var(--radius-pill)", padding: "4px 11px", whiteSpace: "nowrap" }}>{count}/{group.permisos.length}</span>
       </button>
       <div style={{ padding: "6px 10px 10px 44px", display: "flex", flexDirection: "column", gap: 3 }}>
-        {group.perms.map((p) => {
-          const on = selected.has(p.id);
+        {group.permisos.map((p) => {
+          const on = selected.has(p);
           return (
-            <button key={p.id} type="button" onClick={() => onTogglePerm(p.id)} style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", textAlign: "left", background: on ? "var(--green-050)" : "transparent", border: "1px solid " + (on ? "var(--green-300)" : "transparent"), borderRadius: "var(--radius)", padding: "11px 14px", cursor: "pointer" }}>
+            <button key={p} type="button" onClick={() => onTogglePerm(p)} style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", textAlign: "left", background: on ? "var(--green-050)" : "transparent", border: "1px solid " + (on ? "var(--green-300)" : "transparent"), borderRadius: "var(--radius)", padding: "11px 14px", cursor: "pointer" }}>
               <BigCheck state={on ? "on" : "off"} size={23} />
-              <span style={{ fontSize: 15.5, fontWeight: on ? 600 : 500, color: on ? "var(--green-800)" : "var(--fg-1)" }}>{p.label}</span>
+              {/* El código va debajo de la etiqueta: dos permisos de recursos
+                  distintos pueden leerse los dos "Ver" dentro del mismo grupo. */}
+              <span style={{ minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 15.5, fontWeight: on ? 600 : 500, color: on ? "var(--green-800)" : "var(--fg-1)" }}>{etiquetaPermiso(p)}</span>
+                <span style={{ display: "block", fontFamily: "var(--font-mono)", fontSize: 11.5, color: "var(--fg-3)", marginTop: 2 }}>{p}</span>
+              </span>
             </button>
           );
         })}
@@ -68,34 +72,32 @@ function PermGroupEditor({ group, selected, onToggleGroup, onTogglePerm }: { gro
   );
 }
 
-function PermSummary({ perms }: { perms: string[] }) {
+function PermSummary({ perms, grupos }: { perms: string[]; grupos: GrupoPermiso[] }) {
   if (!perms.length) return <span style={{ color: "var(--fg-3)", fontSize: 13 }}>Sin permisos</span>;
-  const counts: Record<string, number> = {};
-  perms.forEach((id) => { const g = GROUP_BY_PERM[id]; if (g) counts[g.id] = (counts[g.id] || 0) + 1; });
+  const tiene = new Set(perms);
+  const conteos = grupos
+    .map((g) => ({ grupo: g, count: g.permisos.filter((p) => tiene.has(p)).length }))
+    .filter((x) => x.count > 0);
   return (
     <span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-      {ADMIN_PERM_GROUPS.filter((g) => counts[g.id]).map((g) => {
-        const GIcon = GROUP_ICON[g.icon] ?? ShieldCheck;
-        const label = g.label.replace("Gestión de roles de administrador", "Roles").replace("Gestión de ", "");
-        return (
-          <span key={g.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: "var(--radius-pill)", padding: "4px 10px", fontSize: 12.5, color: "var(--green-800)", fontWeight: 600, whiteSpace: "nowrap" }}>
-            <GIcon size={14} color="var(--green-700)" /> {label} <span style={{ fontFamily: "var(--font-mono)", opacity: 0.8 }}>{counts[g.id]}</span>
-          </span>
-        );
-      })}
+      {conteos.map(({ grupo, count }) => (
+        <span key={grupo.nombre} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: "var(--radius-pill)", padding: "4px 10px", fontSize: 12.5, color: "var(--green-800)", fontWeight: 600, whiteSpace: "nowrap" }}>
+          <ShieldCheck size={14} color="var(--green-700)" /> {etiquetaGrupo(grupo.nombre)} <span style={{ fontFamily: "var(--font-mono)", opacity: 0.8 }}>{count}</span>
+        </span>
+      ))}
     </span>
   );
 }
 
-function RoleForm({ initial, existingNames, busy, onCancel, onSave }: { initial: AdminRole | null; existingNames: string[]; busy: boolean; onCancel: () => void; onSave: (r: AdminRole) => void }) {
+function RoleForm({ initial, grupos, existingNames, busy, onCancel, onSave }: { initial: RolAdminDetalle | null; grupos: GrupoPermiso[]; existingNames: string[]; busy: boolean; onCancel: () => void; onSave: (r: RolAdminDetalle) => void }) {
   const editing = !!initial;
   const [nombre, setNombre] = useState(initial?.nombre ?? "");
   const [descripcion, setDescripcion] = useState(initial?.descripcion ?? "");
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(initial?.perms ?? []));
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(initial?.permisos ?? []));
   const [attempted, setAttempted] = useState(false);
 
-  const togglePerm = (id: string) => setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const toggleGroup = (group: PermGroup) => setSelected((prev) => { const n = new Set(prev); const ids = group.perms.map((p) => p.id); if (ids.every((id) => n.has(id))) ids.forEach((id) => n.delete(id)); else ids.forEach((id) => n.add(id)); return n; });
+  const togglePerm = (codigo: string) => setSelected((prev) => { const n = new Set(prev); if (n.has(codigo)) n.delete(codigo); else n.add(codigo); return n; });
+  const toggleGroup = (group: GrupoPermiso) => setSelected((prev) => { const n = new Set(prev); if (group.permisos.every((p) => n.has(p))) group.permisos.forEach((p) => n.delete(p)); else group.permisos.forEach((p) => n.add(p)); return n; });
 
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
   const isDup = nombre.trim().length >= 3 && existingNames.map(norm).includes(norm(nombre));
@@ -107,7 +109,14 @@ function RoleForm({ initial, existingNames, busy, onCancel, onSave }: { initial:
   function handleSave() {
     setAttempted(true);
     if (errNombre || errDesc || errPerms) return;
-    onSave({ ...(initial ?? {} as AdminRole), id: initial?.id ?? genId("ar"), nombre: nombre.trim(), descripcion: descripcion.trim(), perms: Array.from(selected), usuarios: initial?.usuarios ?? 0, baja: initial?.baja ?? null });
+    onSave({
+      id: initial?.id ?? genId("ar"),
+      nombre: nombre.trim(),
+      descripcion: descripcion.trim(),
+      permisos: Array.from(selected),
+      cantidadUsuarios: initial?.cantidadUsuarios ?? 0,
+      esProtegido: initial?.esProtegido ?? false,
+    });
   }
 
   const lbl: React.CSSProperties = { display: "block", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16, color: "var(--fg-1)", marginBottom: 8 };
@@ -150,7 +159,9 @@ function RoleForm({ initial, existingNames, busy, onCancel, onSave }: { initial:
           </div>
           {attempted && errPerms && <div style={{ marginBottom: 12 }}><ErrMsg>{errPerms}</ErrMsg></div>}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {ADMIN_PERM_GROUPS.map((g) => <PermGroupEditor key={g.id} group={g} selected={selected} onToggleGroup={toggleGroup} onTogglePerm={togglePerm} />)}
+            {grupos.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 14, color: "var(--fg-2)" }}>No hay permisos definidos en el sistema todavía.</p>
+            ) : grupos.map((g) => <PermGroupEditor key={g.nombre} group={g} selected={selected} onToggleGroup={toggleGroup} onTogglePerm={togglePerm} />)}
           </div>
         </div>
       </div>
@@ -182,30 +193,32 @@ function Scrim({ onClose, children, width = 720 }: { onClose: () => void; childr
   );
 }
 
-function Inner({ initial }: { initial: AdminRole[] }) {
-  const [roles, setRoles] = useState<AdminRole[]>(initial);
-  const [form, setForm] = useState<{ open: boolean; initial: AdminRole | null }>({ open: false, initial: null });
-  const [toDelete, setToDelete] = useState<AdminRole | null>(null);
+function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoPermiso[] }) {
+  // Copia local: el alta y la baja todavía son mocks (ver useRoles). Cuando se
+  // wireen, esto pasa a ser `reload()` sobre el hook.
+  const [roles, setRoles] = useState<RolAdminDetalle[]>(initial);
+  const [form, setForm] = useState<{ open: boolean; initial: RolAdminDetalle | null }>({ open: false, initial: null });
+  const [toDelete, setToDelete] = useState<RolAdminDetalle | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const { guardar, isLoading: saving } = useGuardarRol();
   const { darBaja, isLoading: deleting } = useDarBajaRol();
 
-  const activos = roles.filter((r) => !r.baja).length;
-  const totalAdmins = roles.reduce((s, r) => s + r.usuarios, 0);
-  const ordenados = useMemo(() => [...roles.filter((r) => !r.baja), ...roles.filter((r) => r.baja)], [roles]);
+  const totalAdmins = roles.reduce((s, r) => s + r.cantidadUsuarios, 0);
+  // Un mismo código puede repetirse en dos grupos: se cuentan los distintos.
+  const permisosDisponibles = new Set(grupos.flatMap((g) => g.permisos)).size;
 
   function notify(msg: string) { setFlash(msg); setTimeout(() => setFlash((f) => (f === msg ? null : f)), 3200); }
 
-  async function saveRole(role: AdminRole) {
+  async function saveRole(role: RolAdminDetalle) {
     const editing = !!form.initial;
     await guardar(role);
     setRoles((prev) => (prev.some((r) => r.id === role.id) ? prev.map((r) => (r.id === role.id ? role : r)) : [...prev, role]));
     setForm({ open: false, initial: null });
     notify(editing ? `Se guardaron los cambios del rol «${role.nombre}».` : `Se creó el rol «${role.nombre}».`);
   }
-  async function confirmDelete(role: AdminRole) {
+  async function confirmDelete(role: RolAdminDetalle) {
     await darBaja(role.id);
-    setRoles((prev) => prev.map((r) => (r.id === role.id ? { ...r, baja: admNowStamp() } : r)));
+    setRoles((prev) => prev.filter((r) => r.id !== role.id));
     setToDelete(null);
     notify(`El rol «${role.nombre}» fue dado de baja.`);
   }
@@ -223,7 +236,7 @@ function Inner({ initial }: { initial: AdminRole[] }) {
         <button type="button" className="btn btn-primary btn-lg" onClick={() => setForm({ open: true, initial: null })}><Plus size={18} /> Agregar rol</button>
       </div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
-        {[{ icon: <ShieldCheck size={20} color="var(--green-800)" />, label: "Roles activos", value: activos }, { icon: <UserCog size={20} color="var(--green-800)" />, label: "Administradores con rol", value: totalAdmins }, { icon: <KeyRound size={20} color="var(--green-800)" />, label: "Permisos disponibles", value: ADMIN_ALL_PERMS.length }].map((s) => (
+        {[{ icon: <ShieldCheck size={20} color="var(--green-800)" />, label: "Roles activos", value: roles.length }, { icon: <UserCog size={20} color="var(--green-800)" />, label: "Administradores con rol", value: totalAdmins }, { icon: <KeyRound size={20} color="var(--green-800)" />, label: "Permisos disponibles", value: permisosDisponibles }].map((s) => (
           <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius)", padding: "12px 16px", minWidth: 190 }}>
             <span style={{ width: 42, height: 42, borderRadius: 10, background: "var(--green-050)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.icon}</span>
             <span><span style={{ display: "block", fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>{s.value}</span><span style={{ display: "block", fontSize: 12.5, color: "var(--fg-2)" }}>{s.label}</span></span>
@@ -233,43 +246,39 @@ function Inner({ initial }: { initial: AdminRole[] }) {
 
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 920 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
             <thead>
-              <tr>{["Rol de administrador", "Permisos", "Administradores", "Estado", "Acciones"].map((h, i) => (
-                <th key={h} style={{ textAlign: i === 2 ? "center" : i === 4 ? "right" : "left", fontWeight: 700, color: "var(--fg-2)", fontSize: 12.5, textTransform: "uppercase", letterSpacing: ".05em", padding: "14px 16px", borderBottom: "2px solid var(--outline-variant)", whiteSpace: "nowrap" }}>{h}</th>
+              <tr>{["Rol de administrador", "Permisos", "Administradores", "Acciones"].map((h, i) => (
+                <th key={h} style={{ textAlign: i === 2 ? "center" : i === 3 ? "right" : "left", fontWeight: 700, color: "var(--fg-2)", fontSize: 12.5, textTransform: "uppercase", letterSpacing: ".05em", padding: "14px 16px", borderBottom: "2px solid var(--outline-variant)", whiteSpace: "nowrap" }}>{h}</th>
               ))}</tr>
             </thead>
             <tbody>
-              {ordenados.map((r) => {
-                const baja = !!r.baja;
-                const tieneUsuarios = r.usuarios > 0;
-                const protegido = !!r.lider;
-                const noBorrable = tieneUsuarios || baja || protegido;
-                const delTitle = protegido ? "El rol de Administrador líder no se puede dar de baja" : baja ? "Este rol ya fue dado de baja" : tieneUsuarios ? `No se puede dar de baja: tiene ${r.usuarios} ${r.usuarios === 1 ? "administrador asignado" : "administradores asignados"}` : "Dar de baja este rol";
+              {roles.length === 0 && (
+                <tr><td colSpan={4} style={{ padding: "48px 16px", textAlign: "center", color: "var(--fg-2)", fontSize: 15 }}>Todavía no hay roles de administrador.</td></tr>
+              )}
+              {roles.map((r) => {
+                const tieneUsuarios = r.cantidadUsuarios > 0;
+                const noBorrable = tieneUsuarios || r.esProtegido;
+                const delTitle = r.esProtegido ? "Este rol está protegido y no se puede dar de baja" : tieneUsuarios ? `No se puede dar de baja: tiene ${r.cantidadUsuarios} ${r.cantidadUsuarios === 1 ? "administrador asignado" : "administradores asignados"}` : "Dar de baja este rol";
                 return (
-                  <tr key={r.id} style={{ borderBottom: "1px solid var(--cream-tert)", background: baja ? "var(--cream-tert)" : "transparent", opacity: baja ? 0.72 : 1 }}>
+                  <tr key={r.id} style={{ borderBottom: "1px solid var(--cream-tert)" }}>
                     <td style={{ padding: "16px", verticalAlign: "top", maxWidth: 340 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
-                        <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16.5, color: "var(--fg-1)", textDecoration: baja ? "line-through" : "none" }}>{r.nombre}</span>
-                        {protegido && <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 600, color: "var(--brown-700)", background: "var(--cream-tert)", border: "1px solid var(--sand)", borderRadius: "var(--radius-pill)", padding: "3px 10px" }}><Lock size={12} color="var(--brown-700)" /> Protegido</span>}
+                        <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16.5, color: "var(--fg-1)" }}>{r.nombre}</span>
+                        {r.esProtegido && <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 600, color: "var(--brown-700)", background: "var(--cream-tert)", border: "1px solid var(--sand)", borderRadius: "var(--radius-pill)", padding: "3px 10px" }}><Lock size={12} color="var(--brown-700)" /> Protegido</span>}
                       </div>
                       <div style={{ fontSize: 13.5, color: "var(--fg-2)", marginTop: 4, lineHeight: 1.4 }}>{r.descripcion || "—"}</div>
                     </td>
-                    <td style={{ padding: "16px", verticalAlign: "top", maxWidth: 380 }}><PermSummary perms={r.perms} /></td>
+                    <td style={{ padding: "16px", verticalAlign: "top", maxWidth: 380 }}><PermSummary perms={r.permisos} grupos={grupos} /></td>
                     <td style={{ padding: "16px", textAlign: "center", verticalAlign: "top" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 16, color: tieneUsuarios ? "var(--fg-1)" : "var(--fg-3)" }}><Users size={16} color={tieneUsuarios ? "var(--brown-700)" : "var(--fg-3)"} /> {r.usuarios}</span>
-                    </td>
-                    <td style={{ padding: "16px", verticalAlign: "top" }}>
-                      {baja ? (
-                        <span><span style={pill("neutral")}>Dado de baja</span><span style={{ display: "block", fontFamily: "var(--font-mono)", fontSize: 11.5, color: "var(--fg-3)", marginTop: 6 }}>{r.baja}</span></span>
-                      ) : <span style={pill("success")}>Activo</span>}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 16, color: tieneUsuarios ? "var(--fg-1)" : "var(--fg-3)" }}><Users size={16} color={tieneUsuarios ? "var(--brown-700)" : "var(--fg-3)"} /> {r.cantidadUsuarios}</span>
                     </td>
                     <td style={{ padding: "16px", verticalAlign: "top" }}>
                       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                        <ActionBtn icon={<Pencil size={17} />} label="Modificar" disabled={baja || protegido} title={protegido ? "El rol de Administrador líder no se puede modificar" : baja ? "Rol dado de baja" : "Modificar este rol"} onClick={() => setForm({ open: true, initial: r })} />
+                        <ActionBtn icon={<Pencil size={17} />} label="Modificar" disabled={r.esProtegido} title={r.esProtegido ? "Este rol está protegido y no se puede modificar" : "Modificar este rol"} onClick={() => setForm({ open: true, initial: r })} />
                         <ActionBtn icon={<Trash2 size={17} />} label="Borrar" danger disabled={noBorrable} title={delTitle} onClick={() => setToDelete(r)} />
                       </div>
-                      {tieneUsuarios && !baja && !protegido && <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end", marginTop: 8, fontSize: 11.5, color: "var(--fg-3)" }}><Lock size={13} color="var(--fg-3)" /> No se puede borrar con administradores</div>}
+                      {tieneUsuarios && !r.esProtegido && <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end", marginTop: 8, fontSize: 11.5, color: "var(--fg-3)" }}><Lock size={13} color="var(--fg-3)" /> No se puede borrar con administradores</div>}
                     </td>
                   </tr>
                 );
@@ -280,12 +289,12 @@ function Inner({ initial }: { initial: AdminRole[] }) {
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, color: "var(--fg-3)", fontSize: 13 }}>
-        <Info size={16} color="var(--fg-3)" /> El rol de <strong style={{ color: "var(--fg-2)", fontWeight: 600, margin: "0 4px" }}>Administrador líder</strong> está protegido: no se puede modificar ni dar de baja.
+        <Info size={16} color="var(--fg-3)" /> Los roles marcados como <strong style={{ color: "var(--fg-2)", fontWeight: 600, margin: "0 4px" }}>Protegidos</strong> son del sistema: no se pueden modificar ni dar de baja.
       </div>
 
       {form.open && (
         <Scrim onClose={() => setForm({ open: false, initial: null })}>
-          <RoleForm initial={form.initial} existingNames={roles.filter((r) => !form.initial || r.id !== form.initial!.id).map((r) => r.nombre)} busy={saving} onCancel={() => setForm({ open: false, initial: null })} onSave={saveRole} />
+          <RoleForm initial={form.initial} grupos={grupos} existingNames={roles.filter((r) => !form.initial || r.id !== form.initial!.id).map((r) => r.nombre)} busy={saving} onCancel={() => setForm({ open: false, initial: null })} onSave={saveRole} />
         </Scrim>
       )}
 
@@ -314,17 +323,12 @@ function Inner({ initial }: { initial: AdminRole[] }) {
   );
 }
 
-function pill(tone: "success" | "neutral"): React.CSSProperties {
-  const map = { success: { bg: "var(--success-fill)", fg: "var(--success-fg)" }, neutral: { bg: "var(--cream-tert)", fg: "var(--fg-2)" } }[tone];
-  return { display: "inline-flex", alignItems: "center", borderRadius: "var(--radius-pill)", padding: "4px 12px", fontSize: 12.5, fontWeight: 700, background: map.bg, color: map.fg };
-}
-
 export default function RolesClient() {
-  const { data, isLoading, error, reload } = useRoles();
+  const { roles, grupos, isLoading, error, reload } = useRoles();
   return (
     <AdminShell active="roles">
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando roles…">
-        {data && <Inner initial={data} />}
+        <Inner initial={roles} grupos={grupos} />
       </AsyncBoundary>
     </AdminShell>
   );
