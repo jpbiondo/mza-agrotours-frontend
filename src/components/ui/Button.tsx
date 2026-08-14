@@ -1,6 +1,8 @@
 import { forwardRef } from "react";
 import type { ButtonHTMLAttributes } from "react";
 
+import { cn } from "@/lib/utils";
+
 type Variant = "primary" | "neutral" | "danger";
 type Size = "sm" | "md" | "lg";
 
@@ -33,7 +35,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       type={type}
-      className={`inline-flex cursor-pointer select-none items-center justify-center gap-2 rounded-md border font-sans font-semibold leading-none transition-[background-color,box-shadow,transform] disabled:cursor-not-allowed disabled:border-outline-variant disabled:bg-cream-tert disabled:text-fg-3 disabled:shadow-none ${variants[variant]} ${sizes[size]} ${className}`}
+      // `cn` y no concatenación: sin tailwind-merge, un `className` que pisa una
+      // utilidad de la variante (p. ej. otro color de borde) gana o pierde según
+      // el orden del CSS generado, no según el orden de las clases.
+      className={cn(
+        "inline-flex cursor-pointer select-none items-center justify-center gap-2 rounded-md border font-sans font-semibold leading-none transition-[background-color,box-shadow,transform] disabled:cursor-not-allowed disabled:border-outline-variant disabled:bg-cream-tert disabled:text-fg-3 disabled:shadow-none",
+        variants[variant],
+        sizes[size],
+        className,
+      )}
       {...props}
     />
   );
