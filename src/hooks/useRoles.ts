@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
-import { apiFetch, comoEnvelope } from "@/lib/api";
+import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
+import { conToken } from "@/lib/sesion";
 import type { GrupoPermiso, PermisoCatalogo, RolAdminDetalle } from "@/types/admin";
 
 const ROLES = "/roles/admin";
@@ -148,11 +149,62 @@ export function useRoles(): UseRolesReturn {
   return { roles, grupos, isLoading, error, reload };
 }
 
-/* ---- Escritura ----------------------------------------------------------- */
-// TODO backend: falta el alta/modificación (POST y PUT /roles/admin) y la baja
+/* ---- Alta ---------------------------------------------------------------- */
+
+/** Cuerpo de POST /roles/admin. `permisos` son los códigos del catálogo. */
+export interface DatosRol {
+  nombre: string;
+  descripcion: string;
+  permisos: string[];
+}
+
+/**
+ * Confirmación del backend. Trae también nombre, código y descripción, pero la
+ * pantalla ya los tiene: lo único que no puede saber es el `id` que se asignó.
+ */
+interface RolCreadoBackend {
+  id?: string;
+}
+
+interface CrearResult {
+  ok: boolean;
+  code?: string;
+  /** Id asignado, para insertar la fila sin volver a pedir la lista entera. */
+  id?: string;
+}
+
+export function useCrearRol() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function crear(datos: DatosRol): Promise<CrearResult> {
+    setIsLoading(true);
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(ROLES, {
+          method: "POST",
+          token,
+          body: JSON.stringify(datos),
+        }),
+      );
+      const env = comoEnvelope<RolCreadoBackend>(res);
+      // El code viaja tanto en el envelope 2xx como en el ApiError de un 4xx.
+      return env.ok ? { ok: true, id: env.data?.id } : { ok: false, code: env.code };
+    } catch (e) {
+      if (e instanceof ApiError) return { ok: false, code: e.code };
+      return { ok: false };
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return { crear, isLoading };
+}
+
+/* ---- Modificación y baja ------------------------------------------------- */
+// TODO backend: faltan la modificación (PUT /roles/admin/{id}) y la baja
 // (DELETE /roles/admin/{id}). Hasta que existan, estos dos siguen siendo mocks:
 // simulan la demora y la pantalla actualiza su copia local, así que lo que se
-// cree o borre acá desaparece al recargar.
+// edite o borre acá vuelve atrás al recargar.
 
 export function useGuardarRol() {
   const [isLoading, setIsLoading] = useState(false);

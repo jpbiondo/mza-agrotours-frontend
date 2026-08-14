@@ -8,13 +8,28 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
-import { Button, Card, IconCircle, Modal, Toast } from "@/components/ui";
+import { Alert, Button, Card, IconCircle, Modal, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { genId } from "@/lib/id";
 import { cn } from "@/lib/utils";
-import { useRoles, useGuardarRol, useDarBajaRol } from "@/hooks/useRoles";
+import { useRoles, useCrearRol, useGuardarRol, useDarBajaRol } from "@/hooks/useRoles";
 import type { GrupoPermiso, RolAdminDetalle } from "@/types/admin";
+
+/**
+ * Errores de dominio del alta. Lo que no esté acá cae en el mensaje genérico:
+ * hablar de reintentar sólo tiene sentido si el problema puede ser pasajero.
+ */
+const ERROR_ALTA: Record<string, string> = {
+  "rol.rolAlreadyExists": "Ya existe un rol con ese nombre. Elegí otro.",
+};
+
+function mensajeAlta(code?: string): string {
+  return (
+    (code && ERROR_ALTA[code]) ||
+    "No pudimos crear el rol. Probá de nuevo en unos minutos."
+  );
+}
 
 /**
  * Los iconos son componentes, así que el slug que manda el backend se resuelve
@@ -185,6 +200,7 @@ function RoleForm({
   grupos,
   existingNames,
   busy,
+  error,
   onCancel,
   onSave,
 }: {
@@ -192,6 +208,8 @@ function RoleForm({
   grupos: GrupoPermiso[];
   existingNames: string[];
   busy: boolean;
+  /** Error del backend al guardar; mantiene el panel abierto con lo cargado. */
+  error: string | null;
   onCancel: () => void;
   onSave: (r: RolAdminDetalle) => void;
 }) {
@@ -378,14 +396,17 @@ function RoleForm({
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
-          Cancelar
-        </Button>
-        <Button onClick={handleSave} disabled={busy}>
-          {busy ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />}
-          {editing ? "Guardar cambios" : "Crear rol"}
-        </Button>
+      <div className="border-t border-outline-variant bg-cream-tert px-[26px] py-4">
+        {error && <Alert className="mb-3">{error}</Alert>}
+        <div className="flex justify-end gap-3">
+          <Button variant="neutral" onClick={onCancel} disabled={busy}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={busy}>
+            {busy ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />}
+            {editing ? "Guardar cambios" : "Crear rol"}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -428,7 +449,9 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
     initial: null,
   });
   const [toDelete, setToDelete] = useState<RolAdminDetalle | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
+  const { crear, isLoading: creating } = useCrearRol();
   const { guardar, isLoading: saving } = useGuardarRol();
   const { darBaja, isLoading: deleting } = useDarBajaRol();
 
@@ -447,20 +470,43 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
     setTimeout(() => setToast((t) => (t?.title === title ? null : t)), 3200);
   }
 
-  async function saveRole(role: RolAdminDetalle) {
-    const editing = !!form.initial;
-    await guardar(role);
-    setRoles((prev) =>
-      prev.some((r) => r.id === role.id)
-        ? prev.map((r) => (r.id === role.id ? role : r))
-        : [...prev, role],
-    );
+  function abrirForm(initial: RolAdminDetalle | null) {
+    setFormError(null);
+    setForm({ open: true, initial });
+  }
+
+  function cerrarForm() {
+    setFormError(null);
     setForm({ open: false, initial: null });
-    notify(
-      editing
-        ? `Se guardaron los cambios del rol «${role.nombre}».`
-        : `Se creó el rol «${role.nombre}».`,
-    );
+  }
+
+  async function saveRole(role: RolAdminDetalle) {
+    setFormError(null);
+
+    // Edición: todavía contra el mock (ver useRoles).
+    if (form.initial) {
+      await guardar(role);
+      setRoles((prev) => prev.map((r) => (r.id === role.id ? role : r)));
+      cerrarForm();
+      notify(`Se guardaron los cambios del rol «${role.nombre}».`);
+      return;
+    }
+
+    const res = await crear({
+      nombre: role.nombre,
+      descripcion: role.descripcion,
+      permisos: role.permisos,
+    });
+    if (!res.ok) {
+      // El panel queda abierto con lo cargado: reescribir todo sería cruel,
+      // sobre todo con los permisos ya tildados.
+      setFormError(mensajeAlta(res.code));
+      return;
+    }
+    // El id lo asigna el backend; el de `role` es el provisorio de genId.
+    setRoles((prev) => [...prev, { ...role, id: res.id ?? role.id }]);
+    cerrarForm();
+    notify(`Se creó el rol «${role.nombre}».`);
   }
 
   async function confirmDelete(role: RolAdminDetalle) {
@@ -488,7 +534,7 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
             sistema.
           </p>
         </div>
-        <Button size="lg" onClick={() => setForm({ open: true, initial: null })}>
+        <Button size="lg" onClick={() => abrirForm(null)}>
           <Plus className="size-[18px]" /> Agregar rol
         </Button>
       </div>
@@ -590,7 +636,7 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
                               ? "Este rol está protegido y no se puede modificar"
                               : "Modificar este rol"
                           }
-                          onClick={() => setForm({ open: true, initial: r })}
+                          onClick={() => abrirForm(r)}
                         >
                           <Pencil className="size-[17px]" /> Modificar
                         </Button>
@@ -628,15 +674,16 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
       </div>
 
       {form.open && (
-        <Panel onClose={() => setForm({ open: false, initial: null })}>
+        <Panel onClose={cerrarForm}>
           <RoleForm
             initial={form.initial}
             grupos={grupos}
             existingNames={roles
               .filter((r) => !form.initial || r.id !== form.initial!.id)
               .map((r) => r.nombre)}
-            busy={saving}
-            onCancel={() => setForm({ open: false, initial: null })}
+            busy={creating || saving}
+            error={formError}
+            onCancel={cerrarForm}
             onSave={saveRole}
           />
         </Panel>

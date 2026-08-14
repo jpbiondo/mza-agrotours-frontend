@@ -2,14 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
+import { conToken } from "@/lib/sesion";
 import type { AdminSistema, RolAdmin, UsuarioCard } from "@/types/admin";
-
-/** Corre `fn` con el ID token de Firebase; lanza si no hay sesión. */
-async function conToken<T>(fn: (token: string) => Promise<T>): Promise<T> {
-  const user = auth.currentUser;
-  if (!user) throw new Error("Sin sesión");
-  return fn(await user.getIdToken());
-}
 
 /* ---- Lista de administradores vigentes ---------------------------------- */
 
