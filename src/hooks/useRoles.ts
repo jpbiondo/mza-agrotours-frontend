@@ -235,15 +235,32 @@ export function useActualizarRol() {
 }
 
 /* ---- Baja ---------------------------------------------------------------- */
-// TODO backend: falta DELETE /roles/admin/{id}. Hasta que exista esto sigue
-// siendo un mock: simula la demora y la pantalla saca la fila de su copia
-// local, así que el rol vuelve a aparecer al recargar.
 
 export function useDarBajaRol() {
   const [isLoading, setIsLoading] = useState(false);
-  async function darBaja(_id: string): Promise<void> {
+
+  async function darBaja(rolId: string): Promise<{ ok: boolean; code?: string }> {
     setIsLoading(true);
-    try { await new Promise<void>((res) => setTimeout(res, 600)); } finally { setIsLoading(false); }
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(`${ROLES}/${encodeURIComponent(rolId)}`, {
+          method: "DELETE",
+          token,
+        }),
+      );
+      const env = comoEnvelope<unknown>(res);
+      return env.ok ? { ok: true } : { ok: false, code: env.code };
+    } catch (e) {
+      if (e instanceof ApiError) return { ok: false, code: e.code };
+      // `apiFetch` sólo llega a res.json() con un 2xx, así que un error de
+      // parseo significa que la baja se hizo y el backend contestó sin cuerpo
+      // (204). Un fallo de red tira TypeError antes y cae abajo.
+      if (e instanceof SyntaxError) return { ok: true };
+      return { ok: false };
+    } finally {
+      setIsLoading(false);
+    }
   }
+
   return { darBaja, isLoading };
 }

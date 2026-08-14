@@ -35,6 +35,18 @@ function mensajeGuardar(code: string | undefined, editando: boolean): string {
 }
 
 /**
+ * La baja no define códigos de dominio todavía, pero si vino uno el backend
+ * rechazó por algo concreto y reintentar no lo va a arreglar. TODO backend:
+ * mapear los que aparezcan, p. ej. si al rol le asignaron un administrador
+ * entre que se abrió el diálogo y se confirmó.
+ */
+function mensajeBaja(code?: string): string {
+  return code
+    ? "No se pudo dar de baja el rol."
+    : "No pudimos dar de baja el rol. Probá de nuevo en unos minutos.";
+}
+
+/**
  * Los iconos son componentes, así que el slug que manda el backend se resuelve
  * acá. Es lo único del catálogo que el front tiene que conocer, y un slug nuevo
  * cae en el genérico en vez de romper la pantalla.
@@ -453,6 +465,7 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
   });
   const [toDelete, setToDelete] = useState<RolAdminDetalle | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
   const { crear, isLoading: creating } = useCrearRol();
   const { actualizar, isLoading: saving } = useActualizarRol();
@@ -518,8 +531,18 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
     notify(`Se creó el rol «${role.nombre}».`);
   }
 
+  function pedirBaja(role: RolAdminDetalle | null) {
+    setDeleteError(null);
+    setToDelete(role);
+  }
+
   async function confirmDelete(role: RolAdminDetalle) {
-    await darBaja(role.id);
+    setDeleteError(null);
+    const res = await darBaja(role.id);
+    if (!res.ok) {
+      setDeleteError(mensajeBaja(res.code));
+      return;
+    }
     setRoles((prev) => prev.filter((r) => r.id !== role.id));
     setToDelete(null);
     notify(`El rol «${role.nombre}» fue dado de baja.`);
@@ -657,7 +680,7 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
                           className="border-danger text-sm text-danger"
                           disabled={noBorrable}
                           title={delTitle}
-                          onClick={() => setToDelete(r)}
+                          onClick={() => pedirBaja(r)}
                         >
                           <Trash2 className="size-[17px]" /> Borrar
                         </Button>
@@ -699,7 +722,7 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
       )}
 
       {toDelete && (
-        <Modal onClose={() => setToDelete(null)}>
+        <Modal onClose={() => pedirBaja(null)} dismissable={!deleting}>
           <div className="flex items-center gap-3.5">
             <IconCircle tone="danger">
               <Trash2 className="size-[22px] text-danger" />
@@ -711,8 +734,11 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
             <strong className="text-fg-1">«{toDelete.nombre}»</strong>? Dejará de estar disponible
             para asignar a nuevos administradores.
           </p>
+          {deleteError && (
+            <Alert className="mt-4">{deleteError}</Alert>
+          )}
           <div className="mt-6 flex justify-end gap-3">
-            <Button variant="neutral" onClick={() => setToDelete(null)} disabled={deleting}>
+            <Button variant="neutral" onClick={() => pedirBaja(null)} disabled={deleting}>
               No, volver
             </Button>
             <Button variant="danger" onClick={() => confirmDelete(toDelete)} disabled={deleting}>
