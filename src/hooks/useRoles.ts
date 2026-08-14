@@ -5,7 +5,7 @@ import { apiFetch, comoEnvelope } from "@/lib/api";
 import type { GrupoPermiso, PermisoCatalogo, RolAdminDetalle } from "@/types/admin";
 
 const ROLES = "/roles/admin";
-const GRUPOS = "/permisos/grupo-permisos/admin";
+const GRUPOS = "/permisos/grupos-permisos/admin";
 
 /** Rol crudo del listado. Campos opcionales: defensivo. */
 interface RolBackend {
