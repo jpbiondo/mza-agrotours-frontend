@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import {
   Plus, X, AlertCircle, ShieldCheck, Lock, Pencil, Trash2, Info, ChevronRight, Check,
-  KeyRound, Users, Lightbulb, UserCog, Loader,
+  KeyRound, Users, Lightbulb, UserCog, ClipboardCheck, Warehouse, CalendarCheck, Loader,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import AdminShell from "@/components/admin/AdminShell";
@@ -12,10 +12,29 @@ import { Button, Card, IconCircle, Modal, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { genId } from "@/lib/id";
-import { etiquetaPermiso } from "@/lib/permisos";
 import { cn } from "@/lib/utils";
 import { useRoles, useGuardarRol, useDarBajaRol } from "@/hooks/useRoles";
 import type { GrupoPermiso, RolAdminDetalle } from "@/types/admin";
+
+/**
+ * Los iconos son componentes, así que el slug que manda el backend se resuelve
+ * acá. Es lo único del catálogo que el front tiene que conocer, y un slug nuevo
+ * cae en el genérico en vez de romper la pantalla.
+ */
+const GRUPO_ICONO: Record<string, ComponentType<{ className?: string }>> = {
+  "user-cog": UserCog,
+  "shield-check": ShieldCheck,
+  "clipboard-check": ClipboardCheck,
+  "calendar-check": CalendarCheck,
+  "key-round": KeyRound,
+  warehouse: Warehouse,
+  users: Users,
+};
+
+function IconoGrupo({ icono, className }: { icono: string; className?: string }) {
+  const Icono = GRUPO_ICONO[icono] ?? ShieldCheck;
+  return <Icono className={className} />;
+}
 
 /** "Gestión de administradores" → "Administradores", para las píldoras de la tabla. */
 function etiquetaGrupo(nombre: string): string {
@@ -68,7 +87,7 @@ function PermGroupEditor({
   onToggleGroup: (g: GrupoPermiso) => void;
   onTogglePerm: (codigo: string) => void;
 }) {
-  const count = group.permisos.filter((p) => selected.has(p)).length;
+  const count = group.permisos.filter((p) => selected.has(p.codigo)).length;
   const groupState = count === 0 ? "off" : count === group.permisos.length ? "on" : "mixed";
 
   return (
@@ -83,7 +102,7 @@ function PermGroupEditor({
       >
         <BigCheck state={groupState} className="size-[25px]" />
         <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-outline-variant bg-surface">
-          <ShieldCheck className="size-[19px] text-green-800" />
+          <IconoGrupo icono={group.icono} className="size-[19px] text-green-800" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block font-display text-[16.5px] font-semibold text-fg-1">
@@ -105,20 +124,18 @@ function PermGroupEditor({
 
       <div className="flex flex-col gap-[3px] py-2.5 pr-2.5 pl-11">
         {group.permisos.map((p) => {
-          const on = selected.has(p);
+          const on = selected.has(p.codigo);
           return (
             <button
-              key={p}
+              key={p.codigo}
               type="button"
-              onClick={() => onTogglePerm(p)}
+              onClick={() => onTogglePerm(p.codigo)}
               className={cn(
                 "flex w-full cursor-pointer items-center gap-3.5 rounded-md border px-3.5 py-2.5 text-left",
                 on ? "border-green-300 bg-green-050" : "border-transparent",
               )}
             >
               <BigCheck state={on ? "on" : "off"} className="size-[23px]" />
-              {/* El código va debajo de la etiqueta: dos permisos de recursos
-                  distintos pueden leerse los dos "Ver" dentro del mismo grupo. */}
               <span className="min-w-0">
                 <span
                   className={cn(
@@ -126,9 +143,11 @@ function PermGroupEditor({
                     on ? "font-semibold text-green-800" : "font-medium text-fg-1",
                   )}
                 >
-                  {etiquetaPermiso(p)}
+                  {p.nombre || p.codigo}
                 </span>
-                <span className="mt-0.5 block font-mono text-[11.5px] text-fg-3">{p}</span>
+                {p.descripcion && (
+                  <span className="mt-0.5 block text-[12.5px] text-fg-3">{p.descripcion}</span>
+                )}
               </span>
             </button>
           );
@@ -143,7 +162,7 @@ function PermSummary({ perms, grupos }: { perms: string[]; grupos: GrupoPermiso[
 
   const tiene = new Set(perms);
   const conteos = grupos
-    .map((g) => ({ grupo: g, count: g.permisos.filter((p) => tiene.has(p)).length }))
+    .map((g) => ({ grupo: g, count: g.permisos.filter((p) => tiene.has(p.codigo)).length }))
     .filter((x) => x.count > 0);
 
   return (
@@ -153,8 +172,8 @@ function PermSummary({ perms, grupos }: { perms: string[]; grupos: GrupoPermiso[
           key={grupo.nombre}
           className="inline-flex items-center gap-1.5 rounded-pill border border-green-300 bg-green-050 px-2.5 py-1 text-[12.5px] font-semibold whitespace-nowrap text-green-800"
         >
-          <ShieldCheck className="size-[14px] text-green-700" /> {etiquetaGrupo(grupo.nombre)}{" "}
-          <span className="font-mono opacity-80">{count}</span>
+          <IconoGrupo icono={grupo.icono} className="size-[14px] text-green-700" />{" "}
+          {etiquetaGrupo(grupo.nombre)} <span className="font-mono opacity-80">{count}</span>
         </span>
       ))}
     </span>
@@ -193,8 +212,9 @@ function RoleForm({
   const toggleGroup = (group: GrupoPermiso) =>
     setSelected((prev) => {
       const n = new Set(prev);
-      if (group.permisos.every((p) => n.has(p))) group.permisos.forEach((p) => n.delete(p));
-      else group.permisos.forEach((p) => n.add(p));
+      const codigos = group.permisos.map((p) => p.codigo);
+      if (codigos.every((c) => n.has(c))) codigos.forEach((c) => n.delete(c));
+      else codigos.forEach((c) => n.add(c));
       return n;
     });
 
@@ -414,7 +434,7 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
 
   const totalAdmins = roles.reduce((s, r) => s + r.cantidadUsuarios, 0);
   // Un mismo código puede repetirse en dos grupos: se cuentan los distintos.
-  const permisosDisponibles = new Set(grupos.flatMap((g) => g.permisos)).size;
+  const permisosDisponibles = new Set(grupos.flatMap((g) => g.permisos.map((p) => p.codigo))).size;
 
   const stats = [
     { icon: <ShieldCheck className="size-5 text-green-800" />, label: "Roles activos", value: roles.length },

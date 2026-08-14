@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { apiFetch, comoEnvelope } from "@/lib/api";
-import type { GrupoPermiso, RolAdminDetalle } from "@/types/admin";
+import type { GrupoPermiso, PermisoCatalogo, RolAdminDetalle } from "@/types/admin";
 
 const ROLES = "/roles/admin";
-const GRUPOS = "/permisos/grupos-permisos/admin";
+const GRUPOS = "/permisos/grupo-permisos/admin";
 
 /** Rol crudo del listado. Campos opcionales: defensivo. */
 interface RolBackend {
@@ -21,13 +21,37 @@ interface RolBackend {
 interface GrupoBackend {
   nombre?: string;
   descripcion?: string;
+  icono?: string;
   permisos?: unknown;
 }
 
-/** Códigos de permiso, descartando lo que no sea un string con contenido. */
+/** Permiso crudo del catálogo. */
+interface PermisoBackend {
+  codigo?: string;
+  nombre?: string;
+  descripcion?: string;
+}
+
+/** Códigos de permiso de un rol, descartando lo que no sea un string con contenido. */
 function aCodigos(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
   return v.filter((p): p is string => typeof p === "string" && p.trim() !== "");
+}
+
+/**
+ * Permisos del catálogo. Se descarta el que no traiga código: es la identidad
+ * contra la que se cruzan los roles, y sin él el casillero no podría marcarse.
+ */
+function aPermisos(v: unknown): PermisoCatalogo[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((p): p is PermisoBackend => !!p && typeof p === "object")
+    .map((p) => ({
+      codigo: typeof p.codigo === "string" ? p.codigo.trim() : "",
+      nombre: p.nombre ?? "",
+      descripcion: p.descripcion ?? "",
+    }))
+    .filter((p) => p.codigo !== "");
 }
 
 function aRol(r: RolBackend, i: number): RolAdminDetalle {
@@ -47,7 +71,8 @@ function aGrupo(g: GrupoBackend): GrupoPermiso {
   return {
     nombre: g.nombre ?? "",
     descripcion: g.descripcion ?? "",
-    permisos: aCodigos(g.permisos),
+    icono: g.icono ?? "",
+    permisos: aPermisos(g.permisos),
   };
 }
 

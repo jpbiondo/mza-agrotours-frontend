@@ -37,7 +37,17 @@ export interface RolAdminDetalle {
 }
 
 /**
- * Item de GET /permisos/grupos-permisos/admin: el catálogo de permisos que
+ * Permiso del catálogo. El `codigo` es la identidad —es lo que traen los roles
+ * y lo que compara `puede()`—; el resto existe sólo para mostrarlo.
+ */
+export interface PermisoCatalogo {
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+}
+
+/**
+ * Item de GET /permisos/grupo-permisos/admin: el catálogo de permisos que
  * existen, agrupado por recurso. Es la fuente de verdad de qué se puede marcar
  * —los roles sólo traen códigos—, y por eso vive en el backend: agregar un
  * permiso no debería requerir tocar el front.
@@ -46,7 +56,9 @@ export interface GrupoPermiso {
   /** Hace de clave: el backend no manda id. */
   nombre: string;
   descripcion: string;
-  permisos: string[];
+  /** Slug del icono, p. ej. "user-cog"; se resuelve contra el mapa del front. */
+  icono: string;
+  permisos: PermisoCatalogo[];
 }
 
 /**
