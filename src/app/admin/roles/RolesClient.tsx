@@ -126,23 +126,48 @@ function Stats({ valores }: { valores: ReactNode[] }) {
   );
 }
 
-function Thead() {
+/**
+ * Anchos fijos por columna. Con el layout automático el navegador los calcula
+ * a partir del contenido, así que las barras del esqueleto —que nunca miden
+ * exactamente lo mismo que un nombre o dos botones— daban columnas de otro
+ * ancho, y al llegar los datos saltaba todo. Se nota sobre todo en Acciones,
+ * que va alineada a la derecha.
+ *
+ * Las dos primeras van sin ancho: se reparten lo que sobra, que es lo que
+ * conviene para nombres y listas de permisos de largo variable.
+ */
+const ANCHOS = [undefined, undefined, "w-[170px]", "w-[260px]"];
+
+/** Card, scroll y cabecera: lo que comparten el esqueleto y la tabla con datos. */
+function Tabla({ children }: { children: ReactNode }) {
   return (
-    <thead>
-      <tr>
-        {COLUMNAS.map((h, i) => (
-          <th
-            key={h}
-            className={cn(
-              "border-b-2 border-outline-variant px-4 py-3.5 text-[12.5px] font-bold tracking-[.05em] whitespace-nowrap text-fg-2 uppercase",
-              i === 2 ? "text-center" : i === 3 ? "text-right" : "text-left",
-            )}
-          >
-            {h}
-          </th>
-        ))}
-      </tr>
-    </thead>
+    <Card className="overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[900px] table-fixed border-collapse">
+          <colgroup>
+            {ANCHOS.map((w, i) => (
+              <col key={i} className={w} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr>
+              {COLUMNAS.map((h, i) => (
+                <th
+                  key={h}
+                  className={cn(
+                    "border-b-2 border-outline-variant px-4 py-3.5 text-[12.5px] font-bold tracking-[.05em] whitespace-nowrap text-fg-2 uppercase",
+                    i === 2 ? "text-center" : i === 3 ? "text-right" : "text-left",
+                  )}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          {children}
+        </table>
+      </div>
+    </Card>
   );
 }
 
@@ -186,39 +211,34 @@ function RolesSkeleton() {
 
       <Stats valores={["—", "—", "—"]} />
 
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse">
-            <Thead />
-            <tbody>
-              {FILAS_SKELETON.map((f, i) => (
-                <tr key={i} className="border-b border-cream-tert">
-                  <td className="p-4 align-top">
-                    <Skeleton className={cn("h-[17px]", f.nombre)} />
-                    <Skeleton className={cn("mt-2.5 h-[13px]", f.desc)} />
-                  </td>
-                  <td className="p-4 align-top">
-                    <div className="flex flex-wrap gap-1.5">
-                      {f.chips.map((c) => (
-                        <Skeleton key={c} className={cn("h-[26px] rounded-pill", c)} />
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-4 align-top">
-                    <Skeleton className="mx-auto h-[17px] w-9" />
-                  </td>
-                  <td className="p-4 align-top">
-                    <div className="flex justify-end gap-2.5">
-                      <Skeleton className="h-[34px] w-[108px]" />
-                      <Skeleton className="h-[34px] w-[88px]" />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <Tabla>
+        <tbody>
+          {FILAS_SKELETON.map((f, i) => (
+            <tr key={i} className="border-b border-cream-tert">
+              <td className="p-4 align-top">
+                <Skeleton className={cn("h-[17px]", f.nombre)} />
+                <Skeleton className={cn("mt-2.5 h-[13px]", f.desc)} />
+              </td>
+              <td className="p-4 align-top">
+                <div className="flex flex-wrap gap-1.5">
+                  {f.chips.map((c) => (
+                    <Skeleton key={c} className={cn("h-[26px] rounded-pill", c)} />
+                  ))}
+                </div>
+              </td>
+              <td className="p-4 align-top">
+                <Skeleton className="mx-auto h-[17px] w-9" />
+              </td>
+              <td className="p-4 align-top">
+                <div className="flex justify-end gap-2.5">
+                  <Skeleton className="h-[34px] w-[108px]" />
+                  <Skeleton className="h-[34px] w-[88px]" />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </Tabla>
 
       <NotaProtegidos />
     </div>
@@ -721,112 +741,108 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
 
       <Stats valores={[roles.length, totalAdmins, permisosDisponibles]} />
 
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse">
-            <Thead />
-            <tbody>
-              {roles.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-12 text-center text-[15px] text-fg-2">
-                    Todavía no hay roles de administrador.
-                  </td>
-                </tr>
-              )}
-              {roles.map((r) => {
-                const tieneUsuarios = r.cantidadUsuarios > 0;
-                const noBorrable = tieneUsuarios || r.esProtegido || !gestionar;
-                // Sin el permiso no se puede actuar sobre ninguna fila, así que
-                // ése es el motivo que corresponde antes que los de cada rol.
-                const delTitle = !gestionar
-                  ? SIN_GESTION
-                  : r.esProtegido
-                    ? "Este rol está protegido y no se puede dar de baja"
-                    : tieneUsuarios
-                      ? `No se puede dar de baja: tiene ${r.cantidadUsuarios} ${r.cantidadUsuarios === 1 ? "administrador asignado" : "administradores asignados"}`
-                      : "Dar de baja este rol";
-                const editTitle = !gestionar
-                  ? SIN_GESTION
-                  : r.esProtegido
-                    ? "Este rol está protegido y no se puede modificar"
-                    : "Modificar este rol";
+      <Tabla>
+        <tbody>
+          {roles.length === 0 && (
+            <tr>
+              <td colSpan={4} className="px-4 py-12 text-center text-[15px] text-fg-2">
+                Todavía no hay roles de administrador.
+              </td>
+            </tr>
+          )}
+          {roles.map((r) => {
+            const tieneUsuarios = r.cantidadUsuarios > 0;
+            const noBorrable = tieneUsuarios || r.esProtegido || !gestionar;
+            // Sin el permiso no se puede actuar sobre ninguna fila, así que
+            // ése es el motivo que corresponde antes que los de cada rol.
+            const delTitle = !gestionar
+              ? SIN_GESTION
+              : r.esProtegido
+                ? "Este rol está protegido y no se puede dar de baja"
+                : tieneUsuarios
+                  ? `No se puede dar de baja: tiene ${r.cantidadUsuarios} ${r.cantidadUsuarios === 1 ? "administrador asignado" : "administradores asignados"}`
+                  : "Dar de baja este rol";
+            const editTitle = !gestionar
+              ? SIN_GESTION
+              : r.esProtegido
+                ? "Este rol está protegido y no se puede modificar"
+                : "Modificar este rol";
 
-                return (
-                  <tr key={r.id} className="border-b border-cream-tert">
-                    <td className="max-w-[340px] p-4 align-top">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <span className="font-display text-[16.5px] font-semibold text-fg-1">
-                          {r.nombre}
-                        </span>
-                        {r.esProtegido && (
-                          <span className="inline-flex items-center gap-1.5 rounded-pill border border-sand bg-cream-tert px-2.5 py-[3px] text-[11.5px] font-semibold text-brown-700">
-                            <Lock className="size-3 text-brown-700" /> Protegido
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1 text-[13.5px] leading-snug text-fg-2">
-                        {r.descripcion || "—"}
-                      </div>
-                    </td>
-
-                    <td className="max-w-[380px] p-4 align-top">
-                      <PermSummary perms={r.permisos} grupos={grupos} />
-                    </td>
-
-                    <td className="p-4 text-center align-top">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-2 font-mono text-base font-bold",
-                          tieneUsuarios ? "text-fg-1" : "text-fg-3",
-                        )}
-                      >
-                        <Users
-                          className={cn("size-4", tieneUsuarios ? "text-brown-700" : "text-fg-3")}
-                        />{" "}
-                        {r.cantidadUsuarios}
+            return (
+              <tr key={r.id} className="border-b border-cream-tert">
+                {/* Sin max-w: con table-fixed el ancho lo manda el <colgroup>. */}
+                <td className="p-4 align-top">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="font-display text-[16.5px] font-semibold text-fg-1">
+                      {r.nombre}
+                    </span>
+                    {r.esProtegido && (
+                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-sand bg-cream-tert px-2.5 py-[3px] text-[11.5px] font-semibold text-brown-700">
+                        <Lock className="size-3 text-brown-700" /> Protegido
                       </span>
-                    </td>
+                    )}
+                  </div>
+                  <div className="mt-1 text-[13.5px] leading-snug text-fg-2">
+                    {r.descripcion || "—"}
+                  </div>
+                </td>
 
-                    <td className="p-4 align-top">
-                      <div className="flex justify-end gap-2.5">
-                        <Button
-                          variant="neutral"
-                          size="sm"
-                          className="text-sm text-green-800"
-                          disabled={r.esProtegido || !gestionar}
-                          title={editTitle}
-                          onClick={() => abrirForm(r)}
-                        >
-                          <Pencil className="size-[17px]" /> Modificar
-                        </Button>
-                        {/* Danger de contorno: <Button variant="danger"> es relleno,
-                            demasiado peso para una acción secundaria de la fila. */}
-                        <Button
-                          variant="neutral"
-                          size="sm"
-                          className="border-danger text-sm text-danger"
-                          disabled={noBorrable}
-                          title={delTitle}
-                          onClick={() => pedirBaja(r)}
-                        >
-                          <Trash2 className="size-[17px]" /> Borrar
-                        </Button>
-                      </div>
-                      {/* Sólo si ése es el motivo real: sin el permiso, la
-                          aclaración distrae del que importa. */}
-                      {gestionar && tieneUsuarios && !r.esProtegido && (
-                        <div className="mt-2 flex items-center justify-end gap-1.5 text-[11.5px] text-fg-3">
-                          <Lock className="size-[13px]" /> No se puede borrar con administradores
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                <td className="p-4 align-top">
+                  <PermSummary perms={r.permisos} grupos={grupos} />
+                </td>
+
+                <td className="p-4 text-center align-top">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-2 font-mono text-base font-bold",
+                      tieneUsuarios ? "text-fg-1" : "text-fg-3",
+                    )}
+                  >
+                    <Users
+                      className={cn("size-4", tieneUsuarios ? "text-brown-700" : "text-fg-3")}
+                    />{" "}
+                    {r.cantidadUsuarios}
+                  </span>
+                </td>
+
+                <td className="p-4 align-top">
+                  <div className="flex justify-end gap-2.5">
+                    <Button
+                      variant="neutral"
+                      size="sm"
+                      className="text-sm text-green-800"
+                      disabled={r.esProtegido || !gestionar}
+                      title={editTitle}
+                      onClick={() => abrirForm(r)}
+                    >
+                      <Pencil className="size-[17px]" /> Modificar
+                    </Button>
+                    {/* Danger de contorno: <Button variant="danger"> es relleno,
+                        demasiado peso para una acción secundaria de la fila. */}
+                    <Button
+                      variant="neutral"
+                      size="sm"
+                      className="border-danger text-sm text-danger"
+                      disabled={noBorrable}
+                      title={delTitle}
+                      onClick={() => pedirBaja(r)}
+                    >
+                      <Trash2 className="size-[17px]" /> Borrar
+                    </Button>
+                  </div>
+                  {/* Sólo si ése es el motivo real: sin el permiso, la
+                      aclaración distrae del que importa. */}
+                  {gestionar && tieneUsuarios && !r.esProtegido && (
+                    <div className="mt-2 flex items-center justify-end gap-1.5 text-[11.5px] text-fg-3">
+                      <Lock className="size-[13px]" /> No se puede borrar con administradores
+                    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </Tabla>
 
       <NotaProtegidos />
 

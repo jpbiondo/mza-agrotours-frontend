@@ -355,11 +355,26 @@ const COLUMNAS = ["Administrador", "Correo electrónico", "Identificación", "Ro
 
 const TD: React.CSSProperties = { padding: "14px 18px" };
 
+/**
+ * Anchos fijos por columna. Con el layout automático el navegador los calcula
+ * a partir del contenido, así que las barras del esqueleto —que nunca miden
+ * exactamente lo mismo que un nombre o dos botones— daban columnas de otro
+ * ancho, y al llegar los datos saltaba todo. Se nota sobre todo en Acciones,
+ * que va alineada a la derecha.
+ *
+ * Las dos primeras van sin ancho: se reparten lo que sobra, que es lo que
+ * conviene para nombres y correos de largo variable.
+ */
+const ANCHOS = [undefined, undefined, 140, 200, 290];
+
 function Tabla({ children }: { children: React.ReactNode }) {
   return (
     <div className="card" style={{ padding: 0, overflow: "hidden" }}>
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 920 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", minWidth: 1040 }}>
+          <colgroup>
+            {ANCHOS.map((w, i) => <col key={i} style={w ? { width: w } : undefined} />)}
+          </colgroup>
           <thead>
             <tr>{COLUMNAS.map((h, i) => (
               <th key={h} style={{ textAlign: i === 4 ? "right" : "left", fontWeight: 700, color: "var(--fg-2)", fontSize: 12.5, textTransform: "uppercase", letterSpacing: ".05em", padding: "14px 18px", borderBottom: "2px solid var(--outline-variant)", whiteSpace: "nowrap" }}>{h}</th>
@@ -517,7 +532,9 @@ function Inner() {
                     </div>
                   </div>
                 </td>
-                <td style={{ padding: "14px 18px", fontFamily: "var(--font-mono)", fontSize: 13.5, color: "var(--fg-1)" }}>{p.emailUsuario}</td>
+                {/* Con el layout fijo la columna ya no se estira: un correo largo
+                  corta en vez de desbordar la celda. */}
+              <td style={{ padding: "14px 18px", fontFamily: "var(--font-mono)", fontSize: 13.5, color: "var(--fg-1)", overflowWrap: "anywhere" }}>{p.emailUsuario}</td>
                 <td style={{ padding: "14px 18px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--fg-1)" }}>{p.identificacion}</td>
                 <td style={{ padding: "14px 18px" }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: "var(--radius-pill)", padding: "5px 11px", fontSize: 13, color: "var(--green-800)", fontWeight: 600, whiteSpace: "nowrap" }}><ShieldCheck size={14} color="var(--green-700)" /> {p.nombreRol}</span>
