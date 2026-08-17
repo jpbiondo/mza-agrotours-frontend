@@ -67,6 +67,11 @@
   /* Elevation — shadow-hover / shadow-pop */
   --shadow-hover: 0px 4px 12px rgba(45, 90, 39, 0.08);
   --shadow-pop:   0px 8px 24px rgba(45, 90, 39, 0.12);
+
+  /* Punto de corte de los shells con sidebar (admin y panel): por debajo, la
+     barra lateral deja de ocupar columna y pasa a ser un cajón. Genera la
+     variante `shell:`. Es el mismo valor que usa el diseño. */
+  --breakpoint-shell: 1000px;
 }
 
 /* Aliases "cortos" para estilos inline heredados (misma fuente que @theme). */
