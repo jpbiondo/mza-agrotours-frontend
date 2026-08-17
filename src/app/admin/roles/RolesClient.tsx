@@ -7,7 +7,7 @@ import {
   KeyRound, Users, Lightbulb, UserCog, ClipboardCheck, Warehouse, CalendarCheck, Loader,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Card, IconCircle, Modal, Toast } from "@/components/ui";
+import { Alert, Button, Card, IconCircle, Modal, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { genId } from "@/lib/id";
@@ -68,6 +68,161 @@ const GRUPO_ICONO: Record<string, ComponentType<{ className?: string }>> = {
 function IconoGrupo({ icono, className }: { icono: string; className?: string }) {
   const Icono = GRUPO_ICONO[icono] ?? ShieldCheck;
   return <Icono className={className} />;
+}
+
+/* ---- Marco de la pantalla ------------------------------------------------
+   Lo comparten el esqueleto y la pantalla con datos. Si cada uno dibujara su
+   versión, al llegar los roles se movería todo de lugar apenas cambiara un
+   padding en uno solo. */
+
+const COLUMNAS = ["Rol de administrador", "Permisos", "Administradores", "Acciones"];
+
+const STATS: { icono: ComponentType<{ className?: string }>; label: string }[] = [
+  { icono: ShieldCheck, label: "Roles activos" },
+  { icono: UserCog, label: "Administradores con rol" },
+  { icono: KeyRound, label: "Permisos disponibles" },
+];
+
+function Encabezado({ accion }: { accion: ReactNode }) {
+  return (
+    <>
+      <div className="mb-3.5 flex items-center gap-2.5 text-[13.5px] text-fg-3">
+        <span>Acceso</span>
+        <ChevronRight className="size-[15px]" />
+        <span className="font-medium text-fg-2">Roles de administrador</span>
+      </div>
+
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-5">
+        <div className="min-w-[280px]">
+          <h1 className="font-display text-[34px] font-bold tracking-[-.01em] text-fg-1">
+            Roles de administrador
+          </h1>
+          <p className="mt-2.5 max-w-[660px] text-[15.5px] leading-relaxed text-fg-2">
+            Creá roles para el equipo de administración y elegí qué puede hacer cada uno dentro del
+            sistema.
+          </p>
+        </div>
+        {accion}
+      </div>
+    </>
+  );
+}
+
+function Stats({ valores }: { valores: ReactNode[] }) {
+  return (
+    <div className="mb-5 flex flex-wrap gap-3.5">
+      {STATS.map((s, i) => (
+        <Card key={s.label} className="flex min-w-[190px] items-center gap-3 px-4 py-3">
+          <span className="flex size-[42px] shrink-0 items-center justify-center rounded-[10px] bg-green-050">
+            <s.icono className="size-5 text-green-800" />
+          </span>
+          <span>
+            <span className="block font-mono text-xl font-bold text-fg-1">{valores[i]}</span>
+            <span className="block text-[12.5px] text-fg-2">{s.label}</span>
+          </span>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function Thead() {
+  return (
+    <thead>
+      <tr>
+        {COLUMNAS.map((h, i) => (
+          <th
+            key={h}
+            className={cn(
+              "border-b-2 border-outline-variant px-4 py-3.5 text-[12.5px] font-bold tracking-[.05em] whitespace-nowrap text-fg-2 uppercase",
+              i === 2 ? "text-center" : i === 3 ? "text-right" : "text-left",
+            )}
+          >
+            {h}
+          </th>
+        ))}
+      </tr>
+    </thead>
+  );
+}
+
+function NotaProtegidos() {
+  return (
+    <div className="mt-4 flex items-center gap-2 text-[13px] text-fg-3">
+      <Info className="size-4" /> Los roles marcados como{" "}
+      <strong className="font-semibold text-fg-2">Protegidos</strong> son del sistema: no se pueden
+      modificar ni dar de baja.
+    </div>
+  );
+}
+
+/** Anchos por fila, para que el esqueleto no se lea como una grilla perfecta. */
+const FILAS_SKELETON = [
+  { nombre: "w-[190px]", desc: "w-[280px]", chips: ["w-[128px]", "w-[104px]"] },
+  { nombre: "w-[150px]", desc: "w-[240px]", chips: ["w-[112px]"] },
+  { nombre: "w-[210px]", desc: "w-[300px]", chips: ["w-[128px]", "w-[92px]"] },
+  { nombre: "w-[170px]", desc: "w-[220px]", chips: ["w-[104px]"] },
+];
+
+/**
+ * Mismo marco que la pantalla con datos, con el contenido variable en gris. Los
+ * contadores muestran "—" y no un cero, que se leería como un dato real: "0
+ * roles activos" es una afirmación, y todavía no sabemos nada.
+ */
+function RolesSkeleton() {
+  return (
+    <div className="mx-auto max-w-[1240px] px-7 pt-7 pb-[72px]" aria-busy>
+      <span role="status" className="sr-only">
+        Cargando roles…
+      </span>
+
+      <Encabezado
+        accion={
+          <Button size="lg" disabled>
+            <Plus className="size-[18px]" /> Agregar rol
+          </Button>
+        }
+      />
+
+      <Stats valores={["—", "—", "—"]} />
+
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] border-collapse">
+            <Thead />
+            <tbody>
+              {FILAS_SKELETON.map((f, i) => (
+                <tr key={i} className="border-b border-cream-tert">
+                  <td className="p-4 align-top">
+                    <Skeleton className={cn("h-[17px]", f.nombre)} />
+                    <Skeleton className={cn("mt-2.5 h-[13px]", f.desc)} />
+                  </td>
+                  <td className="p-4 align-top">
+                    <div className="flex flex-wrap gap-1.5">
+                      {f.chips.map((c) => (
+                        <Skeleton key={c} className={cn("h-[26px] rounded-pill", c)} />
+                      ))}
+                    </div>
+                  </td>
+                  <td className="p-4 align-top">
+                    <Skeleton className="mx-auto h-[17px] w-9" />
+                  </td>
+                  <td className="p-4 align-top">
+                    <div className="flex justify-end gap-2.5">
+                      <Skeleton className="h-[34px] w-[108px]" />
+                      <Skeleton className="h-[34px] w-[88px]" />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <NotaProtegidos />
+    </div>
+  );
 }
 
 /** "Gestión de administradores" → "Administradores", para las píldoras de la tabla. */
@@ -482,12 +637,6 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
   // Un mismo código puede repetirse en dos grupos: se cuentan los distintos.
   const permisosDisponibles = new Set(grupos.flatMap((g) => g.permisos.map((p) => p.codigo))).size;
 
-  const stats = [
-    { icon: <ShieldCheck className="size-5 text-green-800" />, label: "Roles activos", value: roles.length },
-    { icon: <UserCog className="size-5 text-green-800" />, label: "Administradores con rol", value: totalAdmins },
-    { icon: <KeyRound className="size-5 text-green-800" />, label: "Permisos disponibles", value: permisosDisponibles },
-  ];
-
   function notify(title: string) {
     setToast({ tone: "success", title });
     setTimeout(() => setToast((t) => (t?.title === title ? null : t)), 3200);
@@ -557,64 +706,25 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
 
   return (
     <div className="mx-auto max-w-[1240px] px-7 pt-7 pb-[72px]">
-      <div className="mb-3.5 flex items-center gap-2.5 text-[13.5px] text-fg-3">
-        <span>Acceso</span>
-        <ChevronRight className="size-[15px]" />
-        <span className="font-medium text-fg-2">Roles de administrador</span>
-      </div>
+      <Encabezado
+        accion={
+          <Button
+            size="lg"
+            disabled={!gestionar}
+            title={gestionar ? "Crear un rol nuevo" : SIN_GESTION}
+            onClick={() => abrirForm(null)}
+          >
+            <Plus className="size-[18px]" /> Agregar rol
+          </Button>
+        }
+      />
 
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-5">
-        <div className="min-w-[280px]">
-          <h1 className="font-display text-[34px] font-bold tracking-[-.01em] text-fg-1">
-            Roles de administrador
-          </h1>
-          <p className="mt-2.5 max-w-[660px] text-[15.5px] leading-relaxed text-fg-2">
-            Creá roles para el equipo de administración y elegí qué puede hacer cada uno dentro del
-            sistema.
-          </p>
-        </div>
-        <Button
-          size="lg"
-          disabled={!gestionar}
-          title={gestionar ? "Crear un rol nuevo" : SIN_GESTION}
-          onClick={() => abrirForm(null)}
-        >
-          <Plus className="size-[18px]" /> Agregar rol
-        </Button>
-      </div>
-
-      <div className="mb-5 flex flex-wrap gap-3.5">
-        {stats.map((s) => (
-          <Card key={s.label} className="flex min-w-[190px] items-center gap-3 px-4 py-3">
-            <span className="flex size-[42px] shrink-0 items-center justify-center rounded-[10px] bg-green-050">
-              {s.icon}
-            </span>
-            <span>
-              <span className="block font-mono text-xl font-bold text-fg-1">{s.value}</span>
-              <span className="block text-[12.5px] text-fg-2">{s.label}</span>
-            </span>
-          </Card>
-        ))}
-      </div>
+      <Stats valores={[roles.length, totalAdmins, permisosDisponibles]} />
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] border-collapse">
-            <thead>
-              <tr>
-                {["Rol de administrador", "Permisos", "Administradores", "Acciones"].map((h, i) => (
-                  <th
-                    key={h}
-                    className={cn(
-                      "border-b-2 border-outline-variant px-4 py-3.5 text-[12.5px] font-bold tracking-[.05em] whitespace-nowrap text-fg-2 uppercase",
-                      i === 2 ? "text-center" : i === 3 ? "text-right" : "text-left",
-                    )}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+            <Thead />
             <tbody>
               {roles.length === 0 && (
                 <tr>
@@ -718,11 +828,7 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
         </div>
       </Card>
 
-      <div className="mt-4 flex items-center gap-2 text-[13px] text-fg-3">
-        <Info className="size-4" /> Los roles marcados como{" "}
-        <strong className="font-semibold text-fg-2">Protegidos</strong> son del sistema: no se
-        pueden modificar ni dar de baja.
-      </div>
+      <NotaProtegidos />
 
       {form.open && (
         <Panel onClose={cerrarForm}>
@@ -776,7 +882,12 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
 export default function RolesClient() {
   const { roles, grupos, isLoading, error, reload } = useRoles();
   return (
-    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando roles…">
+    <AsyncBoundary
+      loading={isLoading}
+      error={error}
+      onRetry={reload}
+      skeleton={<RolesSkeleton />}
+    >
       <Inner initial={roles} grupos={grupos} />
     </AsyncBoundary>
   );

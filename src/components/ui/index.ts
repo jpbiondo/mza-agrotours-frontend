@@ -6,4 +6,5 @@ export type { ToastData } from "./Toast";
 export { Alert } from "./Alert";
 export { EstadoBadge } from "./EstadoBadge";
 export { IconCircle } from "./IconCircle";
+export { Skeleton } from "./Skeleton";
 export { SectionLabel } from "./SectionLabel";
