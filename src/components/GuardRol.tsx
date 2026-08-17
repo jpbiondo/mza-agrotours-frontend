@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { puede, tieneRol } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import type { Rol } from "@/types/auth";
@@ -20,20 +20,11 @@ const MOTIVO: Record<Rol, string> = {
 const SIN_PERMISO = "Tu rol no incluye acceso a esta sección. Pedile a un administrador que te lo habilite.";
 
 /**
- * Los estados del guard no dibujan chrome: lo pone el layout que lo envuelve.
- * Antes acá se renderizaba el <SiteHeader>, y como /admin y /panel montan el
- * guard en su layout, la primera pintura de esas rutas era la barra del sitio
- * público antes de saltar al sidebar que corresponde.
+ * El aviso no dibuja chrome: lo pone el layout que envuelve al guard. Antes acá
+ * se renderizaba el <SiteHeader>, y como /admin y /panel montan el guard en su
+ * layout, la primera pintura de esas rutas era la barra del sitio público antes
+ * de saltar al sidebar que corresponde.
  */
-function Cargando({ texto }: { texto: string }) {
-  return (
-    <div className="px-7 py-[120px] text-center text-fg-3">
-      <Loader size={26} className="spin" />
-      <div className="mt-3 text-sm">{texto}</div>
-    </div>
-  );
-}
-
 function SinPermiso({ motivo }: { motivo: string }) {
   return (
     <div className="mx-auto max-w-[640px] px-7 pt-16 pb-24">
@@ -84,10 +75,15 @@ export default function GuardRol({
     if (sinSesion) router.replace("/acceso");
   }, [sinSesion, router]);
 
-  // Antes de rehidratar no se sabe nada: mostrar el aviso acá haría que parpadee
-  // en cada carga incluso para quien sí tiene acceso.
-  if (!hasHydrated) return <Cargando texto="Verificando tu sesión…" />;
-  if (sinSesion) return <Cargando texto="Redirigiendo…" />;
+  // Los dos estados de espera no dibujan nada. Antes de rehidratar no se sabe
+  // nada de la sesión, pero eso dura el frame que va entre pintar y leer
+  // localStorage: un cartel que aparece y desaparece se lee como que algo
+  // tardó, y el vacío se lee como instantáneo. Sin sesión pasa lo mismo, con la
+  // navegación a /acceso ya en curso.
+  //
+  // Mostrar el aviso de sin acceso acá tampoco serviría: parpadearía en cada
+  // carga incluso para quien sí tiene acceso.
+  if (!hasHydrated || sinSesion) return null;
   if (!tieneRol(roles, rol)) return <SinPermiso motivo={MOTIVO[rol]} />;
   if (permiso && !puede(accesos, permiso)) return <SinPermiso motivo={SIN_PERMISO} />;
 
