@@ -7,7 +7,6 @@ import {
   KeyRound, Users, Lightbulb, UserCog, ClipboardCheck, Warehouse, CalendarCheck, Loader,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
 import { Alert, Button, Card, IconCircle, Modal, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
@@ -777,10 +776,8 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
 export default function RolesClient() {
   const { roles, grupos, isLoading, error, reload } = useRoles();
   return (
-    <AdminShell active="roles">
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando roles…">
-        <Inner initial={roles} grupos={grupos} />
-      </AsyncBoundary>
-    </AdminShell>
+    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando roles…">
+      <Inner initial={roles} grupos={grupos} />
+    </AsyncBoundary>
   );
 }

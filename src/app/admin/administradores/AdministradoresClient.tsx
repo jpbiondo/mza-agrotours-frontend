@@ -8,7 +8,6 @@ import {
   ChevronRight, CheckCircle2, UserCog, Loader, Check, User, Mail, BadgeCheck, UserMinus,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
@@ -541,8 +540,6 @@ function Inner() {
 
 export default function AdministradoresClient() {
   return (
-    <AdminShell active="admins">
-      <Inner />
-    </AdminShell>
+    <Inner />
   );
 }

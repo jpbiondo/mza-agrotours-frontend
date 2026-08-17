@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, UserCog, ShieldCheck, ClipboardCheck, Warehouse, Sprout, Utensils,
   UsersRound, SlidersHorizontal, HandCoins, Landmark, LifeBuoy, HelpCircle, Compass,
@@ -41,6 +42,25 @@ const NAV: { section?: string; id?: string; iconC?: React.ComponentType<{ size?:
   { id: "incidencias", iconC: LifeBuoy, label: "Gestionar incidencias", href: "/admin/incidencias" },
   { id: "faq", iconC: HelpCircle, label: "Preguntas frecuentes", href: "/admin/faq" },
 ];
+
+/**
+ * Ítem activo según la URL: el href más específico que sea prefijo del path.
+ * Así `/admin/roles` marca "Roles" y no "Resumen", cuyo href `/admin` también
+ * calza. Sale del pathname y no de una prop para que no puedan desincronizarse.
+ */
+function idActivo(pathname: string): string {
+  let largo = 0;
+  let id = "";
+  for (const e of NAV) {
+    if (!e.href || !e.id) continue;
+    const calza = pathname === e.href || pathname.startsWith(e.href + "/");
+    if (calza && e.href.length > largo) {
+      largo = e.href.length;
+      id = e.id;
+    }
+  }
+  return id;
+}
 
 function SidebarItem({ entry, active }: { entry: typeof NAV[number]; active: boolean }) {
   const Icon = entry.iconC!;
@@ -119,9 +139,15 @@ function AccountBar() {
   );
 }
 
-export default function AdminShell({ active, children }: { active: string; children: React.ReactNode }) {
+export default function AdminShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const accesos = useAuthStore((s) => s.accesos);
+  const active = idActivo(pathname);
 
+  // Antes de que el store rehidrate, `accesos` está vacío y los ítems con
+  // permiso no se dibujan; aparecen un frame después. Se prefiere ese orden al
+  // inverso: mostrar una entrada que la cuenta no tiene y después sacarla sería
+  // enseñar acceso que no existe.
   const navVisible = useMemo(() => {
     const conPermiso = NAV.filter((e) => !e.permiso || puede(accesos, e.permiso));
     // Si los ítems de una sección se filtraron todos, su rótulo quedaría suelto:

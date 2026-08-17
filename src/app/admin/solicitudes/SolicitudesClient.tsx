@@ -8,7 +8,6 @@ import {
   Image as ImageIcon, ExternalLink, Landmark, BadgeCheck,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
 import { Button, Card, EstadoBadge } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
@@ -756,8 +755,6 @@ function Inner() {
 
 export default function SolicitudesClient() {
   return (
-    <AdminShell active="solicitudes">
-      <Inner />
-    </AdminShell>
+    <Inner />
   );
 }

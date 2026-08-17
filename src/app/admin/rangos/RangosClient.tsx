@@ -6,7 +6,6 @@ import {
   Info, CheckCircle2, Loader,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
 import { genId } from "@/lib/id";
 import { admNowStamp } from "@/data/admin";
 import { RE_MIN_AGE, RE_MAX_AGE, RE_NOMBRE_RE, reAnalyze, reFmtRun } from "@/data/rangos";
@@ -235,10 +234,8 @@ function Inner({ initial }: { initial: RangoEtario[] }) {
 export default function RangosClient() {
   const { data, isLoading, error, reload } = useRangos();
   return (
-    <AdminShell active="rangos">
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando rangos etarios…">
-        {data && <Inner initial={data} />}
-      </AsyncBoundary>
-    </AdminShell>
+    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando rangos etarios…">
+      {data && <Inner initial={data} />}
+    </AsyncBoundary>
   );
 }

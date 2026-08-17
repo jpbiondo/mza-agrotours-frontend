@@ -7,7 +7,6 @@ import {
   CalendarPlus, Undo2, Timer, Store, Wallet, Settings2,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
 import { PARAM_ADMIN, PARAM_FIELDS, PARAM_GROUPS, paramError, paramDisplay } from "@/data/parametros";
 import { admInitials } from "@/data/admin";
 import { useParametros, useConfirmarIdentidad, useGuardarParametros } from "@/hooks/useParametros";
@@ -291,10 +290,8 @@ function Inner({ initial }: { initial: Parametros }) {
 export default function ParametrosClient() {
   const { data, isLoading, error, reload } = useParametros();
   return (
-    <AdminShell active="parametros">
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando parámetros…">
-        {data && <Inner initial={data} />}
-      </AsyncBoundary>
-    </AdminShell>
+    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando parámetros…">
+      {data && <Inner initial={data} />}
+    </AsyncBoundary>
   );
 }
