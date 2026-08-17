@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Mail, Phone, MapPin, Send, CheckCircle2, User } from "lucide-react";
-import { Field, TextInput } from "@/app/registro/components/FormFields";
+import { Field, TextInput } from "@/app/(sitio)/registro/components/FormFields";
 
 const INFO = [
   { icon: <Mail size={18} color="var(--green-800)" />, label: "Correo", value: "hola@mendozaagrotours.ar" },

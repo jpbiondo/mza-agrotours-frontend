@@ -11,7 +11,7 @@ import {
   Lock,
   ArrowLeft,
 } from "lucide-react";
-import { TextInput, EyeToggle } from "@/app/registro/components/FormFields";
+import { TextInput, EyeToggle } from "@/app/(sitio)/registro/components/FormFields";
 
 /* ---- Header público minimal (logo + ayuda) ----------------------------- */
 export function AuthHeader({ onHome }: { onHome?: () => void }) {

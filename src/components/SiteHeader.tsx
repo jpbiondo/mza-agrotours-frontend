@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LogIn, UserPlus } from "lucide-react";
 import VisitorChatDrawer from "@/components/chat/VisitorChatDrawer";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -24,8 +25,36 @@ const APP_LINKS: NavLink[] = [
   { id: "faq", href: "/#faq", label: "Preguntas frecuentes" },
 ];
 
+/**
+ * Rutas que no tienen entrada propia en el nav pero cuelgan de una. Las recetas
+ * se llegan desde Cultivos, así que marcan ese ítem.
+ */
+const ALIAS: Record<string, string> = { "/recetas": "cultivos" };
+
+/**
+ * Ítem activo según la URL: el href más específico que sea prefijo del path.
+ * Sale del pathname y no de una prop para que no puedan desincronizarse, y para
+ * que el header pueda vivir en el layout en vez de repetirse en cada pantalla.
+ * Las anclas del landing (`/#faq`) no participan.
+ */
+function idActivo(pathname: string, links: NavLink[]): string | undefined {
+  for (const [prefijo, id] of Object.entries(ALIAS)) {
+    if (pathname === prefijo || pathname.startsWith(prefijo + "/")) return id;
+  }
+  let largo = 0;
+  let id: string | undefined;
+  for (const l of links) {
+    if (l.href.includes("#")) continue;
+    const calza = pathname === l.href || pathname.startsWith(l.href + "/");
+    if (calza && l.href.length > largo) {
+      largo = l.href.length;
+      id = l.id;
+    }
+  }
+  return id;
+}
+
 interface SiteHeaderProps {
-  active?: string;
   /** Permite que el landing pase anclas de sección en lugar de rutas. */
   navLinks?: NavLink[];
   maxWidth?: number;
@@ -39,10 +68,12 @@ interface SiteHeaderProps {
  * El cluster se renderiza sólo tras la hidratación para que el primer render del
  * cliente coincida con el del servidor (evita el flash de estado incorrecto).
  */
-export default function SiteHeader({ active, navLinks = APP_LINKS, maxWidth = 1200 }: SiteHeaderProps) {
+export default function SiteHeader({ navLinks = APP_LINKS, maxWidth = 1200 }: SiteHeaderProps) {
+  const pathname = usePathname();
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const nombre = useAuthStore((s) => s.nombre);
   const loggedIn = hasHydrated && !!nombre;
+  const active = idActivo(pathname, navLinks);
 
   return (
     <header
