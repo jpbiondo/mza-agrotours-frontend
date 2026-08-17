@@ -2,7 +2,27 @@
 
 import { useState } from "react";
 import { Mail, Phone, MapPin, Send, CheckCircle2, User } from "lucide-react";
-import { Field, TextInput } from "@/app/(sitio)/registro/components/FormFields";
+import { TextField } from "@/components/ui/text-field";
+
+/** Etiqueta + campo. Local porque es el único formulario del landing. */
+function Campo({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="field">
+      <label htmlFor={htmlFor} className="text-[13.5px] font-semibold text-fg-1">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
 
 const INFO = [
   { icon: <Mail size={18} color="var(--green-800)" />, label: "Correo", value: "hola@mendozaagrotours.ar" },
@@ -81,27 +101,22 @@ export default function ContactoSection() {
             </div>
           ) : (
             <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-              <Field label="Nombre y apellido" htmlFor="ct-nombre">
-                <TextInput id="ct-nombre" icon={<User size={18} />} value={nombre} placeholder="Tu nombre" autoComplete="name" onChange={setNombre} />
-              </Field>
-              <Field label="Correo" htmlFor="ct-email">
-                <TextInput id="ct-email" icon={<Mail size={18} />} type="email" value={email} placeholder="nombre@dominio.com" inputMode="email" autoComplete="email" onChange={setEmail} />
-              </Field>
-              <Field label="Mensaje" htmlFor="ct-msg">
+              <Campo label="Nombre y apellido" htmlFor="ct-nombre">
+                <TextField id="ct-nombre" icon={<User />} value={nombre} placeholder="Tu nombre" autoComplete="name" onChange={setNombre} />
+              </Campo>
+              <Campo label="Correo" htmlFor="ct-email">
+                <TextField id="ct-email" icon={<Mail />} type="email" value={email} placeholder="nombre@dominio.com" inputMode="email" autoComplete="email" onChange={setEmail} />
+              </Campo>
+              <Campo label="Mensaje" htmlFor="ct-msg">
                 <textarea
                   id="ct-msg"
                   value={mensaje}
                   onChange={(e) => setMensaje(e.target.value)}
                   placeholder="Contanos en qué podemos ayudarte…"
                   rows={4}
-                  style={{
-                    width: "100%", fontFamily: "var(--font-sans)", fontSize: "var(--body)",
-                    color: "var(--fg-1)", borderRadius: "var(--radius)", background: "var(--surface)",
-                    border: "1px solid var(--sand)", padding: "12px 14px", outline: "none",
-                    resize: "vertical", boxSizing: "border-box",
-                  }}
+                  className="textarea"
                 />
-              </Field>
+              </Campo>
               <button type="submit" className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center" }}>
                 <Send size={18} /> Enviar mensaje
               </button>

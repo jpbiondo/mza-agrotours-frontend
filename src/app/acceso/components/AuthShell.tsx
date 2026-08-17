@@ -11,7 +11,7 @@ import {
   Lock,
   ArrowLeft,
 } from "lucide-react";
-import { TextInput, EyeToggle } from "@/app/(sitio)/registro/components/FormFields";
+import { TextField, EyeToggle } from "@/components/ui/text-field";
 
 /* ---- Header público minimal (logo + ayuda) ----------------------------- */
 export function AuthHeader({ onHome }: { onHome?: () => void }) {
@@ -145,15 +145,15 @@ interface PasswordInputProps {
 export function PasswordInput({ id, value, onChange, error, placeholder, autoComplete }: PasswordInputProps) {
   const [shown, setShown] = useState(false);
   return (
-    <TextInput
+    <TextField
       id={id}
-      icon={<Lock size={18} />}
+      icon={<Lock />}
       type={shown ? "text" : "password"}
       value={value}
       placeholder={placeholder}
       autoComplete={autoComplete}
       onChange={onChange}
-      error={error}
+      aria-invalid={!!error}
       rightSlot={<EyeToggle shown={shown} onToggle={() => setShown((s) => !s)} />}
     />
   );
