@@ -12,9 +12,14 @@ import { Alert, Button, Card, IconCircle, Modal, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { genId } from "@/lib/id";
+import { puede } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useRoles, useCrearRol, useActualizarRol, useDarBajaRol } from "@/hooks/useRoles";
+import { useAuthStore } from "@/stores/authStore";
 import type { GrupoPermiso, RolAdminDetalle } from "@/types/admin";
+
+/** Motivo de los botones deshabilitados cuando falta GESTIONAR_ROL. */
+const SIN_GESTION = "Necesitás el permiso de gestión de roles";
 
 /**
  * Errores de dominio al guardar. Lo que no esté acá cae en el mensaje genérico:
@@ -467,6 +472,9 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
+  // LEER_ROL ya lo exige el guard de la ruta; acá se distingue quién puede actuar.
+  const accesos = useAuthStore((s) => s.accesos);
+  const gestionar = puede(accesos, "GESTIONAR_ROL");
   const { crear, isLoading: creating } = useCrearRol();
   const { actualizar, isLoading: saving } = useActualizarRol();
   const { darBaja, isLoading: deleting } = useDarBajaRol();
@@ -566,7 +574,12 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
             sistema.
           </p>
         </div>
-        <Button size="lg" onClick={() => abrirForm(null)}>
+        <Button
+          size="lg"
+          disabled={!gestionar}
+          title={gestionar ? "Crear un rol nuevo" : SIN_GESTION}
+          onClick={() => abrirForm(null)}
+        >
           <Plus className="size-[18px]" /> Agregar rol
         </Button>
       </div>
@@ -613,12 +626,21 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
               )}
               {roles.map((r) => {
                 const tieneUsuarios = r.cantidadUsuarios > 0;
-                const noBorrable = tieneUsuarios || r.esProtegido;
-                const delTitle = r.esProtegido
-                  ? "Este rol está protegido y no se puede dar de baja"
-                  : tieneUsuarios
-                    ? `No se puede dar de baja: tiene ${r.cantidadUsuarios} ${r.cantidadUsuarios === 1 ? "administrador asignado" : "administradores asignados"}`
-                    : "Dar de baja este rol";
+                const noBorrable = tieneUsuarios || r.esProtegido || !gestionar;
+                // Sin el permiso no se puede actuar sobre ninguna fila, así que
+                // ése es el motivo que corresponde antes que los de cada rol.
+                const delTitle = !gestionar
+                  ? SIN_GESTION
+                  : r.esProtegido
+                    ? "Este rol está protegido y no se puede dar de baja"
+                    : tieneUsuarios
+                      ? `No se puede dar de baja: tiene ${r.cantidadUsuarios} ${r.cantidadUsuarios === 1 ? "administrador asignado" : "administradores asignados"}`
+                      : "Dar de baja este rol";
+                const editTitle = !gestionar
+                  ? SIN_GESTION
+                  : r.esProtegido
+                    ? "Este rol está protegido y no se puede modificar"
+                    : "Modificar este rol";
 
                 return (
                   <tr key={r.id} className="border-b border-cream-tert">
@@ -662,12 +684,8 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
                           variant="neutral"
                           size="sm"
                           className="text-sm text-green-800"
-                          disabled={r.esProtegido}
-                          title={
-                            r.esProtegido
-                              ? "Este rol está protegido y no se puede modificar"
-                              : "Modificar este rol"
-                          }
+                          disabled={r.esProtegido || !gestionar}
+                          title={editTitle}
                           onClick={() => abrirForm(r)}
                         >
                           <Pencil className="size-[17px]" /> Modificar
@@ -685,7 +703,9 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
                           <Trash2 className="size-[17px]" /> Borrar
                         </Button>
                       </div>
-                      {tieneUsuarios && !r.esProtegido && (
+                      {/* Sólo si ése es el motivo real: sin el permiso, la
+                          aclaración distrae del que importa. */}
+                      {gestionar && tieneUsuarios && !r.esProtegido && (
                         <div className="mt-2 flex items-center justify-end gap-1.5 text-[11.5px] text-fg-3">
                           <Lock className="size-[13px]" /> No se puede borrar con administradores
                         </div>
