@@ -42,3 +42,16 @@ export function puede(accesos: Acceso[] | undefined, permiso: string): boolean {
 export function tieneRol(roles: Rol[], requerido: Rol): boolean {
   return roles.includes(requerido);
 }
+
+/**
+ * Nombre del rol para un tipo de acceso, p. ej. "Administrador Líder" para
+ * ADMIN. Cadena vacía si la cuenta no tiene un acceso de ese tipo: quien lo
+ * muestre decide qué poner en su lugar.
+ */
+export function nombreRol(accesos: Acceso[] | undefined, tipoPermiso: string): string {
+  if (!Array.isArray(accesos)) return "";
+  const acceso = accesos.find(
+    (a) => String(a?.tipoPermiso ?? "").trim().toUpperCase() === tipoPermiso,
+  );
+  return acceso?.rolNombre ?? "";
+}

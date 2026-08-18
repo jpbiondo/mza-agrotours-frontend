@@ -8,9 +8,10 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, UserCog, ShieldCheck, ClipboardCheck, Warehouse, Sprout, Utensils,
   UsersRound, SlidersHorizontal, HandCoins, Landmark, LifeBuoy, HelpCircle, Compass,
-  Bell, LogOut, Lock, Menu, X,
+  Bell, LogOut, Lock, Menu, X, UserRound,
 } from "lucide-react";
-import { puede } from "@/lib/roles";
+import { admInitials } from "@/data/admin";
+import { nombreRol, puede } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -141,6 +142,12 @@ function SidebarItem({ entry, active }: { entry: NavEntry; active: boolean }) {
 function AccountBar({ onMenu }: { onMenu: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const nombre = useAuthStore((s) => s.nombre);
+  const accesos = useAuthStore((s) => s.accesos);
+  // El rol que se muestra es el de administración: una misma cuenta puede ser
+  // además productora o visitante, y acá esos no vienen al caso.
+  const rol = nombreRol(accesos, "ADMIN");
+  const iniciales = admInitials(nombre ?? "");
 
   useEffect(() => {
     if (!open) return;
@@ -201,9 +208,11 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
 
         <div className="hidden h-7 w-px bg-outline-variant shell:block" />
 
-        <div className="hidden max-w-[220px] text-right leading-tight shell:block">
-          <div className="text-[13.5px] font-semibold text-fg-1">Diego Ferreyra</div>
-          <div className="mt-0.5 text-[11.5px] text-fg-3">Administrador líder</div>
+        {/* Ancho fijo, no `max-w`: el nombre llega recién al rehidratar, y con
+            ancho automático la campana y el chip se corrían al aparecer. */}
+        <div className="hidden w-[180px] text-right leading-tight shell:block">
+          <div className="truncate text-[13.5px] font-semibold text-fg-1">{nombre ?? ""}</div>
+          <div className="mt-0.5 truncate text-[11.5px] text-fg-3">{rol}</div>
         </div>
 
         <div ref={ref} className="relative">
@@ -211,14 +220,14 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
             type="button"
             aria-haspopup="menu"
             aria-expanded={open}
-            aria-label="Mi cuenta"
+            aria-label={nombre ? `Mi cuenta: ${nombre}` : "Mi cuenta"}
             onClick={() => setOpen((v) => !v)}
             className={cn(
               "flex size-[38px] cursor-pointer items-center justify-center rounded-full bg-brown-700 text-[13px] font-semibold text-white shadow-[inset_0_-2px_0_var(--brown-800)]",
               open && "outline-2 outline-offset-2 outline-green-800",
             )}
           >
-            DF
+            {iniciales || <UserRound className="size-[18px]" />}
           </button>
           {open && (
             <div
