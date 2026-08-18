@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grape, Search, SearchX, Send, MessagesSquare, Mail, Loader } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import ProducerShell from "@/components/panel/ProducerShell";
-import { FINCAS } from "@/data/panel";
 import { chatNow } from "@/data/chats";
 import { genId } from "@/lib/id";
 import { useEstChats, useEnviarMensaje } from "@/hooks/useChats";
@@ -207,11 +205,9 @@ function Inner({ initial }: { initial: EstChat[] }) {
 }
 
 export default function EstChatsClient() {
-  const [fincaId, setFincaId] = useState(FINCAS[0].id);
   const { data, isLoading, error, reload } = useEstChats();
   return (
     <>
-      <ProducerShell active="chats" fincas={FINCAS} activeFincaId={fincaId} onFincaChange={setFincaId} />
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando chats…">
         {data && <Inner initial={data} />}
       </AsyncBoundary>

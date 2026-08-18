@@ -7,11 +7,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import ProducerShell from "@/components/panel/ProducerShell";
-import { FINCAS } from "@/data/panel";
 import {
   CATALOGO_CULTIVOS, findCultivoCat, validarDescripcion, validarTelefono, validarEmail,
 } from "@/data/datos";
+import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { useEstablecimientoDatos, useGuardarEstablecimiento, useEliminarEstablecimiento } from "@/hooks/useEstablecimientoDatos";
 import type { CultivoCat, EstablecimientoDatos } from "@/types/datos";
 
@@ -218,7 +217,9 @@ function ToastView({ toast, onClose }: { toast: Toast; onClose: () => void }) {
 
 /* ---- Cliente ----------------------------------------------------------- */
 export default function DatosClient() {
-  const [fincaId, setFincaId] = useState(FINCAS[0].id);
+  // El establecimiento activo lo elige el switcher del shell.
+  const { activo } = useEstablecimientos();
+  const fincaId = activo?.id ?? "";
   const { data, isLoading, error, reload } = useEstablecimientoDatos(fincaId);
   const { guardar, isLoading: saving } = useGuardarEstablecimiento();
   const { eliminar, isLoading: eliminando } = useEliminarEstablecimiento();
@@ -249,7 +250,6 @@ export default function DatosClient() {
   if (!datos) {
     return (
       <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
-        <ProducerShell active="datos" fincas={FINCAS} activeFincaId={fincaId} onFincaChange={setFincaId} />
         <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando datos…">{null}</AsyncBoundary>
       </div>
     );
@@ -257,7 +257,6 @@ export default function DatosClient() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
-      <ProducerShell active="datos" fincas={FINCAS} activeFincaId={fincaId} onFincaChange={(id) => { setFincaId(id); setEditing(null); setOverrides({}); }} />
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "28px 28px 80px" }}>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 26 }}>

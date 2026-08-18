@@ -6,8 +6,6 @@ import {
   ArrowLeft, Plus, X, Trash2, Check, Loader, Sprout, Clock, Users, CalendarRange,
   AlertCircle, ListChecks, HelpCircle, Ban, Info,
 } from "lucide-react";
-import ProducerShell from "@/components/panel/ProducerShell";
-import { FINCAS } from "@/data/panel";
 import { CATALOGO_CULTIVOS, DIAS } from "@/data/actividad-form";
 import { useGuardarActividad, type EstadoGuardado } from "@/hooks/useGuardarActividad";
 import type { ActividadFormData } from "@/types/actividad-form";
@@ -90,7 +88,6 @@ export default function ActivityForm({ mode, initial }: { mode: "crear" | "edita
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
-      <ProducerShell active="actividades" fincas={FINCAS} activeFincaId={FINCAS[0].id} onFincaChange={() => router.push("/panel/actividades")} />
 
       <div style={{ maxWidth: 880, margin: "0 auto", padding: "28px 28px 120px" }}>
         <button type="button" onClick={() => router.push("/panel/actividades")} className="btn btn-neutral btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 16 }}>

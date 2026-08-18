@@ -1,12 +1,9 @@
 import Link from "next/link";
 import { Sprout, PlusCircle } from "lucide-react";
-import ProducerPanelShell from "@/components/panel/ProducerPanelShell";
 
 /** Estado vacío del panel: el productor todavía no tiene un establecimiento. */
 export default function EmptyEstablecimiento() {
-  return (
-    <ProducerPanelShell fincas={[]}>
-      <div className="mx-auto flex max-w-[640px] flex-col items-center px-7 pt-16 pb-24 text-center">
+  return (      <div className="mx-auto flex max-w-[640px] flex-col items-center px-7 pt-16 pb-24 text-center">
         <div className="mb-6 flex size-20 items-center justify-center rounded-full bg-green-050">
           <Sprout className="size-9 text-green-800" />
         </div>
@@ -25,6 +22,5 @@ export default function EmptyEstablecimiento() {
           <PlusCircle className="size-[18px]" /> Solicitar alta de un establecimiento
         </Link>
       </div>
-    </ProducerPanelShell>
   );
 }
