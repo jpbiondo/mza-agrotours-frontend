@@ -1,0 +1,74 @@
+import type { ActividadFormData, DiaKey } from "@/types/actividad-form";
+import { getActividad } from "@/data/actividades-prod";
+
+export const CATALOGO_CULTIVOS = [
+  "Malbec", "Cabernet Sauvignon", "Bonarda", "Cabernet Franc", "Olivo Arbequina", "Olivo Frantoio",
+  "Durazno", "Damasco", "Cereza", "Nogal", "Pera", "Manzana", "Vid", "Recorrido rural",
+];
+
+export const DIAS: { key: DiaKey; label: string }[] = [
+  { key: "lunes", label: "Lunes" },
+  { key: "martes", label: "Martes" },
+  { key: "miercoles", label: "Miércoles" },
+  { key: "jueves", label: "Jueves" },
+  { key: "viernes", label: "Viernes" },
+  { key: "sabado", label: "Sábado" },
+  { key: "domingo", label: "Domingo" },
+];
+
+const LABEL_TO_KEY: Record<string, DiaKey> = {
+  Lunes: "lunes", Martes: "martes", Miércoles: "miercoles", Jueves: "jueves",
+  Viernes: "viernes", Sábado: "sabado", Domingo: "domingo",
+};
+
+function emptyDays(): Record<DiaKey, { on: boolean; desde: string; hasta: string }> {
+  return DIAS.reduce((acc, d) => { acc[d.key] = { on: false, desde: "", hasta: "" }; return acc; }, {} as Record<DiaKey, { on: boolean; desde: string; hasta: string }>);
+}
+
+/** Estado inicial vacío para crear una actividad. */
+export function emptyActividadForm(): ActividadFormData {
+  return {
+    nombre: "",
+    descripcion: "",
+    cupos: "",
+    cultivos: [],
+    ages: { infantes: { on: false, price: "" }, menores: { on: false, price: "" }, adultos: { on: true, price: "" } },
+    days: emptyDays(),
+    fechaDesde: "",
+    fechaHasta: "",
+    incluye: [""],
+    noIncluye: [""],
+    faqs: [{ q: "", a: "" }],
+  };
+}
+
+/** Hidrata el formulario con los datos de una actividad existente (modo editar). */
+export function hydrateActividadForm(id: string): ActividadFormData | null {
+  const act = getActividad(id);
+  if (!act) return null;
+
+  const base = emptyActividadForm();
+  act.dias.forEach((d) => {
+    const k = LABEL_TO_KEY[d.dia];
+    if (k) base.days[k] = { on: true, desde: d.desde, hasta: d.hasta };
+  });
+
+  return {
+    ...base,
+    nombre: act.nombre,
+    descripcion: `Viví una experiencia auténtica en Finca La Escondida: «${act.nombre}». Te acompañamos entre las hileras para conocer de cerca el trabajo de la tierra, la familia productora y los sabores de la finca.`,
+    cupos: "20",
+    cultivos: [...act.cultivos],
+    ages: {
+      infantes: { on: false, price: "" },
+      menores: { on: true, price: String(Math.round(act.precio * 0.6)) },
+      adultos: { on: true, price: String(act.precio) },
+    },
+    incluye: ["Degustación de productos de la finca", "Guía especializada durante toda la experiencia"],
+    noIncluye: ["Traslado hasta el establecimiento"],
+    faqs: [
+      { q: "¿Necesito llevar algo en particular?", a: "Recomendamos calzado cómodo, gorro y protector solar." },
+      { q: "¿Es apta para toda la familia?", a: "Sí, podés sumar menores indicando su rango etario al reservar." },
+    ],
+  };
+}
