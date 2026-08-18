@@ -522,10 +522,14 @@ function Inner({
       setErrorBaja(mensajeBaja(res.code));
       return;
     }
+    // Se sale del panel, no a otra pantalla de adentro: si éste era el único
+    // establecimiento, la cuenta deja de ser productora y el guard de /panel
+    // rebotaría con el aviso de sin acceso.
+    //
     // Navegación dura a propósito: los establecimientos salen de los accesos
     // del store, y ésos se refrescan recién cuando AuthSync vuelve a pedir el
     // perfil. Sin esto el switcher seguiría ofreciendo el que se dio de baja.
-    window.location.href = "/panel";
+    window.location.href = "/explorar";
   }
 
   const enCultivos = editando === "cultivos";
