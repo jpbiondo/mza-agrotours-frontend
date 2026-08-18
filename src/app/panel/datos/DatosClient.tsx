@@ -5,16 +5,17 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   Home, MapPin, Phone, Landmark, Sprout, Pencil, X, Check, Lock, Plus,
-  Search, Loader, ExternalLink, Inbox,
+  Search, Loader, ExternalLink, Inbox, Trash2, AlertTriangle,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Card, Modal, Skeleton, Toast } from "@/components/ui";
+import { Alert, Button, Card, IconCircle, Modal, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { validarCvu, validarDescripcion, validarEmail, validarTelefono } from "@/data/datos";
 import { cn } from "@/lib/utils";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import {
+  useEliminarEstablecimiento,
   useEstablecimientoDatos,
   useGuardarEstablecimiento,
   useTiposCultivo,
@@ -29,6 +30,68 @@ function mensajeGuardar(code?: string): string {
   return code
     ? "No se pudieron guardar los cambios."
     : "No se pudieron guardar los cambios. Probá de nuevo en unos minutos.";
+}
+
+function mensajeBaja(code?: string): string {
+  // TODO backend: mapear los códigos de dominio del DELETE cuando existan.
+  return code
+    ? "No se pudo eliminar el establecimiento."
+    : "No se pudo eliminar el establecimiento. Probá de nuevo en unos minutos.";
+}
+
+/** Confirmación de la baja: hay que escribir ELIMINAR, como en el diseño. */
+function EliminarModal({
+  nombre,
+  busy,
+  error,
+  onCancel,
+  onConfirm,
+}: {
+  nombre: string;
+  busy: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const [texto, setTexto] = useState("");
+  const confirmado = texto.trim().toUpperCase() === "ELIMINAR";
+
+  return (
+    <Modal onClose={onCancel} dismissable={!busy}>
+      <div className="flex items-center gap-3.5">
+        <IconCircle tone="danger">
+          <AlertTriangle className="size-[22px] text-danger-fg" />
+        </IconCircle>
+        <h3 className="font-display text-[19px] font-semibold text-fg-1">
+          Eliminar establecimiento
+        </h3>
+      </div>
+
+      <p className="mt-4 text-[14.5px] leading-relaxed text-fg-2">
+        Vas a eliminar <strong className="text-fg-1">{nombre}</strong>. Se dan de baja sus
+        actividades, cultivos y datos asociados. Esta acción no se puede deshacer.
+      </p>
+
+      <div className="field mt-4">
+        <label htmlFor="confirmar-baja" className="text-[13.5px] font-semibold text-fg-1">
+          Escribí <span className="font-mono text-danger-fg">ELIMINAR</span> para confirmar
+        </label>
+        <TextField id="confirmar-baja" value={texto} onChange={setTexto} placeholder="ELIMINAR" />
+      </div>
+
+      {error && <Alert className="mt-4">{error}</Alert>}
+
+      <div className="mt-6 flex justify-end gap-3">
+        <Button variant="neutral" onClick={onCancel} disabled={busy}>
+          Cancelar
+        </Button>
+        <Button variant="danger" onClick={onConfirm} disabled={!confirmado || busy}>
+          {busy ? <Loader className="spin size-[17px]" /> : <Trash2 className="size-[17px]" />}
+          Eliminar establecimiento
+        </Button>
+      </div>
+    </Modal>
+  );
 }
 
 /* ---- Tarjeta de sección ------------------------------------------------- */
@@ -388,6 +451,9 @@ function Inner({
   onGuardado: (cambios: Partial<EstablecimientoDatos>) => void;
 }) {
   const { guardar, isLoading: saving } = useGuardarEstablecimiento();
+  const { eliminar, isLoading: eliminando } = useEliminarEstablecimiento();
+  const [bajaAbierta, setBajaAbierta] = useState(false);
+  const [errorBaja, setErrorBaja] = useState<string | null>(null);
   const [editando, setEditando] = useState<Seccion | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
@@ -447,6 +513,19 @@ function Inner({
     onGuardado(cambios);
     setEditando(null);
     notificar("Cambios guardados correctamente.");
+  }
+
+  async function confirmarBaja() {
+    setErrorBaja(null);
+    const res = await eliminar(datos.id);
+    if (!res.ok) {
+      setErrorBaja(mensajeBaja(res.code));
+      return;
+    }
+    // Navegación dura a propósito: los establecimientos salen de los accesos
+    // del store, y ésos se refrescan recién cuando AuthSync vuelve a pedir el
+    // perfil. Sin esto el switcher seguiría ofreciendo el que se dio de baja.
+    window.location.href = "/panel";
   }
 
   const enCultivos = editando === "cultivos";
@@ -668,6 +747,29 @@ function Inner({
           </button>
         )}
       </SectionCard>
+
+      <div className="mt-8 flex justify-end">
+        <Button
+          variant="neutral"
+          className="border-danger text-danger"
+          onClick={() => {
+            setErrorBaja(null);
+            setBajaAbierta(true);
+          }}
+        >
+          <Trash2 className="size-4" /> Eliminar establecimiento
+        </Button>
+      </div>
+
+      {bajaAbierta && (
+        <EliminarModal
+          nombre={datos.nombre}
+          busy={eliminando}
+          error={errorBaja}
+          onCancel={() => setBajaAbierta(false)}
+          onConfirm={confirmarBaja}
+        />
+      )}
 
       {addOpen && (
         <AgregarCultivoModal

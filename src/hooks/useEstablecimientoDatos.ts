@@ -213,3 +213,33 @@ export function useTiposCultivo(habilitado: boolean) {
 
   return { cultivos, isLoading, error };
 }
+
+/* ---- Baja ---------------------------------------------------------------- */
+
+export function useEliminarEstablecimiento() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function eliminar(id: string): Promise<{ ok: boolean; code?: string }> {
+    setIsLoading(true);
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(`${BASE}/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          token,
+        }),
+      );
+      const env = comoEnvelope<unknown>(res);
+      return env.ok ? { ok: true } : { ok: false, code: env.code };
+    } catch (e) {
+      if (e instanceof ApiError) return { ok: false, code: e.code };
+      // `apiFetch` sólo llega a res.json() con un 2xx: un error de parseo es una
+      // baja hecha y contestada sin cuerpo. Un fallo de red tira TypeError.
+      if (e instanceof SyntaxError) return { ok: true };
+      return { ok: false };
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return { eliminar, isLoading };
+}
