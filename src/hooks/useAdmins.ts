@@ -1,37 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
+import { conToken } from "@/lib/sesion";
 import type { AdminSistema, RolAdmin, UsuarioCard } from "@/types/admin";
-
-interface Envelope<T> {
-  ok: boolean;
-  code?: string;
-  data?: T;
-}
-
-/**
- * Normaliza la respuesta al envelope `{ ok, code, data }`. Sigue aceptando el
- * payload crudo —un array o un objeto suelto— por si algún endpoint todavía no
- * lo envuelve; en ese caso se asume éxito.
- *
- * Importante: conserva el `code` cuando `ok` es false, que es como el backend
- * manda los errores de dominio con status 2xx.
- */
-function comoEnvelope<T>(res: unknown): Envelope<T> {
-  if (res && typeof res === "object" && "ok" in res) {
-    const env = res as Envelope<T>;
-    return { ok: env.ok, code: env.code, data: env.data };
-  }
-  return { ok: true, data: (res as T) ?? undefined };
-}
-
-/** Corre `fn` con el ID token de Firebase; lanza si no hay sesión. */
-async function conToken<T>(fn: (token: string) => Promise<T>): Promise<T> {
-  const user = auth.currentUser;
-  if (!user) throw new Error("Sin sesión");
-  return fn(await user.getIdToken());
-}
 
 /* ---- Lista de administradores vigentes ---------------------------------- */
 

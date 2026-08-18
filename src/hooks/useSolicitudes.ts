@@ -27,9 +27,13 @@ function aItem(s: ItemBackend, i: number): SolicitudAdminItem {
     id: s.id ?? `sin-id-${i}`,
     nombreEstablecimiento: s.nombreEstablecimiento ?? "",
     // El backend manda el estado en mayúsculas ("PENDIENTE").
-    estado: String(s.estado ?? "").trim().toLowerCase() as EstadoSolicitud,
+    estado: String(s.estado ?? "")
+      .trim()
+      .toLowerCase() as EstadoSolicitud,
     fechaHoraAlta:
-      typeof s.fechaHoraAlta === "string" && s.fechaHoraAlta.trim() ? s.fechaHoraAlta : null,
+      typeof s.fechaHoraAlta === "string" && s.fechaHoraAlta.trim()
+        ? s.fechaHoraAlta
+        : null,
     departamento: s.departamento ?? "",
     nombreSolicitante: s.nombreSolicitante ?? "",
   };
@@ -83,9 +87,12 @@ export function useSolicitudes(): UseSolicitudesReturn {
           return;
         }
         // Envelope ok sin `data` es lista vacía, no error.
-        setSolicitudes(Array.isArray(res.data) ? res.data.map(aItem).sort(porFechaDesc) : []);
+        setSolicitudes(
+          Array.isArray(res.data) ? res.data.map(aItem).sort(porFechaDesc) : [],
+        );
       } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : "Error inesperado");
+        if (active)
+          setError(e instanceof Error ? e.message : "Error inesperado");
       } finally {
         if (active) setIsLoading(false);
       }
@@ -130,8 +137,12 @@ export function useResolverSolicitud() {
       if (!user) return { ok: false };
       const token = await user.getIdToken();
       const res = await apiFetch<{ ok: boolean; code?: string }>(
-        `${BASE}/${encodeURIComponent(solicitudId)}`,
-        { method: "POST", token, body: JSON.stringify({ estado, observacion }) },
+        `${BASE}/observar/${encodeURIComponent(solicitudId)}`,
+        {
+          method: "POST",
+          token,
+          body: JSON.stringify({ estado, observacion }),
+        },
       );
       return res.ok ? { ok: true } : { ok: false, code: res.code };
     } catch (e) {

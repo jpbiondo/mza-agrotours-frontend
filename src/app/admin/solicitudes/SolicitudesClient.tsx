@@ -5,19 +5,19 @@ import {
   ChevronRight, Clock, CheckCircle2, XCircle, Search, Inbox, User, MapPin,
   ArrowLeft, Hash, Building2, Mail, Phone, Map, Paperclip, Info, ShieldCheck,
   MessageSquare, AlertCircle, Loader, ClipboardCheck, Eye, FileText,
-  Image as ImageIcon, ExternalLink, Landmark,
+  Image as ImageIcon, ExternalLink, Landmark, BadgeCheck,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
+import { Button, Card, EstadoBadge } from "@/components/ui";
+import { TextField } from "@/components/ui/text-field";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { admInitials } from "@/data/admin";
-import { fmtFechaHora } from "@/lib/format";
+import { fmtFecha, fmtFechaHora } from "@/lib/format";
 import { puede } from "@/lib/roles";
 import { storageConfigurado, urlDeArchivo } from "@/lib/storage";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
-import {
-  BASE_ADMIN_SOLICITUDES, useSolicitudDetalle,
-} from "@/hooks/useSolicitudDetalle";
+import { BASE_ADMIN_SOLICITUDES, useSolicitudDetalle } from "@/hooks/useSolicitudDetalle";
 import { useResolverSolicitud, useSolicitudes, type Resolucion } from "@/hooks/useSolicitudes";
 import type {
   EstadoSolicitud, PruebaSolicitud, SolicitudAdminItem, SolicitudDetalle,
@@ -26,31 +26,33 @@ import type {
 const OBS_MAX = 1000;
 const SIN_GESTION = "Necesitás el permiso de gestión de solicitudes de establecimiento";
 
-const TONE: Record<string, { bg: string; fg: string }> = {
-  warning: { bg: "var(--warning-fill)", fg: "var(--warning-fg)" },
-  success: { bg: "var(--success-fill)", fg: "var(--success-fg)" },
-  danger: { bg: "var(--danger-fill)", fg: "var(--danger-fg)" },
-};
-
 function metaDe(estado: EstadoSolicitud) {
   return SOL_ESTADO_META[estado] as
     | (typeof SOL_ESTADO_META)[keyof typeof SOL_ESTADO_META]
     | undefined;
 }
 
-function EstadoPill({ estado, big }: { estado: EstadoSolicitud; big?: boolean }) {
+function Estado({ estado, size }: { estado: EstadoSolicitud; size?: "sm" | "lg" }) {
   const m = metaDe(estado);
-  const t = TONE[m?.tone ?? ""] ?? { bg: "var(--cream-tert)", fg: "var(--fg-2)" };
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", borderRadius: "var(--radius-pill)", padding: big ? "6px 13px" : "4px 11px", fontSize: big ? 13.5 : 12.5, fontWeight: 700, background: t.bg, color: t.fg, whiteSpace: "nowrap" }}>
+    <EstadoBadge tone={m?.tone ?? "neutral"} size={size}>
       {m?.label ?? "Sin estado"}
-    </span>
+    </EstadoBadge>
   );
 }
 
-/** Iniciales del establecimiento para el tile del listado y la cabecera. */
-function estabInitials(nombre: string): string {
-  return admInitials(nombre || "?");
+/** Tile con las iniciales del establecimiento. */
+function EstabTile({ nombre, size = "sm" }: { nombre: string; size?: "sm" | "lg" }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center border border-green-300 bg-green-050 font-display font-bold text-green-800",
+        size === "lg" ? "size-14 rounded-xl text-[19px]" : "size-11 rounded-[10px] text-[15px]",
+      )}
+    >
+      {admInitials(nombre || "?")}
+    </span>
+  );
 }
 
 /* =========================== LISTADO =========================== */
@@ -94,51 +96,87 @@ function List({
   }, [solicitudes, query, filter]);
 
   const stats = [
-    { icon: <Clock size={20} color="var(--warning-fg)" />, label: "Pendientes", value: counts.pendiente, warn: counts.pendiente > 0 },
-    { icon: <CheckCircle2 size={20} color="var(--green-800)" />, label: "Validadas", value: counts.validada },
-    { icon: <XCircle size={20} color="var(--green-800)" />, label: "Rechazadas", value: counts.rechazada },
+    { icon: Clock, label: "Pendientes", value: counts.pendiente, warn: counts.pendiente > 0 },
+    { icon: CheckCircle2, label: "Validadas", value: counts.validada, warn: false },
+    { icon: XCircle, label: "Rechazadas", value: counts.rechazada, warn: false },
   ];
 
   const filterBtn = (val: Filtro, label: string, n?: number) => {
     const on = filter === val;
     return (
-      <button key={val} type="button" onClick={() => setFilter(val)} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 15px", borderRadius: "var(--radius-pill)", fontSize: 13.5, fontWeight: 600, border: "1px solid " + (on ? "var(--green-800)" : "var(--outline-variant)"), background: on ? "var(--green-800)" : "var(--surface)", color: on ? "#fff" : "var(--fg-2)", cursor: "pointer", whiteSpace: "nowrap" }}>
+      <button
+        key={val}
+        type="button"
+        onClick={() => setFilter(val)}
+        className={cn(
+          "inline-flex cursor-pointer items-center gap-[7px] rounded-pill border px-[15px] py-2.5 text-[13.5px] font-semibold whitespace-nowrap transition-colors",
+          on
+            ? "border-green-800 bg-green-800 text-fg-on-dark"
+            : "border-outline-variant bg-surface text-fg-2 hover:bg-cream-tert",
+        )}
+      >
         {label}
-        {n != null && <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 12, padding: "1px 7px", borderRadius: 999, background: on ? "rgba(255,255,255,.22)" : "var(--cream-tert)", color: on ? "#fff" : "var(--fg-2)" }}>{n}</span>}
+        {n != null && (
+          <span
+            className={cn(
+              "rounded-full px-[7px] py-px font-mono text-xs font-bold",
+              on ? "bg-white/20 text-fg-on-dark" : "bg-cream-tert text-fg-2",
+            )}
+          >
+            {n}
+          </span>
+        )}
       </button>
     );
   };
 
   return (
-    <div style={{ maxWidth: 1180, margin: "0 auto", padding: "28px 28px 80px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--fg-3)", fontSize: 13.5, marginBottom: 14 }}>
-        <span>Plataforma</span><ChevronRight size={15} /><span style={{ color: "var(--fg-2)", fontWeight: 500 }}>Solicitudes de establecimientos</span>
+    <div className="mx-auto max-w-[1180px] px-7 pt-7 pb-20">
+      <div className="mb-3.5 flex items-center gap-2.5 text-[13.5px] text-fg-3">
+        <span>Plataforma</span>
+        <ChevronRight className="size-[15px]" />
+        <span className="font-medium text-fg-2">Solicitudes de establecimientos</span>
       </div>
-      <div style={{ marginBottom: 22 }}>
-        <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 32, color: "var(--fg-1)", letterSpacing: "-.01em" }}>Solicitudes de establecimientos</h1>
-        <p style={{ margin: "10px 0 0", color: "var(--fg-2)", fontSize: 15.5, lineHeight: 1.5, maxWidth: 720 }}>
-          Revisá las postulaciones de nuevos establecimientos y validá su veracidad. Aprobá las que cumplan los requisitos o rechazalas dejando una observación.
+
+      <div className="mb-[22px]">
+        <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">
+          Solicitudes de establecimientos
+        </h1>
+        <p className="mt-2.5 max-w-[720px] text-[15.5px] leading-relaxed text-fg-2">
+          Revisá las postulaciones de nuevos establecimientos y validá su veracidad. Aprobá las
+          que cumplan los requisitos o rechazalas dejando una observación.
         </p>
       </div>
 
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
+      <div className="mb-5 flex flex-wrap gap-3.5">
         {stats.map((s) => (
-          <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius)", padding: "12px 16px", minWidth: 180 }}>
-            <span style={{ width: 42, height: 42, borderRadius: 10, background: s.warn ? "var(--warning-fill)" : "var(--green-050)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.icon}</span>
-            <span>
-              <span style={{ display: "block", fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>{s.value}</span>
-              <span style={{ display: "block", fontSize: 12.5, color: "var(--fg-2)" }}>{s.label}</span>
+          <Card key={s.label} className="flex min-w-[180px] items-center gap-3 px-4 py-3">
+            <span
+              className={cn(
+                "flex size-[42px] shrink-0 items-center justify-center rounded-[10px]",
+                s.warn ? "bg-warning-fill" : "bg-green-050",
+              )}
+            >
+              <s.icon className={cn("size-5", s.warn ? "text-warning-fg" : "text-green-800")} />
             </span>
-          </div>
+            <span>
+              <span className="block font-mono text-xl font-bold text-fg-1">{s.value}</span>
+              <span className="block text-[12.5px] text-fg-2">{s.label}</span>
+            </span>
+          </Card>
         ))}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <div style={{ position: "relative", flex: 1, minWidth: 240 }}>
-          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", display: "flex" }}><Search size={17} color="var(--fg-3)" /></span>
-          <input className="input" style={{ paddingLeft: 42 }} placeholder="Buscar por establecimiento, solicitante o departamento" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="min-w-[240px] flex-1">
+          <TextField
+            value={query}
+            onChange={setQuery}
+            icon={<Search />}
+            placeholder="Buscar por establecimiento, solicitante o departamento"
+          />
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div className="flex flex-wrap gap-2">
           {filterBtn("pendiente", "Pendientes", counts.pendiente)}
           {filterBtn("validada", "Validadas", counts.validada)}
           {filterBtn("rechazada", "Rechazadas", counts.rechazada)}
@@ -146,48 +184,79 @@ function List({
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <Card className="overflow-hidden p-0">
         {visibles.length === 0 ? (
-          <div style={{ padding: "56px 24px", textAlign: "center", color: "var(--fg-3)" }}>
-            <Inbox size={32} color="var(--fg-3)" />
-            <div style={{ marginTop: 12, fontSize: 15 }}>
+          <div className="px-6 py-14 text-center text-fg-3">
+            <Inbox className="mx-auto size-8" />
+            <div className="mt-3 text-[15px]">
               {solicitudes.length === 0
                 ? "Todavía no hay solicitudes de establecimientos."
                 : "No hay solicitudes que coincidan con la búsqueda."}
             </div>
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 880 }}>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[880px] border-collapse">
               <thead>
-                <tr>{["Establecimiento", "Departamento", "Solicitado", "Estado", ""].map((h, i) => (
-                  <th key={i} style={{ textAlign: i === 4 ? "right" : "left", fontWeight: 700, color: "var(--fg-2)", fontSize: 12.5, textTransform: "uppercase", letterSpacing: ".05em", padding: "14px 18px", borderBottom: "2px solid var(--outline-variant)", whiteSpace: "nowrap" }}>{h}</th>
-                ))}</tr>
+                <tr>
+                  {["Establecimiento", "Departamento", "Solicitado", "Estado", ""].map((h, i) => (
+                    <th
+                      key={i}
+                      className={cn(
+                        "border-b-2 border-outline-variant px-[18px] py-3.5 text-[12.5px] font-bold tracking-[.05em] text-fg-2 uppercase whitespace-nowrap",
+                        i === 4 ? "text-right" : "text-left",
+                      )}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
               </thead>
               <tbody>
                 {visibles.map((s) => (
-                  <tr key={s.id} style={{ borderBottom: "1px solid var(--cream-tert)" }}>
-                    <td style={{ padding: "15px 18px", maxWidth: 360 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
-                        <span style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 10, background: "var(--green-050)", color: "var(--green-800)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15, border: "1px solid var(--green-300)" }}>{estabInitials(s.nombreEstablecimiento)}</span>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16, color: "var(--fg-1)", lineHeight: 1.25 }}>{s.nombreEstablecimiento || "Sin nombre"}</div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, fontSize: 12.5, color: "var(--fg-2)" }}>
-                            <User size={13} color="var(--fg-3)" />{s.nombreSolicitante || "—"}
+                  <tr key={s.id} className="border-b border-cream-tert">
+                    <td className="max-w-[360px] px-[18px] py-[15px]">
+                      <div className="flex items-center gap-3">
+                        <EstabTile nombre={s.nombreEstablecimiento} />
+                        <div className="min-w-0">
+                          <div className="font-display text-base leading-tight font-semibold text-fg-1">
+                            {s.nombreEstablecimiento || "Sin nombre"}
+                          </div>
+                          <div className="mt-[3px] flex items-center gap-1.5 text-[12.5px] text-fg-2">
+                            <User className="size-[13px] text-fg-3" />
+                            {s.nombreSolicitante || "—"}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: "15px 18px" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, color: "var(--fg-1)" }}><MapPin size={14} color="var(--brown-700)" />{s.departamento || "—"}</span>
+                    <td className="px-[18px] py-[15px]">
+                      <span className="inline-flex items-center gap-1.5 text-[13.5px] text-fg-1">
+                        <MapPin className="size-[14px] text-brown-700" />
+                        {s.departamento || "—"}
+                      </span>
                     </td>
-                    <td style={{ padding: "15px 18px" }}><span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--fg-2)" }}>{fmtFechaHora(s.fechaHoraAlta)}</span></td>
-                    <td style={{ padding: "15px 18px" }}><EstadoPill estado={s.estado} /></td>
-                    <td style={{ padding: "15px 18px", textAlign: "right" }}>
-                      <button type="button" onClick={() => onOpen(s.id)} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontWeight: 600, fontSize: 13.5, padding: "8px 14px", borderRadius: "var(--radius)", cursor: "pointer", whiteSpace: "nowrap", border: "1px solid " + (s.estado === "pendiente" ? "var(--green-800)" : "var(--sand)"), background: s.estado === "pendiente" ? "var(--green-800)" : "var(--surface)", color: s.estado === "pendiente" ? "#fff" : "var(--green-800)", boxShadow: s.estado === "pendiente" ? "inset 0 -2px 0 var(--green-900)" : "none" }}>
-                        {s.estado === "pendiente" ? <ClipboardCheck size={16} /> : <Eye size={16} />}
-                        {s.estado === "pendiente" ? "Revisar" : "Ver"}
-                      </button>
+                    <td className="px-[18px] py-[15px] font-mono text-[13px] text-fg-2">
+                      {fmtFechaHora(s.fechaHoraAlta)}
+                    </td>
+                    <td className="px-[18px] py-[15px]">
+                      <Estado estado={s.estado} />
+                    </td>
+                    <td className="px-[18px] py-[15px] text-right">
+                      <Button
+                        variant={s.estado === "pendiente" ? "primary" : "neutral"}
+                        size="sm"
+                        onClick={() => onOpen(s.id)}
+                      >
+                        {s.estado === "pendiente" ? (
+                          <>
+                            <ClipboardCheck className="size-4" /> Revisar
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="size-4" /> Ver
+                          </>
+                        )}
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -195,39 +264,83 @@ function List({
             </table>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
 
 /* =========================== DETALLE =========================== */
 
-function SectionBox({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function SectionBox({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-      <header style={{ display: "flex", alignItems: "center", gap: 11, padding: "16px 22px", borderBottom: "1px solid var(--cream-tert)" }}>
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: "var(--green-050)", display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
-        <h2 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 17, color: "var(--fg-1)" }}>{title}</h2>
+    <Card className="overflow-hidden">
+      <header className="flex items-center gap-[11px] border-b border-cream-tert px-[22px] py-4">
+        <div className="flex size-[30px] items-center justify-center rounded-lg bg-green-050">
+          {icon}
+        </div>
+        <h2 className="font-display text-[17px] font-semibold text-fg-1">{title}</h2>
       </header>
-      <div style={{ padding: "8px 22px 22px" }}>{children}</div>
-    </section>
+      <div className="px-[22px] pt-2 pb-[22px]">{children}</div>
+    </Card>
   );
 }
 
-function CritRow({ icon, label, value, mono }: { icon: React.ReactNode; label: string; value: string; mono?: boolean }) {
+function Etiqueta({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div style={{ padding: "16px 0", borderBottom: "1px dashed var(--cream-tert)" }}>
-      <div className="t-label" style={{ marginBottom: 5, display: "flex", alignItems: "center", gap: 7 }}>{icon}{label}</div>
-      <div style={{ fontSize: 15, color: "var(--fg-1)", fontFamily: mono ? "var(--font-mono)" : "var(--font-sans)", fontWeight: 500, wordBreak: "break-word" }}>{value || "—"}</div>
+    <div className="mb-1.5 flex items-center gap-[7px] text-[11px] font-semibold tracking-[0.06em] text-fg-2 uppercase">
+      {icon}
+      {children}
     </div>
   );
 }
 
-function DetailField({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function CritRow({
+  icon,
+  label,
+  value,
+  mono,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="border-b border-dashed border-cream-tert py-4">
+      <Etiqueta icon={icon}>{label}</Etiqueta>
+      <div
+        className={cn(
+          "font-medium break-words text-fg-1",
+          mono ? "font-mono text-[15px]" : "text-[15px]",
+        )}
+      >
+        {value || "—"}
+      </div>
+    </div>
+  );
+}
+
+function DetailField({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
     <div>
-      <div className="t-label" style={{ marginBottom: 6, display: "flex", alignItems: "center", gap: 7 }}>{icon}{label}</div>
-      <div style={{ fontSize: 14.5, color: "var(--fg-1)", lineHeight: 1.55, wordBreak: "break-word" }}>{value || "—"}</div>
+      <Etiqueta icon={icon}>{label}</Etiqueta>
+      <div className="text-[14.5px] leading-relaxed break-words text-fg-1">{value || "—"}</div>
     </div>
   );
 }
@@ -235,32 +348,63 @@ function DetailField({ icon, label, value }: { icon: React.ReactNode; label: str
 function PruebaCard({ p }: { p: PruebaSolicitud }) {
   const esPdf = p.extension === "pdf";
   const href = urlDeArchivo(p.key);
+
   const cuerpo = (
     <>
-      <div style={{ height: 108, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", background: esPdf ? "var(--green-050)" : "repeating-linear-gradient(135deg, var(--cream-tert) 0 10px, var(--surface) 10px 20px)" }}>
-        {esPdf ? <FileText size={30} color="var(--green-800)" /> : <ImageIcon size={30} color="var(--brown-700)" />}
-        {p.extension && <span style={{ position: "absolute", top: 8, right: 8, fontFamily: "var(--font-mono)", fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--fg-2)", background: "rgba(251,249,248,.92)", padding: "2px 7px", borderRadius: 999, border: "1px solid var(--outline-variant)" }}>{p.extension}</span>}
+      <div
+        className={cn(
+          "relative flex h-[108px] items-center justify-center",
+          esPdf
+            ? "bg-green-050"
+            : "bg-[repeating-linear-gradient(135deg,var(--cream-tert)_0_10px,var(--surface)_10px_20px)]",
+        )}
+      >
+        {esPdf ? (
+          <FileText className="size-[30px] text-green-800" />
+        ) : (
+          <ImageIcon className="size-[30px] text-brown-700" />
+        )}
+        {p.extension && (
+          <span className="absolute top-2 right-2 rounded-full border border-outline-variant bg-cream-bg/90 px-[7px] py-0.5 font-mono text-[10.5px] font-bold tracking-[.04em] text-fg-2 uppercase">
+            {p.extension}
+          </span>
+        )}
       </div>
-      <div style={{ padding: "10px 12px", borderTop: "1px solid var(--cream-tert)" }}>
-        <div style={{ fontSize: 12.8, fontWeight: 600, color: "var(--fg-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nombre || "Archivo sin nombre"}</div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginTop: 3 }}>
-          {href
-            ? <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 600, color: "var(--green-800)" }}><ExternalLink size={12} color="var(--green-800)" />Ver</span>
-            : <span style={{ fontSize: 11.5, color: "var(--fg-3)" }}>No disponible</span>}
+      <div className="border-t border-cream-tert px-3 py-2.5">
+        <div className="truncate text-[12.8px] font-semibold text-fg-1">
+          {p.nombre || "Archivo sin nombre"}
+        </div>
+        <div className="mt-[3px] flex justify-end">
+          {href ? (
+            <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-green-800">
+              <ExternalLink className="size-3" /> Ver
+            </span>
+          ) : (
+            <span className="text-[11.5px] text-fg-3">No disponible</span>
+          )}
         </div>
       </div>
     </>
   );
 
-  const base: React.CSSProperties = { display: "flex", flexDirection: "column", textDecoration: "none", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius)", overflow: "hidden", background: "var(--surface)" };
-  return href
-    ? <a href={href} target="_blank" rel="noopener noreferrer" style={base}>{cuerpo}</a>
-    : <div style={base}>{cuerpo}</div>;
+  const clases =
+    "flex flex-col overflow-hidden rounded-md border border-outline-variant bg-surface no-underline";
+  return href ? (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(clases, "transition-[box-shadow,border-color] hover:border-sand hover:shadow-[var(--shadow-hover)]")}
+    >
+      {cuerpo}
+    </a>
+  ) : (
+    <div className={clases}>{cuerpo}</div>
+  );
 }
 
 function Detail({
   sol,
-  solicitante,
   gestionar,
   busy,
   error,
@@ -268,7 +412,6 @@ function Detail({
   onResolver,
 }: {
   sol: SolicitudDetalle;
-  solicitante: string;
   gestionar: boolean;
   busy: boolean;
   error: string | null;
@@ -284,123 +427,209 @@ function Detail({
   // observación con la que se resolvió.
   const ultimo = sol.estados[0];
 
+  // "Validada el 12/08/2026 · 14:30 por Ana Pérez". El revisor falta mientras
+  // nadie la miró y la fecha puede no venir, así que se omite lo que falte; sin
+  // ninguno de los dos no se dibuja la línea.
+  const sello =
+    ultimo && (ultimo.fecha || ultimo.revisor)
+      ? [
+          metaDe(sol.estado)?.label,
+          ultimo.fecha && `el ${fmtFechaHora(ultimo.fecha)}`,
+          ultimo.revisor && `por ${ultimo.revisor}`,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : "";
+
   return (
-    <div style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 28px 96px" }}>
-      <button type="button" onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "transparent", border: "none", cursor: "pointer", color: "var(--green-800)", fontSize: 13.5, fontWeight: 600, marginBottom: 14, padding: 0 }}>
-        <ArrowLeft size={16} color="var(--green-800)" /> Volver a solicitudes
+    <div className="mx-auto max-w-[1080px] px-7 pt-6 pb-24">
+      <button
+        type="button"
+        onClick={onBack}
+        className="mb-3.5 inline-flex cursor-pointer items-center gap-[7px] text-[13.5px] font-semibold text-green-800"
+      >
+        <ArrowLeft className="size-4" /> Volver a solicitudes
       </button>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0, marginBottom: 24 }}>
-        <span style={{ flexShrink: 0, width: 56, height: 56, borderRadius: 12, background: "var(--green-050)", color: "var(--green-800)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 19, border: "1px solid var(--green-300)" }}>{estabInitials(sol.nombreEstablecimiento)}</span>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 28, color: "var(--fg-1)", letterSpacing: "-.01em", lineHeight: 1.2 }}>{sol.nombreEstablecimiento || "Solicitud de establecimiento"}</h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", marginTop: 11, fontSize: 13.5, color: "var(--fg-2)" }}>
-            <EstadoPill estado={sol.estado} big />
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Hash size={14} color="var(--fg-3)" /><span style={{ fontFamily: "var(--font-mono)" }}>{sol.id}</span></span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Clock size={14} color="var(--fg-3)" />Solicitado el {fmtFechaHora(sol.fechaHoraAlta)}</span>
-            {solicitante && <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><User size={14} color="var(--fg-3)" />{solicitante}</span>}
+      <div className="mb-6 flex min-w-0 items-center gap-4">
+        <EstabTile nombre={sol.nombreEstablecimiento} size="lg" />
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-[28px] leading-tight font-bold tracking-[-.01em] text-fg-1">
+            {sol.nombreEstablecimiento || "Solicitud de establecimiento"}
+          </h1>
+          <div className="mt-[11px] flex flex-wrap items-center gap-3.5 text-[13.5px] text-fg-2">
+            <Estado estado={sol.estado} size="lg" />
+            <span className="inline-flex items-center gap-1.5">
+              <Hash className="size-[14px] text-fg-3" />
+              <span className="font-mono">{sol.id}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="size-[14px] text-fg-3" />
+              Solicitado el {fmtFechaHora(sol.fechaHoraAlta)}
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="sol-detail-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", gap: 24, alignItems: "start" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
-          <SectionBox icon={<ShieldCheck size={16} color="var(--green-800)" />} title="Campos críticos">
-            <CritRow icon={<Hash size={13} color="var(--fg-3)" />} label="CUIT" value={sol.cuit} mono />
-            <CritRow icon={<Building2 size={13} color="var(--fg-3)" />} label="Razón social" value={sol.razonSocial} />
-            <CritRow icon={<Mail size={13} color="var(--fg-3)" />} label="Email" value={sol.email} />
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <SectionBox icon={<ShieldCheck className="size-4 text-green-800" />} title="Campos críticos">
+            <CritRow icon={<Hash className="size-[13px] text-fg-3" />} label="CUIT" value={sol.cuit} mono />
+            <CritRow icon={<Building2 className="size-[13px] text-fg-3" />} label="Razón social" value={sol.razonSocial} />
+            <CritRow icon={<Mail className="size-[13px] text-fg-3" />} label="Email" value={sol.email} />
           </SectionBox>
 
-          <SectionBox icon={<Info size={16} color="var(--green-800)" />} title="Datos del establecimiento">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, paddingTop: 8 }}>
-              <DetailField icon={<Phone size={13} color="var(--fg-3)" />} label="Teléfono de la organización" value={sol.telefono} />
-              <DetailField icon={<MapPin size={13} color="var(--fg-3)" />} label="Domicilio legal" value={sol.domicilioLegal} />
-              <DetailField icon={<Map size={13} color="var(--fg-3)" />} label="Departamento" value={sol.departamento} />
-              <DetailField icon={<Landmark size={13} color="var(--fg-3)" />} label="CVU" value={sol.cvu} />
+          <SectionBox icon={<Info className="size-4 text-green-800" />} title="Datos del establecimiento">
+            <div className="grid grid-cols-1 gap-[18px] pt-2 sm:grid-cols-2">
+              <DetailField icon={<Phone className="size-[13px] text-fg-3" />} label="Teléfono de la organización" value={sol.telefono} />
+              <DetailField icon={<MapPin className="size-[13px] text-fg-3" />} label="Domicilio legal" value={sol.domicilioLegal} />
+              <DetailField icon={<Map className="size-[13px] text-fg-3" />} label="Departamento" value={sol.departamento} />
+              <DetailField icon={<Landmark className="size-[13px] text-fg-3" />} label="CVU" value={sol.cvu} />
             </div>
           </SectionBox>
 
-          <SectionBox icon={<Paperclip size={16} color="var(--green-800)" />} title={`Prueba de existencia y titularidad (${sol.pruebas.length})`}>
-            <p style={{ margin: "6px 0 14px", fontSize: 13, color: "var(--fg-3)" }}>
+          <SectionBox
+            icon={<Paperclip className="size-4 text-green-800" />}
+            title={`Prueba de existencia y titularidad (${sol.pruebas.length})`}
+          >
+            <p className="mt-1.5 mb-3.5 text-[13px] text-fg-3">
               {storageConfigurado
                 ? "Archivos cargados por el postulante (PNG, JPG o PDF)."
                 : "No se pueden abrir: falta configurar la URL del almacenamiento."}
             </p>
             {sol.pruebas.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 14, color: "var(--fg-2)" }}>La solicitud no tiene pruebas cargadas.</p>
+              <p className="text-sm text-fg-2">La solicitud no tiene pruebas cargadas.</p>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 14 }}>
-                {sol.pruebas.map((p, i) => <PruebaCard key={p.key || i} p={p} />)}
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3.5">
+                {sol.pruebas.map((p, i) => (
+                  <PruebaCard key={p.key || i} p={p} />
+                ))}
               </div>
             )}
           </SectionBox>
         </div>
 
-        <aside style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <SectionBox icon={<MessageSquare size={16} color="var(--green-800)" />} title="Observaciones">
+        <aside className="flex flex-col gap-6">
+          <SectionBox icon={<User className="size-4 text-green-800" />} title="Datos del solicitante">
+            <div className="flex items-center gap-3 border-b border-dashed border-cream-tert pt-2 pb-3.5">
+              <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-brown-700 text-[15px] font-semibold text-fg-on-dark">
+                {admInitials(sol.nombreSolicitante || "?")}
+              </span>
+              <div className="min-w-0">
+                <div className="text-[15px] font-semibold text-fg-1">
+                  {sol.nombreSolicitante || "—"}
+                </div>
+                {sol.fechaHoraAltaSolicitante && (
+                  <div className="mt-0.5 text-[12.5px] text-fg-3">
+                    Miembro desde {fmtFecha(sol.fechaHoraAltaSolicitante)}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col gap-2.5 pt-3">
+              <div className="flex items-center gap-2.5 text-[13.5px] text-fg-1">
+                <BadgeCheck className="size-[15px] shrink-0 text-fg-3" />
+                <span className="font-mono">{sol.identificacionSolicitante || "—"}</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-[13.5px] break-all text-fg-1">
+                <Mail className="size-[15px] shrink-0 text-fg-3" />
+                {sol.emailSolicitante || "—"}
+              </div>
+            </div>
+          </SectionBox>
+
+          <SectionBox icon={<MessageSquare className="size-4 text-green-800" />} title="Observaciones">
             {readOnly ? (
-              <div style={{ paddingTop: 8 }}>
-                <p style={{ margin: 0, fontSize: 14, color: ultimo?.observaciones ? "var(--fg-1)" : "var(--fg-3)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+              <div className="pt-2">
+                <p
+                  className={cn(
+                    "text-sm leading-relaxed whitespace-pre-wrap",
+                    ultimo?.observaciones ? "text-fg-1" : "text-fg-3",
+                  )}
+                >
                   {ultimo?.observaciones || "Sin observaciones."}
                 </p>
-                {ultimo?.fecha && (
-                  <div style={{ marginTop: 12, fontSize: 12.5, color: "var(--fg-3)", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Clock size={13} color="var(--fg-3)" />{metaDe(sol.estado)?.label} el {fmtFechaHora(ultimo.fecha)}
+                {sello && (
+                  <div className="mt-3 flex items-center gap-1.5 text-[12.5px] text-fg-3">
+                    <Clock className="size-[13px]" />
+                    {sello}
                   </div>
                 )}
               </div>
             ) : (
-              <div style={{ paddingTop: 8 }}>
+              <div className="pt-2">
+                {/* Sin primitivo de textarea todavía: usa la clase del design system. */}
                 <textarea
-                  className={"textarea" + (obsErr ? " err" : "")}
+                  className={cn("textarea min-h-[120px] text-sm", obsErr && "err")}
                   value={obs}
                   onChange={(e) => setObs(e.target.value)}
                   rows={5}
                   disabled={!gestionar}
                   maxLength={OBS_MAX + 200}
                   placeholder="Observaciones sobre la solicitud. Se guardan junto con la decisión."
-                  style={{ resize: "vertical", minHeight: 120, fontSize: 14 }}
                 />
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 7 }}>
-                  {obsErr
-                    ? <span className="err-msg" style={{ fontSize: 12.5 }}><AlertCircle size={14} color="var(--danger)" />Máximo {OBS_MAX} caracteres.</span>
-                    : <span style={{ fontSize: 12, color: "var(--fg-3)" }}>Hasta {OBS_MAX} caracteres.</span>}
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: obsErr ? "var(--danger)" : "var(--fg-3)" }}>{obs.length} / {OBS_MAX}</span>
+                <div className="mt-[7px] flex items-center justify-between">
+                  {obsErr ? (
+                    <span className="err-msg text-[12.5px]">
+                      <AlertCircle className="size-[14px] text-danger" />
+                      Máximo {OBS_MAX} caracteres.
+                    </span>
+                  ) : (
+                    <span className="text-xs text-fg-3">Hasta {OBS_MAX} caracteres.</span>
+                  )}
+                  <span className={cn("font-mono text-xs", obsErr ? "text-danger" : "text-fg-3")}>
+                    {obs.length} / {OBS_MAX}
+                  </span>
                 </div>
               </div>
             )}
           </SectionBox>
 
           {!readOnly && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: 18, display: "flex", flexDirection: "column", gap: 10, position: "sticky", top: 84 }}>
-              <button
-                type="button"
+            <Card className="sticky top-[84px] flex flex-col gap-2.5 p-[18px]">
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full"
                 disabled={bloqueado}
                 title={gestionar ? undefined : SIN_GESTION}
                 onClick={() => onResolver("VALIDADA", obs.trim())}
-                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9, padding: "13px 18px", borderRadius: "var(--radius)", border: "none", fontSize: 15, fontWeight: 600, background: bloqueado ? "var(--cream-tert)" : "var(--green-800)", color: bloqueado ? "var(--fg-3)" : "#fff", cursor: bloqueado ? "not-allowed" : "pointer", boxShadow: bloqueado ? "none" : "inset 0 -2px 0 var(--green-900)" }}
               >
-                {busy ? <Loader size={18} className="spin" /> : <CheckCircle2 size={18} color={bloqueado ? "var(--fg-3)" : "#fff"} />} Aprobar solicitud
-              </button>
+                {busy ? <Loader className="size-[18px] spin" /> : <CheckCircle2 className="size-[18px]" />}
+                Aprobar solicitud
+              </Button>
+
+              {/* Rechazar es un danger "outline": no hay variante para eso en <Button>. */}
               <button
                 type="button"
                 disabled={bloqueado}
                 title={gestionar ? undefined : SIN_GESTION}
                 onClick={() => onResolver("RECHAZADA", obs.trim())}
-                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9, padding: "13px 18px", borderRadius: "var(--radius)", border: "1px solid " + (bloqueado ? "var(--cream-tert)" : "var(--danger)"), fontSize: 15, fontWeight: 600, background: "var(--surface)", color: bloqueado ? "var(--fg-3)" : "var(--danger)", cursor: bloqueado ? "not-allowed" : "pointer" }}
+                className={cn(
+                  "inline-flex w-full items-center justify-center gap-2.5 rounded-md border bg-surface px-[18px] py-[13px] text-[15px] font-semibold transition-colors",
+                  bloqueado
+                    ? "cursor-not-allowed border-cream-tert text-fg-3"
+                    : "cursor-pointer border-danger text-danger hover:bg-danger-fill",
+                )}
               >
-                <XCircle size={18} color={bloqueado ? "var(--fg-3)" : "var(--danger)"} /> Rechazar solicitud
+                <XCircle className="size-[18px]" /> Rechazar solicitud
               </button>
+
               {!gestionar && (
-                <div style={{ fontSize: 12, color: "var(--fg-3)", textAlign: "center", lineHeight: 1.45, marginTop: 2 }}>{SIN_GESTION}.</div>
+                <div className="mt-0.5 text-center text-xs leading-snug text-fg-3">
+                  {SIN_GESTION}.
+                </div>
               )}
-              {error && <div style={{ marginTop: 2 }}><span className="err-msg" style={{ fontSize: 12.5 }}><AlertCircle size={14} color="var(--danger)" />{error}</span></div>}
-            </div>
+              {error && (
+                <span className="err-msg mt-0.5 text-[12.5px]">
+                  <AlertCircle className="size-[14px] text-danger" />
+                  {error}
+                </span>
+              )}
+            </Card>
           )}
         </aside>
       </div>
-
-      <style>{`@media (max-width: 900px) { .sol-detail-grid { grid-template-columns: minmax(0,1fr) !important; } }`}</style>
     </div>
   );
 }
@@ -408,13 +637,11 @@ function Detail({
 /** Carga el detalle de la solicitud abierta y delega el render. */
 function DetalleCargado({
   id,
-  solicitante,
   gestionar,
   onBack,
   onResuelta,
 }: {
   id: string;
-  solicitante: string;
   gestionar: boolean;
   onBack: () => void;
   onResuelta: (estado: Resolucion) => void;
@@ -439,18 +666,25 @@ function DetalleCargado({
   }
 
   return (
-    <div style={{ maxWidth: 1080, margin: "0 auto" }}>
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando la solicitud…" pad={72}>
+    <div className="mx-auto max-w-[1080px]">
+      <AsyncBoundary
+        loading={isLoading}
+        error={error}
+        onRetry={reload}
+        loadingLabel="Cargando la solicitud…"
+        pad={72}
+      >
         {notFound || !solicitud ? (
-          <div style={{ padding: "56px 24px", textAlign: "center", color: "var(--fg-3)" }}>
-            <Inbox size={32} color="var(--fg-3)" />
-            <div style={{ marginTop: 12, fontSize: 15 }}>No encontramos esta solicitud.</div>
-            <button type="button" className="btn btn-neutral" style={{ marginTop: 18 }} onClick={onBack}>Volver a solicitudes</button>
+          <div className="px-6 py-14 text-center text-fg-3">
+            <Inbox className="mx-auto size-8" />
+            <div className="mt-3 text-[15px]">No encontramos esta solicitud.</div>
+            <Button variant="neutral" className="mt-4" onClick={onBack}>
+              Volver a solicitudes
+            </Button>
           </div>
         ) : (
           <Detail
             sol={solicitud}
-            solicitante={solicitante}
             gestionar={gestionar}
             busy={resolviendo}
             error={errorResolver}
@@ -490,28 +724,29 @@ function Inner() {
     );
   }
 
-  // El nombre del solicitante sólo viene en el listado, no en el detalle.
-  const solicitante = solicitudes.find((s) => s.id === abierta)?.nombreSolicitante ?? "";
-
   return (
     <>
       {abierta ? (
         <DetalleCargado
           id={abierta}
-          solicitante={solicitante}
           gestionar={gestionar}
           onBack={() => setAbierta(null)}
           onResuelta={onResuelta}
         />
       ) : (
-        <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando solicitudes…">
+        <AsyncBoundary
+          loading={isLoading}
+          error={error}
+          onRetry={reload}
+          loadingLabel="Cargando solicitudes…"
+        >
           <List solicitudes={solicitudes} onOpen={setAbierta} />
         </AsyncBoundary>
       )}
 
       {flash && (
-        <div className="pop" style={{ position: "fixed", right: 24, bottom: 24, zIndex: 90, maxWidth: 400, background: "var(--green-800)", color: "#fff", borderRadius: "var(--radius)", padding: "14px 18px", display: "flex", alignItems: "center", gap: 11, fontWeight: 500, fontSize: 14.5, boxShadow: "0px 8px 24px rgba(45,90,39,0.18)" }}>
-          <CheckCircle2 size={19} color="#fff" /> {flash}
+        <div className="pop fixed right-6 bottom-6 z-90 flex max-w-[400px] items-center gap-[11px] rounded-md bg-green-800 px-[18px] py-3.5 text-[14.5px] font-medium text-fg-on-dark shadow-[0px_8px_24px_rgba(45,90,39,0.18)]">
+          <CheckCircle2 className="size-[19px]" /> {flash}
         </div>
       )}
     </>
@@ -520,8 +755,6 @@ function Inner() {
 
 export default function SolicitudesClient() {
   return (
-    <AdminShell active="solicitudes">
-      <Inner />
-    </AdminShell>
+    <Inner />
   );
 }

@@ -21,6 +21,8 @@ interface CambioEstadoBackend {
   estado?: string;
   fecha?: unknown;
   observaciones?: string;
+  /** `null` en los cambios que nadie revisó (el alta, que nace pendiente). */
+  revisor?: string | null;
 }
 
 /** Registro crudo de GET /solicitudes-establecimiento/me/{id}. */
@@ -39,6 +41,10 @@ interface DetalleBackend {
   fechaHoraAlta?: unknown;
   estados?: CambioEstadoBackend[] | null;
   pruebas?: PruebaBackend[] | null;
+  nombreSolicitante?: string;
+  identificacionSolicitante?: string;
+  emailSolicitante?: string;
+  fechaHoraAltaSolicitante?: unknown;
 }
 
 interface DetalleResponse {
@@ -80,6 +86,7 @@ function aCambio(c: CambioEstadoBackend): CambioEstado {
     estado: aEstado(c.estado),
     fecha: aFecha(c.fecha),
     observaciones: c.observaciones ?? "",
+    revisor: (c.revisor ?? "").trim(),
   };
 }
 
@@ -116,6 +123,11 @@ function aDetalle(d: DetalleBackend): SolicitudDetalle {
     fechaHoraAlta: aFecha(d.fechaHoraAlta),
     estados: Array.isArray(d.estados) ? d.estados.map(aCambio).sort(porFechaDesc) : [],
     pruebas: Array.isArray(d.pruebas) ? d.pruebas.map(aPrueba) : [],
+    // Sólo los manda la vista de administración; en la del visitante quedan vacíos.
+    nombreSolicitante: d.nombreSolicitante ?? "",
+    identificacionSolicitante: d.identificacionSolicitante ?? "",
+    emailSolicitante: d.emailSolicitante ?? "",
+    fechaHoraAltaSolicitante: aFecha(d.fechaHoraAltaSolicitante),
   };
 }
 

@@ -3,9 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface NavLink { id: string; href: string; label: string }
 
+/**
+ * Menú de la navbar para anchos chicos. Se esconde a partir del corte `nav:`,
+ * que es donde <SiteHeader> muestra los links en línea. Antes la visibilidad la
+ * decidía un `display: block !important` desde un <style> del header.
+ */
 export default function MobileNav({ links, active }: { links: NavLink[]; active?: string }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
@@ -20,23 +26,41 @@ export default function MobileNav({ links, active }: { links: NavLink[]; active?
   }, [open]);
 
   return (
-    <div ref={wrap} className="site-mobile" style={{ position: "relative", display: "none" }}>
-      <button type="button" aria-label="Menú" aria-expanded={open} onClick={() => setOpen((o) => !o)} style={{ width: 38, height: 38, borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", background: open ? "var(--cream-tert)" : "var(--surface)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-        {open ? <X size={18} color="var(--fg-2)" /> : <Menu size={18} color="var(--fg-2)" />}
+    <div ref={wrap} className="relative nav:hidden">
+      <button
+        type="button"
+        aria-label="Menú"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "inline-flex size-[38px] cursor-pointer items-center justify-center rounded-md border border-outline-variant",
+          open ? "bg-cream-tert" : "bg-surface",
+        )}
+      >
+        {open ? <X className="size-[18px] text-fg-2" /> : <Menu className="size-[18px] text-fg-2" />}
       </button>
 
       {open && (
-        <div className="pop" role="menu" style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 250, background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: 14, boxShadow: "var(--shadow-pop)", overflow: "hidden", zIndex: 60 }}>
-          <div style={{ padding: 6 }}>
-            {links.map(({ id, href, label }) => {
-              const on = id === active;
-              return (
-                <Link key={id} href={href} role="menuitem" onClick={() => setOpen(false)} style={{ display: "flex", alignItems: "center", padding: "11px 12px", borderRadius: 10, textDecoration: "none", fontSize: 15, fontWeight: on ? 600 : 500, color: on ? "var(--green-800)" : "var(--fg-1)", background: on ? "var(--green-050)" : "transparent" }}>
-                  {label}
-                </Link>
-              );
-            })}
-          </div>
+        <div
+          role="menu"
+          className="pop absolute top-[calc(100%+10px)] right-0 z-[60] w-[250px] overflow-hidden rounded-[14px] border border-outline-variant bg-surface p-1.5 shadow-pop"
+        >
+          {links.map(({ id, href, label }) => (
+            <Link
+              key={id}
+              href={href}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className={cn(
+                "flex items-center rounded-[10px] px-3 py-[11px] text-[15px] no-underline",
+                id === active
+                  ? "bg-green-050 font-semibold text-green-800"
+                  : "font-medium text-fg-1",
+              )}
+            >
+              {label}
+            </Link>
+          ))}
         </div>
       )}
     </div>

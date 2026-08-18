@@ -42,3 +42,41 @@ export function puede(accesos: Acceso[] | undefined, permiso: string): boolean {
 export function tieneRol(roles: Rol[], requerido: Rol): boolean {
   return roles.includes(requerido);
 }
+
+/**
+ * Nombre del rol para un tipo de acceso, p. ej. "Administrador Líder" para
+ * ADMIN. Cadena vacía si la cuenta no tiene un acceso de ese tipo: quien lo
+ * muestre decide qué poner en su lugar.
+ */
+export function nombreRol(accesos: Acceso[] | undefined, tipoPermiso: string): string {
+  if (!Array.isArray(accesos)) return "";
+  const acceso = accesos.find(
+    (a) => String(a?.tipoPermiso ?? "").trim().toUpperCase() === tipoPermiso,
+  );
+  return acceso?.rolNombre ?? "";
+}
+
+/** Un establecimiento donde la cuenta es productora, listo para el switcher. */
+export interface EstablecimientoAcceso {
+  id: string;
+  nombre: string;
+  /** Rol de la cuenta en ese establecimiento, p. ej. "Propietaria". */
+  rolNombre: string;
+}
+
+/**
+ * Establecimientos de los accesos de tipo PRODUCTOR, en el orden en que vienen.
+ * Descarta los que no traen `establecimientoId`: sin id no hay nada que
+ * seleccionar ni por dónde pedir los datos.
+ */
+export function establecimientosDe(accesos: Acceso[] | undefined): EstablecimientoAcceso[] {
+  if (!Array.isArray(accesos)) return [];
+  return accesos
+    .filter((a) => String(a?.tipoPermiso ?? "").trim().toUpperCase() === "PRODUCTOR")
+    .filter((a) => typeof a?.establecimientoId === "string" && a.establecimientoId.trim() !== "")
+    .map((a) => ({
+      id: a.establecimientoId as string,
+      nombre: a.establecimientoNombre ?? "",
+      rolNombre: a.rolNombre ?? "",
+    }));
+}

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Bitter, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
-import AssistantWidget from "@/components/chat/AssistantWidget";
 import AuthSync from "@/components/AuthSync";
 import { cn } from "@/lib/utils";
 
@@ -36,11 +35,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={cn(bitter.variable, ibmPlexSans.variable, ibmPlexMono.variable)}>
+    <html
+      lang="es"
+      className={cn(
+        bitter.variable,
+        ibmPlexSans.variable,
+        ibmPlexMono.variable,
+      )}
+    >
       <body>
         <AuthSync />
         {children}
-        <AssistantWidget />
       </body>
     </html>
   );

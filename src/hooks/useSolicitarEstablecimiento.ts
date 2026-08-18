@@ -2,7 +2,7 @@ import { useState } from "react";
 import { auth } from "../../firebase.config";
 import { apiFetch, ApiError } from "@/lib/api";
 import { contentTypeDe } from "@/data/establecimiento";
-import type { SolicitarAltaForm } from "@/app/mis-solicitudes/nueva/schema";
+import type { SolicitarAltaForm } from "@/app/(sitio)/mis-solicitudes/nueva/schema";
 import type {
   ArchivoUploadRequest,
   SolicitudEstablecimientoCreateResp,

@@ -8,15 +8,15 @@ import {
   ChevronRight, CheckCircle2, UserCog, Loader, Check, User, Mail, BadgeCheck, UserMinus,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { TextField } from "@/components/ui/text-field";
-import { Button } from "@/components/ui";
+import { Button, Skeleton } from "@/components/ui";
 import { EMAIL_RE } from "@/data/auth";
 import { admInitials } from "@/data/admin";
 import { puede } from "@/lib/roles";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import {
   useActualizarAdmin, useAdministradores, useCrearAdmin, useEliminarAdmin,
@@ -347,6 +347,80 @@ function Scrim({ onClose, children, width = 620 }: { onClose: () => void; childr
   );
 }
 
+/* ---- Tabla ---------------------------------------------------------------
+   La cáscara la comparten las filas reales y el esqueleto: si cada uno trajera
+   su cabecera, al llegar los datos se moverían las columnas de lugar. */
+
+const COLUMNAS = ["Administrador", "Correo electrónico", "Identificación", "Rol asignado", "Acciones"];
+
+const TD: React.CSSProperties = { padding: "14px 18px" };
+
+/**
+ * Anchos fijos por columna. Con el layout automático el navegador los calcula
+ * a partir del contenido, así que las barras del esqueleto —que nunca miden
+ * exactamente lo mismo que un nombre o dos botones— daban columnas de otro
+ * ancho, y al llegar los datos saltaba todo. Se nota sobre todo en Acciones,
+ * que va alineada a la derecha.
+ *
+ * Las dos primeras van sin ancho: se reparten lo que sobra, que es lo que
+ * conviene para nombres y correos de largo variable.
+ */
+const ANCHOS = [undefined, undefined, 140, 200, 290];
+
+function Tabla({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", minWidth: 1040 }}>
+          <colgroup>
+            {ANCHOS.map((w, i) => <col key={i} style={w ? { width: w } : undefined} />)}
+          </colgroup>
+          <thead>
+            <tr>{COLUMNAS.map((h, i) => (
+              <th key={h} style={{ textAlign: i === 4 ? "right" : "left", fontWeight: 700, color: "var(--fg-2)", fontSize: 12.5, textTransform: "uppercase", letterSpacing: ".05em", padding: "14px 18px", borderBottom: "2px solid var(--outline-variant)", whiteSpace: "nowrap" }}>{h}</th>
+            ))}</tr>
+          </thead>
+          {children}
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/** Anchos por fila, para que el esqueleto no se lea como una grilla perfecta. */
+const FILAS_SKELETON = [
+  { nombre: "w-[150px]", email: "w-[210px]", ident: "w-[92px]", rol: "w-[128px]" },
+  { nombre: "w-[186px]", email: "w-[244px]", ident: "w-[84px]", rol: "w-[104px]" },
+  { nombre: "w-[132px]", email: "w-[196px]", ident: "w-[96px]", rol: "w-[142px]" },
+  { nombre: "w-[168px]", email: "w-[226px]", ident: "w-[88px]", rol: "w-[112px]" },
+];
+
+function FilasSkeleton() {
+  return (
+    <tbody aria-busy>
+      {FILAS_SKELETON.map((f, i) => (
+        <tr key={i} style={{ borderBottom: "1px solid var(--cream-tert)" }}>
+          <td style={TD}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <Skeleton className="size-[42px] rounded-full" />
+              <Skeleton className={cn("h-4", f.nombre)} />
+            </div>
+          </td>
+          <td style={TD}><Skeleton className={cn("h-3.5", f.email)} /></td>
+          <td style={TD}><Skeleton className={cn("h-3.5", f.ident)} /></td>
+          <td style={TD}><Skeleton className={cn("h-[27px] rounded-pill", f.rol)} /></td>
+          <td style={TD}>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <Skeleton className="h-[35px] w-[136px]" />
+              <Skeleton className="h-[35px] w-[92px]" />
+            </div>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  );
+}
+
 function Inner() {
   const { administradores, isLoading, error, reload, agregar, reemplazar, quitar } =
     useAdministradores();
@@ -419,9 +493,11 @@ function Inner() {
         </button>
       </div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
+        {/* Mientras carga va "—" y no un cero: "0 administradores activos" es una
+            afirmación sobre el sistema, y todavía no sabemos nada. */}
         {[
-          { icon: <UserCog size={20} color="var(--green-800)" />, label: "Administradores activos", value: administradores.length },
-          { icon: <ShieldCheck size={20} color="var(--green-800)" />, label: "Roles disponibles", value: roles.length },
+          { icon: <UserCog size={20} color="var(--green-800)" />, label: "Administradores activos", value: isLoading ? "—" : administradores.length },
+          { icon: <ShieldCheck size={20} color="var(--green-800)" />, label: "Roles disponibles", value: rolesLoading ? "—" : roles.length },
         ].map((s) => (
           <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius)", padding: "12px 16px", minWidth: 190 }}>
             <span style={{ width: 42, height: 42, borderRadius: 10, background: "var(--green-050)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.icon}</span>
@@ -430,75 +506,74 @@ function Inner() {
         ))}
       </div>
 
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando administradores…" pad={72}>
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 920 }}>
-              <thead>
-                <tr>{["Administrador", "Correo electrónico", "Identificación", "Rol asignado", "Acciones"].map((h, i) => (
-                  <th key={h} style={{ textAlign: i === 4 ? "right" : "left", fontWeight: 700, color: "var(--fg-2)", fontSize: 12.5, textTransform: "uppercase", letterSpacing: ".05em", padding: "14px 18px", borderBottom: "2px solid var(--outline-variant)", whiteSpace: "nowrap" }}>{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody>
-                {administradores.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} style={{ padding: "56px 24px", textAlign: "center", color: "var(--fg-3)", fontSize: 15 }}>
-                      Todavía no hay administradores cargados.
-                    </td>
-                  </tr>
-                ) : administradores.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: "1px solid var(--cream-tert)" }}>
-                    <td style={{ padding: "14px 18px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        <span style={{ width: 42, height: 42, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--green-050)", border: "1px solid var(--green-300)", color: "var(--green-800)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15.5 }}>{admInitials(p.nombreUsuario)}</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                          <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16, color: "var(--fg-1)" }}>{p.nombreUsuario}</span>
-                          {p.esLider && <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 600, color: "var(--brown-700)", background: "var(--cream-tert)", border: "1px solid var(--sand)", borderRadius: "var(--radius-pill)", padding: "3px 10px" }}><Crown size={12} color="var(--brown-700)" /> Líder</span>}
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: "14px 18px", fontFamily: "var(--font-mono)", fontSize: 13.5, color: "var(--fg-1)" }}>{p.emailUsuario}</td>
-                    <td style={{ padding: "14px 18px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--fg-1)" }}>{p.identificacion}</td>
-                    <td style={{ padding: "14px 18px" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: "var(--radius-pill)", padding: "5px 11px", fontSize: 13, color: "var(--green-800)", fontWeight: 600, whiteSpace: "nowrap" }}><ShieldCheck size={14} color="var(--green-700)" /> {p.nombreRol}</span>
-                    </td>
-                    <td style={{ padding: "14px 18px" }}>
-                      <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                        <ActionBtn
-                          icon={<Pencil size={17} />}
-                          label="Modificar rol"
-                          disabled={p.esLider || !gestionar}
-                          title={
-                            p.esLider
-                              ? "El rol del administrador líder no se puede cambiar"
-                              : !gestionar
-                                ? SIN_GESTION
-                                : "Cambiar el rol asignado"
-                          }
-                          onClick={() => setEditando(p)}
-                        />
-                        <ActionBtn
-                          icon={<Trash2 size={17} />}
-                          label="Borrar"
-                          danger
-                          disabled={p.esLider || !gestionar}
-                          title={
-                            p.esLider
-                              ? "El administrador líder no se puede borrar"
-                              : !gestionar
-                                ? SIN_GESTION
-                                : "Quitar este administrador del sistema"
-                          }
-                          onClick={() => { setErrorBaja(null); setABorrar(p); }}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <AsyncBoundary
+        loading={isLoading}
+        error={error}
+        onRetry={reload}
+        pad={72}
+        skeleton={<Tabla><FilasSkeleton /></Tabla>}
+      >
+        <Tabla>
+          <tbody>
+            {administradores.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ padding: "56px 24px", textAlign: "center", color: "var(--fg-3)", fontSize: 15 }}>
+                  Todavía no hay administradores cargados.
+                </td>
+              </tr>
+            ) : administradores.map((p) => (
+              <tr key={p.id} style={{ borderBottom: "1px solid var(--cream-tert)" }}>
+                <td style={{ padding: "14px 18px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <span style={{ width: 42, height: 42, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--green-050)", border: "1px solid var(--green-300)", color: "var(--green-800)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15.5 }}>{admInitials(p.nombreUsuario)}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16, color: "var(--fg-1)" }}>{p.nombreUsuario}</span>
+                      {p.esLider && <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 600, color: "var(--brown-700)", background: "var(--cream-tert)", border: "1px solid var(--sand)", borderRadius: "var(--radius-pill)", padding: "3px 10px" }}><Crown size={12} color="var(--brown-700)" /> Líder</span>}
+                    </div>
+                  </div>
+                </td>
+                {/* Con el layout fijo la columna ya no se estira: un correo largo
+                  corta en vez de desbordar la celda. */}
+              <td style={{ padding: "14px 18px", fontFamily: "var(--font-mono)", fontSize: 13.5, color: "var(--fg-1)", overflowWrap: "anywhere" }}>{p.emailUsuario}</td>
+                <td style={{ padding: "14px 18px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--fg-1)" }}>{p.identificacion}</td>
+                <td style={{ padding: "14px 18px" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: "var(--radius-pill)", padding: "5px 11px", fontSize: 13, color: "var(--green-800)", fontWeight: 600, whiteSpace: "nowrap" }}><ShieldCheck size={14} color="var(--green-700)" /> {p.nombreRol}</span>
+                </td>
+                <td style={{ padding: "14px 18px" }}>
+                  <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                    <ActionBtn
+                      icon={<Pencil size={17} />}
+                      label="Modificar rol"
+                      disabled={p.esLider || !gestionar}
+                      title={
+                        p.esLider
+                          ? "El rol del administrador líder no se puede cambiar"
+                          : !gestionar
+                            ? SIN_GESTION
+                            : "Cambiar el rol asignado"
+                      }
+                      onClick={() => setEditando(p)}
+                    />
+                    <ActionBtn
+                      icon={<Trash2 size={17} />}
+                      label="Borrar"
+                      danger
+                      disabled={p.esLider || !gestionar}
+                      title={
+                        p.esLider
+                          ? "El administrador líder no se puede borrar"
+                          : !gestionar
+                            ? SIN_GESTION
+                            : "Quitar este administrador del sistema"
+                      }
+                      onClick={() => { setErrorBaja(null); setABorrar(p); }}
+                    />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Tabla>
       </AsyncBoundary>
 
       <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, color: "var(--fg-3)", fontSize: 13 }}>
@@ -541,8 +616,6 @@ function Inner() {
 
 export default function AdministradoresClient() {
   return (
-    <AdminShell active="admins">
-      <Inner />
-    </AdminShell>
+    <Inner />
   );
 }

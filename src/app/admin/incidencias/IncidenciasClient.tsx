@@ -6,7 +6,6 @@ import {
   ArrowDownWideNarrow, FilterX, ClipboardCheck, X, Check, Lock, Info, CalendarCheck, AlertCircle,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
 import { Pagination } from "@/components/catalog/controls";
 import { admInitials } from "@/data/admin";
 import { fmtFechaHora } from "@/lib/format";
@@ -260,10 +259,8 @@ function Inner({ initial }: { initial: Incidencia[] }) {
 export default function IncidenciasClient() {
   const { data, isLoading, error, reload } = useIncidencias();
   return (
-    <AdminShell active="incidencias">
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando incidencias…">
-        {data && <Inner initial={data} />}
-      </AsyncBoundary>
-    </AdminShell>
+    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando incidencias…">
+      {data && <Inner initial={data} />}
+    </AsyncBoundary>
   );
 }

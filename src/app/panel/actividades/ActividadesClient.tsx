@@ -8,10 +8,9 @@ import {
   AlertTriangle, RotateCcw, SearchX, Grape, Scissors, Wine, Leaf, Cherry, Nut, X as XIcon,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import ProducerShell from "@/components/panel/ProducerShell";
 import { Pagination } from "@/components/catalog/controls";
-import { FINCAS } from "@/data/panel";
 import { estadoBucket, normalizar } from "@/data/actividades-prod";
+import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { useActividades, useActividadAcciones } from "@/hooks/useActividades";
 import { moneyAr } from "@/lib/format";
 import type { ActividadProd, EstadoActividad, EstadoBucket } from "@/types/actividad-prod";
@@ -250,7 +249,9 @@ function ToastView({ toast, onClose }: { toast: Toast; onClose: () => void }) {
 
 /* ---- Cliente ----------------------------------------------------------- */
 export default function ActividadesClient() {
-  const [fincaId, setFincaId] = useState(FINCAS[0].id);
+  // El establecimiento activo lo elige el switcher del shell.
+  const { activo } = useEstablecimientos();
+  const fincaId = activo?.id ?? "";
   const { data, isLoading, error, reload } = useActividades(fincaId);
   const { darDeBaja, cambiarEstado, pendingId } = useActividadAcciones();
 
@@ -311,7 +312,6 @@ export default function ActividadesClient() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
-      <ProducerShell active="actividades" fincas={FINCAS} activeFincaId={fincaId} onFincaChange={(id) => { setFincaId(id); setEstadoF("todas"); setQuery(""); setPage(1); }} />
 
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 72px" }}>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 6 }}>

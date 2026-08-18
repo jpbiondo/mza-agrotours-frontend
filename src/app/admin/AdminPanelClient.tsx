@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { UserCog, ShieldCheck, Warehouse, Ban, AlertTriangle, ArrowRight } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
 import { useAdminResumen } from "@/hooks/useAdminResumen";
 
 function Stat({ icon, value, label, danger }: { icon: React.ReactNode; value: number; label: string; danger?: boolean }) {
@@ -33,7 +32,7 @@ export default function AdminPanelClient() {
   const { data, isLoading, error, reload } = useAdminResumen();
 
   return (
-    <AdminShell active="panel">
+    <>
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando el resumen…">
         {data && (
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "32px 28px 80px" }}>
@@ -75,6 +74,6 @@ export default function AdminPanelClient() {
         .card-hover { transition: box-shadow .16s, border-color .16s, transform .16s; }
         .card-hover:hover { box-shadow: var(--shadow-hover); border-color: var(--sand); transform: translateY(-2px); }
       `}</style>
-    </AdminShell>
+    </>
   );
 }
