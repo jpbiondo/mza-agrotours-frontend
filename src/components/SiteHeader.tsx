@@ -117,7 +117,13 @@ export default function SiteHeader({ navLinks = APP_LINKS, maxWidth = 1200 }: Si
           })}
         </nav>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* El ancho va reservado desde .site-actions: el cluster de sesión y los
+            CTA de invitado no miden lo mismo, y arrancando en cero el nav
+            saltaba 124 px al hidratar. */}
+        <div
+          className="site-actions"
+          style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}
+        >
           {hasHydrated &&
             (loggedIn ? (
               <>
@@ -139,7 +145,13 @@ export default function SiteHeader({ navLinks = APP_LINKS, maxWidth = 1200 }: Si
         </div>
       </div>
 
-      <style>{`@media (max-width: 860px) { .site-nav { display: none !important; } .site-mobile { display: block !important; } }`}</style>
+      <style>{`
+        @media (max-width: 860px) { .site-nav { display: none !important; } .site-mobile { display: block !important; } }
+        /* Ancho medido del estado más ancho (los CTA de invitado). Sólo hace
+           falta con el nav a la vista: sin él, el bloque crece contra el borde
+           derecho y no mueve a nadie. */
+        @media (min-width: 861px) { .site-actions { min-width: 248px; } }
+      `}</style>
     </header>
   );
 }
