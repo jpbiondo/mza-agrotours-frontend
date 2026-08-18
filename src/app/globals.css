@@ -72,6 +72,10 @@
      barra lateral deja de ocupar columna y pasa a ser un cajón. Genera la
      variante `shell:`. Es el mismo valor que usa el diseño. */
   --breakpoint-shell: 1000px;
+
+  /* Punto de corte de la navbar del sitio: por debajo, los links se pliegan en
+     el menú de MobileNav. Genera la variante `nav:`. */
+  --breakpoint-nav: 861px;
 }
 
 /* Aliases "cortos" para estilos inline heredados (misma fuente que @theme). */
