@@ -1,14 +1,37 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { ComponentType, ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, UserCog, ShieldCheck, ClipboardCheck, Warehouse, Sprout, Utensils,
-  UsersRound, SlidersHorizontal, HandCoins, Landmark, LifeBuoy, HelpCircle, Compass,
-  Bell, LogOut, Lock, Menu, X, UserRound,
+  LayoutDashboard,
+  UserCog,
+  ShieldCheck,
+  ClipboardCheck,
+  Warehouse,
+  Sprout,
+  Utensils,
+  UsersRound,
+  SlidersHorizontal,
+  HandCoins,
+  Landmark,
+  LifeBuoy,
+  HelpCircle,
+  Compass,
+  Bell,
+  LogOut,
+  Lock,
+  Menu,
+  X,
+  UserRound,
 } from "lucide-react";
 import { admInitials } from "@/data/admin";
 import { nombreRol, puede } from "@/lib/roles";
@@ -32,25 +55,83 @@ interface NavEntry {
  */
 const NAV: NavEntry[] = [
   { section: "General" },
-  { id: "panel", iconC: LayoutDashboard, label: "Resumen del sistema", href: "/admin" },
+  {
+    id: "panel",
+    iconC: LayoutDashboard,
+    label: "Resumen del sistema",
+    href: "/admin",
+  },
   { section: "Acceso" },
-  { id: "admins", iconC: UserCog, label: "Administradores", href: "/admin/administradores", permiso: "LEER_ADMIN" },
-  { id: "roles", iconC: ShieldCheck, label: "Roles de administrador", href: "/admin/roles", permiso: "LEER_ROL" },
+  {
+    id: "admins",
+    iconC: UserCog,
+    label: "Administradores",
+    href: "/admin/administradores",
+    permiso: "LEER_ADMIN",
+  },
+  {
+    id: "roles",
+    iconC: ShieldCheck,
+    label: "Roles de administrador",
+    href: "/admin/roles",
+    permiso: "LEER_ROL",
+  },
   { section: "Plataforma" },
-  { id: "solicitudes", iconC: ClipboardCheck, label: "Solicitudes de establecimientos", href: "/admin/solicitudes", permiso: "LEER_SOLICITUD_ESTABLECIMIENTO" },
-  { id: "establecimientos", iconC: Warehouse, label: "Establecimientos", href: "/admin/establecimientos" },
+  {
+    id: "solicitudes",
+    iconC: ClipboardCheck,
+    label: "Solicitudes de establecimientos",
+    href: "/admin/solicitudes",
+    permiso: "LEER_SOLICITUD_ESTABLECIMIENTO",
+  },
+  {
+    id: "establecimientos",
+    iconC: Warehouse,
+    label: "Establecimientos",
+    href: "/admin/establecimientos",
+  },
   { section: "Contenido" },
   { id: "cultivos", iconC: Sprout, label: "Cultivos", href: "/admin/cultivos" },
   { id: "recetas", iconC: Utensils, label: "Recetas", href: "/admin/recetas" },
   { section: "Parámetros" },
-  { id: "rangos", iconC: UsersRound, label: "Gestión del rango etario", href: "/admin/rangos" },
-  { id: "parametros", iconC: SlidersHorizontal, label: "Parámetros del sistema", href: "/admin/parametros" },
+  {
+    id: "rangos",
+    iconC: UsersRound,
+    label: "Gestión del rango etario",
+    href: "/admin/rangos",
+  },
+  {
+    id: "parametros",
+    iconC: SlidersHorizontal,
+    label: "Parámetros del sistema",
+    href: "/admin/parametros",
+  },
   { section: "Deudas y reembolsos" },
-  { id: "impagas", iconC: HandCoins, label: "Reservas impagas", href: "/admin/impagas" },
-  { id: "deudas", iconC: Landmark, label: "Deudas de productores", href: "/admin/deudas" },
+  {
+    id: "impagas",
+    iconC: HandCoins,
+    label: "Reservas impagas",
+    href: "/admin/impagas",
+  },
+  {
+    id: "deudas",
+    iconC: Landmark,
+    label: "Deudas de productores",
+    href: "/admin/deudas",
+  },
   { section: "Soporte" },
-  { id: "incidencias", iconC: LifeBuoy, label: "Gestionar incidencias", href: "/admin/incidencias" },
-  { id: "faq", iconC: HelpCircle, label: "Preguntas frecuentes", href: "/admin/faq" },
+  {
+    id: "incidencias",
+    iconC: LifeBuoy,
+    label: "Gestionar incidencias",
+    href: "/admin/incidencias",
+  },
+  {
+    id: "faq",
+    iconC: HelpCircle,
+    label: "Preguntas frecuentes",
+    href: "/admin/faq",
+  },
 ];
 
 /**
@@ -127,7 +208,11 @@ function SidebarItem({ entry, active }: { entry: NavEntry; active: boolean }) {
 
   if (entry.href) {
     return (
-      <Link href={entry.href} aria-current={active ? "page" : undefined} className={clases}>
+      <Link
+        href={entry.href}
+        aria-current={active ? "page" : undefined}
+        className={clases}
+      >
         {contenido}
       </Link>
     );
@@ -152,7 +237,8 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -166,15 +252,32 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
   }, [open]);
 
   const menu = [
-    { icon: <HelpCircle className="size-[18px] text-fg-2" />, label: "Ayuda", href: "/#faq" },
-    { icon: <Lock className="size-[18px] text-fg-2" />, label: "Acceso y seguridad", href: "/acceso" },
-    { icon: <LogOut className="size-[18px] text-fg-2" />, label: "Cerrar sesión", href: "/acceso" },
+    {
+      icon: <HelpCircle className="size-[18px] text-fg-2" />,
+      label: "Ayuda",
+      href: "/#faq",
+    },
+    {
+      icon: <Lock className="size-[18px] text-fg-2" />,
+      label: "Acceso y seguridad",
+      href: "/acceso",
+    },
+    {
+      icon: <LogOut className="size-[18px] text-fg-2" />,
+      label: "Cerrar sesión",
+      href: "/acceso",
+    },
   ];
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-2.5 border-b border-outline-variant bg-surface px-3.5 shell:gap-0 shell:px-7">
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
-        <button type="button" onClick={onMenu} aria-label="Abrir menú" className={cn(BTN_SHELL, "shell:hidden")}>
+        <button
+          type="button"
+          onClick={onMenu}
+          aria-label="Abrir menú"
+          className={cn(BTN_SHELL, "shell:hidden")}
+        >
           <Menu className="size-5 text-fg-1" />
         </button>
         {/* En compacto queda sólo el icono: el rótulo se lleva el ancho que
@@ -199,7 +302,11 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
           <ShieldCheck className="size-[15px]" /> Modo administrador
         </span>
 
-        <button type="button" aria-label="Notificaciones" className={cn(BTN_SHELL, "relative shell:size-10")}>
+        <button
+          type="button"
+          aria-label="Notificaciones"
+          className={cn(BTN_SHELL, "relative shell:size-10")}
+        >
           <Bell className="size-5 text-fg-2" />
           <span className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border-2 border-surface bg-danger text-[11px] font-bold text-white">
             3
@@ -210,8 +317,10 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
 
         {/* Ancho fijo, no `max-w`: el nombre llega recién al rehidratar, y con
             ancho automático la campana y el chip se corrían al aparecer. */}
-        <div className="hidden w-[180px] text-right leading-tight shell:block">
-          <div className="truncate text-[13.5px] font-semibold text-fg-1">{nombre ?? ""}</div>
+        <div className="hidden max-w-[220px] text-right leading-tight shell:block">
+          <div className="truncate text-[13.5px] font-semibold text-fg-1">
+            {nombre ?? ""}
+          </div>
           <div className="mt-0.5 truncate text-[11.5px] text-fg-3">{rol}</div>
         </div>
 
@@ -236,7 +345,9 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
             >
               {menu.map((it, i) => (
                 <span key={it.label}>
-                  {i === menu.length - 1 && <div className="my-1.5 h-px bg-outline-variant" />}
+                  {i === menu.length - 1 && (
+                    <div className="my-1.5 h-px bg-outline-variant" />
+                  )}
                   <Link
                     href={it.href}
                     role="menuitem"
@@ -288,7 +399,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   // inverso: mostrar una entrada que la cuenta no tiene y después sacarla sería
   // enseñar acceso que no existe.
   const navVisible = useMemo(() => {
-    const conPermiso = NAV.filter((e) => !e.permiso || puede(accesos, e.permiso));
+    const conPermiso = NAV.filter(
+      (e) => !e.permiso || puede(accesos, e.permiso),
+    );
     // Si los ítems de una sección se filtraron todos, su rótulo quedaría suelto:
     // se conserva sólo cuando lo sigue un ítem.
     return conPermiso.filter((e, i) => {
@@ -324,10 +437,15 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         )}
       >
         <div className="flex items-center">
-          <Link href="/" className="flex min-w-0 flex-1 items-center gap-2.5 px-5 pt-5 pb-4 no-underline">
+          <Link
+            href="/"
+            className="flex min-w-0 flex-1 items-center gap-2.5 px-5 pt-5 pb-4 no-underline"
+          >
             <Image src="/logo-mark.svg" alt="" width={32} height={32} />
             <div className="leading-none">
-              <div className="font-display text-[17px] font-bold text-green-800">Mendoza</div>
+              <div className="font-display text-[17px] font-bold text-green-800">
+                Mendoza
+              </div>
               <div className="mt-[3px] text-[9.5px] font-semibold tracking-[.12em] text-brown-700 uppercase">
                 AgroTours
               </div>
