@@ -7,7 +7,6 @@ import {
   SearchX,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
 import { estabInitials } from "@/data/admin";
 import { moneyAr, fmtFecha, fmtFechaHora } from "@/lib/format";
 import { DEUDA_ESTADO_META, DEUDA_ESTADOS_ORDEN, deudaAccionable } from "@/data/deudas";
@@ -263,10 +262,8 @@ function Inner({ initial }: { initial: Deuda[] }) {
 export default function DeudasClient() {
   const { data, isLoading, error, reload } = useDeudas();
   return (
-    <AdminShell active="deudas">
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando deudas…">
-        {data && <Inner initial={data} />}
-      </AsyncBoundary>
-    </AdminShell>
+    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando deudas…">
+      {data && <Inner initial={data} />}
+    </AsyncBoundary>
   );
 }

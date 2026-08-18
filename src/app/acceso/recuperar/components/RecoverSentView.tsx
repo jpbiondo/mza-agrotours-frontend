@@ -1,16 +1,15 @@
 "use client";
 
-import { MailCheck, Inbox, KeyRound } from "lucide-react";
+import { MailCheck } from "lucide-react";
 import { AuthLink } from "@/app/acceso/components/AuthShell";
 
 interface RecoverSentViewProps {
   email: string;
-  onOpenLink: () => void;
   onBackLogin: () => void;
   onResend: () => void;
 }
 
-export default function RecoverSentView({ email, onOpenLink, onBackLogin, onResend }: RecoverSentViewProps) {
+export default function RecoverSentView({ email, onBackLogin, onResend }: RecoverSentViewProps) {
   return (
     <div data-screen-label="Recuperar contraseña · enviado" style={{ textAlign: "center", paddingTop: 8 }}>
       <div
@@ -32,26 +31,6 @@ export default function RecoverSentView({ email, onOpenLink, onBackLogin, onRese
       <p style={{ fontSize: 13, color: "var(--fg-3)", margin: "10px 0 26px" }}>
         ¿No te llegó? Revisá el spam o <AuthLink onClick={onResend}>reenviá el correo</AuthLink>.
       </p>
-
-      {/* Simulación del botón "Recuperar contraseña" que viaja en el mail */}
-      <div
-        style={{
-          padding: 18, borderRadius: "var(--radius)", border: "1px dashed var(--brown-500)",
-          background: "var(--brown-100)", marginBottom: 22, textAlign: "left",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 12.5, color: "var(--brown-800)", fontWeight: 600, marginBottom: 12 }}>
-          <Inbox size={16} /> Vista previa del correo
-        </div>
-        <button
-          type="button"
-          onClick={onOpenLink}
-          className="btn btn-neutral"
-          style={{ width: "100%", justifyContent: "center" }}
-        >
-          <KeyRound size={18} /> Recuperar contraseña
-        </button>
-      </div>
 
       <AuthLink onClick={onBackLogin}>Volver a iniciar sesión</AuthLink>
     </div>

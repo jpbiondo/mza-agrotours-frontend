@@ -7,7 +7,6 @@ import {
   Tractor, Wallet,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
 import { genId } from "@/lib/id";
 import { FAQ_CATEGORIAS } from "@/data/faq";
 import { useFaq, useGuardarFaq, useEliminarFaq } from "@/hooks/useFaq";
@@ -248,10 +247,8 @@ function Inner({ initial }: { initial: FaqItem[] }) {
 export default function FaqAdminClient() {
   const { data, isLoading, error, reload } = useFaq();
   return (
-    <AdminShell active="faq">
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando preguntas…">
-        {data && <Inner initial={data} />}
-      </AsyncBoundary>
-    </AdminShell>
+    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando preguntas…">
+      {data && <Inner initial={data} />}
+    </AsyncBoundary>
   );
 }

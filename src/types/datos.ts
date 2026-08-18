@@ -1,25 +1,32 @@
-export interface CultivoCat {
+/** Cultivo tal como lo devuelven `/tipos-cultivo` y el establecimiento. */
+export interface CultivoRef {
   id: string;
   nombre: string;
-  /** Cantidad de actividades del establecimiento que usan este cultivo; >0 ⇒ no se puede quitar. */
-  actividades: number;
 }
 
+/**
+ * Item de GET /establecimientos/{id}. `ubicacion` y `localidad` no se editan
+ * desde el panel; el resto sí, y viaja entero en cada PUT (ver `useGuardarEstablecimiento`).
+ */
 export interface EstablecimientoDatos {
-  // Identidad
+  id: string;
   nombre: string;
   cuit: string;
   razonSocial: string;
   descripcion: string;
-  // Ubicación (no modificable)
-  calle: string;
+  ubicacion: string;
   localidad: string;
-  provincia: string;
-  // Contacto
   telefono: string;
   email: string;
-  // Operación (no modificable)
   cvu: string;
-  // Cultivos asociados (ids del catálogo)
-  cultivos: string[];
+  cultivos: CultivoRef[];
+}
+
+/** Cuerpo de PUT /establecimientos/{id}: todo lo editable, siempre completo. */
+export interface EstablecimientoEditable {
+  descripcion: string;
+  telefono: string;
+  email: string;
+  cvu: string;
+  cultivosIds: string[];
 }

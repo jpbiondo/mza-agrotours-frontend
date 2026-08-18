@@ -6,12 +6,11 @@ import {
   CreditCard, RotateCcw, XCircle, CheckCircle2, Banknote, UserCheck,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import ProducerShell from "@/components/panel/ProducerShell";
 import { Pagination } from "@/components/catalog/controls";
-import { FINCAS } from "@/data/panel";
 import {
   ESTADO_META, ESTADO_OPTS, categoriaEtaria, precioCategoria, totalReserva, rangoEtario, type ProdTone,
 } from "@/data/panel-reservas";
+import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { useReservasRecibidas, useConfirmarReserva } from "@/hooks/useReservasRecibidas";
 import type { EstadoReservaProd, ReservaProd } from "@/types/panel-reservas";
 
@@ -132,7 +131,9 @@ function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; 
 }
 
 export default function ReservasRecibidasClient() {
-  const [fincaId, setFincaId] = useState(FINCAS[0].id);
+  // El establecimiento activo lo elige el switcher del shell.
+  const { activo } = useEstablecimientos();
+  const fincaId = activo?.id ?? "";
   const { data, isLoading, error, reload } = useReservasRecibidas(fincaId);
   const { confirmar, pendingId } = useConfirmarReserva();
 
@@ -185,7 +186,6 @@ export default function ReservasRecibidasClient() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
-      <ProducerShell active="reservas" fincas={FINCAS} activeFincaId={fincaId} onFincaChange={(id) => { setFincaId(id); setPage(1); setFiltro("todos"); }} />
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 28px 80px" }}>
         <div style={{ marginBottom: 24 }}>

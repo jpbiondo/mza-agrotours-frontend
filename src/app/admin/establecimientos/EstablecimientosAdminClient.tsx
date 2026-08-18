@@ -6,7 +6,6 @@ import {
   RotateCcw, AlertTriangle, Clock, AlertCircle, Check, CheckCircle2, SearchX, Loader,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import AdminShell from "@/components/admin/AdminShell";
 import { admNowStamp, estabInitials } from "@/data/admin";
 import { useEstablecimientosAdmin, useModerarEstablecimiento } from "@/hooks/useEstablecimientosAdmin";
 import type { AdminEstab } from "@/types/admin";
@@ -222,10 +221,8 @@ function Inner({ initial }: { initial: AdminEstab[] }) {
 export default function EstablecimientosAdminClient() {
   const { data, isLoading, error, reload } = useEstablecimientosAdmin();
   return (
-    <AdminShell active="establecimientos">
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando establecimientos…">
-        {data && <Inner initial={data} />}
-      </AsyncBoundary>
-    </AdminShell>
+    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando establecimientos…">
+      {data && <Inner initial={data} />}
+    </AsyncBoundary>
   );
 }

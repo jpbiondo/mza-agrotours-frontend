@@ -1,11 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { z } from "zod";
 import { KeyRound, Mail, Send } from "lucide-react";
-import { Field, TextInput } from "@/app/registro/components/FormFields";
-import { FormHead, BackLink } from "@/app/acceso/components/AuthShell";
+import { TextField } from "@/components/ui/text-field";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { FormHead, BackLink, FormAlert } from "@/app/acceso/components/AuthShell";
+import { Button } from "@/components/ui/Button";
 import { recoverEmailSchema } from "../schema";
-import z from "zod";
+import { enviarResetEmail } from "@/lib/passwordReset";
+
+type RecoverEmailData = z.infer<typeof recoverEmailSchema>;
 
 interface RecoverEmailFormProps {
   onSent: (email: string) => void;
@@ -13,25 +27,27 @@ interface RecoverEmailFormProps {
 }
 
 export default function RecoverEmailForm({ onSent, onBack }: RecoverEmailFormProps) {
-  const [email, setEmail] = useState("");
-  const [touched, setTouched] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  const error = useMemo(() => {
-    const r = recoverEmailSchema.safeParse({ email });
-    if (r.success) return undefined;
-    return z.flattenError(r.error).fieldErrors.email?.[0];
-  }, [email]);
-  const show = (touched || submitted) && error;
+  const form = useForm<RecoverEmailData>({
+    resolver: zodResolver(recoverEmailSchema),
+    defaultValues: { email: "" },
+    mode: "onTouched",
+  });
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitted(true);
-    if (error) return;
-    setLoading(true);
-    // MOCK — simula el envío del correo de recuperación
-    setTimeout(() => { setLoading(false); onSent(email.trim()); }, 700);
+  async function onValid(data: RecoverEmailData) {
+    setApiError(null);
+    const email = data.email.trim();
+    const r = await enviarResetEmail(email);
+    if (r.ok) {
+      onSent(email);
+      return;
+    }
+    setApiError(
+      r.code === "invalidEmail"
+        ? "El correo ingresado no es válido."
+        : "No pudimos enviar el correo. Intentá de nuevo en unos minutos.",
+    );
   }
 
   return (
@@ -43,29 +59,56 @@ export default function RecoverEmailForm({ onSent, onBack }: RecoverEmailFormPro
         sub="Ingresá el correo asociado a tu cuenta y te enviaremos un enlace para crear una nueva contraseña."
       />
 
-      <form onSubmit={submit} noValidate style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        <Field label="Correo" required error={show} htmlFor="rc-email">
-          <TextInput
-            id="rc-email"
-            icon={<Mail size={18} />}
-            type="email"
-            value={email}
-            placeholder="nombre@dominio.com"
-            inputMode="email"
-            autoComplete="email"
-            error={show}
-            onChange={(x) => { setEmail(x); setTouched(true); }}
-          />
-        </Field>
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn btn-primary btn-lg"
-          style={{ width: "100%", justifyContent: "center", marginTop: 4 }}
+      {apiError && <FormAlert tone="danger">{apiError}</FormAlert>}
+
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onValid)}
+          noValidate
+          className="flex flex-col gap-[18px]"
         >
-          {loading ? "Enviando…" : (<><Send size={18} /> Enviar enlace de recuperación</>)}
-        </button>
-      </form>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Correo</FormLabel>
+                <FormControl>
+                  <TextField
+                    {...field}
+                    onChange={(v) => {
+                      field.onChange(v);
+                      setApiError(null);
+                    }}
+                    icon={<Mail />}
+                    type="email"
+                    placeholder="nombre@dominio.com"
+                    inputMode="email"
+                    autoComplete="email"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            disabled={form.formState.isSubmitting}
+            className="mt-1 w-full"
+          >
+            {form.formState.isSubmitting ? (
+              "Enviando…"
+            ) : (
+              <>
+                <Send className="size-[18px]" /> Enviar enlace de recuperación
+              </>
+            )}
+          </Button>
+        </form>
+      </Form>
     </div>
   );
 }

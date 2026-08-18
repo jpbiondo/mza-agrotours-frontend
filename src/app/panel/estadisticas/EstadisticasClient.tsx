@@ -7,10 +7,9 @@ import {
   Grape, Sprout, Scissors, Wheat, Apple,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import ProducerShell from "@/components/panel/ProducerShell";
 import { Donut, BarChart, OccupancyBar } from "@/components/panel/charts";
-import { FINCAS } from "@/data/panel";
 import { PERIODOS, periodoMeta, fmtMoney, fmtSignedPct } from "@/data/estadisticas";
+import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { useEstadisticas, useExportarReporte, type ExportOpts } from "@/hooks/useEstadisticas";
 import type { ActividadPerf, Periodo } from "@/types/estadisticas";
 
@@ -186,7 +185,9 @@ function ToastView({ toast, onClose }: { toast: ToastData; onClose: () => void }
 }
 
 export default function EstadisticasClient() {
-  const [fincaId, setFincaId] = useState(FINCAS[0].id);
+  // El establecimiento activo lo elige el switcher del shell.
+  const { activo } = useEstablecimientos();
+  const fincaId = activo?.id ?? "";
   const { data, isLoading, error, reload } = useEstadisticas(fincaId);
   const { exportar, isLoading: exporting } = useExportarReporte();
   const [period, setPeriod] = useState<Periodo>("6m");
@@ -203,7 +204,6 @@ export default function EstadisticasClient() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
-      <ProducerShell active="estadisticas" fincas={FINCAS} activeFincaId={fincaId} onFincaChange={setFincaId} />
 
       <main style={{ maxWidth: 1240, margin: "0 auto", padding: "32px 28px 80px" }}>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 20, marginBottom: 32 }}>

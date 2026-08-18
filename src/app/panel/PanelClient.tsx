@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import {
   CalendarCheck, Users, Grape, Banknote, TrendingUp, Download, Plus,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import ProducerShell from "@/components/panel/ProducerShell";
-import { FINCAS } from "@/data/panel";
+import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { usePanelDashboard } from "@/hooks/usePanelDashboard";
 import type { PanelCultivo, PanelReserva, PanelStat, ReservaTone, CultivoState } from "@/types/panel";
 
@@ -106,12 +104,13 @@ function CultivosCard({ cultivos }: { cultivos: PanelCultivo[] }) {
 }
 
 export default function PanelClient() {
-  const [fincaId, setFincaId] = useState(FINCAS[0].id);
+  // El establecimiento activo lo elige el switcher del shell.
+  const { activo } = useEstablecimientos();
+  const fincaId = activo?.id ?? "";
   const { data, isLoading, error, reload } = usePanelDashboard(fincaId);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
-      <ProducerShell active="panel" fincas={FINCAS} activeFincaId={fincaId} onFincaChange={setFincaId} />
 
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando tu panel…">
         {data && (

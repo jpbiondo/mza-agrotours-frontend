@@ -7,6 +7,12 @@ interface AsyncBoundaryProps {
   error: string | null;
   onRetry?: () => void;
   loadingLabel?: string;
+  /**
+   * Reemplaza el spinner mientras carga. Para pantallas con una forma conocida
+   * —una tabla, unas métricas— un esqueleto con esa forma evita que el
+   * contenido salte de lugar cuando llegan los datos.
+   */
+  skeleton?: React.ReactNode;
   /** Vertical padding of the loading/error state (bigger for full pages). */
   pad?: number;
   children: React.ReactNode;
@@ -14,11 +20,12 @@ interface AsyncBoundaryProps {
 
 /**
  * Estado compartido de carga / error para las lecturas asíncronas.
- * Muestra spinner mientras carga, un panel con "Reintentar" ante un error,
- * o el contenido cuando hay datos.
+ * Muestra spinner (o el esqueleto que le pasen) mientras carga, un panel con
+ * "Reintentar" ante un error, o el contenido cuando hay datos.
  */
-export default function AsyncBoundary({ loading, error, onRetry, loadingLabel = "Cargando…", pad = 120, children }: AsyncBoundaryProps) {
+export default function AsyncBoundary({ loading, error, onRetry, loadingLabel = "Cargando…", skeleton, pad = 120, children }: AsyncBoundaryProps) {
   if (loading) {
+    if (skeleton) return <>{skeleton}</>;
     return (
       <div style={{ padding: `${pad}px 28px`, textAlign: "center", color: "var(--fg-3)" }}>
         <Loader size={26} className="spin" />

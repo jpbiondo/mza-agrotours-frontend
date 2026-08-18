@@ -9,8 +9,6 @@ import {
   Grape, Scissors, Wine, Leaf, Cherry, Nut,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import ProducerShell from "@/components/panel/ProducerShell";
-import { FINCAS } from "@/data/panel";
 import { useCalendarioActividad } from "@/hooks/useCalendarioActividad";
 import { MESES_LABEL, NOMBRES_DIA, fechaLarga } from "@/data/calendario";
 import { estadoBucket } from "@/data/actividades-prod";
@@ -241,7 +239,6 @@ export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
-      <ProducerShell active="actividades" fincas={FINCAS} activeFincaId={FINCAS[0].id} onFincaChange={() => router.push("/panel/actividades")} />
 
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "24px 28px 80px" }}>
         <Link href="/panel/actividades" style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none", color: "var(--fg-2)", fontSize: 13.5, fontWeight: 600, marginBottom: 18 }}>
