@@ -9,7 +9,7 @@ import { useGestionCultivos, useGuardarCultivo, useEliminarCultivo } from "@/hoo
 import type { Estacion, GcrCultivo, GcrReceta } from "@/types/gestionCr";
 import {
   GcrFlash, GcrConfirmDelete, GcrFormShell, GcrFormHeader, GcrFormFooter, GcrFieldLabel, GcrErr,
-  GcrSeasonBar, GcrSeasonEditor, GcrListEditor, GcrStats, GcrSearchBar, GcrEmptyState, GcrPageHead, GcrNoMatch, inputBase,
+  GcrSeasonBar, GcrSeasonEditor, GcrListEditor, GcrStats, GcrSearchBar, GcrEmptyState, GcrPageHead, GcrNoMatch,
 } from "@/components/admin/gcr/shared";
 
 /* ---- Formulario -------------------------------------------------------- */
@@ -48,12 +48,12 @@ function CultivoForm({ initial, busy, existingNames, onCancel, onSave }: { initi
       <div style={{ padding: "22px 26px", overflowY: "auto", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 22 }}>
         <div>
           <GcrFieldLabel required>Nombre</GcrFieldLabel>
-          <input value={nombre} maxLength={60} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Uva Malbec" style={{ ...inputBase, borderColor: showNombre ? "var(--danger)" : "var(--sand)" }} />
+          <input value={nombre} maxLength={60} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Uva Malbec" className={showNombre ? "input err" : "input"} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 7 }}>{showNombre ? <GcrErr msg={errNombre} /> : <span />}<span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-3)" }}>{nombre.length}/60</span></div>
         </div>
         <div>
           <GcrFieldLabel required>Descripción</GcrFieldLabel>
-          <textarea rows={4} maxLength={500} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Contá qué caracteriza a este cultivo, cuándo y cómo se cosecha en Mendoza." style={{ ...inputBase, resize: "vertical", borderColor: showDesc ? "var(--danger)" : "var(--sand)" }} />
+          <textarea rows={4} maxLength={500} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Contá qué caracteriza a este cultivo, cuándo y cómo se cosecha en Mendoza." className={showDesc ? "textarea err" : "textarea"} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 7 }}>{showDesc ? <GcrErr msg={errDesc} /> : <span />}<span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 12, color: descripcion.length >= 500 ? "var(--danger)" : "var(--fg-3)" }}>{descripcion.length}/500</span></div>
         </div>
         <div>
