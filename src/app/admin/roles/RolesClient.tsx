@@ -11,14 +11,14 @@ import { Alert, Button, Card, IconCircle, Modal, Skeleton, Toast } from "@/compo
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { genId } from "@/lib/id";
-import { puede } from "@/lib/roles";
+import { ROL_ADMIN_LIDER, tieneRol } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useRoles, useCrearRol, useActualizarRol, useDarBajaRol } from "@/hooks/useRoles";
 import { useAuthStore } from "@/stores/authStore";
 import type { GrupoPermiso, RolAdminDetalle } from "@/types/admin";
 
-/** Motivo de los botones deshabilitados cuando falta GESTIONAR_ROL. */
-const SIN_GESTION = "Necesitás el permiso de gestión de roles";
+/** Motivo de los botones deshabilitados cuando no se es Administrador Líder. */
+const SIN_GESTION = "Sólo el Administrador Líder puede gestionar los roles";
 
 /**
  * Errores de dominio al guardar. Lo que no esté acá cae en el mensaje genérico:
@@ -646,9 +646,11 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
-  // LEER_ROL ya lo exige el guard de la ruta; acá se distingue quién puede actuar.
+  // LEER_ROL ya lo exige el guard de la ruta; acá se distingue quién puede
+  // actuar, y eso no lo da un permiso suelto sino el rol: crear, modificar y
+  // dar de baja roles es atribución del Administrador Líder.
   const accesos = useAuthStore((s) => s.accesos);
-  const gestionar = puede(accesos, "GESTIONAR_ROL");
+  const gestionar = tieneRol(accesos, ROL_ADMIN_LIDER, { tipoPermiso: "ADMIN" });
   const { crear, isLoading: creating } = useCrearRol();
   const { actualizar, isLoading: saving } = useActualizarRol();
   const { darBaja, isLoading: deleting } = useDarBajaRol();

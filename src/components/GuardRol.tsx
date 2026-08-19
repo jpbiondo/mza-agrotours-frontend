@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
-import { puede, tieneRol } from "@/lib/roles";
+import { puede, tieneTipoPermiso } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import type { Rol } from "@/types/auth";
 
@@ -51,7 +51,7 @@ function SinPermiso({ motivo }: { motivo: string }) {
  *
  * Es control de navegación, no de seguridad: los accesos salen del store
  * persistido y se pueden editar desde el navegador. La barrera real es que el
- * backend rechace los requests (ver `tieneRol`).
+ * backend rechace los requests (ver `tieneTipoPermiso`).
  */
 export default function GuardRol({
   rol,
@@ -84,7 +84,7 @@ export default function GuardRol({
   // Mostrar el aviso de sin acceso acá tampoco serviría: parpadearía en cada
   // carga incluso para quien sí tiene acceso.
   if (!hasHydrated || sinSesion) return null;
-  if (!tieneRol(roles, rol)) return <SinPermiso motivo={MOTIVO[rol]} />;
+  if (!tieneTipoPermiso(roles, rol)) return <SinPermiso motivo={MOTIVO[rol]} />;
   if (permiso && !puede(accesos, permiso)) return <SinPermiso motivo={SIN_PERMISO} />;
 
   return <>{children}</>;
