@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function RolesPage() {
   // El layout de /admin ya exige el rol; acá se suma el permiso de lectura.
   return (
-    <GuardRol rol="admin" permiso="LEER_ROL">
+    <GuardRol rol="admin" permiso="LEER_ROLES_ADMIN">
       <RolesClient />
     </GuardRol>
   );
