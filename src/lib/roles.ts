@@ -43,7 +43,7 @@ export function rolesDe(accesos: Acceso[] | undefined): Rol[] {
  * va a hacer falta scopear por `establecimientoId`, ya que alguien puede
  * gestionar un establecimiento y no otro.
  */
-export function puede(accesos: Acceso[] | undefined, permiso: string): boolean {
+export function tienePermiso(accesos: Acceso[] | undefined, permiso: string): boolean {
   if (!Array.isArray(accesos)) return false;
   return accesos.some((a) => Array.isArray(a?.permisos) && a.permisos.includes(permiso));
 }

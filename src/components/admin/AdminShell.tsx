@@ -34,7 +34,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { admInitials } from "@/data/admin";
-import { nombreRol, puede } from "@/lib/roles";
+import { nombreRol, tienePermiso } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -400,7 +400,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   // enseñar acceso que no existe.
   const navVisible = useMemo(() => {
     const conPermiso = NAV.filter(
-      (e) => !e.permiso || puede(accesos, e.permiso),
+      (e) => !e.permiso || tienePermiso(accesos, e.permiso),
     );
     // Si los ítems de una sección se filtraron todos, su rótulo quedaría suelto:
     // se conserva sólo cuando lo sigue un ítem.

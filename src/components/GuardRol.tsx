@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
-import { puede, tieneTipoPermiso } from "@/lib/roles";
+import { tienePermiso, tieneTipoPermiso } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import type { Rol } from "@/types/auth";
 
@@ -17,7 +17,8 @@ const MOTIVO: Record<Rol, string> = {
 };
 
 /** Tiene el rol pero no el permiso fino: el motivo es otro. */
-const SIN_PERMISO = "Tu rol no incluye acceso a esta sección. Pedile a un administrador que te lo habilite.";
+const SIN_PERMISO =
+  "Tu rol no incluye acceso a esta sección. Pedile a un administrador que te lo habilite.";
 
 /**
  * El aviso no dibuja chrome: lo pone el layout que envuelve al guard. Antes acá
@@ -35,8 +36,13 @@ function SinPermiso({ motivo }: { motivo: string }) {
         <h1 className="font-display text-[24px] font-bold text-fg-1">
           No tenés acceso a esta sección
         </h1>
-        <p className="max-w-[440px] text-[14.5px] leading-relaxed text-fg-2">{motivo}</p>
-        <Link href="/explorar" className="btn btn-primary mt-2 inline-flex no-underline">
+        <p className="max-w-[440px] text-[14.5px] leading-relaxed text-fg-2">
+          {motivo}
+        </p>
+        <Link
+          href="/explorar"
+          className="btn btn-primary mt-2 inline-flex no-underline"
+        >
           Volver al inicio
         </Link>
       </div>
@@ -85,7 +91,8 @@ export default function GuardRol({
   // carga incluso para quien sí tiene acceso.
   if (!hasHydrated || sinSesion) return null;
   if (!tieneTipoPermiso(roles, rol)) return <SinPermiso motivo={MOTIVO[rol]} />;
-  if (permiso && !puede(accesos, permiso)) return <SinPermiso motivo={SIN_PERMISO} />;
+  if (permiso && !tienePermiso(accesos, permiso))
+    return <SinPermiso motivo={SIN_PERMISO} />;
 
   return <>{children}</>;
 }
