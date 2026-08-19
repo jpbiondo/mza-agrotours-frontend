@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import GuardRol from "@/components/GuardRol";
+import { PermisoAdmin } from "@/lib/permisos";
 import RolesClient from "./RolesClient";
 
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 export default function RolesPage() {
   // El layout de /admin ya exige el rol; acá se suma el permiso de lectura.
   return (
-    <GuardRol rol="admin" permiso="LEER_ROLES_ADMIN">
+    <GuardRol rol="admin" permiso={PermisoAdmin.LEER_ROLES_ADMIN}>
       <RolesClient />
     </GuardRol>
   );

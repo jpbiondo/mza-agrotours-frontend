@@ -11,6 +11,7 @@ import { Alert, Button, Card, IconCircle, Modal, Skeleton, Toast } from "@/compo
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { genId } from "@/lib/id";
+import { TipoPermiso } from "@/lib/permisos";
 import { ROL_ADMIN_LIDER, tieneRol } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useRoles, useCrearRol, useActualizarRol, useDarBajaRol } from "@/hooks/useRoles";
@@ -646,11 +647,11 @@ function Inner({ initial, grupos }: { initial: RolAdminDetalle[]; grupos: GrupoP
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
-  // LEER_ROL ya lo exige el guard de la ruta; acá se distingue quién puede
+  // LEER_ROLES_ADMIN ya lo exige el guard de la ruta; acá se distingue quién puede
   // actuar, y eso no lo da un permiso suelto sino el rol: crear, modificar y
   // dar de baja roles es atribución del Administrador Líder.
   const accesos = useAuthStore((s) => s.accesos);
-  const gestionar = tieneRol(accesos, ROL_ADMIN_LIDER, { tipoPermiso: "ADMIN" });
+  const gestionar = tieneRol(accesos, ROL_ADMIN_LIDER, { tipoPermiso: TipoPermiso.ADMIN });
   const { crear, isLoading: creating } = useCrearRol();
   const { actualizar, isLoading: saving } = useActualizarRol();
   const { darBaja, isLoading: deleting } = useDarBajaRol();

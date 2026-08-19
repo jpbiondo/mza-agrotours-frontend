@@ -35,6 +35,7 @@ import { TextField } from "@/components/ui/text-field";
 import { Button, Skeleton } from "@/components/ui";
 import { EMAIL_RE } from "@/data/auth";
 import { admInitials } from "@/data/admin";
+import { PermisoAdmin } from "@/lib/permisos";
 import { tienePermiso } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -981,7 +982,7 @@ function Inner() {
   const { eliminar, isLoading: borrando } = useEliminarAdmin();
   // LEER_ADMIN ya lo exige el guard de la ruta; acá se distingue quién puede actuar.
   const accesos = useAuthStore((s) => s.accesos);
-  const gestionar = tienePermiso(accesos, "GESTIONAR_ADMIN");
+  const gestionar = tienePermiso(accesos, PermisoAdmin.GESTIONAR_ADMIN);
   // `null` = cerrado; "nuevo" = alta; un administrador = cambio de rol.
   const [modal, setModal] = useState<"nuevo" | AdminSistema | null>(null);
   const [aBorrar, setABorrar] = useState<AdminSistema | null>(null);

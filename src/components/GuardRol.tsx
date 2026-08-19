@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
+import type { Permiso } from "@/lib/permisos";
 import { tienePermiso, tieneTipoPermiso } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import type { Rol } from "@/types/auth";
@@ -65,8 +66,8 @@ export default function GuardRol({
   children,
 }: {
   rol: Rol;
-  /** Permiso adicional, p. ej. "LEER_ADMIN". Sin él alcanza con el rol. */
-  permiso?: string;
+  /** Permiso adicional, p. ej. `PermisoAdmin.LEER_ADMIN`. Sin él alcanza con el rol. */
+  permiso?: Permiso;
   children: ReactNode;
 }) {
   const router = useRouter();

@@ -1,10 +1,12 @@
+import { TipoPermiso } from "@/lib/permisos";
+import type { Permiso } from "@/lib/permisos";
 import type { Acceso, Rol } from "@/types/auth";
 
 /** `tipoPermiso` de cada acceso → rol interno. */
-const POR_TIPO: Record<string, Rol> = {
-  ADMIN: "admin",
-  PRODUCTOR: "productor",
-  VISITANTE: "visitante",
+const POR_TIPO: Record<TipoPermiso, Rol> = {
+  [TipoPermiso.ADMIN]: "admin",
+  [TipoPermiso.PRODUCTOR]: "productor",
+  [TipoPermiso.VISITANTE]: "visitante",
 };
 
 /**
@@ -31,7 +33,9 @@ function normNombre(nombre: string | null | undefined): string {
  */
 export function rolesDe(accesos: Acceso[] | undefined): Rol[] {
   if (!Array.isArray(accesos)) return [];
-  const roles = accesos.map((a) => POR_TIPO[tipoDe(a)]).filter((r): r is Rol => Boolean(r));
+  const roles = accesos
+    .map((a) => POR_TIPO[tipoDe(a) as TipoPermiso])
+    .filter((r): r is Rol => Boolean(r));
   return [...new Set(roles)];
 }
 
@@ -43,7 +47,7 @@ export function rolesDe(accesos: Acceso[] | undefined): Rol[] {
  * va a hacer falta scopear por `establecimientoId`, ya que alguien puede
  * gestionar un establecimiento y no otro.
  */
-export function tienePermiso(accesos: Acceso[] | undefined, permiso: string): boolean {
+export function tienePermiso(accesos: Acceso[] | undefined, permiso: Permiso): boolean {
   if (!Array.isArray(accesos)) return false;
   return accesos.some((a) => Array.isArray(a?.permisos) && a.permisos.includes(permiso));
 }
@@ -55,9 +59,9 @@ export function tienePermiso(accesos: Acceso[] | undefined, permiso: string): bo
  * "Propietaria" de un establecimiento y no tener nada que ver con otro.
  */
 export interface AmbitoRol {
-  /** "ADMIN" | "PRODUCTOR" | "VISITANTE". Sin esto vale cualquier tipo. */
-  tipoPermiso?: string;
-  /** Sólo tiene sentido junto con `tipoPermiso: "PRODUCTOR"`. */
+  /** Sin esto vale cualquier tipo de acceso. */
+  tipoPermiso?: TipoPermiso;
+  /** Sólo tiene sentido junto con `tipoPermiso: TipoPermiso.PRODUCTOR`. */
   establecimientoId?: string;
 }
 
@@ -79,7 +83,7 @@ export function tieneRol(
   // Sin nombre no hay nada que buscar, y comparar contra "" daría verdadero
   // con cualquier acceso al que le falte el rolNombre.
   if (!buscado) return false;
-  const tipo = ambito.tipoPermiso?.trim().toUpperCase();
+  const tipo = ambito.tipoPermiso;
   const establecimiento = ambito.establecimientoId?.trim();
   return accesos.some(
     (a) =>
@@ -108,7 +112,7 @@ export function tieneTipoPermiso(roles: Rol[], requerido: Rol): boolean {
  * ADMIN. Cadena vacía si la cuenta no tiene un acceso de ese tipo: quien lo
  * muestre decide qué poner en su lugar.
  */
-export function nombreRol(accesos: Acceso[] | undefined, tipoPermiso: string): string {
+export function nombreRol(accesos: Acceso[] | undefined, tipoPermiso: TipoPermiso): string {
   if (!Array.isArray(accesos)) return "";
   const acceso = accesos.find((a) => tipoDe(a) === tipoPermiso);
   return acceso?.rolNombre ?? "";
@@ -130,7 +134,7 @@ export interface EstablecimientoAcceso {
 export function establecimientosDe(accesos: Acceso[] | undefined): EstablecimientoAcceso[] {
   if (!Array.isArray(accesos)) return [];
   return accesos
-    .filter((a) => tipoDe(a) === "PRODUCTOR")
+    .filter((a) => tipoDe(a) === TipoPermiso.PRODUCTOR)
     .filter((a) => typeof a?.establecimientoId === "string" && a.establecimientoId.trim() !== "")
     .map((a) => ({
       id: a.establecimientoId as string,

@@ -34,6 +34,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { admInitials } from "@/data/admin";
+import { PermisoAdmin, TipoPermiso } from "@/lib/permisos";
 import { nombreRol, tienePermiso } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -45,7 +46,7 @@ interface NavEntry {
   label?: string;
   href?: string;
   badge?: number;
-  permiso?: string;
+  permiso?: PermisoAdmin;
 }
 
 /**
@@ -67,14 +68,14 @@ const NAV: NavEntry[] = [
     iconC: UserCog,
     label: "Administradores",
     href: "/admin/administradores",
-    permiso: "LEER_ADMIN",
+    permiso: PermisoAdmin.LEER_ADMIN,
   },
   {
     id: "roles",
     iconC: ShieldCheck,
     label: "Roles de administrador",
     href: "/admin/roles",
-    permiso: "LEER_ROL",
+    permiso: PermisoAdmin.LEER_ROLES_ADMIN,
   },
   { section: "Plataforma" },
   {
@@ -82,7 +83,7 @@ const NAV: NavEntry[] = [
     iconC: ClipboardCheck,
     label: "Solicitudes de establecimientos",
     href: "/admin/solicitudes",
-    permiso: "LEER_SOLICITUD_ESTABLECIMIENTO",
+    permiso: PermisoAdmin.LEER_SOLICITUD_ESTABLECIMIENTO,
   },
   {
     id: "establecimientos",
@@ -231,7 +232,7 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
   const accesos = useAuthStore((s) => s.accesos);
   // El rol que se muestra es el de administración: una misma cuenta puede ser
   // además productora o visitante, y acá esos no vienen al caso.
-  const rol = nombreRol(accesos, "ADMIN");
+  const rol = nombreRol(accesos, TipoPermiso.ADMIN);
   const iniciales = admInitials(nombre ?? "");
 
   useEffect(() => {

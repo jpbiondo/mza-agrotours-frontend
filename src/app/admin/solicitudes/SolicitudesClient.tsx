@@ -36,6 +36,7 @@ import { TextField } from "@/components/ui/text-field";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { admInitials } from "@/data/admin";
 import { fmtFecha, fmtFechaHora } from "@/lib/format";
+import { PermisoAdmin } from "@/lib/permisos";
 import { tienePermiso } from "@/lib/roles";
 import { storageConfigurado, urlDeArchivo } from "@/lib/storage";
 import { cn } from "@/lib/utils";
@@ -861,7 +862,7 @@ function Inner() {
   const accesos = useAuthStore((s) => s.accesos);
   const gestionar = tienePermiso(
     accesos,
-    "GESTIONAR_SOLICITUD_ESTABLECIMIENTO",
+    PermisoAdmin.GESTIONAR_SOLICITUD_ESTABLECIMIENTO,
   );
   const [abierta, setAbierta] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
