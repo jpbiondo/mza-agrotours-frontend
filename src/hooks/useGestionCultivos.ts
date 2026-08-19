@@ -39,9 +39,9 @@ const A_ESTACION: Record<string, Estacion> = {
 };
 
 const A_NOMBRE: Record<Estacion, string> = {
-  h: "Cosecha",
-  g: "Crecimiento",
-  r: "Reposo",
+  h: "COSECHA",
+  g: "CRECIMIENTO",
+  r: "REPOSO",
 };
 
 /** Doce meses en reposo: la base de cualquier calendario. */
@@ -83,7 +83,7 @@ function aCalendarioOrdenado(v: unknown): Estacion[] {
 
 /** La vuelta: siempre 12 strings, sea cual sea el largo que llegue. */
 function aEstacionalidadPorMes(cal: Estacion[]): string[] {
-  return Array.from({ length: 12 }, (_, i) => A_NOMBRE[cal[i]] ?? "Reposo");
+  return Array.from({ length: 12 }, (_, i) => A_NOMBRE[cal[i]] ?? "REPOSO");
 }
 
 /* ---- Mapeo de las respuestas --------------------------------------------- */
