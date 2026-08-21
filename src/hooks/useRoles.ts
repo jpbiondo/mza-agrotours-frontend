@@ -3,10 +3,21 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
-import type { GrupoPermiso, PermisoCatalogo, RolAdminDetalle } from "@/types/admin";
+import type {
+  AccionesRoles, DatosRol, GrupoPermiso, PermisoCatalogo, RolDetalle,
+} from "@/types/roles";
 
-const ROLES = "/admin/roles";
-const GRUPOS = "/permisos/grupos-permisos/admin";
+/* Los roles de administrador cuelgan del sistema; los de productor, de cada
+   establecimiento. El catálogo de permisos está partido por ámbito: cada
+   pantalla sólo puede marcar los permisos del suyo. */
+const ROLES_ADMIN = "/admin/roles";
+const GRUPOS_ADMIN = "/permisos/grupos-permisos/admin";
+const GRUPOS_PRODUCTOR = "/permisos/grupos-permisos/productor";
+
+/** Base de los roles de un establecimiento; el alta, el PUT y el DELETE cuelgan de acá. */
+export function rolesDeEstablecimiento(establecimientoId: string): string {
+  return `/establecimientos/${encodeURIComponent(establecimientoId)}/roles`;
+}
 
 /** Rol crudo del listado. Campos opcionales: defensivo. */
 interface RolBackend {
@@ -55,7 +66,7 @@ function aPermisos(v: unknown): PermisoCatalogo[] {
     .filter((p) => p.codigo !== "");
 }
 
-function aRol(r: RolBackend, i: number): RolAdminDetalle {
+function aRol(r: RolBackend, i: number): RolDetalle {
   return {
     id: r.id ?? `sin-id-${i}`,
     nombre: r.nombre ?? "",
@@ -79,7 +90,7 @@ function aGrupo(g: GrupoBackend): GrupoPermiso {
 
 interface UseRolesReturn {
   /** Siempre definido: `[]` significa "cargó y no hay ninguno". */
-  roles: RolAdminDetalle[];
+  roles: RolDetalle[];
   /** Catálogo de permisos: qué se puede marcar y cómo se agrupa. */
   grupos: GrupoPermiso[];
   isLoading: boolean;
@@ -92,45 +103,66 @@ interface UseRolesReturn {
  * Van juntas porque la tabla no se puede dibujar sin el catálogo: el resumen de
  * permisos de cada rol sale de cruzar sus códigos contra los grupos, y el
  * editor necesita los grupos para saber qué casilleros existen.
+ *
+ * `rolesPath` en `null` significa que todavía no hay de dónde pedirlos —el
+ * productor sin establecimiento elegido—: no se pide nada y la pantalla dibuja
+ * su propio vacío.
  */
-export function useRoles(): UseRolesReturn {
-  const [roles, setRoles] = useState<RolAdminDetalle[]>([]);
-  const [grupos, setGrupos] = useState<GrupoPermiso[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function useCatalogoRoles(rolesPath: string | null, gruposPath: string): UseRolesReturn {
   const [nonce, setNonce] = useState(0);
+  /**
+   * Lo cargado, con la clave de la petición que lo trajo. Guardar la clave
+   * junto a los datos evita el estado de carga imperativo: mientras no coincida
+   * con la clave actual, lo que hay en pantalla es de otra petición y la
+   * pantalla está cargando. Sin eso, al cambiar de establecimiento se verían un
+   * frame los roles de la finca anterior bajo el nombre de la nueva.
+   */
+  const [cargado, setCargado] = useState<{
+    clave: string;
+    roles: RolDetalle[];
+    grupos: GrupoPermiso[];
+    error: string | null;
+  } | null>(null);
+
+  // `reload` cambia la clave sin cambiar los endpoints, y así vuelve a pedir.
+  const clave = rolesPath ? `${nonce}|${rolesPath}|${gruposPath}` : "";
+  const alDia = !!clave && cargado?.clave === clave;
 
   useEffect(() => {
+    if (!rolesPath) return;
     let active = true;
 
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!active) return;
+      const fin = (
+        datos: Partial<{ roles: RolDetalle[]; grupos: GrupoPermiso[]; error: string }>,
+      ) => setCargado({ clave, roles: [], grupos: [], error: null, ...datos });
+
       if (!user) {
-        setError("Necesitás iniciar sesión para ver los roles");
-        setIsLoading(false);
+        fin({ error: "Necesitás iniciar sesión para ver los roles" });
         return;
       }
       try {
         const token = await user.getIdToken();
         const [resRoles, resGrupos] = await Promise.all([
-          apiFetch<unknown>(ROLES, { token }),
-          apiFetch<unknown>(GRUPOS, { token }),
+          apiFetch<unknown>(rolesPath, { token }),
+          apiFetch<unknown>(gruposPath, { token }),
         ]);
         if (!active) return;
 
         const envRoles = comoEnvelope<RolBackend[]>(resRoles);
         const envGrupos = comoEnvelope<GrupoBackend[]>(resGrupos);
         if (!envRoles.ok || !envGrupos.ok) {
-          setError(envRoles.code ?? envGrupos.code ?? "No pudimos cargar los roles");
+          fin({ error: envRoles.code ?? envGrupos.code ?? "No pudimos cargar los roles" });
           return;
         }
         // Envelope ok sin `data` es lista vacía, no error.
-        setRoles(Array.isArray(envRoles.data) ? envRoles.data.map(aRol) : []);
-        setGrupos(Array.isArray(envGrupos.data) ? envGrupos.data.map(aGrupo) : []);
+        fin({
+          roles: Array.isArray(envRoles.data) ? envRoles.data.map(aRol) : [],
+          grupos: Array.isArray(envGrupos.data) ? envGrupos.data.map(aGrupo) : [],
+        });
       } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : "Error inesperado");
-      } finally {
-        if (active) setIsLoading(false);
+        if (active) fin({ error: e instanceof Error ? e.message : "Error inesperado" });
       }
     });
 
@@ -138,86 +170,71 @@ export function useRoles(): UseRolesReturn {
       active = false;
       unsub();
     };
-  }, [nonce]);
+  }, [clave, rolesPath, gruposPath]);
 
-  const reload = useCallback(() => {
-    setIsLoading(true);
-    setError(null);
-    setNonce((n) => n + 1);
-  }, []);
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
 
-  return { roles, grupos, isLoading, error, reload };
+  return {
+    roles: alDia ? cargado.roles : [],
+    grupos: alDia ? cargado.grupos : [],
+    // Sin ruta no hay nada que esperar: la pantalla dibuja su propio vacío.
+    isLoading: !!rolesPath && !alDia,
+    error: alDia ? cargado.error : null,
+    reload,
+  };
 }
 
-/* ---- Alta ---------------------------------------------------------------- */
-
-/** Cuerpo de POST /roles/admin. `permisos` son los códigos del catálogo. */
-export interface DatosRol {
-  nombre: string;
-  descripcion: string;
-  permisos: string[];
+/** Roles de administrador del sistema. */
+export function useRoles(): UseRolesReturn {
+  return useCatalogoRoles(ROLES_ADMIN, GRUPOS_ADMIN);
 }
 
 /**
- * Confirmación del backend. Trae también nombre, código y descripción, pero la
- * pantalla ya los tiene: lo único que no puede saber es el `id` que se asignó.
+ * Roles de un establecimiento. Con el id vacío —cuenta sin establecimientos— no
+ * se pide nada: no hay ninguno del que pedir los roles.
  */
-interface RolCreadoBackend {
-  id?: string;
+export function useRolesProductor(establecimientoId: string): UseRolesReturn {
+  const path = establecimientoId ? rolesDeEstablecimiento(establecimientoId) : null;
+  return useCatalogoRoles(path, GRUPOS_PRODUCTOR);
 }
 
-interface CrearResult {
-  ok: boolean;
-  code?: string;
-  /** Id asignado, para insertar la fila sin volver a pedir la lista entera. */
-  id?: string;
-}
+/* ---- Alta, modificación y baja ------------------------------------------- */
 
-export function useCrearRol() {
-  const [isLoading, setIsLoading] = useState(false);
+/**
+ * Las tres mutaciones sobre una misma base: `/admin/roles` o los roles de un
+ * establecimiento. El alta y la modificación mandan el mismo cuerpo; la baja,
+ * sólo el id en la URL.
+ */
+export function useRolesCrud(basePath: string): AccionesRoles {
+  const [guardando, setGuardando] = useState(false);
+  const [borrando, setBorrando] = useState(false);
 
-  async function crear(datos: DatosRol): Promise<CrearResult> {
-    setIsLoading(true);
+  const rolUrl = (rolId: string) => `${basePath}/${encodeURIComponent(rolId)}`;
+
+  async function crear(datos: DatosRol) {
+    setGuardando(true);
     try {
       const res = await conToken((token) =>
-        apiFetch<unknown>(ROLES, {
-          method: "POST",
-          token,
-          body: JSON.stringify(datos),
-        }),
+        apiFetch<unknown>(basePath, { method: "POST", token, body: JSON.stringify(datos) }),
       );
-      const env = comoEnvelope<RolCreadoBackend>(res);
+      // La respuesta trae también nombre y descripción, que la pantalla ya
+      // tiene: lo único que no puede saber es el id que se asignó.
+      const env = comoEnvelope<{ id?: string }>(res);
       // El code viaja tanto en el envelope 2xx como en el ApiError de un 4xx.
       return env.ok ? { ok: true, id: env.data?.id } : { ok: false, code: env.code };
     } catch (e) {
       if (e instanceof ApiError) return { ok: false, code: e.code };
       return { ok: false };
     } finally {
-      setIsLoading(false);
+      setGuardando(false);
     }
   }
 
-  return { crear, isLoading };
-}
-
-/* ---- Modificación -------------------------------------------------------- */
-
-export function useActualizarRol() {
-  const [isLoading, setIsLoading] = useState(false);
-
-  /** El id va en la URL; el cuerpo es el mismo del alta. */
-  async function actualizar(
-    rolId: string,
-    datos: DatosRol,
-  ): Promise<{ ok: boolean; code?: string }> {
-    setIsLoading(true);
+  async function actualizar(rolId: string, datos: DatosRol) {
+    setGuardando(true);
     try {
       const res = await conToken((token) =>
-        apiFetch<unknown>(`${ROLES}/${encodeURIComponent(rolId)}`, {
-          method: "PUT",
-          token,
-          body: JSON.stringify(datos),
-        }),
+        apiFetch<unknown>(rolUrl(rolId), { method: "PUT", token, body: JSON.stringify(datos) }),
       );
       const env = comoEnvelope<unknown>(res);
       // La respuesta confirma id, nombre y descripción: nada que la pantalla no
@@ -227,26 +244,15 @@ export function useActualizarRol() {
       if (e instanceof ApiError) return { ok: false, code: e.code };
       return { ok: false };
     } finally {
-      setIsLoading(false);
+      setGuardando(false);
     }
   }
 
-  return { actualizar, isLoading };
-}
-
-/* ---- Baja ---------------------------------------------------------------- */
-
-export function useDarBajaRol() {
-  const [isLoading, setIsLoading] = useState(false);
-
-  async function darBaja(rolId: string): Promise<{ ok: boolean; code?: string }> {
-    setIsLoading(true);
+  async function darBaja(rolId: string) {
+    setBorrando(true);
     try {
       const res = await conToken((token) =>
-        apiFetch<unknown>(`${ROLES}/${encodeURIComponent(rolId)}`, {
-          method: "DELETE",
-          token,
-        }),
+        apiFetch<unknown>(rolUrl(rolId), { method: "DELETE", token }),
       );
       const env = comoEnvelope<unknown>(res);
       return env.ok ? { ok: true } : { ok: false, code: env.code };
@@ -258,9 +264,14 @@ export function useDarBajaRol() {
       if (e instanceof SyntaxError) return { ok: true };
       return { ok: false };
     } finally {
-      setIsLoading(false);
+      setBorrando(false);
     }
   }
 
-  return { darBaja, isLoading };
+  return { crear, actualizar, darBaja, guardando, borrando };
+}
+
+/** Las mutaciones sobre los roles de administrador. */
+export function useRolesCrudAdmin(): AccionesRoles {
+  return useRolesCrud(ROLES_ADMIN);
 }
