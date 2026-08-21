@@ -10,11 +10,16 @@ const POR_TIPO: Record<TipoPermiso, Rol> = {
 };
 
 /**
- * Nombre del rol de administración que puede gestionar el sistema. Lo define el
- * backend —viaja en `rolNombre`— y es el único rol protegido con el que el
- * front necesita comparar; el resto se crean desde la pantalla de roles.
+ * Roles protegidos, espejo del enum `RolProtegido` del backend: los únicos
+ * nombres de rol con los que el front necesita comparar, porque son los que
+ * habilitan la gestión en su ámbito. El resto se crean desde la pantalla de
+ * roles y no significan nada acá.
+ *
+ * Viajan en `rolNombre` de cada acceso. El de productor vale por
+ * establecimiento: se es líder de una finca, no de todas.
  */
 export const ROL_ADMIN_LIDER = "Administrador Líder";
+export const ROL_PRODUCTOR_LIDER = "Productor Líder";
 
 /** `tipoPermiso` normalizado, que es como lo compara todo este archivo. */
 function tipoDe(acceso: Acceso | undefined): string {
@@ -40,29 +45,48 @@ export function rolesDe(accesos: Acceso[] | undefined): Rol[] {
 }
 
 /**
- * `true` si alguno de los accesos incluye el permiso.
- *
- * Hace la unión sobre todos los accesos. Para los permisos de ADMIN es exacto,
- * porque hay un único acceso de ese tipo; cuando lleguen permisos de PRODUCTOR
- * va a hacer falta scopear por `establecimientoId`, ya que alguien puede
- * gestionar un establecimiento y no otro.
- */
-export function tienePermiso(accesos: Acceso[] | undefined, permiso: Permiso): boolean {
-  if (!Array.isArray(accesos)) return false;
-  return accesos.some((a) => Array.isArray(a?.permisos) && a.permisos.includes(permiso));
-}
-
-/**
- * Ámbito donde se busca un rol. Los roles no son globales: aplican dentro de un
- * `tipoPermiso` y, cuando ése es PRODUCTOR, dentro de un establecimiento —el
- * mismo criterio de `establecimientosDe`—, porque alguien puede ser
- * "Propietaria" de un establecimiento y no tener nada que ver con otro.
+ * Ámbito donde se busca un rol o un permiso. Ni uno ni otro son globales:
+ * aplican dentro de un `tipoPermiso` y, cuando ése es PRODUCTOR, dentro de un
+ * establecimiento —el mismo criterio de `establecimientosDe`—, porque alguien
+ * puede ser "Propietaria" de un establecimiento y no tener nada que ver con
+ * otro.
  */
 export interface AmbitoRol {
   /** Sin esto vale cualquier tipo de acceso. */
   tipoPermiso?: TipoPermiso;
   /** Sólo tiene sentido junto con `tipoPermiso: TipoPermiso.PRODUCTOR`. */
   establecimientoId?: string;
+}
+
+/** Los accesos que caen dentro del ámbito; sin ámbito, todos. */
+function enAmbito(accesos: Acceso[], ambito: AmbitoRol): Acceso[] {
+  const tipo = ambito.tipoPermiso;
+  const establecimiento = ambito.establecimientoId?.trim();
+  return accesos.filter(
+    (a) =>
+      (!tipo || tipoDe(a) === tipo) &&
+      (!establecimiento || a?.establecimientoId === establecimiento),
+  );
+}
+
+/**
+ * `true` si alguno de los accesos del ámbito incluye el permiso.
+ *
+ * Sin ámbito hace la unión sobre todos los accesos, que es exacto para los
+ * permisos de ADMIN porque hay un único acceso de ese tipo. Para los de
+ * PRODUCTOR hay que pasar el `establecimientoId`: la cuenta puede gestionar un
+ * establecimiento y no otro, y la unión le daría permisos del primero mientras
+ * mira el segundo.
+ */
+export function tienePermiso(
+  accesos: Acceso[] | undefined,
+  permiso: Permiso,
+  ambito: AmbitoRol = {},
+): boolean {
+  if (!Array.isArray(accesos)) return false;
+  return enAmbito(accesos, ambito).some(
+    (a) => Array.isArray(a?.permisos) && a.permisos.includes(permiso),
+  );
 }
 
 /**
@@ -83,14 +107,7 @@ export function tieneRol(
   // Sin nombre no hay nada que buscar, y comparar contra "" daría verdadero
   // con cualquier acceso al que le falte el rolNombre.
   if (!buscado) return false;
-  const tipo = ambito.tipoPermiso;
-  const establecimiento = ambito.establecimientoId?.trim();
-  return accesos.some(
-    (a) =>
-      normNombre(a?.rolNombre) === buscado &&
-      (!tipo || tipoDe(a) === tipo) &&
-      (!establecimiento || a?.establecimientoId === establecimiento),
-  );
+  return enAmbito(accesos, ambito).some((a) => normNombre(a?.rolNombre) === buscado);
 }
 
 /**
