@@ -2,10 +2,33 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  ChevronRight, Clock, CheckCircle2, XCircle, Search, Inbox, User, MapPin,
-  ArrowLeft, Hash, Building2, Mail, Phone, Map, Paperclip, Info, ShieldCheck,
-  MessageSquare, AlertCircle, Loader, ClipboardCheck, Eye, FileText,
-  Image as ImageIcon, ExternalLink, Landmark, BadgeCheck,
+  ChevronRight,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Search,
+  Inbox,
+  User,
+  MapPin,
+  ArrowLeft,
+  Hash,
+  Building2,
+  Mail,
+  Phone,
+  Map,
+  Paperclip,
+  Info,
+  ShieldCheck,
+  MessageSquare,
+  AlertCircle,
+  Loader,
+  ClipboardCheck,
+  Eye,
+  FileText,
+  Image as ImageIcon,
+  ExternalLink,
+  Landmark,
+  BadgeCheck,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Button, Card, EstadoBadge } from "@/components/ui";
@@ -13,18 +36,30 @@ import { TextField } from "@/components/ui/text-field";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { admInitials } from "@/data/admin";
 import { fmtFecha, fmtFechaHora } from "@/lib/format";
-import { puede } from "@/lib/roles";
+import { PermisoAdmin } from "@/lib/permisos";
+import { tienePermiso } from "@/lib/roles";
 import { storageConfigurado, urlDeArchivo } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
-import { BASE_ADMIN_SOLICITUDES, useSolicitudDetalle } from "@/hooks/useSolicitudDetalle";
-import { useResolverSolicitud, useSolicitudes, type Resolucion } from "@/hooks/useSolicitudes";
+import {
+  BASE_ADMIN_SOLICITUDES,
+  useSolicitudDetalle,
+} from "@/hooks/useSolicitudDetalle";
+import {
+  useResolverSolicitud,
+  useSolicitudes,
+  type Resolucion,
+} from "@/hooks/useSolicitudes";
 import type {
-  EstadoSolicitud, PruebaSolicitud, SolicitudAdminItem, SolicitudDetalle,
+  EstadoSolicitud,
+  PruebaSolicitud,
+  SolicitudAdminItem,
+  SolicitudDetalle,
 } from "@/types/solicitudes";
 
 const OBS_MAX = 1000;
-const SIN_GESTION = "Necesitás el permiso de gestión de solicitudes de establecimiento";
+const SIN_GESTION =
+  "Necesitás el permiso de gestión de solicitudes de establecimiento";
 
 function metaDe(estado: EstadoSolicitud) {
   return SOL_ESTADO_META[estado] as
@@ -32,7 +67,13 @@ function metaDe(estado: EstadoSolicitud) {
     | undefined;
 }
 
-function Estado({ estado, size }: { estado: EstadoSolicitud; size?: "sm" | "lg" }) {
+function Estado({
+  estado,
+  size,
+}: {
+  estado: EstadoSolicitud;
+  size?: "sm" | "lg";
+}) {
   const m = metaDe(estado);
   return (
     <EstadoBadge tone={m?.tone ?? "neutral"} size={size}>
@@ -42,12 +83,20 @@ function Estado({ estado, size }: { estado: EstadoSolicitud; size?: "sm" | "lg" 
 }
 
 /** Tile con las iniciales del establecimiento. */
-function EstabTile({ nombre, size = "sm" }: { nombre: string; size?: "sm" | "lg" }) {
+function EstabTile({
+  nombre,
+  size = "sm",
+}: {
+  nombre: string;
+  size?: "sm" | "lg";
+}) {
   return (
     <span
       className={cn(
         "inline-flex shrink-0 items-center justify-center border border-green-300 bg-green-050 font-display font-bold text-green-800",
-        size === "lg" ? "size-14 rounded-xl text-[19px]" : "size-11 rounded-[10px] text-[15px]",
+        size === "lg"
+          ? "size-14 rounded-xl text-[19px]"
+          : "size-11 rounded-[10px] text-[15px]",
       )}
     >
       {admInitials(nombre || "?")}
@@ -96,9 +145,24 @@ function List({
   }, [solicitudes, query, filter]);
 
   const stats = [
-    { icon: Clock, label: "Pendientes", value: counts.pendiente, warn: counts.pendiente > 0 },
-    { icon: CheckCircle2, label: "Validadas", value: counts.validada, warn: false },
-    { icon: XCircle, label: "Rechazadas", value: counts.rechazada, warn: false },
+    {
+      icon: Clock,
+      label: "Pendientes",
+      value: counts.pendiente,
+      warn: counts.pendiente > 0,
+    },
+    {
+      icon: CheckCircle2,
+      label: "Validadas",
+      value: counts.validada,
+      warn: false,
+    },
+    {
+      icon: XCircle,
+      label: "Rechazadas",
+      value: counts.rechazada,
+      warn: false,
+    },
   ];
 
   const filterBtn = (val: Filtro, label: string, n?: number) => {
@@ -135,7 +199,9 @@ function List({
       <div className="mb-3.5 flex items-center gap-2.5 text-[13.5px] text-fg-3">
         <span>Plataforma</span>
         <ChevronRight className="size-[15px]" />
-        <span className="font-medium text-fg-2">Solicitudes de establecimientos</span>
+        <span className="font-medium text-fg-2">
+          Solicitudes de establecimientos
+        </span>
       </div>
 
       <div className="mb-[22px]">
@@ -143,24 +209,35 @@ function List({
           Solicitudes de establecimientos
         </h1>
         <p className="mt-2.5 max-w-[720px] text-[15.5px] leading-relaxed text-fg-2">
-          Revisá las postulaciones de nuevos establecimientos y validá su veracidad. Aprobá las
-          que cumplan los requisitos o rechazalas dejando una observación.
+          Revisá las postulaciones de nuevos establecimientos y validá su
+          veracidad. Aprobá las que cumplan los requisitos o rechazalas dejando
+          una observación.
         </p>
       </div>
 
       <div className="mb-5 flex flex-wrap gap-3.5">
         {stats.map((s) => (
-          <Card key={s.label} className="flex min-w-[180px] items-center gap-3 px-4 py-3">
+          <Card
+            key={s.label}
+            className="flex min-w-[180px] items-center gap-3 px-4 py-3"
+          >
             <span
               className={cn(
                 "flex size-[42px] shrink-0 items-center justify-center rounded-[10px]",
                 s.warn ? "bg-warning-fill" : "bg-green-050",
               )}
             >
-              <s.icon className={cn("size-5", s.warn ? "text-warning-fg" : "text-green-800")} />
+              <s.icon
+                className={cn(
+                  "size-5",
+                  s.warn ? "text-warning-fg" : "text-green-800",
+                )}
+              />
             </span>
             <span>
-              <span className="block font-mono text-xl font-bold text-fg-1">{s.value}</span>
+              <span className="block font-mono text-xl font-bold text-fg-1">
+                {s.value}
+              </span>
               <span className="block text-[12.5px] text-fg-2">{s.label}</span>
             </span>
           </Card>
@@ -199,7 +276,13 @@ function List({
             <table className="w-full min-w-[880px] border-collapse">
               <thead>
                 <tr>
-                  {["Establecimiento", "Departamento", "Solicitado", "Estado", ""].map((h, i) => (
+                  {[
+                    "Establecimiento",
+                    "Departamento",
+                    "Solicitado",
+                    "Estado",
+                    "",
+                  ].map((h, i) => (
                     <th
                       key={i}
                       className={cn(
@@ -243,7 +326,9 @@ function List({
                     </td>
                     <td className="px-[18px] py-[15px] text-right">
                       <Button
-                        variant={s.estado === "pendiente" ? "primary" : "neutral"}
+                        variant={
+                          s.estado === "pendiente" ? "primary" : "neutral"
+                        }
                         size="sm"
                         onClick={() => onOpen(s.id)}
                       >
@@ -286,14 +371,22 @@ function SectionBox({
         <div className="flex size-[30px] items-center justify-center rounded-lg bg-green-050">
           {icon}
         </div>
-        <h2 className="font-display text-[17px] font-semibold text-fg-1">{title}</h2>
+        <h2 className="font-display text-[17px] font-semibold text-fg-1">
+          {title}
+        </h2>
       </header>
       <div className="px-[22px] pt-2 pb-[22px]">{children}</div>
     </Card>
   );
 }
 
-function Etiqueta({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function Etiqueta({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className="mb-1.5 flex items-center gap-[7px] text-[11px] font-semibold tracking-[0.06em] text-fg-2 uppercase">
       {icon}
@@ -340,7 +433,9 @@ function DetailField({
   return (
     <div>
       <Etiqueta icon={icon}>{label}</Etiqueta>
-      <div className="text-[14.5px] leading-relaxed break-words text-fg-1">{value || "—"}</div>
+      <div className="text-[14.5px] leading-relaxed break-words text-fg-1">
+        {value || "—"}
+      </div>
     </div>
   );
 }
@@ -394,7 +489,10 @@ function PruebaCard({ p }: { p: PruebaSolicitud }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={cn(clases, "transition-[box-shadow,border-color] hover:border-sand hover:shadow-[var(--shadow-hover)]")}
+      className={cn(
+        clases,
+        "transition-[box-shadow,border-color] hover:border-sand hover:shadow-[var(--shadow-hover)]",
+      )}
     >
       {cuerpo}
     </a>
@@ -473,18 +571,53 @@ function Detail({
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-6">
-          <SectionBox icon={<ShieldCheck className="size-4 text-green-800" />} title="Campos críticos">
-            <CritRow icon={<Hash className="size-[13px] text-fg-3" />} label="CUIT" value={sol.cuit} mono />
-            <CritRow icon={<Building2 className="size-[13px] text-fg-3" />} label="Razón social" value={sol.razonSocial} />
-            <CritRow icon={<Mail className="size-[13px] text-fg-3" />} label="Email" value={sol.email} />
+          <SectionBox
+            icon={<ShieldCheck className="size-4 text-green-800" />}
+            title="Campos críticos"
+          >
+            <CritRow
+              icon={<Hash className="size-[13px] text-fg-3" />}
+              label="CUIT"
+              value={sol.cuit}
+              mono
+            />
+            <CritRow
+              icon={<Building2 className="size-[13px] text-fg-3" />}
+              label="Razón social"
+              value={sol.razonSocial}
+            />
+            <CritRow
+              icon={<Mail className="size-[13px] text-fg-3" />}
+              label="Email"
+              value={sol.email}
+            />
           </SectionBox>
 
-          <SectionBox icon={<Info className="size-4 text-green-800" />} title="Datos del establecimiento">
+          <SectionBox
+            icon={<Info className="size-4 text-green-800" />}
+            title="Datos del establecimiento"
+          >
             <div className="grid grid-cols-1 gap-[18px] pt-2 sm:grid-cols-2">
-              <DetailField icon={<Phone className="size-[13px] text-fg-3" />} label="Teléfono de la organización" value={sol.telefono} />
-              <DetailField icon={<MapPin className="size-[13px] text-fg-3" />} label="Domicilio legal" value={sol.domicilioLegal} />
-              <DetailField icon={<Map className="size-[13px] text-fg-3" />} label="Departamento" value={sol.departamento} />
-              <DetailField icon={<Landmark className="size-[13px] text-fg-3" />} label="CVU" value={sol.cvu} />
+              <DetailField
+                icon={<Phone className="size-[13px] text-fg-3" />}
+                label="Teléfono de la organización"
+                value={sol.telefono}
+              />
+              <DetailField
+                icon={<MapPin className="size-[13px] text-fg-3" />}
+                label="Domicilio legal"
+                value={sol.domicilioLegal}
+              />
+              <DetailField
+                icon={<Map className="size-[13px] text-fg-3" />}
+                label="Departamento"
+                value={sol.departamento}
+              />
+              <DetailField
+                icon={<Landmark className="size-[13px] text-fg-3" />}
+                label="CVU"
+                value={sol.cvu}
+              />
             </div>
           </SectionBox>
 
@@ -498,7 +631,9 @@ function Detail({
                 : "No se pueden abrir: falta configurar la URL del almacenamiento."}
             </p>
             {sol.pruebas.length === 0 ? (
-              <p className="text-sm text-fg-2">La solicitud no tiene pruebas cargadas.</p>
+              <p className="text-sm text-fg-2">
+                La solicitud no tiene pruebas cargadas.
+              </p>
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3.5">
                 {sol.pruebas.map((p, i) => (
@@ -510,7 +645,10 @@ function Detail({
         </div>
 
         <aside className="flex flex-col gap-6">
-          <SectionBox icon={<User className="size-4 text-green-800" />} title="Datos del solicitante">
+          <SectionBox
+            icon={<User className="size-4 text-green-800" />}
+            title="Datos del solicitante"
+          >
             <div className="flex items-center gap-3 border-b border-dashed border-cream-tert pt-2 pb-3.5">
               <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-brown-700 text-[15px] font-semibold text-fg-on-dark">
                 {admInitials(sol.nombreSolicitante || "?")}
@@ -529,7 +667,9 @@ function Detail({
             <div className="flex flex-col gap-2.5 pt-3">
               <div className="flex items-center gap-2.5 text-[13.5px] text-fg-1">
                 <BadgeCheck className="size-[15px] shrink-0 text-fg-3" />
-                <span className="font-mono">{sol.identificacionSolicitante || "—"}</span>
+                <span className="font-mono">
+                  {sol.identificacionSolicitante || "—"}
+                </span>
               </div>
               <div className="flex items-center gap-2.5 text-[13.5px] break-all text-fg-1">
                 <Mail className="size-[15px] shrink-0 text-fg-3" />
@@ -538,7 +678,10 @@ function Detail({
             </div>
           </SectionBox>
 
-          <SectionBox icon={<MessageSquare className="size-4 text-green-800" />} title="Observaciones">
+          <SectionBox
+            icon={<MessageSquare className="size-4 text-green-800" />}
+            title="Observaciones"
+          >
             {readOnly ? (
               <div className="pt-2">
                 <p
@@ -560,7 +703,10 @@ function Detail({
               <div className="pt-2">
                 {/* Sin primitivo de textarea todavía: usa la clase del design system. */}
                 <textarea
-                  className={cn("textarea min-h-[120px] text-sm", obsErr && "err")}
+                  className={cn(
+                    "textarea min-h-[120px] text-sm",
+                    obsErr && "err",
+                  )}
                   value={obs}
                   onChange={(e) => setObs(e.target.value)}
                   rows={5}
@@ -575,9 +721,16 @@ function Detail({
                       Máximo {OBS_MAX} caracteres.
                     </span>
                   ) : (
-                    <span className="text-xs text-fg-3">Hasta {OBS_MAX} caracteres.</span>
+                    <span className="text-xs text-fg-3">
+                      Hasta {OBS_MAX} caracteres.
+                    </span>
                   )}
-                  <span className={cn("font-mono text-xs", obsErr ? "text-danger" : "text-fg-3")}>
+                  <span
+                    className={cn(
+                      "font-mono text-xs",
+                      obsErr ? "text-danger" : "text-fg-3",
+                    )}
+                  >
                     {obs.length} / {OBS_MAX}
                   </span>
                 </div>
@@ -595,7 +748,11 @@ function Detail({
                 title={gestionar ? undefined : SIN_GESTION}
                 onClick={() => onResolver("VALIDADA", obs.trim())}
               >
-                {busy ? <Loader className="size-[18px] spin" /> : <CheckCircle2 className="size-[18px]" />}
+                {busy ? (
+                  <Loader className="size-[18px] spin" />
+                ) : (
+                  <CheckCircle2 className="size-[18px]" />
+                )}
                 Aprobar solicitud
               </Button>
 
@@ -661,7 +818,8 @@ function DetalleCargado({
       return;
     }
     setErrorResolver(
-      r.code ?? "No pudimos procesar la solicitud. Intentá de nuevo en unos minutos.",
+      r.code ??
+        "No pudimos procesar la solicitud. Intentá de nuevo en unos minutos.",
     );
   }
 
@@ -677,7 +835,9 @@ function DetalleCargado({
         {notFound || !solicitud ? (
           <div className="px-6 py-14 text-center text-fg-3">
             <Inbox className="mx-auto size-8" />
-            <div className="mt-3 text-[15px]">No encontramos esta solicitud.</div>
+            <div className="mt-3 text-[15px]">
+              No encontramos esta solicitud.
+            </div>
             <Button variant="neutral" className="mt-4" onClick={onBack}>
               Volver a solicitudes
             </Button>
@@ -700,7 +860,10 @@ function DetalleCargado({
 function Inner() {
   const { solicitudes, isLoading, error, reload } = useSolicitudes();
   const accesos = useAuthStore((s) => s.accesos);
-  const gestionar = puede(accesos, "GESTIONAR_SOLICITUD_ESTABLECIMIENTO");
+  const gestionar = tienePermiso(
+    accesos,
+    PermisoAdmin.GESTIONAR_SOLICITUD_ESTABLECIMIENTO,
+  );
   const [abierta, setAbierta] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
@@ -754,7 +917,5 @@ function Inner() {
 }
 
 export default function SolicitudesClient() {
-  return (
-    <Inner />
-  );
+  return <Inner />;
 }

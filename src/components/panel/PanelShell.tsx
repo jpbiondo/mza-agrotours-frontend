@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, BarChart3, Grape, CalendarCheck, MessageSquare, Home, Sprout,
+  LayoutDashboard, BarChart3, Grape, CalendarCheck, MessageSquare, Home, Sprout, ShieldCheck,
   ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -40,6 +40,8 @@ const SIDEBAR: Row[] = [
   { section: "Establecimiento" },
   { id: "datos", icon: Home, label: "Datos del establecimiento", href: "/panel/datos" },
   { id: "cultivos", icon: Sprout, label: "Cultivos", href: "/cultivos" },
+  { section: "Configuración" },
+  { id: "roles", icon: ShieldCheck, label: "Roles y permisos", href: "/panel/roles" },
 ];
 
 // El alta de establecimiento vive en el espacio de visitante: el panel es sólo
