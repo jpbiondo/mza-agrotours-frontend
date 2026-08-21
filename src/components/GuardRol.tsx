@@ -26,8 +26,12 @@ const SIN_PERMISO =
  * se renderizaba el <SiteHeader>, y como /admin y /panel montan el guard en su
  * layout, la primera pintura de esas rutas era la barra del sitio público antes
  * de saltar al sidebar que corresponde.
+ *
+ * Se exporta para las pantallas que no pueden resolver el acceso en la ruta: los
+ * permisos de PRODUCTOR valen por establecimiento, y cuál está activo lo sabe
+ * recién el cliente, cuando rehidrata el store del switcher.
  */
-function SinPermiso({ motivo }: { motivo: string }) {
+export function SinPermiso({ motivo }: { motivo: string }) {
   return (
     <div className="mx-auto max-w-[640px] px-7 pt-16 pb-24">
       <div className="flex flex-col items-center gap-3 rounded-lg border border-outline-variant bg-surface px-8 py-14 text-center">
