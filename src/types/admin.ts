@@ -17,59 +17,6 @@ export interface RolAdmin {
   descripcion: string;
 }
 
-/**
- * Item de GET /roles/admin: un rol con los permisos que otorga. `RolAdmin` es
- * la versión corta que llena el selector de la pantalla de administradores;
- * ésta es la que gestiona la pantalla de roles.
- *
- * El endpoint sólo devuelve los roles vigentes, así que no hay campo de baja.
- */
-export interface RolAdminDetalle {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  /** Códigos sueltos, p. ej. "LEER_ADMIN". Se cruzan contra `GrupoPermiso`. */
-  permisos: string[];
-  /** Administradores que hoy tienen el rol; con al menos uno no se puede borrar. */
-  cantidadUsuarios: number;
-  /** Rol de sistema: no se modifica ni se da de baja. */
-  esProtegido: boolean;
-}
-
-/**
- * Permiso del catálogo. El `codigo` es la identidad —es lo que traen los roles
- * y lo que compara `puede()`—; el resto existe sólo para mostrarlo.
- */
-export interface PermisoCatalogo {
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-}
-
-/**
- * Item de GET /permisos/grupo-permisos/admin: el catálogo de permisos que
- * existen, agrupado por recurso. Es la fuente de verdad de qué se puede marcar
- * —los roles sólo traen códigos—, y por eso vive en el backend: agregar un
- * permiso no debería requerir tocar el front.
- */
-export interface GrupoPermiso {
-  /** Hace de clave: el backend no manda id. */
-  nombre: string;
-  descripcion: string;
-  /** Slug del icono, p. ej. "user-cog"; se resuelve contra el mapa del front. */
-  icono: string;
-  permisos: PermisoCatalogo[];
-}
-
-/**
- * GET /usuario/card/{email}: sólo confirma que la cuenta existe. No dice si ya
- * es administradora — eso se resuelve comparando la identificación contra la
- * lista vigente.
- */
-export interface UsuarioCard {
-  nombre: string;
-  identificacion: string;
-}
 
 /* ---- Mock del resto del panel de administración ------------------------- */
 
