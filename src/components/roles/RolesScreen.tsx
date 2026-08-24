@@ -5,12 +5,12 @@ import type { ComponentType, ReactNode } from "react";
 import {
   ChevronRight, Info, KeyRound, Loader, Lock, Pencil, Plus, ShieldCheck, Trash2,
 } from "lucide-react";
-import { Alert, Button, Card, IconCircle, Modal, Skeleton, Toast } from "@/components/ui";
+import { Alert, Button, Card, IconCircle, Modal, Panel, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { AccionesRoles, DatosRol, GrupoPermiso, RolDetalle } from "@/types/roles";
 import { PermSummary } from "./permisos-ui";
-import { Panel, RoleForm } from "./RoleForm";
+import { RoleForm } from "./RoleForm";
 import type { TextosRoles } from "./textos";
 
 /**

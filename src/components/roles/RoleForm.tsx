@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { AlertCircle, Check, Lightbulb, Loader, X } from "lucide-react";
 import { Alert, Button } from "@/components/ui";
@@ -245,34 +245,6 @@ export function RoleForm({
             {editing ? "Guardar cambios" : "Crear rol"}
           </Button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Panel del formulario. No usa <Modal> a propósito: ese primitivo es un diálogo
- * centrado de ancho fijo, y acá hace falta el doble de ancho, anclado arriba y
- * con scroll propio, porque el editor de permisos crece con el catálogo.
- */
-export function Panel({ onClose, children }: { onClose: () => void; children: ReactNode }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return (
-    <div
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-[rgba(42,38,32,0.45)] px-5 py-10 backdrop-blur-[2px]"
-    >
-      <div className="pop m-auto w-[720px] max-w-full overflow-hidden rounded-lg border border-outline-variant bg-surface shadow-pop">
-        {children}
       </div>
     </div>
   );

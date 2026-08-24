@@ -32,7 +32,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { TextField } from "@/components/ui/text-field";
-import { Button, Skeleton } from "@/components/ui";
+import { ActionBtn, Button, Skeleton } from "@/components/ui";
 import { EMAIL_RE } from "@/data/auth";
 import { admInitials } from "@/data/admin";
 import { PermisoAdmin } from "@/lib/permisos";
@@ -45,8 +45,8 @@ import {
   useCrearAdmin,
   useEliminarAdmin,
   useRolesAdmin,
-  useUsuarioCard,
 } from "@/hooks/useAdmins";
+import { useUsuarioCard } from "@/hooks/useUsuarioCard";
 import type { AdminSistema, RolAdmin } from "@/types/admin";
 import {
   nuevoAdminSchema,
@@ -649,58 +649,6 @@ function AdminForm({
         </div>
       </form>
     </Form>
-  );
-}
-
-function ActionBtn({
-  icon,
-  label,
-  danger,
-  disabled,
-  title,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  danger?: boolean;
-  disabled?: boolean;
-  title: string;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        fontFamily: "var(--font-sans)",
-        fontWeight: 600,
-        fontSize: 14,
-        padding: "8px 12px",
-        borderRadius: "var(--radius)",
-        border:
-          "1px solid " +
-          (disabled
-            ? "var(--outline-variant)"
-            : danger
-              ? "var(--danger)"
-              : "var(--sand)"),
-        background: disabled ? "var(--cream-tert)" : "var(--surface)",
-        color: disabled
-          ? "var(--fg-3)"
-          : danger
-            ? "var(--danger)"
-            : "var(--green-800)",
-        cursor: disabled ? "not-allowed" : "pointer",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {icon} {label}
-    </button>
   );
 }
 
@@ -1324,7 +1272,7 @@ function Inner() {
                       <ActionBtn
                         icon={<Trash2 size={17} />}
                         label="Borrar"
-                        danger
+                        tone="danger"
                         disabled={p.esLider || !gestionar}
                         title={
                           p.esLider
