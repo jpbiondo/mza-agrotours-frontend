@@ -7,7 +7,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BarChart3, Grape, CalendarCheck, MessageSquare, Home, Sprout, ShieldCheck,
-  ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound,
+  ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound, Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -39,6 +39,7 @@ const SIDEBAR: Row[] = [
   { id: "chats", icon: MessageSquare, label: "Chats", href: "/panel/chats", badge: 3 },
   { section: "Establecimiento" },
   { id: "datos", icon: Home, label: "Datos del establecimiento", href: "/panel/datos" },
+  { id: "productores", icon: Users, label: "Productores", href: "/panel/productores" },
   { id: "cultivos", icon: Sprout, label: "Cultivos", href: "/cultivos" },
   { section: "Configuración" },
   { id: "roles", icon: ShieldCheck, label: "Roles y permisos", href: "/panel/roles" },
