@@ -18,16 +18,6 @@ export interface RolAdmin {
 }
 
 
-/**
- * GET /usuario/card/{email}: sólo confirma que la cuenta existe. No dice si ya
- * es administradora — eso se resuelve comparando la identificación contra la
- * lista vigente.
- */
-export interface UsuarioCard {
-  nombre: string;
-  identificacion: string;
-}
-
 /* ---- Mock del resto del panel de administración ------------------------- */
 
 export interface PermItem {
