@@ -18,8 +18,8 @@ import {
   useEliminarEstablecimiento,
   useEstablecimientoDatos,
   useGuardarEstablecimiento,
-  useTiposCultivo,
 } from "@/hooks/useEstablecimientoDatos";
+import { useTiposCultivo } from "@/hooks/useTiposCultivo";
 import type { CultivoRef, EstablecimientoDatos } from "@/types/datos";
 
 /** Secciones que se pueden editar; una por vez. */

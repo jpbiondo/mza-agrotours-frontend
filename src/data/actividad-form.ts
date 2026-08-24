@@ -58,7 +58,11 @@ export function hydrateActividadForm(id: string): ActividadFormData | null {
     nombre: act.nombre,
     descripcion: `Viví una experiencia auténtica en Finca La Escondida: «${act.nombre}». Te acompañamos entre las hileras para conocer de cerca el trabajo de la tierra, la familia productora y los sabores de la finca.`,
     cupos: "20",
-    cultivos: [...act.cultivos],
+    // `cultivos` pasó a ser una lista de ids del catálogo, y el mock sólo tiene
+    // nombres: metiéndolos acá el formulario mostraría chips con el nombre como
+    // id y mandaría basura al guardar. Queda vacío hasta que se wiree el
+    // modificar, que va a traer los ids del backend.
+    cultivos: [],
     ages: {
       infantes: { on: false, price: "" },
       menores: { on: true, price: String(Math.round(act.precio * 0.6)) },
