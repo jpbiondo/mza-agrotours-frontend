@@ -21,20 +21,6 @@ const DIA_BACKEND: Record<DiaKey, string> = {
   domingo: "DOMINGO",
 };
 
-/**
- * Los tres tramos del formulario, con los rangos de edad que la propia pantalla
- * declara ("18 años o más", "3 a 17", "0 a 2"). El DTO pide un rango explícito,
- * así que la convención vive acá y en un solo lugar.
- *
- * TODO backend: `edadMaxima` de adultos va en 120 y no en null, que es lo único
- * que funciona igual si la columna admite nulos y si no.
- */
-const TRAMOS = [
-  { key: "adultos", nombre: "Adultos", edadMinima: 18, edadMaxima: 120, base: true },
-  { key: "menores", nombre: "Menores", edadMinima: 3, edadMaxima: 17, base: false },
-  { key: "infantes", nombre: "Infantes", edadMinima: 0, edadMaxima: 2, base: false },
-] as const;
-
 interface TarifaDTO {
   nombre: string;
   precio: number;
@@ -70,16 +56,21 @@ export interface AltaActividadDTO {
   diasDisponibles: DiaDTO[];
 }
 
-/** Adultos va siempre; los otros dos sólo si se habilitaron. */
-function aTarifas(ages: ActividadFormData["ages"]): TarifaDTO[] {
-  return TRAMOS.filter((t) => t.base || ages[t.key].on).map((t) => ({
-    nombre: t.nombre,
-    // Infantes suelen ir sin cargo, así que un precio vacío es 0, no un error.
-    precio: Number(ages[t.key].price) || 0,
-    edadMinima: t.edadMinima,
-    edadMaxima: t.edadMaxima,
-    esTarifaBase: t.base,
-  }));
+/**
+ * Sólo las filas marcadas. El `id` de la fila es del formulario —identifica el
+ * renglón mientras se edita— y no viaja: el backend le asigna el suyo.
+ */
+function aTarifas(filas: ActividadFormData["tarifas"]): TarifaDTO[] {
+  return filas
+    .filter((r) => r.on)
+    .map((r) => ({
+      nombre: r.nombre.trim(),
+      // Un rango sin cargo (infantes, por lo general) es 0, no un error.
+      precio: Number(r.precio) || 0,
+      edadMinima: Number(r.min) || 0,
+      edadMaxima: Number(r.max) || 0,
+      esTarifaBase: r.base,
+    }));
 }
 
 /** Sólo los días habilitados y con las dos horas cargadas. */
@@ -110,7 +101,7 @@ export function aPayload(v: ActividadFormData, estado: EstadoGuardado): AltaActi
       .filter((f) => f.q.trim() && f.a.trim())
       .map((f) => ({ pregunta: f.q.trim(), respuesta: f.a.trim() })),
     cuposMax: Number(v.cupos) || 0,
-    tarifas: aTarifas(v.ages),
+    tarifas: aTarifas(v.tarifas),
     fechaDesde: v.fechaDesde,
     fechaHasta: v.fechaHasta,
     diasDisponibles: aDias(v.days),

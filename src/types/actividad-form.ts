@@ -1,8 +1,21 @@
 export type DiaKey = "lunes" | "martes" | "miercoles" | "jueves" | "viernes" | "sabado" | "domingo";
 
-export interface AgeTier {
+/**
+ * Un rango etario con su precio. El productor los renombra, les cambia las
+ * edades, agrega y borra: no hay tramos fijos. Las edades y el precio viajan
+ * como texto porque son campos en edición —"" es "todavía no escribió nada",
+ * que no es lo mismo que 0—; el hook de guardado los pasa a número.
+ */
+export interface TarifaFila {
+  /** Sólo del cliente: identifica la fila mientras se edita. No viaja al backend. */
+  id: string;
+  nombre: string;
+  min: string;
+  max: string;
+  precio: string;
+  /** Sin marcar, la fila queda de plantilla: ni se valida ni se manda. */
   on: boolean;
-  price: string;
+  base: boolean;
 }
 
 export interface DiaCfg {
@@ -21,7 +34,7 @@ export interface ActividadFormData {
   descripcion: string;
   cupos: string;
   cultivos: string[];
-  ages: { infantes: AgeTier; menores: AgeTier; adultos: AgeTier };
+  tarifas: TarifaFila[];
   days: Record<DiaKey, DiaCfg>;
   fechaDesde: string;
   fechaHasta: string;
