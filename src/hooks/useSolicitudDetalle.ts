@@ -31,6 +31,8 @@ interface DetalleBackend {
   nombreEstablecimiento?: string;
   razonSocial?: string;
   cuit?: string;
+  /** Grafía del backend en la lectura; en el alta el campo viaja como `descripcion`. */
+  descripcionEstablecimiento?: string;
   departamento?: string;
   domicilioLegal?: string;
   email?: string;
@@ -113,6 +115,7 @@ function aDetalle(d: DetalleBackend): SolicitudDetalle {
     nombreEstablecimiento: d.nombreEstablecimiento ?? "",
     razonSocial: d.razonSocial ?? "",
     cuit: d.cuit ?? "",
+    descripcion: d.descripcionEstablecimiento ?? "",
     departamento: d.departamento ?? "",
     domicilioLegal: d.domicilioLegal ?? "",
     email: d.email ?? "",
