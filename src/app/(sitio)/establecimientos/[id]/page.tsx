@@ -1,25 +1,18 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { ESTABLECIMIENTOS, getEstablecimiento } from "@/data/establecimientos";
 import DetalleClient from "./DetalleClient";
 
-export function generateStaticParams() {
-  return ESTABLECIMIENTOS.map((e) => ({ id: e.id }));
-}
-
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
-  const e = getEstablecimiento(id);
-  if (!e) return { title: "Establecimiento no encontrado · Mendoza AgroTours" };
-  return { title: `${e.nombre} · Mendoza AgroTours`, description: e.descripcion };
-}
+/* El detalle sale del backend en el cliente, así que la metadata no puede
+   nombrar al establecimiento. TODO backend: si hiciera falta para SEO, habría
+   que pedir el detalle también acá en `generateMetadata`. */
+export const metadata: Metadata = {
+  title: "Establecimiento · Mendoza AgroTours",
+  description: "Conocé el establecimiento, sus cultivos y las actividades que ofrece.",
+};
 
 export default async function DetalleEstablecimientoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const est = getEstablecimiento(id);
-  if (!est) notFound();
 
   return (
-    <DetalleClient est={est} />
+    <DetalleClient id={id} />
   );
 }
