@@ -34,6 +34,7 @@ function toPayload(f: SolicitarAltaForm, files: File[]) {
     nombreEstablecimiento: f.nombre.trim(),
     razonSocial: f.razonSocial.trim(),
     cuit: f.cuit.trim(),
+    descripcion: f.descripcion.trim(),
     domicilioLegal: f.domicilio.trim(),
     departamento: f.departamento,
     telefono: f.telefono.trim(),

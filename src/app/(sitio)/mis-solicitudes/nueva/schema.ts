@@ -21,6 +21,11 @@ export const solicitarAltaSchema = z.object({
     .trim()
     .min(1, "El CUIT es obligatorio.")
     .max(11, "Hasta 11 caracteres."),
+  descripcion: z
+    .string()
+    .trim()
+    .min(1, "La descripción es obligatoria.")
+    .max(2000, "Hasta 2000 caracteres."),
   departamento: z.string().min(1, "Seleccioná un departamento."),
   domicilio: z
     .string()
@@ -52,6 +57,7 @@ export const SOLICITAR_ALTA_INICIAL: SolicitarAltaForm = {
   nombre: "",
   razonSocial: "",
   cuit: "",
+  descripcion: "",
   departamento: "",
   domicilio: "",
   email: "",

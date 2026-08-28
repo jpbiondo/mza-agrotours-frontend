@@ -425,15 +425,25 @@ function DetailField({
   icon,
   label,
   value,
+  span,
+  multilinea,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  span?: boolean;
+  /** Respeta los saltos de línea que cargó el postulante (descripción). */
+  multilinea?: boolean;
 }) {
   return (
-    <div>
+    <div className={cn("min-w-0", span && "sm:col-span-2")}>
       <Etiqueta icon={icon}>{label}</Etiqueta>
-      <div className="text-[14.5px] leading-relaxed break-words text-fg-1">
+      <div
+        className={cn(
+          "text-[14.5px] leading-relaxed break-words text-fg-1",
+          multilinea && "whitespace-pre-line",
+        )}
+      >
         {value || "—"}
       </div>
     </div>
@@ -617,6 +627,13 @@ function Detail({
                 icon={<Landmark className="size-[13px] text-fg-3" />}
                 label="CVU"
                 value={sol.cvu}
+              />
+              <DetailField
+                icon={<FileText className="size-[13px] text-fg-3" />}
+                label="Descripción"
+                value={sol.descripcion}
+                span
+                multilinea
               />
             </div>
           </SectionBox>
