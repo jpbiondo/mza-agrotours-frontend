@@ -14,6 +14,10 @@ export function fmtFechaHora(iso: string | null): string {
 /** Fecha: ISO → "18/06/2026". */
 export function fmtFecha(iso: string | null): string {
   if (!iso) return "—";
+  // Una fecha sola (los `LocalDate` del backend) la parsea `Date` como UTC, así
+  // que al oeste de Greenwich caería un día antes. Se reordena el string.
+  const soloFecha = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (soloFecha) return `${soloFecha[3]}/${soloFecha[2]}/${soloFecha[1]}`;
   const d = new Date(iso);
   const p = (x: number) => String(x).padStart(2, "0");
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;

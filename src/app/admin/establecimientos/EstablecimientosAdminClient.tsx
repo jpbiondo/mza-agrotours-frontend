@@ -1,228 +1,711 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import {
-  ChevronRight, Search, Warehouse, Ban, List as ListIcon, User, MapPin, Grape, CalendarCheck,
-  RotateCcw, AlertTriangle, Clock, AlertCircle, Check, CheckCircle2, SearchX, Loader,
+  AlertCircle, AlertTriangle, Ban, CalendarCheck, Check, ChevronRight, Clock, Grape,
+  List as ListIcon, Loader, MapPin, RotateCcw, Search, SearchX, User, Warehouse,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { admNowStamp, estabInitials } from "@/data/admin";
+import { ActionBtn, Alert, Button, Card, EstadoBadge, IconCircle, Modal, Skeleton, Toast } from "@/components/ui";
+import type { ToastData } from "@/components/ui";
+import { TextField } from "@/components/ui/text-field";
+import { estabInitials } from "@/data/admin";
+import { fmtFecha, fmtFechaHora } from "@/lib/format";
+import { PermisoAdmin } from "@/lib/permisos";
+import { tienePermiso } from "@/lib/roles";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/authStore";
 import { useEstablecimientosAdmin, useModerarEstablecimiento } from "@/hooks/useEstablecimientosAdmin";
-import type { AdminEstab } from "@/types/admin";
+import type { AdminEstab, EstadoAdminEstab } from "@/types/admin";
 
-function pill(tone: "success" | "danger"): React.CSSProperties {
-  const map = { success: { bg: "var(--success-fill)", fg: "var(--success-fg)" }, danger: { bg: "var(--danger-fill)", fg: "var(--danger-fg)" } }[tone];
-  return { display: "inline-flex", alignItems: "center", borderRadius: "var(--radius-pill)", padding: "4px 11px", fontSize: 12.5, fontWeight: 700, background: map.bg, color: map.fg };
-}
+const SIN_GESTION = "Necesitás el permiso de gestión de establecimientos";
+const MOTIVO_MIN = 15;
+const MOTIVO_MAX = 280;
 
-function ActionBtn({ icon, label, tone, title, onClick }: { icon: React.ReactNode; label: string; tone: "danger" | "success"; title: string; onClick: () => void }) {
-  const success = tone === "success";
+/**
+ * Errores de dominio de la moderación. Los tres primeros son carreras contra
+ * otro administrador, así que el mensaje empuja a recargar en vez de reintentar.
+ */
+const ERROR_MODERAR: Record<string, string> = {
+  "AS.establecimientoNotFound": "No encontramos el establecimiento. Puede que lo hayan dado de baja.",
+  "AS.establecimientoNoActivo": "El establecimiento ya no está activo. Actualizá la lista para ver su estado.",
+  "AS.establecimientoNoSuspendido": "El establecimiento ya no está suspendido. Actualizá la lista para ver su estado.",
+};
+
+function mensajeModerar(code: string | undefined, suspendiendo: boolean): string {
   return (
-    <button type="button" onClick={onClick} title={title} style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 600, fontSize: 14, padding: "8px 12px", borderRadius: "var(--radius)", border: "1px solid " + (success ? "var(--green-800)" : "var(--danger)"), background: success ? "var(--green-800)" : "var(--surface)", color: success ? "#fff" : "var(--danger)", cursor: "pointer", whiteSpace: "nowrap", boxShadow: success ? "inset 0 -2px 0 var(--green-900)" : "none" }}>{icon} {label}</button>
+    (code && ERROR_MODERAR[code]) ||
+    (suspendiendo
+      ? "No pudimos suspender el establecimiento. Probá de nuevo en unos minutos."
+      : "No pudimos reactivar el establecimiento. Probá de nuevo en unos minutos.")
   );
 }
 
-function Scrim({ onClose, children, width = 520 }: { onClose: () => void; children: React.ReactNode; width?: number }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+/**
+ * "Suspendido el 01/09/2026 · 12:43 · por Ana Pérez". El ejecutor falta cuando
+ * el cambio no lo hizo un administrador y la fecha puede no venir, así que se
+ * omite lo que falte; sin ninguno de los dos no se dibuja la línea.
+ */
+function selloDe(e: AdminEstab): string {
+  if (!e.fechaEstado && !e.ejecutorEstado) return "";
+  return [
+    "Suspendido",
+    e.fechaEstado && `el ${fmtFechaHora(e.fechaEstado)}`,
+    e.ejecutorEstado && `· por ${e.ejecutorEstado}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/* ---- Cáscara de la tabla -------------------------------------------------
+   La comparten el esqueleto y la tabla con datos, y los anchos van fijos: con
+   el layout automático las columnas se recalculan al llegar los datos y salta
+   todo, sobre todo Acciones, que va alineada a la derecha. */
+
+const COLUMNAS = ["Establecimiento", "Ubicación", "Actividad", "Alta", "Estado", "Acciones"];
+const ANCHOS = [undefined, "w-[190px]", "w-[150px]", "w-[120px]", "w-[130px]", "w-[180px]"];
+
+function Tabla({ children }: { children: ReactNode }) {
   return (
-    <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(42,38,32,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(2px)" }}>
-      <div className="pop" style={{ background: "var(--surface)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-pop)", width: `min(${width}px, 100%)`, padding: 26 }}>{children}</div>
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1040px] table-fixed border-collapse">
+        <colgroup>
+          {ANCHOS.map((w, i) => (
+            <col key={i} className={w} />
+          ))}
+        </colgroup>
+        <thead>
+          <tr>
+            {COLUMNAS.map((h, i) => (
+              <th
+                key={h}
+                className={cn(
+                  "border-b-2 border-outline-variant px-4 py-3.5 text-[12.5px] font-bold tracking-[.05em] whitespace-nowrap text-fg-2 uppercase",
+                  i === 2 ? "text-center" : i === 5 ? "text-right" : "text-left",
+                )}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        {children}
+      </table>
     </div>
   );
 }
 
-function SuspendModal({ estab, busy, onCancel, onConfirm }: { estab: AdminEstab; busy: boolean; onCancel: () => void; onConfirm: (motivo: string) => void }) {
-  const [motivo, setMotivo] = useState("");
-  const [attempted, setAttempted] = useState(false);
-  const err = !motivo.trim() ? "Escribí el motivo de la suspensión." : motivo.trim().length < 15 ? "El motivo debe tener al menos 15 caracteres." : "";
-  const show = attempted && err;
+/** Actividades publicadas y reservas históricas de la finca. */
+function ContadoresActividad({ estab }: { estab: AdminEstab }) {
+  const items = [
+    { Icono: Grape, color: "text-green-700", valor: estab.actividades, title: "Actividades publicadas" },
+    { Icono: CalendarCheck, color: "text-brown-700", valor: estab.reservas, title: "Reservas históricas" },
+  ];
   return (
-    <Scrim onClose={onCancel}>
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-        <span style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--danger-fill)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Ban size={22} color="var(--danger)" /></span>
-        <div>
-          <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>Suspender establecimiento</h3>
-          <div style={{ fontSize: 13.5, color: "var(--fg-2)", marginTop: 2 }}>{estab.nombre} · {estab.titular}</div>
-        </div>
-      </div>
-      <p style={{ margin: "0 0 14px", color: "var(--fg-2)", fontSize: 14.5, lineHeight: 1.55 }}>El establecimiento dejará de aparecer en la exploración y no podrá recibir nuevas reservas. El titular verá el motivo que registres acá.</p>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: "var(--danger-fill)", borderRadius: "var(--radius)", padding: "11px 13px", marginBottom: 18 }}>
-        <Clock size={17} color="var(--danger)" style={{ flexShrink: 0, marginTop: 1 }} />
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 13.5, lineHeight: 1.5 }}><strong style={{ color: "var(--fg-1)" }}>Duración:</strong> la suspensión no tiene fecha de vencimiento. Se mantiene hasta que un administrador la reactive manualmente.</p>
-      </div>
-      <label htmlFor="susp-motivo" style={{ display: "block", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15.5, color: "var(--fg-1)", marginBottom: 8 }}>Motivo de la suspensión <span style={{ color: "var(--danger)" }}>*</span></label>
-      <textarea id="susp-motivo" maxLength={280} rows={4} placeholder="Ej. Reiteradas cancelaciones sin reembolso a los visitantes." value={motivo} onChange={(e) => setMotivo(e.target.value)} autoFocus style={{ width: "100%", resize: "vertical", minHeight: 96, fontFamily: "var(--font-sans)", fontSize: 15, color: "var(--fg-1)", borderRadius: "var(--radius)", background: "var(--surface)", border: "1px solid " + (show ? "var(--danger)" : "var(--sand)"), padding: "12px 14px", outline: "none", boxSizing: "border-box" }} />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 7 }}>
-        {show ? <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--danger-fg)" }}><AlertCircle size={15} color="var(--danger)" /> {err}</span> : <span style={{ fontSize: 12, color: "var(--fg-3)" }}>Quedará registrado junto con tu nombre y la fecha.</span>}
-        <span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 12, color: motivo.length > 280 ? "var(--danger)" : "var(--fg-3)" }}>{motivo.length}/280</span>
-      </div>
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
-        <button type="button" className="btn btn-neutral" onClick={onCancel} disabled={busy}>Cancelar</button>
-        <button type="button" className="btn" onClick={() => { setAttempted(true); if (!err) onConfirm(motivo.trim()); }} disabled={busy} style={{ background: "var(--danger)", color: "#fff", boxShadow: "inset 0 -2px 0 var(--danger-fg)" }}>{busy ? <Loader size={17} className="spin" /> : <Ban size={17} />} Suspender establecimiento</button>
-      </div>
-    </Scrim>
+    <div className="inline-flex items-center gap-3.5">
+      {items.map((c) => (
+        <span
+          key={c.title}
+          title={c.title}
+          className={cn(
+            "inline-flex items-center gap-1.5 font-mono text-sm font-bold",
+            // En cero el número no aporta nada y compite con los que sí.
+            c.valor > 0 ? "text-fg-1" : "text-fg-3",
+          )}
+        >
+          <c.Icono className={cn("size-[15px]", c.valor > 0 ? c.color : "text-fg-3")} />
+          {c.valor}
+        </span>
+      ))}
+    </div>
   );
 }
 
-function Inner({ initial }: { initial: AdminEstab[] }) {
+/* ---- Esqueleto ----------------------------------------------------------- */
+
+const ANCHOS_SKELETON = ["w-[150px]", "w-[124px]", "w-[168px]", "w-[136px]", "w-[112px]"];
+
+function EstablecimientosSkeleton() {
+  return (
+    <div className="mx-auto max-w-[1240px] px-7 pt-7 pb-[72px]" aria-busy>
+      <span role="status" className="sr-only">
+        Cargando establecimientos…
+      </span>
+
+      <PageHead />
+
+      {/* "—" y no cero: "0 establecimientos" es una afirmación, y todavía no
+          sabemos nada. */}
+      <Stats activos="—" suspendidos="—" total="—" hayAlerta={false} />
+      <Filtros query="" onQuery={() => {}} filtro="todos" onFiltro={() => {}} disabled />
+
+      <Card className="overflow-hidden p-0">
+        <Tabla>
+          <tbody>
+            {ANCHOS_SKELETON.map((w, i) => (
+              <tr key={i} className="border-b border-cream-tert">
+                <td className="p-4 align-middle">
+                  <div className="flex items-center gap-3.5">
+                    <Skeleton className="size-[46px] rounded-[10px]" />
+                    <div className="flex flex-col gap-2">
+                      <Skeleton className={cn("h-4", w)} />
+                      <Skeleton className="h-3 w-[96px]" />
+                    </div>
+                  </div>
+                </td>
+                <td className="p-4 align-middle">
+                  <Skeleton className="h-4 w-[118px]" />
+                </td>
+                <td className="p-4 align-middle">
+                  <Skeleton className="mx-auto h-4 w-[76px]" />
+                </td>
+                <td className="p-4 align-middle">
+                  <Skeleton className="h-4 w-[84px]" />
+                </td>
+                <td className="p-4 align-middle">
+                  <Skeleton className="h-[26px] w-[78px] rounded-pill" />
+                </td>
+                <td className="p-4 align-middle">
+                  <Skeleton className="ml-auto h-[38px] w-[124px]" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Tabla>
+      </Card>
+    </div>
+  );
+}
+
+/* ---- Cabecera, métricas y filtros ---------------------------------------- */
+
+function PageHead() {
+  return (
+    <>
+      <div className="mb-3.5 flex items-center gap-2.5 text-[13.5px] text-fg-3">
+        <span>Plataforma</span>
+        <ChevronRight className="size-[15px]" />
+        <span className="font-medium text-fg-2">Establecimientos</span>
+      </div>
+      <div className="mb-6">
+        <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">
+          Establecimientos
+        </h1>
+        <p className="mt-2.5 max-w-[680px] text-[15.5px] leading-relaxed text-fg-2">
+          Supervisá los establecimientos de la plataforma. Podés suspender los que incumplan las
+          normas — siempre con un motivo — y reactivarlos cuando regularicen su situación.
+        </p>
+      </div>
+    </>
+  );
+}
+
+function Stats({
+  activos,
+  suspendidos,
+  total,
+  hayAlerta,
+}: {
+  activos: ReactNode;
+  suspendidos: ReactNode;
+  total: ReactNode;
+  hayAlerta: boolean;
+}) {
+  const items = [
+    { Icono: Warehouse, label: "Establecimientos activos", value: activos, alerta: false },
+    { Icono: Ban, label: "Suspendidos", value: suspendidos, alerta: hayAlerta },
+    { Icono: ListIcon, label: "Total en la plataforma", value: total, alerta: false },
+  ];
+  return (
+    <div className="mb-5 flex flex-wrap gap-3.5">
+      {items.map((s) => (
+        <Card key={s.label} className="flex min-w-[190px] items-center gap-3 px-4 py-3">
+          <span
+            className={cn(
+              "flex size-[42px] shrink-0 items-center justify-center rounded-[10px]",
+              s.alerta ? "bg-danger-fill" : "bg-green-050",
+            )}
+          >
+            <s.Icono className={cn("size-5", s.alerta ? "text-danger" : "text-green-800")} />
+          </span>
+          <span>
+            <span className="block font-mono text-xl font-bold text-fg-1">{s.value}</span>
+            <span className="block text-[12.5px] text-fg-2">{s.label}</span>
+          </span>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+type Filtro = "todos" | "activos" | "suspendidos";
+
+function Filtros({
+  query,
+  onQuery,
+  filtro,
+  onFiltro,
+  disabled,
+}: {
+  query: string;
+  onQuery: (v: string) => void;
+  filtro: Filtro;
+  onFiltro: (f: Filtro) => void;
+  /** El esqueleto dibuja los mismos controles apagados, para que no salte el bloque. */
+  disabled?: boolean;
+}) {
+  const opciones: [Filtro, string][] = [
+    ["todos", "Todos"],
+    ["activos", "Activos"],
+    ["suspendidos", "Suspendidos"],
+  ];
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="min-w-[240px] flex-1">
+        <TextField
+          value={query}
+          onChange={onQuery}
+          icon={<Search />}
+          placeholder="Buscar por nombre, productor líder o departamento"
+          disabled={disabled}
+        />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {opciones.map(([val, label]) => {
+          const on = filtro === val;
+          return (
+            <button
+              key={val}
+              type="button"
+              disabled={disabled}
+              onClick={() => onFiltro(val)}
+              className={cn(
+                "rounded-pill border px-[15px] py-2.5 text-[13.5px] font-semibold whitespace-nowrap transition-colors",
+                disabled ? "cursor-default" : "cursor-pointer",
+                on
+                  ? "border-green-800 bg-green-800 text-fg-on-dark"
+                  : "border-outline-variant bg-surface text-fg-2 hover:bg-cream-tert",
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---- Diálogos ------------------------------------------------------------ */
+
+function SuspenderModal({
+  estab,
+  busy,
+  error,
+  onCancel,
+  onConfirm,
+}: {
+  estab: AdminEstab;
+  busy: boolean;
+  /** Rechazo del backend: el diálogo queda abierto con lo escrito. */
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: (motivo: string) => void;
+}) {
+  const [motivo, setMotivo] = useState("");
+  const [intentado, setIntentado] = useState(false);
+
+  const limpio = motivo.trim();
+  const err = !limpio
+    ? "Escribí el motivo de la suspensión."
+    : limpio.length < MOTIVO_MIN
+      ? `El motivo debe tener al menos ${MOTIVO_MIN} caracteres.`
+      : "";
+  const mostrarErr = intentado && !!err;
+
+  return (
+    <Modal onClose={onCancel} dismissable={!busy}>
+      <div className="flex items-center gap-3.5">
+        <IconCircle tone="danger">
+          <Ban className="size-[22px] text-danger" />
+        </IconCircle>
+        <div className="min-w-0">
+          <h3 className="font-display text-xl font-bold text-fg-1">Suspender establecimiento</h3>
+          <div className="mt-0.5 truncate text-[13.5px] text-fg-2">
+            {estab.nombre}
+            {estab.productorLider && ` · ${estab.productorLider}`}
+          </div>
+        </div>
+      </div>
+
+      <p className="mt-3.5 text-[14.5px] leading-relaxed text-fg-2">
+        El establecimiento dejará de aparecer en la exploración y no podrá recibir nuevas reservas.
+        El titular verá el motivo que registres acá.
+      </p>
+
+      <Alert tone="danger" icon={<Clock size={17} />} className="mt-3.5">
+        <strong className="font-bold">Duración:</strong> la suspensión no tiene fecha de
+        vencimiento. Se mantiene hasta que un administrador la reactive manualmente.
+      </Alert>
+
+      <label
+        htmlFor="susp-motivo"
+        className="mt-[18px] mb-2 block font-display text-[15.5px] font-semibold text-fg-1"
+      >
+        Motivo de la suspensión <span className="text-danger">*</span>
+      </label>
+      {/* Sin primitivo de textarea todavía: usa la clase del design system. */}
+      <textarea
+        id="susp-motivo"
+        rows={4}
+        autoFocus
+        maxLength={MOTIVO_MAX}
+        value={motivo}
+        onChange={(e) => setMotivo(e.target.value)}
+        aria-invalid={mostrarErr || undefined}
+        aria-describedby="susp-motivo-ayuda"
+        placeholder="Ej. Reiteradas cancelaciones sin reembolso a los visitantes."
+        className={cn("textarea min-h-[96px] text-[15px]", mostrarErr && "err")}
+      />
+      <div className="mt-[7px] flex items-center justify-between gap-3">
+        {mostrarErr ? (
+          <span className="err-msg text-[12.5px]">
+            <AlertCircle className="size-[15px] text-danger" /> {err}
+          </span>
+        ) : (
+          <span id="susp-motivo-ayuda" className="text-xs text-fg-3">
+            Quedará registrado junto con la fecha.
+          </span>
+        )}
+        <span className="shrink-0 font-mono text-xs text-fg-3">
+          {motivo.length}/{MOTIVO_MAX}
+        </span>
+      </div>
+
+      {error && <Alert className="mt-4">{error}</Alert>}
+
+      <div className="mt-6 flex justify-end gap-3">
+        <Button variant="neutral" onClick={onCancel} disabled={busy}>
+          Cancelar
+        </Button>
+        <Button
+          variant="danger"
+          disabled={busy}
+          onClick={() => {
+            setIntentado(true);
+            if (!err) onConfirm(limpio);
+          }}
+        >
+          {busy ? <Loader className="size-[17px] spin" /> : <Ban className="size-[17px]" />}
+          Suspender establecimiento
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function ReactivarModal({
+  estab,
+  busy,
+  error,
+  onCancel,
+  onConfirm,
+}: {
+  estab: AdminEstab;
+  busy: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal onClose={onCancel} dismissable={!busy}>
+      <div className="flex items-center gap-3.5">
+        <IconCircle tone="success">
+          <RotateCcw className="size-[22px] text-green-800" />
+        </IconCircle>
+        <h3 className="font-display text-xl font-bold text-fg-1">Reactivar establecimiento</h3>
+      </div>
+      <p className="mt-4 text-[15px] leading-relaxed text-fg-2">
+        <strong className="font-semibold text-fg-1">{estab.nombre}</strong> volverá a aparecer en la
+        exploración y podrá recibir reservas nuevamente.
+      </p>
+      {error && <Alert className="mt-4">{error}</Alert>}
+      <div className="mt-6 flex justify-end gap-3">
+        <Button variant="neutral" onClick={onCancel} disabled={busy}>
+          No, volver
+        </Button>
+        <Button onClick={onConfirm} disabled={busy}>
+          {busy ? <Loader className="size-[17px] spin" /> : <Check className="size-[17px]" />}
+          Sí, reactivar
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+/* ---- Pantalla ------------------------------------------------------------ */
+
+function Pantalla({
+  initial,
+  gestionar,
+}: {
+  initial: AdminEstab[];
+  gestionar: boolean;
+}) {
   const [estabs, setEstabs] = useState<AdminEstab[]>(initial);
-  const [toSuspend, setToSuspend] = useState<AdminEstab | null>(null);
-  const [toReactivate, setToReactivate] = useState<AdminEstab | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
+  const [aSuspender, setASuspender] = useState<AdminEstab | null>(null);
+  const [aReactivar, setAReactivar] = useState<AdminEstab | null>(null);
+  const [errorModal, setErrorModal] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastData | null>(null);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"todos" | "activos" | "suspendidos">("todos");
+  const [filtro, setFiltro] = useState<Filtro>("todos");
   const { suspender, reactivar, isLoading } = useModerarEstablecimiento();
 
   const activos = estabs.filter((e) => e.estado === "activo").length;
-  const suspendidos = estabs.filter((e) => e.estado === "suspendido").length;
+  const suspendidos = estabs.length - activos;
 
-  function notify(msg: string) { setFlash(msg); setTimeout(() => setFlash((f) => (f === msg ? null : f)), 3400); }
+  function avisar(title: string) {
+    const data: ToastData = { tone: "success", title };
+    setToast(data);
+    setTimeout(() => setToast((t) => (t === data ? null : t)), 3400);
+  }
 
   const visibles = useMemo(() => {
     const q = query.trim().toLowerCase();
     return estabs.filter((e) => {
-      if (filter === "activos" && e.estado !== "activo") return false;
-      if (filter === "suspendidos" && e.estado !== "suspendido") return false;
-      if (q && !(e.nombre.toLowerCase().includes(q) || e.titular.toLowerCase().includes(q) || e.ubicacion.toLowerCase().includes(q))) return false;
+      if (filtro === "activos" && e.estado !== "activo") return false;
+      if (filtro === "suspendidos" && e.estado !== "suspendido") return false;
+      if (
+        q &&
+        !(
+          e.nombre.toLowerCase().includes(q) ||
+          e.productorLider.toLowerCase().includes(q) ||
+          e.departamento.toLowerCase().includes(q)
+        )
+      )
+        return false;
       return true;
     });
-  }, [estabs, query, filter]);
+  }, [estabs, query, filtro]);
 
-  async function confirmSuspend(estab: AdminEstab, motivo: string) {
-    await suspender(estab.id, motivo);
-    setEstabs((prev) => prev.map((e) => (e.id === estab.id ? { ...e, estado: "suspendido", motivo, suspendido: admNowStamp(), suspendidoPor: "Diego Ferreyra" } : e)));
-    setToSuspend(null);
-    notify(`Se suspendió ${estab.nombre}.`);
-  }
-  async function confirmReactivate(estab: AdminEstab) {
-    await reactivar(estab.id);
-    setEstabs((prev) => prev.map((e) => (e.id === estab.id ? { ...e, estado: "activo", motivo: undefined, suspendido: undefined, suspendidoPor: undefined } : e)));
-    setToReactivate(null);
-    notify(`Se reactivó ${estab.nombre}.`);
+  /**
+   * Se parchea la fila en vez de recargar la lista: recargar mostraría el
+   * esqueleto de toda la tabla por un cambio de una celda. Sólo se pisa el
+   * estado —los contadores no viajan en esas respuestas— y `respaldo` cubre el
+   * 2xx sin cuerpo, donde el estado nuevo lo sabemos igual.
+   */
+  function aplicar(id: string, devuelto: EstadoAdminEstab | undefined, respaldo: EstadoAdminEstab) {
+    setEstabs((prev) => prev.map((e) => (e.id === id ? { ...e, ...(devuelto ?? respaldo) } : e)));
   }
 
-  const filterBtn = (val: typeof filter, label: string) => {
-    const on = filter === val;
-    return <button type="button" onClick={() => setFilter(val)} style={{ padding: "8px 14px", borderRadius: "var(--radius-pill)", fontSize: 13.5, fontWeight: 600, border: "1px solid " + (on ? "var(--green-800)" : "var(--outline-variant)"), background: on ? "var(--green-800)" : "var(--surface)", color: on ? "#fff" : "var(--fg-2)", cursor: "pointer", whiteSpace: "nowrap" }}>{label}</button>;
-  };
+  async function confirmarSuspension(estab: AdminEstab, motivo: string) {
+    setErrorModal(null);
+    const r = await suspender(estab.id, motivo);
+    if (!r.ok) {
+      setErrorModal(mensajeModerar(r.code, true));
+      return;
+    }
+    aplicar(estab.id, r.estado, {
+      estado: "suspendido",
+      motivoEstado: motivo,
+      // Sin respuesta no sabemos el sello: mejor no dibujarlo que inventarlo.
+      fechaEstado: null,
+      ejecutorEstado: "",
+    });
+    setASuspender(null);
+    avisar(`Se suspendió ${estab.nombre}.`);
+  }
+
+  async function confirmarReactivacion(estab: AdminEstab) {
+    setErrorModal(null);
+    const r = await reactivar(estab.id);
+    if (!r.ok) {
+      setErrorModal(mensajeModerar(r.code, false));
+      return;
+    }
+    aplicar(estab.id, r.estado, {
+      estado: "activo",
+      motivoEstado: "",
+      fechaEstado: null,
+      ejecutorEstado: "",
+    });
+    setAReactivar(null);
+    avisar(`Se reactivó ${estab.nombre}.`);
+  }
+
+  function cerrarModal() {
+    setASuspender(null);
+    setAReactivar(null);
+    setErrorModal(null);
+  }
 
   return (
-    <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 72px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--fg-3)", fontSize: 13.5, marginBottom: 14 }}><span>Plataforma</span><ChevronRight size={15} /><span style={{ color: "var(--fg-2)", fontWeight: 500 }}>Establecimientos</span></div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 32, color: "var(--fg-1)", letterSpacing: "-.01em" }}>Establecimientos</h1>
-        <p style={{ margin: "10px 0 0", color: "var(--fg-2)", fontSize: 15.5, lineHeight: 1.5, maxWidth: 680 }}>Supervisá los establecimientos de la plataforma. Podés suspender los que incumplan las normas — siempre con un motivo — y reactivarlos cuando regularicen su situación.</p>
-      </div>
+    <div className="mx-auto max-w-[1240px] px-7 pt-7 pb-[72px]">
+      <PageHead />
+      <Stats
+        activos={activos}
+        suspendidos={suspendidos}
+        total={estabs.length}
+        hayAlerta={suspendidos > 0}
+      />
+      <Filtros query={query} onQuery={setQuery} filtro={filtro} onFiltro={setFiltro} />
 
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
-        {[{ icon: <Warehouse size={20} color="var(--green-800)" />, label: "Establecimientos activos", value: activos, danger: false }, { icon: <Ban size={20} color={suspendidos > 0 ? "var(--danger)" : "var(--green-800)"} />, label: "Suspendidos", value: suspendidos, danger: suspendidos > 0 }, { icon: <ListIcon size={20} color="var(--green-800)" />, label: "Total en la plataforma", value: estabs.length, danger: false }].map((s) => (
-          <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius)", padding: "12px 16px", minWidth: 190 }}>
-            <span style={{ width: 42, height: 42, borderRadius: 10, background: s.danger ? "var(--danger-fill)" : "var(--green-050)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.icon}</span>
-            <span><span style={{ display: "block", fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>{s.value}</span><span style={{ display: "block", fontSize: 12.5, color: "var(--fg-2)" }}>{s.label}</span></span>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <div style={{ position: "relative", flex: 1, minWidth: 240 }}>
-          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", display: "flex" }}><Search size={17} color="var(--fg-3)" /></span>
-          <input placeholder="Buscar por nombre, titular o ubicación" value={query} onChange={(e) => setQuery(e.target.value)} style={{ width: "100%", fontFamily: "var(--font-sans)", fontSize: 15, color: "var(--fg-1)", borderRadius: "var(--radius)", background: "var(--surface)", border: "1px solid var(--sand)", padding: "11px 14px 11px 42px", outline: "none", boxSizing: "border-box" }} />
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>{filterBtn("todos", "Todos")}{filterBtn("activos", "Activos")}{filterBtn("suspendidos", "Suspendidos")}</div>
-      </div>
-
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <Card className="overflow-hidden p-0">
         {visibles.length === 0 ? (
-          <div style={{ padding: "56px 24px", textAlign: "center", color: "var(--fg-3)" }}><SearchX size={32} color="var(--fg-3)" /><div style={{ marginTop: 12, fontSize: 15 }}>No hay establecimientos que coincidan con la búsqueda.</div></div>
+          <div className="px-6 py-14 text-center text-fg-3">
+            <SearchX className="mx-auto size-8" />
+            <div className="mt-3 text-[15px]">
+              {estabs.length === 0
+                ? "Todavía no hay establecimientos en la plataforma."
+                : "No hay establecimientos que coincidan con la búsqueda."}
+            </div>
+          </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1040 }}>
-              <thead>
-                <tr>{["Establecimiento", "Ubicación", "Actividad", "Alta", "Estado", "Acciones"].map((h, i) => (
-                  <th key={h} style={{ textAlign: i === 5 ? "right" : i === 2 ? "center" : "left", fontWeight: 700, color: "var(--fg-2)", fontSize: 12.5, textTransform: "uppercase", letterSpacing: ".05em", padding: "14px 16px", borderBottom: "2px solid var(--outline-variant)", whiteSpace: "nowrap" }}>{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody>
-                {visibles.map((e) => {
-                  const susp = e.estado === "suspendido";
-                  return (
-                    <Fragment key={e.id}>
-                      <tr style={{ borderBottom: susp ? "none" : "1px solid var(--cream-tert)", background: susp ? "var(--danger-fill)" : "transparent" }}>
-                        <td style={{ padding: "14px 16px", maxWidth: 320 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                            <span style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 10, display: "inline-flex", alignItems: "center", justifyContent: "center", background: susp ? "var(--cream-tert)" : "var(--green-050)", color: susp ? "var(--fg-3)" : "var(--green-800)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15, border: "1px solid " + (susp ? "var(--outline-variant)" : "var(--green-300)") }}>{estabInitials(e.nombre)}</span>
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16, color: "var(--fg-1)" }}>{e.nombre}</div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, fontSize: 12.5, color: "var(--fg-2)" }}><User size={13} color="var(--fg-3)" /> {e.titular}</div>
+          <Tabla>
+            <tbody>
+              {visibles.map((e) => {
+                const susp = e.estado === "suspendido";
+                const sello = susp ? selloDe(e) : "";
+                return (
+                  <Fragment key={e.id}>
+                    <tr
+                      className={cn(
+                        susp ? "bg-danger-fill" : "border-b border-cream-tert",
+                      )}
+                    >
+                      <td className="p-4 align-middle">
+                        <div className="flex items-center gap-3.5">
+                          <span
+                            className={cn(
+                              "inline-flex size-[46px] shrink-0 items-center justify-center rounded-[10px] border font-display text-[15px] font-bold",
+                              susp
+                                ? "border-outline-variant bg-cream-tert text-fg-3"
+                                : "border-green-300 bg-green-050 text-green-800",
+                            )}
+                          >
+                            {estabInitials(e.nombre || "?")}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="truncate font-display text-base leading-tight font-semibold text-fg-1">
+                              {e.nombre || "Sin nombre"}
+                            </div>
+                            <div className="mt-[3px] flex items-center gap-1.5 text-[12.5px] text-fg-2">
+                              <User className="size-[13px] shrink-0 text-fg-3" />
+                              <span className="truncate">{e.productorLider || "—"}</span>
                             </div>
                           </div>
-                        </td>
-                        <td style={{ padding: "14px 16px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, color: "var(--fg-1)" }}><MapPin size={14} color="var(--brown-700)" /> {e.ubicacion}</span></td>
-                        <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: 14 }}>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 14, color: "var(--fg-1)" }} title="Actividades publicadas"><Grape size={15} color="var(--green-700)" /> {e.actividades}</span>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 14, color: "var(--fg-1)" }} title="Reservas históricas"><CalendarCheck size={15} color="var(--brown-700)" /> {e.reservas}</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: "14px 16px", fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--fg-2)" }}>{e.alta}</td>
-                        <td style={{ padding: "14px 16px" }}><span style={pill(susp ? "danger" : "success")}>{susp ? "Suspendido" : "Activo"}</span></td>
-                        <td style={{ padding: "14px 16px" }}>
-                          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                            {susp ? <ActionBtn icon={<RotateCcw size={17} />} label="Reactivar" tone="success" title="Reactivar este establecimiento" onClick={() => setToReactivate(e)} /> : <ActionBtn icon={<Ban size={17} />} label="Suspender" tone="danger" title="Suspender este establecimiento" onClick={() => setToSuspend(e)} />}
+                        </div>
+                      </td>
+                      <td className="p-4 align-middle">
+                        <span className="inline-flex items-center gap-1.5 text-[13.5px] text-fg-1">
+                          <MapPin className="size-[14px] shrink-0 text-brown-700" />
+                          <span className="truncate">{e.departamento + ", Mendoza" || "—"}</span>
+                        </span>
+                      </td>
+                      <td className="p-4 text-center align-middle">
+                        <ContadoresActividad estab={e} />
+                      </td>
+                      <td className="p-4 align-middle font-mono text-[13px] text-fg-2">
+                        {fmtFecha(e.fechaAlta)}
+                      </td>
+                      <td className="p-4 align-middle">
+                        <EstadoBadge tone={susp ? "danger" : "success"}>
+                          {susp ? "Suspendido" : "Activo"}
+                        </EstadoBadge>
+                      </td>
+                      <td className="p-4 align-middle">
+                        <div className="flex justify-end">
+                          {susp ? (
+                            <ActionBtn
+                              icon={<RotateCcw className="size-[17px]" />}
+                              label="Reactivar"
+                              disabled={!gestionar}
+                              title={gestionar ? "Reactivar este establecimiento" : SIN_GESTION}
+                              onClick={() => setAReactivar(e)}
+                            />
+                          ) : (
+                            <ActionBtn
+                              icon={<Ban className="size-[17px]" />}
+                              label="Suspender"
+                              tone="danger"
+                              disabled={!gestionar}
+                              title={gestionar ? "Suspender este establecimiento" : SIN_GESTION}
+                              onClick={() => setASuspender(e)}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {susp && (
+                      <tr className="border-b border-cream-tert bg-danger-fill">
+                        <td colSpan={6} className="px-4 pt-0 pb-4 pl-[74px]">
+                          <div className="flex items-start gap-2.5 rounded-md border border-danger bg-surface px-3.5 py-2.5">
+                            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" />
+                            <div className="min-w-0">
+                              <div className="t-label mb-1 text-danger-fg">
+                                Motivo de la suspensión
+                              </div>
+                              <div className="text-[13.5px] leading-relaxed text-fg-1">
+                                {e.motivoEstado || "Sin motivo registrado."}
+                              </div>
+                              {sello && (
+                                <div className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-fg-3">
+                                  <Clock className="size-3 shrink-0" /> {sello}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
                       </tr>
-                      {susp && (
-                        <tr style={{ borderBottom: "1px solid var(--cream-tert)", background: "var(--danger-fill)" }}>
-                          <td colSpan={6} style={{ padding: "0 16px 14px 72px" }}>
-                            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: "var(--surface)", border: "1px solid var(--danger)", borderRadius: "var(--radius)", padding: "10px 13px" }}>
-                              <AlertTriangle size={16} color="var(--danger)" style={{ flexShrink: 0, marginTop: 2 }} />
-                              <div style={{ minWidth: 0 }}>
-                                <div className="t-label" style={{ color: "var(--danger-fg)", marginBottom: 4 }}>Motivo de la suspensión</div>
-                                <div style={{ fontSize: 13.5, color: "var(--fg-1)", lineHeight: 1.5 }}>{e.motivo}</div>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, fontSize: 11.5, color: "var(--fg-3)" }}><Clock size={12} color="var(--fg-3)" /> Suspendido el {e.suspendido}{e.suspendidoPor ? ` · por ${e.suspendidoPor}` : ""}</div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </Tabla>
         )}
-      </div>
+      </Card>
 
-      {toSuspend && <SuspendModal estab={toSuspend} busy={isLoading} onCancel={() => setToSuspend(null)} onConfirm={(motivo) => confirmSuspend(toSuspend, motivo)} />}
-      {toReactivate && (
-        <Scrim onClose={() => setToReactivate(null)} width={460}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
-            <span style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--green-050)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><RotateCcw size={22} color="var(--green-800)" /></span>
-            <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>Reactivar establecimiento</h3>
-          </div>
-          <p style={{ margin: "0 0 22px", color: "var(--fg-2)", fontSize: 15, lineHeight: 1.55 }}><strong style={{ color: "var(--fg-1)" }}>{toReactivate.nombre}</strong> volverá a aparecer en la exploración y podrá recibir reservas nuevamente.</p>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
-            <button type="button" className="btn btn-neutral" onClick={() => setToReactivate(null)} disabled={isLoading}>No, volver</button>
-            <button type="button" className="btn btn-primary" onClick={() => confirmReactivate(toReactivate)} disabled={isLoading}>{isLoading ? <Loader size={17} className="spin" /> : <Check size={17} />} Sí, reactivar</button>
-          </div>
-        </Scrim>
+      {aSuspender && (
+        <SuspenderModal
+          estab={aSuspender}
+          busy={isLoading}
+          error={errorModal}
+          onCancel={cerrarModal}
+          onConfirm={(motivo) => confirmarSuspension(aSuspender, motivo)}
+        />
       )}
-      {flash && <div className="pop" style={{ position: "fixed", right: 24, bottom: 24, zIndex: 80, background: "var(--green-800)", color: "#fff", borderRadius: "var(--radius)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, boxShadow: "var(--shadow-pop)", fontSize: 15, fontWeight: 500, maxWidth: "calc(100vw - 40px)" }}><CheckCircle2 size={20} color="#fff" /> {flash}</div>}
+      {aReactivar && (
+        <ReactivarModal
+          estab={aReactivar}
+          busy={isLoading}
+          error={errorModal}
+          onCancel={cerrarModal}
+          onConfirm={() => confirmarReactivacion(aReactivar)}
+        />
+      )}
+      {toast && <Toast {...toast} />}
     </div>
   );
 }
 
 export default function EstablecimientosAdminClient() {
-  const { data, isLoading, error, reload } = useEstablecimientosAdmin();
+  const { establecimientos, isLoading, error, reload } = useEstablecimientosAdmin();
+  const accesos = useAuthStore((s) => s.accesos);
+  const gestionar = tienePermiso(accesos, PermisoAdmin.GESTIONAR_ESTABLECIMIENTO);
+
   return (
-    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando establecimientos…">
-      {data && <Inner initial={data} />}
+    <AsyncBoundary
+      loading={isLoading}
+      error={error}
+      onRetry={reload}
+      skeleton={<EstablecimientosSkeleton />}
+    >
+      {/* `reload` vuelve a poner `isLoading`, y con eso el boundary desmonta la
+          pantalla: la copia local con las filas parcheadas se descarta sola y
+          no queda mezclada con lo que acaba de llegar. */}
+      <Pantalla initial={establecimientos} gestionar={gestionar} />
     </AsyncBoundary>
   );
 }
