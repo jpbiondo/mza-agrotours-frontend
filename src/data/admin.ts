@@ -64,13 +64,17 @@ export const ADMIN_SEED_PEOPLE: AdminPerson[] = [
   { id: "a5", nombre: "Tomás Peralta", email: "tomas.peralta@mendozaagrotours.gob.ar", dni: "28.945.302", rolId: "ar4", estado: "activo" },
 ];
 
+/**
+ * Sólo lo usa el mock del resumen de /admin: la pantalla de establecimientos ya
+ * va contra `GET /admin/establecimientos`.
+ */
 export const ADMIN_SEED_ESTAB: AdminEstab[] = [
-  { id: "e1", nombre: "Finca La Escondida", titular: "Lucía Funes", ubicacion: "Luján de Cuyo, Mendoza", actividades: 8, reservas: 142, alta: "12/03/2024", estado: "activo" },
-  { id: "e2", nombre: "Finca Los Álamos", titular: "Mateo Quiroga", ubicacion: "Maipú, Mendoza", actividades: 5, reservas: 87, alta: "04/07/2024", estado: "activo" },
-  { id: "e3", nombre: "Bodega Viento Sur", titular: "Sofía Iglesias", ubicacion: "Valle de Uco, Tunuyán", actividades: 11, reservas: 203, alta: "21/01/2024", estado: "activo" },
-  { id: "e4", nombre: "Finca El Cerezal", titular: "Joaquín Méndez", ubicacion: "San Rafael, Mendoza", actividades: 3, reservas: 19, alta: "15/09/2025", estado: "suspendido", motivo: "Reiteradas cancelaciones sin reembolso a los visitantes. Suspendido hasta regularizar la situación.", suspendido: "10/06/2026 · 16:30", suspendidoPor: "Paula Bianchi" },
-  { id: "e5", nombre: "Olivícola Don Aldo", titular: "Renata Vidal", ubicacion: "Maipú, Mendoza", actividades: 4, reservas: 56, alta: "30/11/2024", estado: "activo" },
-  { id: "e6", nombre: "Finca Sol de Agosto", titular: "Ignacio Sosa", ubicacion: "Tupungato, Mendoza", actividades: 2, reservas: 8, alta: "02/02/2026", estado: "activo" },
+  { id: "e1", nombre: "Finca La Escondida", productorLider: "Lucía Funes", departamento: "Luján de Cuyo", fechaAlta: "2024-03-12T09:00:00", actividades: 8, reservas: 142, estado: "activo", motivoEstado: "", fechaEstado: null, ejecutorEstado: "" },
+  { id: "e2", nombre: "Finca Los Álamos", productorLider: "Mateo Quiroga", departamento: "Maipú", fechaAlta: "2024-07-04T09:00:00", actividades: 5, reservas: 87, estado: "activo", motivoEstado: "", fechaEstado: null, ejecutorEstado: "" },
+  { id: "e3", nombre: "Bodega Viento Sur", productorLider: "Sofía Iglesias", departamento: "Tunuyán", fechaAlta: "2024-01-21T09:00:00", actividades: 11, reservas: 203, estado: "activo", motivoEstado: "", fechaEstado: null, ejecutorEstado: "" },
+  { id: "e4", nombre: "Finca El Cerezal", productorLider: "Joaquín Méndez", departamento: "San Rafael", fechaAlta: "2025-09-15T09:00:00", actividades: 3, reservas: 19, estado: "suspendido", motivoEstado: "Reiteradas cancelaciones sin reembolso a los visitantes. Suspendido hasta regularizar la situación.", fechaEstado: "2026-06-10T16:30:00", ejecutorEstado: "Paula Bianchi" },
+  { id: "e5", nombre: "Olivícola Don Aldo", productorLider: "Renata Vidal", departamento: "Maipú", fechaAlta: "2024-11-30T09:00:00", actividades: 4, reservas: 56, estado: "activo", motivoEstado: "", fechaEstado: null, ejecutorEstado: "" },
+  { id: "e6", nombre: "Finca Sol de Agosto", productorLider: "Ignacio Sosa", departamento: "Tupungato", fechaAlta: "2026-02-02T09:00:00", actividades: 2, reservas: 8, estado: "activo", motivoEstado: "", fechaEstado: null, ejecutorEstado: "" },
 ];
 
 export function admInitials(nombre: string): string {
