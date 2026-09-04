@@ -66,6 +66,8 @@ export interface SolicitudDetalle {
   nombreEstablecimiento: string;
   razonSocial: string;
   cuit: string;
+  /** Llega como `descripcionEstablecimiento`; acá se guarda con el nombre de la pantalla. */
+  descripcion: string;
   departamento: string;
   domicilioLegal: string;
   email: string;

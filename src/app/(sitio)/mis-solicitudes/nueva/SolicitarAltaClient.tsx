@@ -428,6 +428,29 @@ export default function SolicitarAltaClient() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="descripcion"
+                    render={({ field, fieldState }) => (
+                      <FormItem className="sm:col-span-2">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <FormLabel required className={LABEL}>Descripción</FormLabel>
+                          <Counter value={field.value} max={2000} />
+                        </div>
+                        <FormControl>
+                          {/* Sin primitivo de textarea todavía: usa la clase del design system. */}
+                          <textarea
+                            {...field}
+                            rows={5}
+                            maxLength={2000}
+                            placeholder="Contá qué ofrece el establecimiento: su historia, la producción y lo que puede visitar el turista."
+                            className={cn("textarea", fieldState.error && "err")}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 {/* Ubicación */}
