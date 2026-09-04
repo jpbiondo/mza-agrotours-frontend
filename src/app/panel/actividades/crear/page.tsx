@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function CrearActividadPage() {
-  return <ActivityForm mode="crear" initial={emptyActividadForm()} />;
+  return <ActivityForm initial={emptyActividadForm()} />;
 }

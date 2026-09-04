@@ -15,11 +15,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { Modal, Alert, Button, IconCircle } from "@/components/ui";
-import {
-  condicionIncumplidaMsg,
-  esBloqueoAdmin,
-  rolLabel,
-} from "@/data/cuenta";
+import { rolLabel } from "@/data/cuenta";
 import type { CondicionIncumplida, CuentaSesion } from "@/data/cuenta";
 import {
   useEliminarCuenta,
@@ -72,13 +68,15 @@ export default function DeleteAccountFlow({
   const { verificar } = useVerificarCondicionesBaja();
   const { procesar } = useEliminarCuenta();
 
+  // El envelope viene `ok` aunque la baja no se pueda hacer: lo que bloquea es
+  // que `data` traiga condiciones incumplidas (hasta 3). Sin `ok` es un fallo.
   function aplicar(res: { ok: boolean; condiciones: CondicionIncumplida[] }) {
     if (!res.ok) {
-      setStep("warn");
-    } else {
-      setCondiciones(res.condiciones);
-      setStep("blocked");
+      setStep("error");
+      return;
     }
+    setCondiciones(res.condiciones);
+    setStep(res.condiciones.length > 0 ? "blocked" : "warn");
   }
 
   // Al abrir, el backend decide si la cuenta cumple las condiciones para la baja.
@@ -169,7 +167,6 @@ export default function DeleteAccountFlow({
   }
 
   if (step === "blocked") {
-    const adminBlock = esBloqueoAdmin(condiciones);
     const varias = condiciones.length > 1;
     return (
       <Modal onClose={onClose}>
@@ -177,22 +174,23 @@ export default function DeleteAccountFlow({
           <ShieldAlert size={26} className="text-danger-fg" />
         </IconCircle>
         <h3 className={`mb-2 ${modalTitle}`}>
-          {adminBlock
-            ? "No es posible eliminar esta cuenta"
-            : "Todavía no podés eliminar tu cuenta"}
+          Todavía no podés eliminar tu cuenta
         </h3>
         <p className={`mb-5 ${modalLead}`}>
-          {adminBlock
-            ? "Las cuentas con rol de administrador no pueden darse de baja a sí mismas."
-            : varias
-              ? "Para poder dar de baja tu cuenta, primero tenés que cumplir con estas condiciones:"
-              : "Para poder dar de baja tu cuenta, primero tenés que cumplir con la siguiente condición:"}
+          {varias
+            ? "Para poder dar de baja tu cuenta, primero tenés que cumplir con estas condiciones:"
+            : "Para poder dar de baja tu cuenta, primero tenés que cumplir con la siguiente condición:"}
         </p>
+        {/* Se listan todas las condiciones incumplidas, no sólo la primera: si
+            no, el usuario resuelve una y vuelve a chocar con la siguiente. */}
         <ul className={`mb-[22px] ${condList}`}>
-          {condiciones.map((c, i) => {
-            const m = condicionIncumplidaMsg(c);
-            return <CondRow key={i} label={m.label} detail={m.detail} />;
-          })}
+          {condiciones.map((c) => (
+            <CondRow
+              key={c.nombre}
+              label={c.nombre}
+              detail={c.descripcion}
+            />
+          ))}
         </ul>
         <div className={modalActions}>
           <Button onClick={onClose}>
