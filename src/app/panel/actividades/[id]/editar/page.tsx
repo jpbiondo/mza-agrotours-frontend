@@ -1,13 +1,22 @@
 import type { Metadata } from "next";
-import EditarActividadClient from "./EditarActividadClient";
+import { notFound } from "next/navigation";
+import ActivityForm from "@/components/panel/ActivityForm";
+import { ACTIVIDADES_PROD } from "@/data/actividades-prod";
+import { hydrateActividadForm } from "@/data/actividad-form";
 
-export const metadata: Metadata = {
-  title: "Modificar actividad · Panel del productor · Mendoza AgroTours",
-};
+export function generateStaticParams() {
+  return ACTIVIDADES_PROD.map((a) => ({ id: a.id }));
+}
 
-// Sin `generateStaticParams`: la actividad la trae el backend con la sesión del
-// productor, así que no hay lista de ids conocida en build.
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const form = hydrateActividadForm(id);
+  return { title: form ? `Modificar ${form.nombre} · Mendoza AgroTours` : "Modificar actividad · Mendoza AgroTours" };
+}
+
 export default async function EditarActividadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <EditarActividadClient actividadId={id} />;
+  const form = hydrateActividadForm(id);
+  if (!form) notFound();
+  return <ActivityForm mode="editar" initial={form} />;
 }

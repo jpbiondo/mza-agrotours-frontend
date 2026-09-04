@@ -2,11 +2,10 @@
 
 import { useEffect } from "react";
 import { Search, SearchX, Trash2, X, Plus, Check, AlertCircle, ChevronRight, Gauge } from "lucide-react";
-import { Alert, Button, Card, IconCircle, Modal, Toast } from "@/components/ui";
-import { TextField } from "@/components/ui/text-field";
 import { GCR_MESES, GCR_ESTACIONES, GCR_EST_ORDEN, gcrCultivoNombre, gcrCultivoColor } from "@/data/gestionCr";
-import { cn } from "@/lib/utils";
 import type { Dificultad, Estacion, GcrCultivo } from "@/types/gestionCr";
+
+export const inputBase: React.CSSProperties = { width: "100%", fontFamily: "var(--font-sans)", fontSize: 15.5, color: "var(--fg-1)", borderRadius: "var(--radius)", border: "1px solid var(--sand)", padding: "12px 14px", outline: "none", boxSizing: "border-box", background: "var(--surface)" };
 
 /* ---- Escape-to-close hook ---------------------------------------------- */
 function useEscape(onClose: () => void) {
@@ -20,171 +19,83 @@ function useEscape(onClose: () => void) {
 /* ---- Flash toast ------------------------------------------------------- */
 export function GcrFlash({ flash }: { flash: string | null }) {
   if (!flash) return null;
-  return <Toast tone="success" title={flash} />;
-}
-
-/* ---- Confirmación de eliminación --------------------------------------- */
-export function GcrConfirmDelete({
-  open,
-  title,
-  body,
-  busy,
-  error,
-  onCancel,
-  onConfirm,
-}: {
-  open: boolean;
-  title: string;
-  body: React.ReactNode;
-  busy?: boolean;
-  /** Rechazo del backend: el diálogo queda abierto con el aviso. */
-  error?: string | null;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  if (!open) return null;
   return (
-    <Modal onClose={onCancel} dismissable={!busy}>
-      <div className="flex items-center gap-3.5">
-        <IconCircle tone="danger">
-          <Trash2 className="size-[22px] text-danger" />
-        </IconCircle>
-        <h3 className="font-display text-xl font-bold text-fg-1">{title}</h3>
-      </div>
-      <p className="mt-4 text-[15px] leading-relaxed text-fg-2">{body}</p>
-      {error && <Alert className="mt-4">{error}</Alert>}
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
-          No, volver
-        </Button>
-        <Button variant="danger" onClick={onConfirm} disabled={busy}>
-          <Trash2 className="size-[17px]" /> Sí, eliminar
-        </Button>
-      </div>
-    </Modal>
+    <div className="pop" style={{ position: "fixed", right: 24, bottom: 24, zIndex: 90, maxWidth: 420, background: "var(--green-800)", color: "#fff", borderRadius: "var(--radius)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, boxShadow: "var(--shadow-pop)", fontSize: 15, fontWeight: 500 }}>
+      <Check size={20} color="#fff" /> {flash}
+    </div>
   );
 }
 
-/* ---- Modal shell de formulario -----------------------------------------
-   No usa <Modal>: ese primitivo es un diálogo centrado de ancho fijo, y acá
-   hace falta un panel ancho, anclado arriba y con scroll propio, porque el
-   formulario crece con la cantidad de beneficios o pasos. */
+/* ---- Confirmación de eliminación --------------------------------------- */
+export function GcrConfirmDelete({ open, title, body, busy, onCancel, onConfirm }: { open: boolean; title: string; body: React.ReactNode; busy?: boolean; onCancel: () => void; onConfirm: () => void }) {
+  useEscape(onCancel);
+  if (!open) return null;
+  return (
+    <div onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(42,38,32,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(2px)" }}>
+      <div className="pop" style={{ background: "var(--surface)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-pop)", width: "min(460px, 100%)", padding: 26 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+          <span style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--danger-fill)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Trash2 size={22} color="var(--danger)" /></span>
+          <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>{title}</h3>
+        </div>
+        <p style={{ margin: "0 0 22px", color: "var(--fg-2)", fontSize: 15, lineHeight: 1.55 }}>{body}</p>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+          <button type="button" className="btn btn-neutral" onClick={onCancel} disabled={busy}>No, volver</button>
+          <button type="button" className="btn" onClick={onConfirm} disabled={busy} style={{ background: "var(--danger)", boxShadow: "inset 0 -2px 0 var(--danger-fg)", color: "#fff" }}><Trash2 size={17} /> Sí, eliminar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Modal shell de formulario ----------------------------------------- */
 export function GcrFormShell({ onCancel, children }: { onCancel: () => void; children: React.ReactNode }) {
   useEscape(onCancel);
   return (
-    <div
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
-      className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-[rgba(42,38,32,.45)] px-5 py-10 backdrop-blur-[2px]"
-    >
-      <div className="pop m-auto flex max-h-[calc(100vh-80px)] w-[680px] max-w-full flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface shadow-pop">
+    <div onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }} style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(42,38,32,.45)", backdropFilter: "blur(2px)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px", overflowY: "auto" }}>
+      <div className="pop" style={{ background: "var(--surface)", width: "min(680px, 100%)", maxHeight: "calc(100vh - 80px)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-pop)", display: "flex", flexDirection: "column", overflow: "hidden", margin: "auto" }}>
         {children}
       </div>
     </div>
   );
 }
 
-export function GcrFormHeader({
-  eyebrow,
-  title,
-  sub,
-  onCancel,
-}: {
-  eyebrow: string;
-  title: string;
-  sub?: string;
-  onCancel: () => void;
-}) {
+export function GcrFormHeader({ eyebrow, title, sub, onCancel }: { eyebrow: string; title: string; sub?: string; onCancel: () => void }) {
   return (
-    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline-variant px-[26px] py-[22px]">
-      <div className="min-w-0">
-        <div className="t-label mb-1.5">{eyebrow}</div>
-        <h2 className="font-display text-2xl font-bold text-fg-1">{title}</h2>
-        {sub && <p className="mt-1.5 max-w-[480px] text-sm leading-relaxed text-fg-2">{sub}</p>}
+    <div style={{ padding: "22px 26px", borderBottom: "1px solid var(--outline-variant)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexShrink: 0 }}>
+      <div style={{ minWidth: 0 }}>
+        <div className="t-label" style={{ marginBottom: 6 }}>{eyebrow}</div>
+        <h2 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, color: "var(--fg-1)" }}>{title}</h2>
+        {sub && <p style={{ margin: "6px 0 0", color: "var(--fg-2)", fontSize: 14, maxWidth: 480, lineHeight: 1.5 }}>{sub}</p>}
       </div>
-      <button
-        type="button"
-        onClick={onCancel}
-        aria-label="Cerrar"
-        className="flex size-[42px] shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface"
-      >
-        <X className="size-5 text-fg-2" />
-      </button>
+      <button type="button" onClick={onCancel} aria-label="Cerrar" style={{ width: 42, height: 42, flexShrink: 0, borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", background: "var(--surface)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={20} color="var(--fg-2)" /></button>
     </div>
   );
 }
 
-export function GcrFormFooter({
-  onCancel,
-  onSave,
-  saveLabel,
-  saveIcon,
-  busy,
-  error,
-}: {
-  onCancel: () => void;
-  onSave: () => void;
-  saveLabel: string;
-  saveIcon?: React.ReactNode;
-  busy?: boolean;
-  /** Rechazo del backend: el panel queda abierto con lo cargado. */
-  error?: string | null;
-}) {
+export function GcrFormFooter({ onCancel, onSave, saveLabel, saveIcon, busy }: { onCancel: () => void; onSave: () => void; saveLabel: string; saveIcon?: React.ReactNode; busy?: boolean }) {
   return (
-    <div className="shrink-0 border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-      {error && <Alert className="mb-3">{error}</Alert>}
-      <div className="flex items-center justify-end gap-3">
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
-          Cancelar
-        </Button>
-        <Button onClick={onSave} disabled={busy}>
-          {saveIcon ?? <Check className="size-[17px]" />} {saveLabel}
-        </Button>
-      </div>
+    <div style={{ padding: "16px 26px", borderTop: "1px solid var(--outline-variant)", background: "var(--cream-tert)", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, flexShrink: 0 }}>
+      <button type="button" className="btn btn-neutral" onClick={onCancel} disabled={busy}>Cancelar</button>
+      <button type="button" className="btn btn-primary" onClick={onSave} disabled={busy}>{saveIcon ?? <Check size={17} />} {saveLabel}</button>
     </div>
   );
 }
 
-export function GcrFieldLabel({
-  children,
-  required,
-  style,
-}: {
-  children: React.ReactNode;
-  required?: boolean;
-  /** Se conserva porque la pantalla de recetas todavía la usa. */
-  style?: React.CSSProperties;
-}) {
-  return (
-    <label style={style} className="mb-2 block font-display text-[15.5px] font-semibold text-fg-1">
-      {children}
-      {required && <span className="ml-[3px] text-danger">*</span>}
-    </label>
-  );
+export function GcrFieldLabel({ children, required, style }: { children: React.ReactNode; required?: boolean; style?: React.CSSProperties }) {
+  return <label style={{ display: "block", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15.5, color: "var(--fg-1)", marginBottom: 8, ...style }}>{children}{required && <span style={{ color: "var(--danger)", marginLeft: 3 }}>*</span>}</label>;
 }
 
 export function GcrErr({ msg }: { msg: string }) {
-  return (
-    <div className="err-msg">
-      <AlertCircle className="size-[15px] text-danger" /> {msg}
-    </div>
-  );
+  return <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--danger-fg)" }}><AlertCircle size={15} color="var(--danger)" /> {msg}</div>;
 }
 
 /* ---- Barra de estacionalidad (lectura) --------------------------------- */
 export function GcrSeasonBar({ calendario }: { calendario: Estacion[] }) {
   return (
-    <div className="flex gap-0.5" title="Calendario de cosecha">
+    <div style={{ display: "flex", gap: 2 }} title="Calendario de cosecha">
       {calendario.map((s, i) => {
-        // Fallback: un estado fuera del enum no puede tumbar la fila entera.
-        const est = GCR_ESTACIONES[s] ?? GCR_ESTACIONES.r;
-        return (
-          <span
-            key={i}
-            title={`${GCR_MESES[i] ?? ""}: ${est.nombre}`}
-            className={cn("size-[19px] rounded", s === "r" && "opacity-[.42]")}
-            style={{ background: est.swatch }}
-          />
-        );
+        const est = GCR_ESTACIONES[s];
+        return <span key={i} title={`${GCR_MESES[i]}: ${est.nombre}`} style={{ width: 19, height: 19, borderRadius: 4, background: est.swatch, opacity: s === "r" ? 0.42 : 1 }} />;
       })}
     </div>
   );
@@ -192,172 +103,63 @@ export function GcrSeasonBar({ calendario }: { calendario: Estacion[] }) {
 
 /* ---- Editor de estacionalidad ------------------------------------------ */
 export function GcrSeasonEditor({ value, onChange }: { value: Estacion[]; onChange: (v: Estacion[]) => void }) {
-  const cycle = (s: Estacion): Estacion => {
-    // `indexOf` da -1 con un valor fuera del orden; sin el max, el ciclo arranca
-    // en el último estado en vez del primero.
-    const i = Math.max(0, GCR_EST_ORDEN.indexOf(s));
-    return GCR_EST_ORDEN[(i + 1) % GCR_EST_ORDEN.length];
-  };
-
+  const cycle = (s: Estacion): Estacion => GCR_EST_ORDEN[(GCR_EST_ORDEN.indexOf(s) + 1) % GCR_EST_ORDEN.length];
   return (
     <div>
-      <div className="grid grid-cols-6 gap-2">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8 }}>
         {value.map((s, i) => {
-          const est = GCR_ESTACIONES[s] ?? GCR_ESTACIONES.r;
+          const est = GCR_ESTACIONES[s];
           return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => {
-                const next = [...value];
-                next[i] = cycle(s);
-                onChange(next);
-              }}
-              style={{ borderColor: est.bd, background: est.bg, color: est.fg }}
-              className="flex cursor-pointer flex-col items-center gap-1.5 rounded-md border px-1.5 py-[9px]"
-            >
-              <span className="text-[11.5px] font-bold tracking-[.04em] uppercase">
-                {GCR_MESES[i] ?? ""}
-              </span>
-              <span className="flex items-center gap-[5px]">
-                <span className="size-[9px] rounded-full" style={{ background: est.swatch }} />
-                <span className="text-[11px] font-medium">{est.nombre}</span>
-              </span>
+            <button key={i} type="button" onClick={() => { const next = [...value]; next[i] = cycle(s); onChange(next); }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "9px 6px", borderRadius: "var(--radius)", border: "1px solid " + est.bd, background: est.bg, cursor: "pointer" }}>
+              <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 11.5, letterSpacing: ".04em", textTransform: "uppercase", color: est.fg }}>{GCR_MESES[i]}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: "50%", background: est.swatch }} /><span style={{ fontSize: 11, color: est.fg, fontWeight: 500 }}>{est.nombre}</span></span>
             </button>
           );
         })}
       </div>
-      <div className="mt-3 flex flex-wrap gap-4">
-        {GCR_EST_ORDEN.map((k) => {
-          const e = GCR_ESTACIONES[k];
-          return (
-            <span key={k} className="inline-flex items-center gap-1.5 text-xs text-fg-2">
-              <span className="size-[11px] rounded-sm" style={{ background: e.swatch }} />
-              {e.nombre}
-            </span>
-          );
-        })}
-        <span className="ml-auto text-[11.5px] text-fg-3">Tocá cada mes para cambiar su estado.</span>
+      <div style={{ display: "flex", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
+        {GCR_EST_ORDEN.map((k) => { const e = GCR_ESTACIONES[k]; return <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--fg-2)" }}><span style={{ width: 11, height: 11, borderRadius: 3, background: e.swatch }} />{e.nombre}</span>; })}
+        <span style={{ fontSize: 11.5, color: "var(--fg-3)", marginLeft: "auto" }}>Tocá cada mes para cambiar su estado.</span>
       </div>
     </div>
   );
 }
 
 /* ---- Editor de lista (beneficios / ingredientes / pasos) --------------- */
-export function GcrListEditor({
-  items,
-  onChange,
-  placeholder,
-  numbered,
-  addLabel,
-  maxLength,
-}: {
-  items: string[];
-  onChange: (v: string[]) => void;
-  placeholder: string;
-  numbered?: boolean;
-  addLabel: string;
-  maxLength?: number;
-}) {
-  const update = (i: number, v: string) => {
-    const next = [...items];
-    next[i] = v;
-    onChange(next);
-  };
-
+export function GcrListEditor({ items, onChange, placeholder, numbered, addLabel, maxLength }: { items: string[]; onChange: (v: string[]) => void; placeholder: string; numbered?: boolean; addLabel: string; maxLength?: number }) {
+  const update = (i: number, v: string) => { const next = [...items]; next[i] = v; onChange(next); };
   return (
     <div>
-      <div className="flex flex-col gap-2">
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {items.map((it, i) => (
-          <div key={i} className="flex items-start gap-2.5">
-            <span
-              className={cn(
-                "mt-[5px] flex size-[26px] shrink-0 items-center justify-center border border-green-300 bg-green-050 text-xs font-bold text-green-800",
-                numbered ? "rounded-md font-mono" : "rounded-full",
-              )}
-            >
-              {numbered ? i + 1 : <Check className="size-3.5" />}
-            </span>
-            <div className="min-w-0 flex-1">
-              <TextField
-                value={it}
-                placeholder={placeholder}
-                maxLength={maxLength}
-                onChange={(v) => update(i, v)}
-              />
-              {maxLength && it.length >= Math.floor(maxLength * 0.8) && (
-                <div
-                  className={cn(
-                    "mt-1 text-right font-mono text-[11px]",
-                    it.length >= maxLength ? "text-danger" : "text-fg-3",
-                  )}
-                >
-                  {it.length}/{maxLength}
-                </div>
-              )}
+          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <span style={{ flexShrink: 0, marginTop: 5, width: 26, height: 26, borderRadius: numbered ? "var(--radius)" : "50%", background: "var(--green-050)", border: "1px solid var(--green-300)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: numbered ? "var(--font-mono)" : "var(--font-sans)", fontWeight: 700, fontSize: 12, color: "var(--green-800)" }}>{numbered ? i + 1 : <Check size={14} color="var(--green-800)" />}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <input value={it} placeholder={placeholder} maxLength={maxLength} onChange={(e) => update(i, e.target.value)} style={{ ...inputBase, fontSize: 14.5, padding: "10px 12px" }} />
+              {maxLength && it.length >= Math.floor(maxLength * 0.8) && <div style={{ marginTop: 4, fontFamily: "var(--font-mono)", fontSize: 11, color: it.length >= maxLength ? "var(--danger)" : "var(--fg-3)", textAlign: "right" }}>{it.length}/{maxLength}</div>}
             </div>
-            <button
-              type="button"
-              onClick={() => onChange(items.filter((_, idx) => idx !== i))}
-              aria-label="Quitar"
-              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface"
-            >
-              <Trash2 className="size-4 text-danger" />
-            </button>
+            <button type="button" onClick={() => onChange(items.filter((_, idx) => idx !== i))} aria-label="Quitar" style={{ flexShrink: 0, width: 36, height: 36, borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", background: "var(--surface)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={16} color="var(--danger)" /></button>
           </div>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={() => onChange([...items, ""])}
-        className="mt-2.5 inline-flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-brown-700 bg-surface px-3 py-2 text-[13.5px] font-semibold text-brown-700"
-      >
-        <Plus className="size-4" />
-        {addLabel}
-      </button>
+      <button type="button" onClick={() => onChange([...items, ""])} style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: "var(--radius)", border: "1px dashed var(--brown-700)", background: "var(--surface)", color: "var(--brown-700)", fontFamily: "var(--font-sans)", fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}><Plus size={16} color="var(--brown-700)" />{addLabel}</button>
     </div>
   );
 }
 
 /* ---- Multiselección de cultivos (chips) -------------------------------- */
-export function GcrCultivoMultiSelect({
-  cultivos,
-  selected,
-  onChange,
-}: {
-  cultivos: GcrCultivo[];
-  selected: string[];
-  onChange: (v: string[]) => void;
-}) {
-  const toggle = (id: string) =>
-    onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
-
+export function GcrCultivoMultiSelect({ cultivos, selected, onChange }: { cultivos: GcrCultivo[]; selected: string[]; onChange: (v: string[]) => void }) {
+  const toggle = (id: string) => onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
   return (
-    <div className="flex flex-wrap gap-2">
-      {cultivos
-        .filter((c) => c.estado === "activo")
-        .map((c) => {
-          const on = selected.includes(c.id);
-          return (
-            <button
-              key={c.id}
-              type="button"
-              role="checkbox"
-              aria-checked={on}
-              onClick={() => toggle(c.id)}
-              className={cn(
-                "inline-flex cursor-pointer items-center gap-2.5 rounded-pill border py-[7px] pr-[13px] pl-2 text-[13.5px]",
-                on
-                  ? "border-green-800 bg-green-050 font-semibold text-green-800 shadow-[inset_0_-2px_0_var(--green-100)]"
-                  : "border-outline-variant bg-surface font-medium text-fg-2",
-              )}
-            >
-              <span className="size-5 shrink-0 rounded-full" style={{ background: c.color }} />
-              {c.nombre}
-              {on && <Check className="size-[15px]" />}
-            </button>
-          );
-        })}
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      {cultivos.filter((c) => c.estado === "activo").map((c) => {
+        const on = selected.includes(c.id);
+        return (
+          <button key={c.id} type="button" role="checkbox" aria-checked={on} onClick={() => toggle(c.id)} style={{ display: "inline-flex", alignItems: "center", gap: 9, padding: "7px 13px 7px 8px", borderRadius: "var(--radius-pill)", border: "1px solid " + (on ? "var(--green-800)" : "var(--outline-variant)"), background: on ? "var(--green-050)" : "var(--surface)", color: on ? "var(--green-800)" : "var(--fg-2)", fontFamily: "var(--font-sans)", fontSize: 13.5, fontWeight: on ? 600 : 500, cursor: "pointer", boxShadow: on ? "inset 0 -2px 0 var(--green-100)" : "none" }}>
+            <span style={{ width: 20, height: 20, borderRadius: "50%", background: c.color, flexShrink: 0 }} />{c.nombre}{on && <Check size={15} color="var(--green-800)" />}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -365,157 +167,79 @@ export function GcrCultivoMultiSelect({
 /* ---- Chip de cultivo (lectura) ----------------------------------------- */
 export function GcrCultivoChip({ id, cultivos }: { id: string; cultivos: GcrCultivo[] }) {
   return (
-    <span className="inline-flex items-center gap-[7px] rounded-pill border border-sand bg-cream-tert py-[3px] pr-2.5 pl-1 text-[12.5px] font-medium whitespace-nowrap text-fg-1">
-      <span
-        className="size-4 shrink-0 rounded-full"
-        style={{ background: gcrCultivoColor(id, cultivos) }}
-      />
-      {gcrCultivoNombre(id, cultivos)}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "3px 10px 3px 4px", borderRadius: "var(--radius-pill)", background: "var(--cream-tert)", border: "1px solid var(--sand)", fontSize: 12.5, color: "var(--fg-1)", fontWeight: 500, whiteSpace: "nowrap" }}>
+      <span style={{ width: 16, height: 16, borderRadius: "50%", background: gcrCultivoColor(id, cultivos), flexShrink: 0 }} />{gcrCultivoNombre(id, cultivos)}
     </span>
   );
 }
 
 /* ---- Pill de dificultad ------------------------------------------------ */
-const DIFICULTAD_TONO: Record<string, string> = {
-  "Fácil": "border-green-300 bg-green-050 text-green-800",
-  "Media": "border-[#E6CA72] bg-[#FBF3D6] text-[#8A6D12]",
-  "Difícil": "border-danger bg-danger-fill text-danger-fg",
-};
-
 export function GcrDifficultyPill({ dificultad }: { dificultad: Dificultad }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-[12.5px] font-semibold whitespace-nowrap",
-        DIFICULTAD_TONO[dificultad] ?? DIFICULTAD_TONO["Media"],
-      )}
-    >
-      <Gauge className="size-[13px]" />
-      {dificultad}
-    </span>
-  );
+  const map: Record<string, { bg: string; bd: string; fg: string }> = {
+    "Fácil": { bg: "var(--green-050)", bd: "var(--green-300)", fg: "var(--green-800)" },
+    "Media": { bg: "#FBF3D6", bd: "#E6CA72", fg: "#8A6D12" },
+    "Difícil": { bg: "var(--danger-fill)", bd: "var(--danger)", fg: "var(--danger-fg)" },
+  };
+  const c = map[dificultad] || map["Media"];
+  return <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: "var(--radius-pill)", background: c.bg, border: "1px solid " + c.bd, color: c.fg, fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap" }}><Gauge size={13} color={c.fg} />{dificultad}</span>;
 }
 
 /* ---- Tarjetas de estadística ------------------------------------------- */
-export function GcrStats({ items }: { items: { icon: React.ReactNode; label: string; value: React.ReactNode }[] }) {
+export function GcrStats({ items }: { items: { icon: React.ReactNode; label: string; value: number }[] }) {
   return (
-    <div className="mb-5 flex flex-wrap gap-3.5">
+    <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
       {items.map((s) => (
-        <Card key={s.label} className="flex min-w-[190px] items-center gap-3 px-4 py-3">
-          <span className="flex size-[42px] shrink-0 items-center justify-center rounded-[10px] bg-green-050">
-            {s.icon}
-          </span>
-          <span>
-            <span className="block font-mono text-xl font-bold text-fg-1">{s.value}</span>
-            <span className="block text-[12.5px] text-fg-2">{s.label}</span>
-          </span>
-        </Card>
+        <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius)", padding: "12px 16px", minWidth: 190 }}>
+          <span style={{ width: 42, height: 42, borderRadius: 10, background: "var(--green-050)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.icon}</span>
+          <span><span style={{ display: "block", fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>{s.value}</span><span style={{ display: "block", fontSize: 12.5, color: "var(--fg-2)" }}>{s.label}</span></span>
+        </div>
       ))}
     </div>
   );
 }
 
 /* ---- Barra de búsqueda ------------------------------------------------- */
-export function GcrSearchBar({
-  query,
-  onQuery,
-  placeholder,
-  disabled,
-}: {
-  query: string;
-  onQuery: (v: string) => void;
-  placeholder: string;
-  /** El esqueleto dibuja el mismo control apagado, para que no salte el bloque. */
-  disabled?: boolean;
-}) {
+export function GcrSearchBar({ query, onQuery, placeholder }: { query: string; onQuery: (v: string) => void; placeholder: string }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-3">
-      <div className="min-w-[240px] flex-1">
-        {/* <TextField> y no la clase `.input`: ésa es CSS sin capa y le gana a
-            las utilidades de Tailwind, así que el hueco para el icono no se
-            podía abrir con `pl-*`. */}
-        <TextField
-          value={query}
-          onChange={onQuery}
-          icon={<Search />}
-          placeholder={placeholder}
-          disabled={disabled}
-        />
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+      <div style={{ position: "relative", flex: 1, minWidth: 240 }}>
+        <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", display: "flex" }}><Search size={17} color="var(--fg-3)" /></span>
+        <input style={{ ...inputBase, paddingLeft: 42, fontSize: 15 }} placeholder={placeholder} value={query} onChange={(e) => onQuery(e.target.value)} />
       </div>
     </div>
   );
 }
 
 /* ---- Estado vacío ------------------------------------------------------ */
-export function GcrEmptyState({
-  icon,
-  title,
-  body,
-  actionLabel,
-  onAction,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-  actionLabel: string;
-  onAction: () => void;
-}) {
+export function GcrEmptyState({ icon, title, body, actionLabel, onAction }: { icon: React.ReactNode; title: string; body: string; actionLabel: string; onAction: () => void }) {
   return (
-    <div className="px-7 py-[60px] text-center">
-      <div className="mx-auto mb-[18px] flex size-[72px] items-center justify-center rounded-full border border-sand bg-cream-tert">
-        {icon}
-      </div>
-      <h3 className="mb-2 font-display text-[21px] font-bold text-fg-1">{title}</h3>
-      <p className="mx-auto mb-[22px] max-w-[440px] text-[15px] leading-relaxed text-fg-2">{body}</p>
-      <Button onClick={onAction}>
-        <Plus className="size-[17px]" /> {actionLabel}
-      </Button>
+    <div style={{ padding: "60px 28px", textAlign: "center" }}>
+      <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--cream-tert)", border: "1px solid var(--sand)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>{icon}</div>
+      <h3 style={{ margin: "0 0 8px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 21, color: "var(--fg-1)" }}>{title}</h3>
+      <p style={{ margin: "0 auto 22px", color: "var(--fg-2)", fontSize: 15, lineHeight: 1.55, maxWidth: 440 }}>{body}</p>
+      <button type="button" className="btn btn-primary" onClick={onAction}><Plus size={17} /> {actionLabel}</button>
     </div>
   );
 }
 
 /* ---- Encabezado de página ---------------------------------------------- */
-export function GcrPageHead({
-  crumb,
-  title,
-  desc,
-  actionLabel,
-  onAction,
-  accionDeshabilitada,
-}: {
-  crumb: string;
-  title: string;
-  desc: string;
-  actionLabel: string;
-  onAction: () => void;
-  /** El esqueleto muestra el mismo botón apagado. */
-  accionDeshabilitada?: boolean;
-}) {
+export function GcrPageHead({ crumb, title, desc, actionLabel, onAction }: { crumb: string; title: string; desc: string; actionLabel: string; onAction: () => void }) {
   return (
     <>
-      <div className="mb-3.5 flex items-center gap-2.5 text-[13.5px] text-fg-3">
-        <span>Contenido</span>
-        <ChevronRight className="size-[15px]" />
-        <span className="font-medium text-fg-2">{crumb}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--fg-3)", fontSize: 13.5, marginBottom: 14 }}>
+        <span>Contenido</span><ChevronRight size={15} /><span style={{ color: "var(--fg-2)", fontWeight: 500 }}>{crumb}</span>
       </div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-5">
-        <div className="min-w-[280px]">
-          <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">{title}</h1>
-          <p className="mt-2.5 max-w-[680px] text-[15.5px] leading-relaxed text-fg-2">{desc}</p>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, flexWrap: "wrap", marginBottom: 24 }}>
+        <div style={{ minWidth: 280 }}>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 32, color: "var(--fg-1)", letterSpacing: "-.01em" }}>{title}</h1>
+          <p style={{ margin: "10px 0 0", color: "var(--fg-2)", fontSize: 15.5, lineHeight: 1.5, maxWidth: 680 }}>{desc}</p>
         </div>
-        <Button size="lg" onClick={onAction} disabled={accionDeshabilitada}>
-          <Plus className="size-[18px]" /> {actionLabel}
-        </Button>
+        <button type="button" className="btn btn-primary btn-lg" onClick={onAction}><Plus size={18} /> {actionLabel}</button>
       </div>
     </>
   );
 }
 
 export function GcrNoMatch({ msg }: { msg: string }) {
-  return (
-    <div className="px-6 py-14 text-center text-fg-3">
-      <SearchX className="mx-auto size-8" />
-      <div className="mt-3 text-[15px]">{msg}</div>
-    </div>
-  );
+  return <div style={{ padding: "56px 24px", textAlign: "center", color: "var(--fg-3)" }}><SearchX size={32} color="var(--fg-3)" /><div style={{ marginTop: 12, fontSize: 15 }}>{msg}</div></div>;
 }

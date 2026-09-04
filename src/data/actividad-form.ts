@@ -1,21 +1,10 @@
-import type { LimitesUploader } from "@/components/ui/uploader";
-import type { ActividadFormData, DiaKey, TarifaFila } from "@/types/actividad-form";
+import type { ActividadFormData, DiaKey } from "@/types/actividad-form";
+import { getActividad } from "@/data/actividades-prod";
 
-/* ---- Fotos de la actividad -----------------------------------------------
-   A diferencia de las pruebas documentales, acá no entra el PDF y el tope es
-   por imagen, no sobre la suma. */
-
-export const FOTOS_MAX = 10;
-export const FOTO_MAX_BYTES = 5 * 1024 * 1024; // 5 MB por imagen
-
-export const UPLOAD_FOTOS: LimitesUploader = {
-  maxFiles: FOTOS_MAX,
-  maxBytesPorArchivo: FOTO_MAX_BYTES,
-  accept: "image/jpeg,image/png",
-  acceptLabel: "JPG o PNG",
-  extensiones: ["jpg", "jpeg", "png"],
-  mimes: ["image/jpeg", "image/png"],
-};
+export const CATALOGO_CULTIVOS = [
+  "Malbec", "Cabernet Sauvignon", "Bonarda", "Cabernet Franc", "Olivo Arbequina", "Olivo Frantoio",
+  "Durazno", "Damasco", "Cereza", "Nogal", "Pera", "Manzana", "Vid", "Recorrido rural",
+];
 
 export const DIAS: { key: DiaKey; label: string }[] = [
   { key: "lunes", label: "Lunes" },
@@ -27,27 +16,13 @@ export const DIAS: { key: DiaKey; label: string }[] = [
   { key: "domingo", label: "Domingo" },
 ];
 
+const LABEL_TO_KEY: Record<string, DiaKey> = {
+  Lunes: "lunes", Martes: "martes", Miércoles: "miercoles", Jueves: "jueves",
+  Viernes: "viernes", Sábado: "sabado", Domingo: "domingo",
+};
+
 function emptyDays(): Record<DiaKey, { on: boolean; desde: string; hasta: string }> {
   return DIAS.reduce((acc, d) => { acc[d.key] = { on: false, desde: "", hasta: "" }; return acc; }, {} as Record<DiaKey, { on: boolean; desde: string; hasta: string }>);
-}
-
-/**
- * Plantilla de rangos etarios: son sugerencias, no tramos fijos. El productor
- * las renombra, les cambia las edades, agrega o borra.
- *
- * Los ids son fijos y no aleatorios porque el formulario se arma en el server
- * component y viaja serializado: un id nuevo por render cambiaría el payload
- * en cada build sin necesidad. Las filas que agrega el usuario sí se generan
- * al vuelo, ya en el cliente.
- */
-export function tarifasIniciales(): TarifaFila[] {
-  return [
-    { id: "tpl-infantes", nombre: "Infantes", min: "0", max: "2", precio: "", on: false, base: false },
-    { id: "tpl-menores", nombre: "Menores", min: "3", max: "17", precio: "", on: false, base: false },
-    // Adultos arranca marcada y como base: es el caso de siempre, y así una
-    // actividad recién abierta no debe una tarifa base desde el vamos.
-    { id: "tpl-adultos", nombre: "Adultos", min: "18", max: "120", precio: "", on: true, base: true },
-  ];
 }
 
 /** Estado inicial vacío para crear una actividad. */
@@ -57,12 +32,43 @@ export function emptyActividadForm(): ActividadFormData {
     descripcion: "",
     cupos: "",
     cultivos: [],
-    tarifas: tarifasIniciales(),
+    ages: { infantes: { on: false, price: "" }, menores: { on: false, price: "" }, adultos: { on: true, price: "" } },
     days: emptyDays(),
     fechaDesde: "",
     fechaHasta: "",
     incluye: [""],
     noIncluye: [""],
     faqs: [{ q: "", a: "" }],
+  };
+}
+
+/** Hidrata el formulario con los datos de una actividad existente (modo editar). */
+export function hydrateActividadForm(id: string): ActividadFormData | null {
+  const act = getActividad(id);
+  if (!act) return null;
+
+  const base = emptyActividadForm();
+  act.dias.forEach((d) => {
+    const k = LABEL_TO_KEY[d.dia];
+    if (k) base.days[k] = { on: true, desde: d.desde, hasta: d.hasta };
+  });
+
+  return {
+    ...base,
+    nombre: act.nombre,
+    descripcion: `Viví una experiencia auténtica en Finca La Escondida: «${act.nombre}». Te acompañamos entre las hileras para conocer de cerca el trabajo de la tierra, la familia productora y los sabores de la finca.`,
+    cupos: "20",
+    cultivos: [...act.cultivos],
+    ages: {
+      infantes: { on: false, price: "" },
+      menores: { on: true, price: String(Math.round(act.precio * 0.6)) },
+      adultos: { on: true, price: String(act.precio) },
+    },
+    incluye: ["Degustación de productos de la finca", "Guía especializada durante toda la experiencia"],
+    noIncluye: ["Traslado hasta el establecimiento"],
+    faqs: [
+      { q: "¿Necesito llevar algo en particular?", a: "Recomendamos calzado cómodo, gorro y protector solar." },
+      { q: "¿Es apta para toda la familia?", a: "Sí, podés sumar menores indicando su rango etario al reservar." },
+    ],
   };
 }

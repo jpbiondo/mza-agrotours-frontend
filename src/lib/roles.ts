@@ -1,35 +1,11 @@
-import { TipoPermiso } from "@/lib/permisos";
-import type { Permiso } from "@/lib/permisos";
 import type { Acceso, Rol } from "@/types/auth";
 
 /** `tipoPermiso` de cada acceso → rol interno. */
-const POR_TIPO: Record<TipoPermiso, Rol> = {
-  [TipoPermiso.ADMIN]: "admin",
-  [TipoPermiso.PRODUCTOR]: "productor",
-  [TipoPermiso.VISITANTE]: "visitante",
+const POR_TIPO: Record<string, Rol> = {
+  ADMIN: "admin",
+  PRODUCTOR: "productor",
+  VISITANTE: "visitante",
 };
-
-/**
- * Roles protegidos, espejo del enum `RolProtegido` del backend: los únicos
- * nombres de rol con los que el front necesita comparar, porque son los que
- * habilitan la gestión en su ámbito. El resto se crean desde la pantalla de
- * roles y no significan nada acá.
- *
- * Viajan en `rolNombre` de cada acceso. El de productor vale por
- * establecimiento: se es líder de una finca, no de todas.
- */
-export const ROL_ADMIN_LIDER = "Administrador Líder";
-export const ROL_PRODUCTOR_LIDER = "Productor Líder";
-
-/** `tipoPermiso` normalizado, que es como lo compara todo este archivo. */
-function tipoDe(acceso: Acceso | undefined): string {
-  return String(acceso?.tipoPermiso ?? "").trim().toUpperCase();
-}
-
-/** Nombres de rol comparables: el backend no garantiza mayúsculas ni espacios. */
-function normNombre(nombre: string | null | undefined): string {
-  return String(nombre ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-}
 
 /**
  * Roles que surgen de los accesos del usuario. Descarta los tipos que no
@@ -39,88 +15,31 @@ function normNombre(nombre: string | null | undefined): string {
 export function rolesDe(accesos: Acceso[] | undefined): Rol[] {
   if (!Array.isArray(accesos)) return [];
   const roles = accesos
-    .map((a) => POR_TIPO[tipoDe(a) as TipoPermiso])
+    .map((a) => POR_TIPO[String(a?.tipoPermiso ?? "").trim().toUpperCase()])
     .filter((r): r is Rol => Boolean(r));
   return [...new Set(roles)];
 }
 
 /**
- * Ámbito donde se busca un rol o un permiso. Ni uno ni otro son globales:
- * aplican dentro de un `tipoPermiso` y, cuando ése es PRODUCTOR, dentro de un
- * establecimiento —el mismo criterio de `establecimientosDe`—, porque alguien
- * puede ser "Propietaria" de un establecimiento y no tener nada que ver con
- * otro.
- */
-export interface AmbitoRol {
-  /** Sin esto vale cualquier tipo de acceso. */
-  tipoPermiso?: TipoPermiso;
-  /** Sólo tiene sentido junto con `tipoPermiso: TipoPermiso.PRODUCTOR`. */
-  establecimientoId?: string;
-}
-
-/** Los accesos que caen dentro del ámbito; sin ámbito, todos. */
-function enAmbito(accesos: Acceso[], ambito: AmbitoRol): Acceso[] {
-  const tipo = ambito.tipoPermiso;
-  const establecimiento = ambito.establecimientoId?.trim();
-  return accesos.filter(
-    (a) =>
-      (!tipo || tipoDe(a) === tipo) &&
-      (!establecimiento || a?.establecimientoId === establecimiento),
-  );
-}
-
-/**
- * `true` si alguno de los accesos del ámbito incluye el permiso.
+ * `true` si alguno de los accesos incluye el permiso.
  *
- * Sin ámbito hace la unión sobre todos los accesos, que es exacto para los
- * permisos de ADMIN porque hay un único acceso de ese tipo. Para los de
- * PRODUCTOR hay que pasar el `establecimientoId`: la cuenta puede gestionar un
- * establecimiento y no otro, y la unión le daría permisos del primero mientras
- * mira el segundo.
+ * Hace la unión sobre todos los accesos. Para los permisos de ADMIN es exacto,
+ * porque hay un único acceso de ese tipo; cuando lleguen permisos de PRODUCTOR
+ * va a hacer falta scopear por `establecimientoId`, ya que alguien puede
+ * gestionar un establecimiento y no otro.
  */
-export function tienePermiso(
-  accesos: Acceso[] | undefined,
-  permiso: Permiso,
-  ambito: AmbitoRol = {},
-): boolean {
+export function puede(accesos: Acceso[] | undefined, permiso: string): boolean {
   if (!Array.isArray(accesos)) return false;
-  return enAmbito(accesos, ambito).some(
-    (a) => Array.isArray(a?.permisos) && a.permisos.includes(permiso),
-  );
+  return accesos.some((a) => Array.isArray(a?.permisos) && a.permisos.includes(permiso));
 }
 
 /**
- * `true` si la cuenta tiene un acceso con ese nombre de rol dentro del ámbito
- * pedido. Es la pregunta que corresponde cuando lo que habilita una acción es
- * el rol en sí —p. ej. el Administrador Líder— y no un permiso suelto.
- *
- * Como todo lo de este archivo, es control de navegación y no de seguridad: los
- * accesos salen del store persistido y se pueden editar desde el navegador.
- */
-export function tieneRol(
-  accesos: Acceso[] | undefined,
-  rolNombre: string,
-  ambito: AmbitoRol = {},
-): boolean {
-  if (!Array.isArray(accesos)) return false;
-  const buscado = normNombre(rolNombre);
-  // Sin nombre no hay nada que buscar, y comparar contra "" daría verdadero
-  // con cualquier acceso al que le falte el rolNombre.
-  if (!buscado) return false;
-  return enAmbito(accesos, ambito).some((a) => normNombre(a?.rolNombre) === buscado);
-}
-
-/**
- * `true` si la cuenta tiene algún acceso de ese tipo. Responde si es
- * administradora o productora, no cuál es su rol ni sobre qué establecimiento:
- * para eso están `tieneRol` y `establecimientosDe`.
- *
  * Chequeo de acceso del lado del cliente. Sirve para no mostrar pantallas ni
  * acciones que no corresponden, NO como control de seguridad: los accesos
  * viajan en el store persistido y son editables desde el navegador. Quien tiene
  * que rechazar cada request es el backend.
  */
-export function tieneTipoPermiso(roles: Rol[], requerido: Rol): boolean {
+export function tieneRol(roles: Rol[], requerido: Rol): boolean {
   return roles.includes(requerido);
 }
 
@@ -129,9 +48,11 @@ export function tieneTipoPermiso(roles: Rol[], requerido: Rol): boolean {
  * ADMIN. Cadena vacía si la cuenta no tiene un acceso de ese tipo: quien lo
  * muestre decide qué poner en su lugar.
  */
-export function nombreRol(accesos: Acceso[] | undefined, tipoPermiso: TipoPermiso): string {
+export function nombreRol(accesos: Acceso[] | undefined, tipoPermiso: string): string {
   if (!Array.isArray(accesos)) return "";
-  const acceso = accesos.find((a) => tipoDe(a) === tipoPermiso);
+  const acceso = accesos.find(
+    (a) => String(a?.tipoPermiso ?? "").trim().toUpperCase() === tipoPermiso,
+  );
   return acceso?.rolNombre ?? "";
 }
 
@@ -151,7 +72,7 @@ export interface EstablecimientoAcceso {
 export function establecimientosDe(accesos: Acceso[] | undefined): EstablecimientoAcceso[] {
   if (!Array.isArray(accesos)) return [];
   return accesos
-    .filter((a) => tipoDe(a) === TipoPermiso.PRODUCTOR)
+    .filter((a) => String(a?.tipoPermiso ?? "").trim().toUpperCase() === "PRODUCTOR")
     .filter((a) => typeof a?.establecimientoId === "string" && a.establecimientoId.trim() !== "")
     .map((a) => ({
       id: a.establecimientoId as string,

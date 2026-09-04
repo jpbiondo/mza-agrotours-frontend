@@ -5,8 +5,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
-import type { Permiso } from "@/lib/permisos";
-import { tienePermiso, tieneTipoPermiso } from "@/lib/roles";
+import { puede, tieneRol } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import type { Rol } from "@/types/auth";
 
@@ -18,20 +17,15 @@ const MOTIVO: Record<Rol, string> = {
 };
 
 /** Tiene el rol pero no el permiso fino: el motivo es otro. */
-const SIN_PERMISO =
-  "Tu rol no incluye acceso a esta sección. Pedile a un administrador que te lo habilite.";
+const SIN_PERMISO = "Tu rol no incluye acceso a esta sección. Pedile a un administrador que te lo habilite.";
 
 /**
  * El aviso no dibuja chrome: lo pone el layout que envuelve al guard. Antes acá
  * se renderizaba el <SiteHeader>, y como /admin y /panel montan el guard en su
  * layout, la primera pintura de esas rutas era la barra del sitio público antes
  * de saltar al sidebar que corresponde.
- *
- * Se exporta para las pantallas que no pueden resolver el acceso en la ruta: los
- * permisos de PRODUCTOR valen por establecimiento, y cuál está activo lo sabe
- * recién el cliente, cuando rehidrata el store del switcher.
  */
-export function SinPermiso({ motivo }: { motivo: string }) {
+function SinPermiso({ motivo }: { motivo: string }) {
   return (
     <div className="mx-auto max-w-[640px] px-7 pt-16 pb-24">
       <div className="flex flex-col items-center gap-3 rounded-lg border border-outline-variant bg-surface px-8 py-14 text-center">
@@ -41,13 +35,8 @@ export function SinPermiso({ motivo }: { motivo: string }) {
         <h1 className="font-display text-[24px] font-bold text-fg-1">
           No tenés acceso a esta sección
         </h1>
-        <p className="max-w-[440px] text-[14.5px] leading-relaxed text-fg-2">
-          {motivo}
-        </p>
-        <Link
-          href="/explorar"
-          className="btn btn-primary mt-2 inline-flex no-underline"
-        >
+        <p className="max-w-[440px] text-[14.5px] leading-relaxed text-fg-2">{motivo}</p>
+        <Link href="/explorar" className="btn btn-primary mt-2 inline-flex no-underline">
           Volver al inicio
         </Link>
       </div>
@@ -62,7 +51,7 @@ export function SinPermiso({ motivo }: { motivo: string }) {
  *
  * Es control de navegación, no de seguridad: los accesos salen del store
  * persistido y se pueden editar desde el navegador. La barrera real es que el
- * backend rechace los requests (ver `tieneTipoPermiso`).
+ * backend rechace los requests (ver `tieneRol`).
  */
 export default function GuardRol({
   rol,
@@ -70,8 +59,8 @@ export default function GuardRol({
   children,
 }: {
   rol: Rol;
-  /** Permiso adicional, p. ej. `PermisoAdmin.LEER_ADMIN`. Sin él alcanza con el rol. */
-  permiso?: Permiso;
+  /** Permiso adicional, p. ej. "LEER_ADMIN". Sin él alcanza con el rol. */
+  permiso?: string;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -95,9 +84,8 @@ export default function GuardRol({
   // Mostrar el aviso de sin acceso acá tampoco serviría: parpadearía en cada
   // carga incluso para quien sí tiene acceso.
   if (!hasHydrated || sinSesion) return null;
-  if (!tieneTipoPermiso(roles, rol)) return <SinPermiso motivo={MOTIVO[rol]} />;
-  if (permiso && !tienePermiso(accesos, permiso))
-    return <SinPermiso motivo={SIN_PERMISO} />;
+  if (!tieneRol(roles, rol)) return <SinPermiso motivo={MOTIVO[rol]} />;
+  if (permiso && !puede(accesos, permiso)) return <SinPermiso motivo={SIN_PERMISO} />;
 
   return <>{children}</>;
 }
