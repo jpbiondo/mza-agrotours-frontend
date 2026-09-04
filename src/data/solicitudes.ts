@@ -86,4 +86,8 @@ export function vigenteQueCoincide(campo: "cuil" | "razonSocial" | "email", valo
   return ESTAB_VIGENTES.find((e) => normCrit(e[campo]) === normCrit(valor)) || null;
 }
 
-export { fmtBytes } from "@/lib/utils";
+export function fmtBytes(b: number): string {
+  if (b < 1024) return b + " B";
+  if (b < 1024 * 1024) return (b / 1024).toFixed(0) + " KB";
+  return (b / (1024 * 1024)).toFixed(1) + " MB";
+}

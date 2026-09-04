@@ -17,6 +17,6 @@ export default async function CalendarioActividadPage({ params }: { params: Prom
   const { id } = await params;
   const act = getActividad(id);
   if (!act) notFound();
-  const { id: actId, nombre, estado, cultivos } = act;
-  return <CalendarioClient act={{ id: actId, nombre, estado, cultivos }} />;
+  const { id: actId, nombre, icon, estado, cultivos } = act;
+  return <CalendarioClient act={{ id: actId, nombre, icon, estado, cultivos }} />;
 }

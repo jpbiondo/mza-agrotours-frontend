@@ -7,7 +7,7 @@ export type Rol = "visitante" | "productor" | "admin";
 export interface Acceso {
   rolId: string;
   rolNombre: string;
-  /** Un `TipoPermiso` del backend; normalizar con `rolesDe`. */
+  /** "ADMIN" | "PRODUCTOR" | "VISITANTE". Normalizar con `rolesDe`. */
   tipoPermiso: string;
   /** Permisos finos del rol, p. ej. "LEER_ADMIN", "GESTIONAR_ADMIN". */
   permisos: string[];

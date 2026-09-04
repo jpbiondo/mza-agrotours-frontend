@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { Utensils, Sprout, Users, List as ListIcon, Clock, Pencil, Trash2, Loader } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { TextField } from "@/components/ui/text-field";
 import { genId } from "@/lib/id";
 import { GCR_DIFICULTADES, GCR_DURACIONES, gcrCultivoNombre, gcrRecetaInitials } from "@/data/gestionCr";
 import { useGestionRecetas, useGuardarReceta, useEliminarReceta } from "@/hooks/useGestionRecetas";
@@ -11,7 +10,7 @@ import type { Dificultad, DuracionId, GcrCultivo, GcrReceta } from "@/types/gest
 import {
   GcrFlash, GcrConfirmDelete, GcrFormShell, GcrFormHeader, GcrFormFooter, GcrFieldLabel, GcrErr,
   GcrListEditor, GcrCultivoMultiSelect, GcrCultivoChip, GcrDifficultyPill, GcrStats, GcrSearchBar,
-  GcrEmptyState, GcrPageHead, GcrNoMatch,
+  GcrEmptyState, GcrPageHead, GcrNoMatch, inputBase,
 } from "@/components/admin/gcr/shared";
 
 /* ---- Segmented control ------------------------------------------------- */
@@ -68,7 +67,7 @@ function RecetaForm({ initial, busy, cultivos, existingNames, onCancel, onSave }
       <div style={{ padding: "22px 26px", overflowY: "auto", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 22 }}>
         <div>
           <GcrFieldLabel required>Nombre de la receta</GcrFieldLabel>
-          <TextField value={nombre} maxLength={100} onChange={setNombre} placeholder="Ej. Tarta rústica de uva Malbec" aria-invalid={!!showNombre} />
+          <input value={nombre} maxLength={100} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Tarta rústica de uva Malbec" style={{ ...inputBase, borderColor: showNombre ? "var(--danger)" : "var(--sand)" }} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 7 }}>{showNombre ? <GcrErr msg={errNombre} /> : <span />}<span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-3)" }}>{nombre.length}/100</span></div>
         </div>
         <div>
@@ -82,18 +81,18 @@ function RecetaForm({ initial, busy, cultivos, existingNames, onCancel, onSave }
           <div><GcrFieldLabel>Duración</GcrFieldLabel><Segmented value={duracion} onChange={setDuracion} options={Object.values(GCR_DURACIONES).map((d) => ({ value: d.id, label: d.nombre }))} /></div>
           <div>
             <GcrFieldLabel>Tiempo de preparación</GcrFieldLabel>
-            <TextField value={tiempo} maxLength={40} onChange={setTiempo} placeholder="Ej. 1 h 15 min" />
+            <input value={tiempo} maxLength={40} onChange={(e) => setTiempo(e.target.value)} placeholder="Ej. 1 h 15 min" style={{ ...inputBase, fontSize: 15 }} />
             <div style={{ marginTop: 6, fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-3)", textAlign: "right" }}>{tiempo.length}/40</div>
           </div>
           <div>
             <GcrFieldLabel>Porciones</GcrFieldLabel>
-            <TextField inputMode="numeric" value={porciones} onChange={(v) => setPorciones(v.replace(/[^0-9]/g, ""))} aria-invalid={!!(attempted && errPorciones)} />
+            <input inputMode="numeric" value={porciones} onChange={(e) => setPorciones(e.target.value.replace(/[^0-9]/g, ""))} style={{ ...inputBase, fontFamily: "var(--font-mono)", borderColor: attempted && errPorciones ? "var(--danger)" : "var(--sand)" }} />
             {attempted && errPorciones && <div style={{ marginTop: 7 }}><GcrErr msg={errPorciones} /></div>}
           </div>
         </div>
         <div>
           <GcrFieldLabel required>Descripción</GcrFieldLabel>
-          <textarea rows={3} maxLength={500} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Contá en una o dos líneas de qué se trata la receta." className={attempted && errDesc ? "textarea err" : "textarea"} />
+          <textarea rows={3} maxLength={500} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Contá en una o dos líneas de qué se trata la receta." style={{ ...inputBase, resize: "vertical", borderColor: attempted && errDesc ? "var(--danger)" : "var(--sand)" }} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 7 }}>{attempted && errDesc ? <GcrErr msg={errDesc} /> : <span />}<span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 12, color: descripcion.length >= 500 ? "var(--danger)" : "var(--fg-3)" }}>{descripcion.length}/500</span></div>
         </div>
         <div><GcrFieldLabel style={{ marginBottom: 12 }}>Ingredientes</GcrFieldLabel><GcrListEditor items={ingredientes} onChange={setIngredientes} placeholder="Ej. 250 g de harina 0000" addLabel="Agregar ingrediente" maxLength={100} /></div>

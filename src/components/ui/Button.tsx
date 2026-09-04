@@ -22,22 +22,6 @@ const sizes: Record<Size, string> = {
   lg: "px-6 py-[15px] text-base",
 };
 
-const BASE =
-  "inline-flex cursor-pointer select-none items-center justify-center gap-2 rounded-md border font-sans font-semibold leading-none no-underline transition-[background-color,box-shadow,transform] disabled:cursor-not-allowed disabled:border-outline-variant disabled:bg-cream-tert disabled:text-fg-3 disabled:shadow-none";
-
-/**
- * Las clases del botón, para pintar como botón algo que no lo es —un `<Link>`,
- * sobre todo—. Un `<button>` envolviendo un `<a>` no es HTML válido y rompe la
- * navegación, así que el link se estila en vez de envolverse.
- */
-export function buttonClasses({
-  variant = "primary",
-  size = "md",
-  className = "",
-}: { variant?: Variant; size?: Size; className?: string } = {}): string {
-  return cn(BASE, variants[variant], sizes[size], className);
-}
-
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
@@ -54,7 +38,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       // `cn` y no concatenación: sin tailwind-merge, un `className` que pisa una
       // utilidad de la variante (p. ej. otro color de borde) gana o pierde según
       // el orden del CSS generado, no según el orden de las clases.
-      className={buttonClasses({ variant, size, className })}
+      className={cn(
+        "inline-flex cursor-pointer select-none items-center justify-center gap-2 rounded-md border font-sans font-semibold leading-none transition-[background-color,box-shadow,transform] disabled:cursor-not-allowed disabled:border-outline-variant disabled:bg-cream-tert disabled:text-fg-3 disabled:shadow-none",
+        variants[variant],
+        sizes[size],
+        className,
+      )}
       {...props}
     />
   );

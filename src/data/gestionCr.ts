@@ -43,12 +43,21 @@ export function gcrCultivoNombre(id: string, cultivos?: GcrCultivo[]): string {
   const c = (cultivos || GCR_CULTIVOS_SEED).find((x) => x.id === id);
   return c ? c.nombre : id;
 }
-
 export function gcrCultivoColor(id: string, cultivos?: GcrCultivo[]): string {
   const c = (cultivos || GCR_CULTIVOS_SEED).find((x) => x.id === id);
   return c ? c.color : "linear-gradient(135deg,#8C7A55,#5C4A2E)";
 }
-
+/** Cantidad de recetas activas que usan un cultivo. */
+export function gcrRecetasDeCultivo(cultivoId: string, recetas: GcrReceta[]): number {
+  return recetas.filter((r) => r.estado === "activo" && r.cultivos.includes(cultivoId)).length;
+}
+/** Rango de meses de cosecha legible. */
+export function gcrCosechaLabel(calendario: Estacion[]): string {
+  const idx = calendario.map((s, i) => (s === "h" ? i : -1)).filter((i) => i >= 0);
+  if (idx.length === 0) return "Sin cosecha";
+  if (idx.length === 1) return GCR_MESES[idx[0]];
+  return `${GCR_MESES[idx[0]]}–${GCR_MESES[idx[idx.length - 1]]}`;
+}
 /** Iniciales para avatares de receta. */
 export function gcrRecetaInitials(nombre: string): string {
   const skip = new Set(["de", "del", "la", "el", "los", "las", "al", "con", "en", "y", "a"]);

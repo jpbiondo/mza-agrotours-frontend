@@ -94,14 +94,11 @@ function Dato({
   value,
   mono,
   span,
-  multilinea,
 }: {
   label: string;
   value: string;
   mono?: boolean;
   span?: boolean;
-  /** Respeta los saltos de línea que cargó el usuario (descripción). */
-  multilinea?: boolean;
 }) {
   return (
     <div className={cn("min-w-0", span && "sm:col-span-2")}>
@@ -112,7 +109,6 @@ function Dato({
         className={cn(
           "leading-normal break-words text-fg-1",
           mono ? "font-mono text-[14px]" : "text-[15px]",
-          multilinea && "whitespace-pre-line",
         )}
       >
         {value || "—"}
@@ -248,7 +244,6 @@ function Detalle({ s }: { s: SolicitudDetalle }) {
         <Dato label="Nombre del establecimiento" value={s.nombreEstablecimiento} span />
         <Dato label="Razón social" value={s.razonSocial} />
         <Dato label="CUIT" value={s.cuit} mono />
-        <Dato label="Descripción" value={s.descripcion} span multilinea />
       </Seccion>
 
       <Seccion title="Ubicación">

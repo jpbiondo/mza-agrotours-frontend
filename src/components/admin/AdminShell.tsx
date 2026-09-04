@@ -34,8 +34,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { admInitials } from "@/data/admin";
-import { PermisoAdmin, TipoPermiso } from "@/lib/permisos";
-import { nombreRol, tienePermiso } from "@/lib/roles";
+import { nombreRol, puede } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -46,7 +45,7 @@ interface NavEntry {
   label?: string;
   href?: string;
   badge?: number;
-  permiso?: PermisoAdmin;
+  permiso?: string;
 }
 
 /**
@@ -68,14 +67,14 @@ const NAV: NavEntry[] = [
     iconC: UserCog,
     label: "Administradores",
     href: "/admin/administradores",
-    permiso: PermisoAdmin.LEER_ADMIN,
+    permiso: "LEER_ADMIN",
   },
   {
     id: "roles",
     iconC: ShieldCheck,
     label: "Roles de administrador",
     href: "/admin/roles",
-    permiso: PermisoAdmin.LEER_ROLES_ADMIN,
+    permiso: "LEER_ROL",
   },
   { section: "Plataforma" },
   {
@@ -83,7 +82,7 @@ const NAV: NavEntry[] = [
     iconC: ClipboardCheck,
     label: "Solicitudes de establecimientos",
     href: "/admin/solicitudes",
-    permiso: PermisoAdmin.LEER_SOLICITUD_ESTABLECIMIENTO,
+    permiso: "LEER_SOLICITUD_ESTABLECIMIENTO",
   },
   {
     id: "establecimientos",
@@ -232,7 +231,7 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
   const accesos = useAuthStore((s) => s.accesos);
   // El rol que se muestra es el de administración: una misma cuenta puede ser
   // además productora o visitante, y acá esos no vienen al caso.
-  const rol = nombreRol(accesos, TipoPermiso.ADMIN);
+  const rol = nombreRol(accesos, "ADMIN");
   const iniciales = admInitials(nombre ?? "");
 
   useEffect(() => {
@@ -401,7 +400,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   // enseñar acceso que no existe.
   const navVisible = useMemo(() => {
     const conPermiso = NAV.filter(
-      (e) => !e.permiso || tienePermiso(accesos, e.permiso),
+      (e) => !e.permiso || puede(accesos, e.permiso),
     );
     // Si los ítems de una sección se filtraron todos, su rótulo quedaría suelto:
     // se conserva sólo cuando lo sigue un ítem.
