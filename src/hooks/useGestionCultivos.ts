@@ -93,23 +93,32 @@ interface CultivoBackend {
   nombre?: string;
   calendarioEstacionalidad?: unknown;
   resumenCosecha?: string;
-  cantidadRecetas?: unknown;
-  cantidadActividades?: unknown;
-  puedeEliminarse?: unknown;
+  cantidadRecetas?: number;
+  cantidadActividades?: number;
+  puedeEliminarse?: boolean;
 }
 
 interface CatalogoBackend {
-  totalCultivos?: unknown;
-  totalRecetas?: unknown;
+  totalCultivos?: number;
+  totalRecetas?: number;
   cultivos?: CultivoBackend[] | null;
 }
 
 interface DetalleBackend {
   nombre?: string;
   descripcion?: string;
-  beneficios?: unknown;
-  estacionalidadPorMes?: unknown;
+  beneficios?: string[];
+  estacionalidadPorMes?: EstacionalidadPorMes[];
 }
+
+interface EstacionalidadPorMes {
+  mes: Mes;
+  nombre: Estacionalidad;
+}
+
+type Mes = "ENERO" | "FEBRERO" | "MARZO" | "ABRIL" | "MAYO" | "JUNIO" | "JULIO" | "AGOSTO" | "SEPTIEMBRE" | "OCTUBRE" | "NOVIEMBRE" | "DICIEMBRE"
+
+type Estacionalidad = "COSECHA" | "REPOSO" | "CRECIMIENTO";
 
 function aNumero(v: unknown): number {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
@@ -240,7 +249,7 @@ export function useCultivoDetalle() {
           nombre: env.data.nombre ?? "",
           descripcion: env.data.descripcion ?? "",
           beneficios: aTextos(env.data.beneficios),
-          calendario: aCalendarioOrdenado(env.data.estacionalidadPorMes),
+          calendario: aCalendarioOrdenado(env.data.estacionalidadPorMes?.map((estacionalidad) => estacionalidad.nombre)), 
         },
       };
     } catch (e) {
