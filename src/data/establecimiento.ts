@@ -1,5 +1,6 @@
 import { Home, Building2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { LimitesUploader } from "@/components/ui/uploader";
 
 /** Requisitos documentales que se muestran junto al uploader de pruebas. */
 export interface RequisitoDoc {
@@ -33,6 +34,7 @@ export const REQUISITOS_DOC: RequisitoDoc[] = [
 
 /** Límites del uploader de pruebas. */
 export const UPLOAD_MAX_FILES = 10;
+export const UPLOAD_ACCEPT_LABEL = "PDF, JPG o PNG";
 export const UPLOAD_MAX_BYTES = 30 * 1024 * 1024; // 30 MB
 
 /** Únicos formatos aceptados como prueba documental. */
@@ -50,6 +52,15 @@ export const UPLOAD_MIME_POR_EXT: Record<
   (typeof UPLOAD_EXTENSIONES)[number],
   (typeof UPLOAD_MIMES)[number]
 > = { pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg" };
+
+export const UPLOAD_PRUEBAS: LimitesUploader = {
+  maxFiles: UPLOAD_MAX_FILES,
+  maxBytesTotal: UPLOAD_MAX_BYTES,
+  accept: UPLOAD_ACCEPT,
+  acceptLabel: UPLOAD_ACCEPT_LABEL,
+  extensiones: UPLOAD_EXTENSIONES,
+  mimes: UPLOAD_MIMES,
+};
 
 /** Extensión en minúsculas y sin punto. "" si el nombre no tiene extensión. */
 export function extensionDe(nombre: string): string {

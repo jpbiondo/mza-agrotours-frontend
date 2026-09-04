@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, MapPin, Sprout, CreditCard, Hourglass, CheckCircle2, CalendarDays,
-  CalendarCheck, ChevronLeft, ChevronRight, Info, ListChecks, ArrowRight, Ban, Clock,
+  CalendarCheck, ChevronLeft, ChevronRight, Info, ListChecks, ArrowRight, FilePenLine, Clock,
   Grape, Scissors, Wine, Leaf, Cherry, Nut,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { useCalendarioActividad } from "@/hooks/useCalendarioActividad";
 import { MESES_LABEL, NOMBRES_DIA, fechaLarga } from "@/data/calendario";
-import { estadoBucket } from "@/data/actividades-prod";
+import { iconoDeCultivos } from "@/data/actividades-prod";
 import type { DiaCelda, MesCal } from "@/types/calendario";
 import type { ActividadProd } from "@/types/actividad-prod";
 
@@ -228,14 +228,16 @@ function DaySummaryCard({ mes, day, onVerReservas }: { mes: MesCal; day: number 
   );
 }
 
-export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id" | "nombre" | "icon" | "estado" | "cultivos"> }) {
+export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id" | "nombre" | "estado" | "cultivos"> }) {
   const router = useRouter();
   const { data, isLoading, error, reload } = useCalendarioActividad(act.id);
   const [mesIdx, setMesIdx] = useState(0);
   const [selDay, setSelDay] = useState<number | null>(null);
 
-  const IconC = ICONS[act.icon] ?? Grape;
-  const activo = estadoBucket(act.estado) !== "baja";
+  const IconC = ICONS[iconoDeCultivos(act.cultivos)] ?? Grape;
+  // Ya no existe el estado "dada de baja": una actividad eliminada no vuelve.
+  // Lo que queda por distinguir es si está publicada o todavía en borrador.
+  const activo = act.estado === "publicado";
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
@@ -256,13 +258,13 @@ export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 30, color: "var(--fg-1)", margin: 0, letterSpacing: "-.01em" }}>{act.nombre}</h1>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-3)" }}>{act.id}</span>
-              <Pill tone={activo ? "success" : "neutral"}>{activo ? "Activo" : "Dada de baja"}</Pill>
+              <Pill tone={activo ? "success" : "neutral"}>{activo ? "Publicado" : "Borrador"}</Pill>
             </div>
             <div style={{ marginTop: 14 }}>
               <div className="t-label" style={{ marginBottom: 7 }}>Cultivos asociados</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                 {act.cultivos.map((c) => (
-                  <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--green-100)", color: "var(--green-800)", borderRadius: "var(--radius-pill)", padding: "4px 11px", fontSize: 12.5, fontWeight: 600 }}><Sprout size={12} color="var(--green-700)" /> {c}</span>
+                  <span key={c.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--green-100)", color: "var(--green-800)", borderRadius: "var(--radius-pill)", padding: "4px 11px", fontSize: 12.5, fontWeight: 600 }}><Sprout size={12} color="var(--green-700)" /> {c.nombre}</span>
                 ))}
               </div>
             </div>
@@ -271,10 +273,10 @@ export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id
 
         {!activo && (
           <div style={{ display: "flex", gap: 13, alignItems: "flex-start", background: "var(--cream-tert)", border: "1px solid var(--outline)", borderRadius: "var(--radius-lg)", padding: "14px 18px", margin: "20px 0 4px" }}>
-            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--surface)", border: "1px solid var(--outline)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Ban size={19} color="var(--fg-2)" /></div>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--surface)", border: "1px solid var(--outline)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><FilePenLine size={19} color="var(--fg-2)" /></div>
             <div>
-              <strong style={{ fontSize: 14.5, color: "var(--fg-1)" }}>Actividad dada de baja</strong>
-              <p style={{ margin: "3px 0 0", fontSize: 13.5, color: "var(--fg-2)", lineHeight: 1.5 }}>Esta actividad está inactiva. Podés consultar su calendario y reservas, pero no se puede reprogramar ni cancelar la jornada de ningún día.</p>
+              <strong style={{ fontSize: 14.5, color: "var(--fg-1)" }}>Actividad en borrador</strong>
+              <p style={{ margin: "3px 0 0", fontSize: 13.5, color: "var(--fg-2)", lineHeight: 1.5 }}>Todavía no es visible para los visitantes y no puede recibir reservas. Publicala desde el listado de actividades para que aparezca en el catálogo.</p>
             </div>
           </div>
         )}
