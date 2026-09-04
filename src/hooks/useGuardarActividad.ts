@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
 import { DIAS } from "@/data/actividad-form";
+import { limpiarLista } from "@/lib/actividad-form";
 import type { ActividadFormData, DiaKey } from "@/types/actividad-form";
 
 export type EstadoGuardado = "publicado" | "borrador";
@@ -82,11 +83,6 @@ function aDias(days: ActividadFormData["days"]): DiaDTO[] {
   }));
 }
 
-/** Quita los renglones en blanco que deja el editor de listas. */
-function limpiar(items: string[]): string[] {
-  return items.map((t) => t.trim()).filter(Boolean);
-}
-
 export function aPayload(v: ActividadFormData, estado: EstadoGuardado): AltaActividadDTO {
   return {
     nombre: v.nombre.trim(),
@@ -95,8 +91,8 @@ export function aPayload(v: ActividadFormData, estado: EstadoGuardado): AltaActi
     estado: estado === "publicado" ? "PUBLICADO" : "BORRADOR",
     // TODO backend: las fotos todavía no se suben.
     fotos: [],
-    incluye: limpiar(v.incluye),
-    noIncluye: limpiar(v.noIncluye),
+    incluye: limpiarLista(v.incluye),
+    noIncluye: limpiarLista(v.noIncluye),
     faqs: v.faqs
       .filter((f) => f.q.trim() && f.a.trim())
       .map((f) => ({ pregunta: f.q.trim(), respuesta: f.a.trim() })),

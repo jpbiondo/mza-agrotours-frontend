@@ -1,6 +1,9 @@
 import { AlertCircle, Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+export const CAMPO =
+  "h-11 w-full min-w-0 rounded-md border border-input bg-surface px-3.5 text-base text-fg-1 outline-none transition-colors placeholder:text-fg-3 focus-visible:border-green-800 focus-visible:ring-3 focus-visible:ring-green-800/20 aria-invalid:border-danger aria-invalid:bg-danger-fill";
+
 /** Etiqueta de campo, con el asterisco de obligatorio. */
 export function FieldLabel({
   children,

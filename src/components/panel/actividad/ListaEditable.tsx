@@ -5,13 +5,10 @@ import { Trash2 } from "lucide-react";
 import { soloTexto, type ErroresActividad } from "@/lib/actividad-form";
 import { cn } from "@/lib/utils";
 import type { FaqItem } from "@/types/actividad-form";
-import { BloqueHead, BotonAgregar, ErrorMsg } from "./campos";
+import { BloqueHead, BotonAgregar, CAMPO, ErrorMsg } from "./campos";
 
 const MIN = 5;
 const MAX = 200;
-
-const CAMPO =
-  "h-11 w-full min-w-0 rounded-md border border-input bg-surface px-3.5 text-base text-fg-1 outline-none transition-colors placeholder:text-fg-3 focus-visible:border-green-800 focus-visible:ring-3 focus-visible:ring-green-800/20 aria-invalid:border-danger aria-invalid:bg-danger-fill";
 
 /**
  * Lista de ítems de texto libre ("Qué incluye" / "Qué NO incluye"). Es opcional:
@@ -29,6 +26,7 @@ export function ListaEditable({
   clave,
   errs,
   intentado,
+  permitirNumeros,
 }: {
   title: string;
   hint?: string;
@@ -42,7 +40,13 @@ export function ListaEditable({
   clave: string;
   errs: ErroresActividad;
   intentado: boolean;
+  /**
+   * Deja escribir dígitos. Al modificar hacen falta —«Desayuno para 2 personas»—
+   * y filtrarlos borraría lo que el productor ya tenía cargado.
+   */
+  permitirNumeros?: boolean;
 }) {
+  const filtrar = permitirNumeros ? (s: string) => s : soloTexto;
   const [tocados, setTocados] = useState<Set<number>>(() => new Set());
   const ver = (i: number) => (intentado || tocados.has(i) ? errs[`${clave}_${i}`] : undefined);
 
@@ -83,7 +87,7 @@ export function ListaEditable({
                   placeholder={placeholder}
                   aria-label={`${title}: ítem ${i + 1}`}
                   aria-invalid={!!err || undefined}
-                  onChange={(e) => onChange(items.map((x, idx) => (idx === i ? soloTexto(e.target.value).slice(0, MAX) : x)))}
+                  onChange={(e) => onChange(items.map((x, idx) => (idx === i ? filtrar(e.target.value).slice(0, MAX) : x)))}
                   onBlur={() => setTocados((t) => new Set(t).add(i))}
                   className={cn(CAMPO, "flex-1")}
                 />
@@ -117,19 +121,23 @@ export function FaqEditor({
   errs,
   intentado,
   icon,
+  permitirNumeros,
 }: {
   faqs: FaqItem[];
   onChange: (faqs: FaqItem[]) => void;
   errs: ErroresActividad;
   intentado: boolean;
   icon: React.ReactNode;
+  /** Ver `ListaEditable`. */
+  permitirNumeros?: boolean;
 }) {
   const [tocados, setTocados] = useState<Set<string>>(() => new Set());
   const ver = (i: number, campo: "q" | "a") =>
     intentado || tocados.has(`${i}_${campo}`) ? errs[`faq_${i}_${campo}`] : undefined;
 
+  const filtrar = permitirNumeros ? (s: string) => s : soloTexto;
   const editar = (i: number, campo: "q" | "a", v: string) =>
-    onChange(faqs.map((f, idx) => (idx === i ? { ...f, [campo]: soloTexto(v).slice(0, MAX) } : f)));
+    onChange(faqs.map((f, idx) => (idx === i ? { ...f, [campo]: filtrar(v).slice(0, MAX) } : f)));
 
   const quitar = (i: number) => {
     const next = faqs.filter((_, idx) => idx !== i);

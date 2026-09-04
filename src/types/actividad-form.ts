@@ -9,6 +9,11 @@ export type DiaKey = "lunes" | "martes" | "miercoles" | "jueves" | "viernes" | "
 export interface TarifaFila {
   /** Sólo del cliente: identifica la fila mientras se edita. No viaja al backend. */
   id: string;
+  /**
+   * Id que le puso el backend, si la fila ya existía. Sólo lo llena la
+   * modificación: en el alta ninguna tarifa lo tiene todavía.
+   */
+  backendId?: string;
   nombre: string;
   min: string;
   max: string;

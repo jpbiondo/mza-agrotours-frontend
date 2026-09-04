@@ -36,13 +36,7 @@ function mensajeAlta(code?: string): string {
 
 const ICONO_PASO = [FileText, ListChecks, Users, CalendarDays];
 
-export default function ActivityForm({
-  mode,
-  initial,
-}: {
-  mode: "crear" | "editar";
-  initial: ActividadFormData;
-}) {
+export default function ActivityForm({ initial }: { initial: ActividadFormData }) {
   const router = useRouter();
   const { activo } = useEstablecimientos();
   const establecimientoId = activo?.id ?? "";
@@ -131,12 +125,10 @@ export default function ActivityForm({
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">
-              {mode === "crear" ? "Crear actividad" : "Modificar actividad"}
+              Crear actividad
             </h1>
             <p className="mt-1.5 text-[15px] text-fg-2">
-              {mode === "crear"
-                ? "Cargá una experiencia de tu establecimiento para darle visibilidad a los visitantes."
-                : "Editá los datos de esta experiencia. Los cambios se aplican al publicar."}
+              Cargá una experiencia de tu establecimiento para darle visibilidad a los visitantes.
             </p>
           </div>
           {activo && (
@@ -408,7 +400,7 @@ export default function ActivityForm({
                         </>
                       ) : (
                         <>
-                          <Send className="size-4" /> {mode === "crear" ? "Publicar" : "Publicar cambios"}
+                          <Send className="size-4" /> Publicar
                         </>
                       )}
                     </Button>

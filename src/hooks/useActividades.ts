@@ -30,7 +30,7 @@ const ESTADOS: Record<string, EstadoActividad> = {
  * que los visitantes la ven y perdería reservas sin enterarse. Al revés el error
  * es visible y el arreglo es un clic.
  */
-function aEstado(v: unknown): EstadoActividad {
+export function aEstado(v: unknown): EstadoActividad {
   return (typeof v === "string" && ESTADOS[v.trim().toUpperCase()]) || "borrador";
 }
 
