@@ -1,5 +1,21 @@
+import type { LimitesUploader } from "@/components/ui/uploader";
 import type { ActividadFormData, DiaKey, TarifaFila } from "@/types/actividad-form";
-import { getActividad } from "@/data/actividades-prod";
+
+/* ---- Fotos de la actividad -----------------------------------------------
+   A diferencia de las pruebas documentales, acá no entra el PDF y el tope es
+   por imagen, no sobre la suma. */
+
+export const FOTOS_MAX = 10;
+export const FOTO_MAX_BYTES = 5 * 1024 * 1024; // 5 MB por imagen
+
+export const UPLOAD_FOTOS: LimitesUploader = {
+  maxFiles: FOTOS_MAX,
+  maxBytesPorArchivo: FOTO_MAX_BYTES,
+  accept: "image/jpeg,image/png",
+  acceptLabel: "JPG o PNG",
+  extensiones: ["jpg", "jpeg", "png"],
+  mimes: ["image/jpeg", "image/png"],
+};
 
 export const DIAS: { key: DiaKey; label: string }[] = [
   { key: "lunes", label: "Lunes" },
@@ -10,11 +26,6 @@ export const DIAS: { key: DiaKey; label: string }[] = [
   { key: "sabado", label: "Sábado" },
   { key: "domingo", label: "Domingo" },
 ];
-
-const LABEL_TO_KEY: Record<string, DiaKey> = {
-  Lunes: "lunes", Martes: "martes", Miércoles: "miercoles", Jueves: "jueves",
-  Viernes: "viernes", Sábado: "sabado", Domingo: "domingo",
-};
 
 function emptyDays(): Record<DiaKey, { on: boolean; desde: string; hasta: string }> {
   return DIAS.reduce((acc, d) => { acc[d.key] = { on: false, desde: "", hasta: "" }; return acc; }, {} as Record<DiaKey, { on: boolean; desde: string; hasta: string }>);
@@ -53,39 +64,5 @@ export function emptyActividadForm(): ActividadFormData {
     incluye: [""],
     noIncluye: [""],
     faqs: [{ q: "", a: "" }],
-  };
-}
-
-/** Hidrata el formulario con los datos de una actividad existente (modo editar). */
-export function hydrateActividadForm(id: string): ActividadFormData | null {
-  const act = getActividad(id);
-  if (!act) return null;
-
-  const base = emptyActividadForm();
-  act.dias.forEach((d) => {
-    const k = LABEL_TO_KEY[d.dia];
-    if (k) base.days[k] = { on: true, desde: d.desde, hasta: d.hasta };
-  });
-
-  return {
-    ...base,
-    nombre: act.nombre,
-    descripcion: `Viví una experiencia auténtica en Finca La Escondida: «${act.nombre}». Te acompañamos entre las hileras para conocer de cerca el trabajo de la tierra, la familia productora y los sabores de la finca.`,
-    cupos: "20",
-    // `cultivos` pasó a ser una lista de ids del catálogo, y el mock sólo tiene
-    // nombres: metiéndolos acá el formulario mostraría chips con el nombre como
-    // id y mandaría basura al guardar. Queda vacío hasta que se wiree el
-    // modificar, que va a traer los ids del backend.
-    cultivos: [],
-    tarifas: [
-      { id: "tpl-menores", nombre: "Menores", min: "3", max: "17", precio: String(Math.round(act.precio * 0.6)), on: true, base: false },
-      { id: "tpl-adultos", nombre: "Adultos", min: "18", max: "120", precio: String(act.precio), on: true, base: true },
-    ],
-    incluye: ["Degustación de productos de la finca", "Guía especializada durante toda la experiencia"],
-    noIncluye: ["Traslado hasta el establecimiento"],
-    faqs: [
-      { q: "¿Necesito llevar algo en particular?", a: "Recomendamos calzado cómodo, gorro y protector solar." },
-      { q: "¿Es apta para toda la familia?", a: "Sí, podés sumar menores indicando su rango etario al reservar." },
-    ],
   };
 }
