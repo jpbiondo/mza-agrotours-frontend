@@ -2,7 +2,7 @@
 
 import { AlertCircle, Trash2, Plus } from "lucide-react";
 import { moneyAr } from "@/lib/format";
-import { evalViajero, TIPOS_DOC, type Viajero, type Precios } from "@/data/reserva";
+import { evalViajero, TIPOS_DOC, type Viajero, type Precios, type Rango } from "@/data/reserva";
 
 const inputStyle: React.CSSProperties = {
   width: "100%", fontFamily: "var(--font-sans)", fontSize: 14.5, color: "var(--fg-1)",
@@ -15,12 +15,12 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 function TravelerRow({
-  index, v, precios, canRemove, onChange, onRemove,
+  index, v, precios, rangos, canRemove, onChange, onRemove,
 }: {
-  index: number; v: Viajero; precios: Precios; canRemove: boolean;
+  index: number; v: Viajero; precios: Precios; rangos: Rango[]; canRemove: boolean;
   onChange: (v: Viajero) => void; onRemove: () => void;
 }) {
-  const { edad, rango, permitido } = evalViajero(v, precios);
+  const { edad, rango, permitido } = evalViajero(v, precios, rangos);
   const noPermitido = !!v.fechaNac && edad != null && !permitido;
   const subtotal = permitido && rango ? precios[rango.id] ?? 0 : 0;
   const set = (k: keyof Viajero, val: string) => onChange({ ...v, [k]: val });
@@ -104,9 +104,9 @@ function pill(tone: "success" | "danger"): React.CSSProperties {
 }
 
 export default function TravelersList({
-  viajeros, precios, onChange,
+  viajeros, precios, rangos, onChange,
 }: {
-  viajeros: Viajero[]; precios: Precios; onChange: (v: Viajero[]) => void;
+  viajeros: Viajero[]; precios: Precios; rangos: Rango[]; onChange: (v: Viajero[]) => void;
 }) {
   const setRow = (i: number, nv: Viajero) => onChange(viajeros.map((v, idx) => (idx === i ? nv : v)));
   const addRow = () => onChange([...viajeros, { nombre: "", fechaNac: "", tipoDoc: "DNI", numDoc: "" }]);
@@ -115,7 +115,7 @@ export default function TravelersList({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {viajeros.map((v, i) => (
-        <TravelerRow key={i} index={i} v={v} precios={precios} canRemove={viajeros.length > 1} onChange={(nv) => setRow(i, nv)} onRemove={() => removeRow(i)} />
+        <TravelerRow key={i} index={i} v={v} precios={precios} rangos={rangos} canRemove={viajeros.length > 1} onChange={(nv) => setRow(i, nv)} onRemove={() => removeRow(i)} />
       ))}
       <button
         type="button"

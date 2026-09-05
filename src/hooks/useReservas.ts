@@ -36,6 +36,27 @@ async function mockCancelar(_reservaId: string): Promise<void> {
   await new Promise<void>((res) => setTimeout(res, 700));
 }
 
+export interface ConsultarReserva{
+  idReserva: string;
+  totalReserva: number;
+  estadoReserva: string;
+  cantPersonas: number;
+  detalleDTOs: ConsultarReservaDetalle[];
+  fechaHoraInicio: string;
+  fechaHoraFin: string;
+  nombreActividad: string;
+  idActividad: string;
+  nombreEstablecimiento: string;
+  idEstablecimiento: string;
+  ubicacionEstablecimiento: string;
+}
+interface ConsultarReservaDetalle{
+  renglon: number;
+  nombre: string;
+  tipoRangoEtario: string;
+  subtotal: number;
+}
+
 export interface ValoracionPayload {
   reservaId: string;
   rating: number;
