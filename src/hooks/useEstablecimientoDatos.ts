@@ -3,14 +3,10 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
-import type {
-  CultivoRef,
-  EstablecimientoDatos,
-  EstablecimientoEditable,
-} from "@/types/datos";
+import { aCultivos } from "@/hooks/useTiposCultivo";
+import type { EstablecimientoDatos, EstablecimientoEditable } from "@/types/datos";
 
 const BASE = "/establecimientos";
-const TIPOS_CULTIVO = "/tipos-cultivo";
 
 /** Registro crudo del backend. Campos opcionales: defensivo. */
 interface DatosBackend {
@@ -25,26 +21,6 @@ interface DatosBackend {
   email?: string;
   cvu?: string;
   cultivos?: unknown;
-}
-
-interface CultivoBackend {
-  id?: string;
-  nombre?: string;
-}
-
-/**
- * Cultivos con id y nombre. Se descarta el que no traiga id: es lo que viaja en
- * `cultivosIds` al guardar, así que sin él no se podría ni conservar.
- */
-function aCultivos(v: unknown): CultivoRef[] {
-  if (!Array.isArray(v)) return [];
-  return v
-    .filter((c): c is CultivoBackend => !!c && typeof c === "object")
-    .map((c) => ({
-      id: typeof c.id === "string" ? c.id.trim() : "",
-      nombre: c.nombre ?? "",
-    }))
-    .filter((c) => c.id !== "");
 }
 
 function aDatos(d: DatosBackend): EstablecimientoDatos {
@@ -172,44 +148,33 @@ export function useGuardarEstablecimiento() {
   return { guardar, isLoading };
 }
 
-/* ---- Catálogo de cultivos ------------------------------------------------ */
 
-/**
- * GET /tipos-cultivo: todos los cultivos que se pueden asociar. Se pide una vez
- * al abrir el modal de agregar, no al cargar la pantalla.
- */
-export function useTiposCultivo(habilitado: boolean) {
-  const [cultivos, setCultivos] = useState<CultivoRef[]>([]);
-  // Arranca en carga si ya está habilitado: prenderlo desde el efecto sería
-  // un render de más y un setState sincrónico adentro del efecto.
-  const [isLoading, setIsLoading] = useState(habilitado);
-  const [error, setError] = useState<string | null>(null);
+/* ---- Baja ---------------------------------------------------------------- */
 
-  useEffect(() => {
-    if (!habilitado) return;
-    let active = true;
+export function useEliminarEstablecimiento() {
+  const [isLoading, setIsLoading] = useState(false);
 
-    conToken((token) => apiFetch<unknown>(TIPOS_CULTIVO, { token }))
-      .then((res) => {
-        if (!active) return;
-        const env = comoEnvelope<CultivoBackend[]>(res);
-        if (!env.ok) {
-          setError(env.code ?? "No pudimos cargar los cultivos");
-          return;
-        }
-        setCultivos(aCultivos(env.data));
-      })
-      .catch((e: unknown) => {
-        if (active) setError(e instanceof Error ? e.message : "Error inesperado");
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+  async function eliminar(id: string): Promise<{ ok: boolean; code?: string }> {
+    setIsLoading(true);
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(`${BASE}/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          token,
+        }),
+      );
+      const env = comoEnvelope<unknown>(res);
+      return env.ok ? { ok: true } : { ok: false, code: env.code };
+    } catch (e) {
+      if (e instanceof ApiError) return { ok: false, code: e.code };
+      // `apiFetch` sólo llega a res.json() con un 2xx: un error de parseo es una
+      // baja hecha y contestada sin cuerpo. Un fallo de red tira TypeError.
+      if (e instanceof SyntaxError) return { ok: true };
+      return { ok: false };
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-    return () => {
-      active = false;
-    };
-  }, [habilitado]);
-
-  return { cultivos, isLoading, error };
+  return { eliminar, isLoading };
 }

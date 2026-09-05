@@ -279,7 +279,8 @@ interface MeetsDeleteResponse {
 
 /**
  * Verifica si la cuenta puede darse de baja (GET /usuario/me/meets-delete-conditions).
- * `ok` con data vacía → cumple todo; `!ok` con data → condiciones incumplidas.
+ * Responde el envelope de siempre: `ok` con `data` = las condiciones que NO se
+ * cumplen (hasta 3). Lista vacía → cumple todo y la baja puede seguir.
  * Un fallo técnico hace throw en apiFetch → el llamador muestra un error.
  */
 export function useVerificarCondicionesBaja() {

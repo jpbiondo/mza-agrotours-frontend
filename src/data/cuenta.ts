@@ -71,41 +71,12 @@ export function validarPerfil(v: Perfil): Partial<Record<keyof Perfil, string>> 
 }
 
 /* ---- Condiciones para dar de baja la cuenta ---------------------------- */
-/** Condición incumplida devuelta por el backend (GET meets-delete-conditions).
- *  `nombre` es un código; `descripcion` es el texto del backend (respaldo). */
+/** Condición incumplida devuelta por el backend (GET meets-delete-conditions). */
 export interface CondicionIncumplida {
   nombre: string;
   descripcion: string;
 }
 
-/** Copia (título + detalle) por cada `nombre` conocido; para códigos nuevos usa
- *  la `descripcion` del backend como respaldo. */
-const COPY_CONDICION: Record<string, { label: string; detail: string }> = {
-  reservasActivas: {
-    label: "No debés tener reservas en estado «Pendiente»",
-    detail:
-      "Tenés reservas en estado Pendiente. Cancelalas o esperá su resolución para continuar.",
-  },
-  administradorSistemas: {
-    label: "Un administrador no puede autoeliminar su cuenta",
-    detail:
-      "Pedí a otro administrador del sistema que gestione la baja de tu cuenta.",
-  },
-};
-
-export function condicionIncumplidaMsg(c: CondicionIncumplida): {
-  label: string;
-  detail: string;
-} {
-  return (
-    COPY_CONDICION[c.nombre] ?? { label: c.descripcion, detail: c.descripcion }
-  );
-}
-
-/** Bloqueo "duro" (no algo que el usuario pueda resolver): cuenta de admin. */
-export function esBloqueoAdmin(condiciones: CondicionIncumplida[]): boolean {
-  return condiciones.some((c) => c.nombre === "administradorSistemas");
-}
 
 export function rolLabel(rol: RolCuenta): string {
   return rol === "productor" ? "productor líder" : rol === "admin" ? "administrador" : "visitante";
