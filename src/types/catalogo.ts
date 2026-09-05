@@ -129,5 +129,5 @@ export interface MesCalendario {
   year: number;
   month: number;
   label: string;
-  days: Record<number, { state: "disponible" | "off"; cupos: number; dow: number }>;
+  days: Record<number, { id: string; state: "disponible" | "off"; cupos: number; cupoMaximo: number; dow: number }>;
 }

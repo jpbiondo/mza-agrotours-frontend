@@ -27,6 +27,13 @@ export const PRONOSTICO = [
 ];
 
 /* ---- Disponibilidad de cupos por día (mock, deriva del diseño) --------- */
+
+/** UUID con formato válido (placeholder mientras el calendario no viene del backend). */
+function idParaDia(year: number, month: number, day: number): string {
+  const hex = (n: number, len: number) => n.toString(16).padStart(len, "0");
+  return `${hex(year, 8)}-${hex(month + 1, 4)}-${hex(day, 4)}-0000-000000000000`;
+}
+
 function makeMarzo(): MesCalendario {
   const cuposByDay: Record<number, number> = {
     5: 8, 6: 4, 8: 12, 10: 11, 11: 6, 12: 2, 13: 9, 15: 7, 17: 5, 18: 10,
@@ -37,7 +44,7 @@ function makeMarzo(): MesCalendario {
   for (let d = 1; d <= daysInMonth; d++) {
     const dow = new Date(2026, 2, d).getDay();
     const cupos = cuposByDay[d] ?? 0;
-    days[d] = { state: cupos > 0 ? "disponible" : "off", cupos, dow };
+    days[d] = { id: idParaDia(2026, 2, d), state: cupos > 0 ? "disponible" : "off", cupos, dow };
   }
   return { year: 2026, month: 2, label: "Marzo 2026", days };
 }
@@ -49,7 +56,7 @@ function makeAbril(): MesCalendario {
   for (let d = 1; d <= daysInMonth; d++) {
     const dow = new Date(2026, 3, d).getDay();
     const cupos = cuposByDay[d] ?? 0;
-    days[d] = { state: cupos > 0 ? "disponible" : "off", cupos, dow };
+    days[d] = { id: idParaDia(2026, 3, d), state: cupos > 0 ? "disponible" : "off", cupos, dow };
   }
   return { year: 2026, month: 3, label: "Abril 2026", days };
 }

@@ -3,13 +3,12 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCb_MmtL6HQb_3SnfP7QLln4MdjPSV9jCA",
-  authDomain: "mza-agrotours-dev-john.firebaseapp.com",
-  projectId: "mza-agrotours-dev-john",
-  storageBucket: "mza-agrotours-dev-john.firebasestorage.app",
-  messagingSenderId: "176665133777",
-  appId: "1:176665133777:web:79860464d91c09b845fbf0",
-  measurementId: "G-N02ZD7SMH1",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 export const app = initializeApp(firebaseConfig);

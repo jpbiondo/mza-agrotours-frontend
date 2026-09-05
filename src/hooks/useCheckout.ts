@@ -1,48 +1,91 @@
 import { useState } from "react";
-import { codigoReserva } from "@/data/reserva";
+import { auth } from "../../firebase.config";
+import { apiFetch, ApiError } from "@/lib/api";
+import { ConsultarReserva } from "./useReservas";
 
-export type Outcome = "success" | "cancel" | "fail";
+interface IniciarReserva{
+  reservaDTO: ConsultarReserva;
+  preferenceId: string;
+}
 
-/** Crea la reserva en estado pendiente y devuelve su código. */
-export function useCrearReserva() {
+interface ReservarResponse{
+  ok: boolean;
+  code?: string;
+  data?: IniciarReserva;
+}
+
+interface cancelarPagoResponse{
+  ok: boolean;
+  code?: string;
+  data?: null;
+}
+
+export interface RealizarReservaRequest{
+  diaActividadId: string;
+  reservaDetalleList: RealizarReservaRequestDetalle[]
+}
+export interface RealizarReservaRequestDetalle{
+  nombreApellido: string;
+  identificacion: string;
+  tipoIdentificacion: string;
+  fechaNacimiento: string;
+}
+
+/** Crea la reserva en estado pendiente (POST /reserva/reservar): detalle + preferenceId de Mercado Pago. */
+export function useReserva() {
   const [isLoading, setIsLoading] = useState(false);
 
-  async function crear(): Promise<string> {
+  async function crear(request: RealizarReservaRequest): Promise<ReservarResponse> {
     setIsLoading(true);
     try {
-      return await mockCrearReserva();
+      return await crearReserva(request);
     } finally {
       setIsLoading(false);
     }
   }
 
-  return { crear, isLoading };
-}
-
-// MOCK — reemplazar por fetch("/api/reservas", { method: "POST", body }) → { codigo }
-async function mockCrearReserva(): Promise<string> {
-  await new Promise<void>((res) => setTimeout(res, 600));
-  return codigoReserva();
-}
-
-/** Procesa el pago de la reserva en el servicio externo (simulado). */
-export function useProcesarPago() {
-  const [isLoading, setIsLoading] = useState(false);
-
-  async function procesar(outcome: Outcome): Promise<Outcome> {
+  async function useCancelarPago(preferenceId: String): Promise<cancelarPagoResponse>{
     setIsLoading(true);
-    try {
-      return await mockProcesarPago(outcome);
-    } finally {
+    try{
+      return await cancelarPago(preferenceId);
+    } finally{
       setIsLoading(false);
     }
+
   }
 
-  return { procesar, isLoading };
+  return { crear, useCancelarPago, isLoading };
 }
 
-// MOCK — reemplazar por el retorno del servicio de pagos (Mercado Pago)
-async function mockProcesarPago(outcome: Outcome): Promise<Outcome> {
-  await new Promise<void>((res) => setTimeout(res, 1500));
-  return outcome;
+async function crearReserva(request: RealizarReservaRequest): Promise<ReservarResponse> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Sin sesión");
+  const token = await user.getIdToken();
+
+  try {
+    return await apiFetch<ReservarResponse>("/reserva/reservar", {
+      method: "POST",
+      token,
+      body: JSON.stringify(request),
+    });
+  } catch (e) {
+    if (e instanceof ApiError) return { ok: false, code: e.code };
+    throw e;
+  }
+}
+
+async function cancelarPago(preferenceId: String): Promise<cancelarPagoResponse>{
+  const user = auth.currentUser;
+  if (!user) throw new Error("Sin sesión");
+  const token = await user.getIdToken();
+  
+  try {
+    return await apiFetch<cancelarPagoResponse>(`/reserva/cancelarPago/${preferenceId}`, {
+      method: "POST",
+      token,
+    });
+  } catch (e) {
+    if (e instanceof ApiError) return { ok: false, code: e.code };
+    throw e;
+  }
 }
