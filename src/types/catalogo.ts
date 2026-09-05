@@ -49,11 +49,53 @@ export interface Establecimiento {
   actividades: string[];
 }
 
+/* ---- Catálogo público de establecimientos (backend real) ------------------
+   Vocabulario propio de las pantallas de visitante. Convive con
+   `Establecimiento` de arriba, que todavía alimenta la landing y /explorar
+   desde los mocks de `@/data/establecimientos`. */
+
+/** Item de GET /establecimientos. */
+export interface EstablecimientoResumen {
+  id: string;
+  nombre: string;
+  razonSocial: string;
+  /** Puede venir vacía: el backend la manda `null` si nadie la cargó. */
+  descripcion: string;
+  cultivos: string[];
+  cantidadActividades: number;
+}
+
+/** Actividad ofrecida, tal como la lista el detalle de un establecimiento. */
+export interface ActividadOfrecida {
+  id: string;
+  nombre: string;
+  cultivos: string[];
+  /** `null` es "todavía sin precio publicado", que no es lo mismo que $ 0. */
+  precioDesde: number | null;
+  /** `null` es "todavía sin reseñas". */
+  puntuacion: number | null;
+}
+
+/** GET /establecimientos/{id}/detalle. Los textos vacíos son campos sin cargar. */
+export interface EstablecimientoPublico {
+  id: string;
+  nombre: string;
+  razonSocial: string;
+  departamento: string;
+  descripcion: string;
+  email: string;
+  telefono: string;
+  ubicacion: string;
+  cultivos: string[];
+  actividades: ActividadOfrecida[];
+}
+
 /** Opción de un filtro de catálogo (valor + etiqueta + cantidad). */
 export interface FilterOption {
   value: string;
   label: string;
-  count: number;
+  /** Opcional: los filtros que resuelve el backend no traen cuántos hay de cada uno. */
+  count?: number;
 }
 
 export interface FaqItem {

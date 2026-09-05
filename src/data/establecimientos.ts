@@ -1,5 +1,4 @@
-import { ACTIVIDADES } from "@/data/actividades";
-import type { Actividad, Establecimiento, FilterOption } from "@/types/catalogo";
+import { Establecimiento } from "@/types/catalogo";
 
 /** Catálogo completo de establecimientos vigentes. */
 export const ESTABLECIMIENTOS: Establecimiento[] = [
@@ -205,23 +204,3 @@ export const ESTABLECIMIENTOS: Establecimiento[] = [
 export const ESTABLECIMIENTOS_DESTACADOS: Establecimiento[] = [
   "EST-ESCONDIDA", "EST-ALAMOS", "EST-VIENTOSUR", "EST-SANTAROSA", "EST-LOTENORTE", "EST-CERRO",
 ].map((id) => ESTABLECIMIENTOS.find((e) => e.id === id)!).filter(Boolean);
-
-/** Opciones del filtro por cultivo, derivadas del listado. */
-export function buildCultivoOpts(list: Establecimiento[]): FilterOption[] {
-  const counts: Record<string, number> = {};
-  list.forEach((e) => e.cultivos.forEach((c) => { counts[c] = (counts[c] || 0) + 1; }));
-  return Object.keys(counts)
-    .sort((a, b) => a.localeCompare(b, "es"))
-    .map((c) => ({ value: c, label: c, count: counts[c] }));
-}
-
-export function getEstablecimiento(id: string): Establecimiento | undefined {
-  return ESTABLECIMIENTOS.find((e) => e.id === id);
-}
-
-/** Resuelve las actividades de un establecimiento contra el catálogo. */
-export function actividadesDeEst(est: Establecimiento): Actividad[] {
-  return est.actividades
-    .map((id) => ACTIVIDADES.find((a) => a.id === id))
-    .filter((a): a is Actividad => Boolean(a));
-}

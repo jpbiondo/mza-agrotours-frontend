@@ -9,6 +9,17 @@ const GRADIENTS = [
   "linear-gradient(135deg, #0a2209 0%, #154212 55%, #2d5a27 100%)",
 ];
 
+/**
+ * Seed estable a partir de un id. El backend todavía no manda imágenes, así que
+ * el degradado sale del propio id: cada establecimiento o actividad conserva
+ * siempre el mismo entre renders y entre pantallas.
+ */
+export function seedDeId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997;
+  return h;
+}
+
 interface PhotoProps {
   seed: number;
   height?: number | string;
