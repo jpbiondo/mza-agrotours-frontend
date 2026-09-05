@@ -227,7 +227,7 @@ function ReservaForm({ id, info }: { id: string; info: InfoParaReservar }) {
     return rangos.map((r) => m[r.id]).filter(Boolean);
   }, [evals, precios, rangos]);
 
-  const { crear, useCancelarPago , isLoading: creando } = useReserva();
+  const { crear, cancelarPago, isLoading: creando } = useReserva();
   const confirmable = haySeleccion && !cuposInsuficientes && todosCompletos && evals.some((e) => e.completo);
 
   const onConfirm = async () => {
@@ -253,7 +253,7 @@ function ReservaForm({ id, info }: { id: string; info: InfoParaReservar }) {
       setOkOpen(true);
       return;
     };
-    useCancelarPago(prefId);
+    cancelarPago(prefId);
     setPayOpen(false);
   };
   

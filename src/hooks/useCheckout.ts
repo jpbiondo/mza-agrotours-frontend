@@ -44,17 +44,17 @@ export function useReserva() {
     }
   }
 
-  async function useCancelarPago(preferenceId: String): Promise<cancelarPagoResponse>{
+  async function cancelarPago(preferenceId: String): Promise<cancelarPagoResponse>{
     setIsLoading(true);
     try{
-      return await cancelarPago(preferenceId);
+      return await cancelarPagoRequest(preferenceId);
     } finally{
       setIsLoading(false);
     }
 
   }
 
-  return { crear, useCancelarPago, isLoading };
+  return { crear, cancelarPago, isLoading };
 }
 
 async function crearReserva(request: RealizarReservaRequest): Promise<ReservarResponse> {
@@ -74,7 +74,7 @@ async function crearReserva(request: RealizarReservaRequest): Promise<ReservarRe
   }
 }
 
-async function cancelarPago(preferenceId: String): Promise<cancelarPagoResponse>{
+async function cancelarPagoRequest(preferenceId: String): Promise<cancelarPagoResponse>{
   const user = auth.currentUser;
   if (!user) throw new Error("Sin sesión");
   const token = await user.getIdToken();

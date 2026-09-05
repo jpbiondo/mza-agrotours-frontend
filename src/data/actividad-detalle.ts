@@ -44,7 +44,7 @@ function makeMarzo(): MesCalendario {
   for (let d = 1; d <= daysInMonth; d++) {
     const dow = new Date(2026, 2, d).getDay();
     const cupos = cuposByDay[d] ?? 0;
-    days[d] = { id: idParaDia(2026, 2, d), state: cupos > 0 ? "disponible" : "off", cupos, dow };
+    days[d] = { id: idParaDia(2026, 2, d), state: cupos > 0 ? "disponible" : "off", cupos, cupoMaximo: CUPO_MAXIMO, dow };
   }
   return { year: 2026, month: 2, label: "Marzo 2026", days };
 }
@@ -56,7 +56,7 @@ function makeAbril(): MesCalendario {
   for (let d = 1; d <= daysInMonth; d++) {
     const dow = new Date(2026, 3, d).getDay();
     const cupos = cuposByDay[d] ?? 0;
-    days[d] = { id: idParaDia(2026, 3, d), state: cupos > 0 ? "disponible" : "off", cupos, dow };
+    days[d] = { id: idParaDia(2026, 3, d), state: cupos > 0 ? "disponible" : "off", cupos, cupoMaximo: CUPO_MAXIMO, dow };
   }
   return { year: 2026, month: 3, label: "Abril 2026", days };
 }
