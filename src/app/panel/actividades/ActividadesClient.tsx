@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  AlertTriangle, CalendarDays, CalendarPlus, Check, Clock, Eye, EyeOff, FilePenLine,
+  AlertTriangle, Ban, CalendarDays, CalendarPlus, Check, Clock, Eye, EyeOff, FilePenLine,
   Grape, LayoutGrid, Leaf, Loader, MapPin, Nut, Cherry, Plus, RotateCcw, Scissors, Search,
   SearchX, Settings2, SlidersHorizontal, Sprout, Trash2, Wine, X,
 } from "lucide-react";
@@ -20,6 +20,9 @@ import { cn } from "@/lib/utils";
 import type { ActividadProd, EstadoActividad } from "@/types/actividad-prod";
 
 const PAGE_SIZE = 10;
+
+const SUSPENDIDO_CREAR = "El establecimiento está suspendido: no podés crear actividades.";
+const SUSPENDIDO_MODIFICAR = "El establecimiento está suspendido: no podés modificar actividades.";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   grape: Grape, scissors: Scissors, wine: Wine, leaf: Leaf, cherry: Cherry,
@@ -39,20 +42,30 @@ function CropChip({ children }: { children: React.ReactNode }) {
 }
 
 function CardAction({
-  icon, label, href, onClick, danger,
+  icon, label, href, onClick, danger, disabled, title,
 }: {
   icon: React.ReactNode;
   label: string;
   href?: string;
   onClick?: () => void;
   danger?: boolean;
+  disabled?: boolean;
+  title?: string;
 }) {
   const clase = cn(
-    "inline-flex cursor-pointer items-center gap-[7px] rounded-md border border-sand bg-surface px-3.5 py-2.5 text-[13.5px] font-semibold whitespace-nowrap no-underline transition-colors hover:bg-cream-tert",
+    "inline-flex items-center gap-[7px] rounded-md border border-sand bg-surface px-3.5 py-2.5 text-[13.5px] font-semibold whitespace-nowrap no-underline transition-colors",
     danger ? "text-danger-fg shadow-[inset_0_-2px_0_var(--danger-fill)]" : "text-fg-1 shadow-[inset_0_-2px_0_var(--outline)]",
+    disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-cream-tert",
   );
-  if (href) return <Link href={href} className={clase}>{icon} {label}</Link>;
-  return <button type="button" onClick={onClick} className={clase}>{icon} {label}</button>;
+
+  if (href && !disabled) {
+    return <Link href={href} className={clase} title={title}>{icon} {label}</Link>;
+  }
+  return (
+    <button type="button" onClick={onClick} className={clase} disabled={disabled} title={title}>
+      {icon} {label}
+    </button>
+  );
 }
 
 /* ---- Toggle Borrador / Publicar ----------------------------------------- */
@@ -114,10 +127,11 @@ function PublishToggle({
 
 /* ---- Tarjeta de actividad ----------------------------------------------- */
 function ActivityCard({
-  act, busy, onEliminar, onPublicar, onBorrador,
+  act, busy, suspendido, onEliminar, onPublicar, onBorrador,
 }: {
   act: ActividadProd;
   busy: boolean;
+  suspendido: boolean;
   onEliminar: () => void;
   onPublicar: () => void;
   onBorrador: () => void;
@@ -191,8 +205,20 @@ function ActivityCard({
       </div>
 
       <div className="flex flex-wrap justify-end gap-2.5 border-t border-outline-variant bg-cream-tert px-6 py-3.5">
-        <CardAction icon={<Settings2 className="size-[15px] text-fg-2" />} label="Modificar" href={`/panel/actividades/${act.id}/editar`} />
-        <CardAction icon={<CalendarPlus className="size-[15px] text-fg-2" />} label="Agregar día" href={`/panel/actividades/${act.id}/editar`} />
+        <CardAction
+          icon={<Settings2 className="size-[15px] text-fg-2" />}
+          label="Modificar"
+          href={`/panel/actividades/${act.id}/editar`}
+          disabled={suspendido}
+          title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
+        />
+        <CardAction
+          icon={<CalendarPlus className="size-[15px] text-fg-2" />}
+          label="Agregar día"
+          href={`/panel/actividades/${act.id}/editar`}
+          disabled={suspendido}
+          title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
+        />
         <CardAction icon={<CalendarDays className="size-[15px] text-fg-2" />} label="Ver calendario" href={`/panel/actividades/${act.id}/calendario`} />
         <CardAction icon={<Trash2 className="size-[15px] text-danger" />} label="Eliminar" danger onClick={onEliminar} />
       </div>
@@ -279,6 +305,7 @@ export default function ActividadesClient() {
   // El establecimiento activo lo elige el switcher del shell.
   const { activo } = useEstablecimientos();
   const establecimientoId = activo?.id ?? "";
+  const suspendido = !!activo?.suspendido;
   const { data, isLoading, error, reload } = useActividades(establecimientoId);
   const { darDeBaja, cambiarEstado, pendingId } = useActividadAcciones();
 
@@ -368,9 +395,15 @@ export default function ActividadesClient() {
               Gestioná las experiencias que ofrecés y revisá su disponibilidad.
             </p>
           </div>
-          <Link href="/panel/actividades/crear" className={buttonClasses()}>
-            <Plus className="size-[17px]" /> Crear actividad
-          </Link>
+          {suspendido ? (
+            <Button disabled title={SUSPENDIDO_CREAR}>
+              <Plus className="size-[17px]" /> Crear actividad
+            </Button>
+          ) : (
+            <Link href="/panel/actividades/crear" className={buttonClasses()}>
+              <Plus className="size-[17px]" /> Crear actividad
+            </Link>
+          )}
         </div>
 
         <div className="mt-[22px] mb-6 h-px bg-outline-variant" />
@@ -379,6 +412,14 @@ export default function ActividadesClient() {
           <Alert className="mb-5">
             No hay un establecimiento seleccionado. Elegí uno en el menú lateral para ver sus
             actividades.
+          </Alert>
+        )}
+
+        {suspendido && (
+          <Alert tone="danger" icon={<Ban className="size-[18px]" />} className="mb-5">
+            <strong className="font-bold">Este establecimiento está suspendido.</strong> Podés ver
+            tus actividades y su calendario, pero no crear ni modificar ninguna hasta que un
+            administrador lo reactive.
           </Alert>
         )}
 
@@ -401,9 +442,15 @@ export default function ActividadesClient() {
               <p className="mx-auto mb-6 max-w-[420px] text-[15.5px] leading-relaxed text-fg-2">
                 Empezá creando la primera experiencia para tus visitantes.
               </p>
-              <Link href="/panel/actividades/crear" className={buttonClasses()}>
-                <Plus className="size-[18px]" /> Crear actividad
-              </Link>
+              {suspendido ? (
+                <Button disabled title={SUSPENDIDO_CREAR}>
+                  <Plus className="size-[18px]" /> Crear actividad
+                </Button>
+              ) : (
+                <Link href="/panel/actividades/crear" className={buttonClasses()}>
+                  <Plus className="size-[18px]" /> Crear actividad
+                </Link>
+              )}
             </Card>
           ) : (
             <>
@@ -470,6 +517,7 @@ export default function ActividadesClient() {
                       key={act.id}
                       act={act}
                       busy={pendingId === act.id}
+                      suspendido={suspendido}
                       onEliminar={() => pedirBaja(act)}
                       onPublicar={() => setEstado(act, "publicado")}
                       onBorrador={() => setEstado(act, "borrador")}
