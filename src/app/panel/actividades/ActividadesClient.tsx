@@ -305,7 +305,7 @@ export default function ActividadesClient() {
   // El establecimiento activo lo elige el switcher del shell.
   const { activo } = useEstablecimientos();
   const establecimientoId = activo?.id ?? "";
-  const suspendido = !!activo?.suspendido;
+  const suspendido = !!activo?.establecimientoSuspendido;
   const { data, isLoading, error, reload } = useActividades(establecimientoId);
   const { darDeBaja, cambiarEstado, pendingId } = useActividadAcciones();
 

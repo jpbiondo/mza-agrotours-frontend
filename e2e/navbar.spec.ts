@@ -9,8 +9,8 @@ interface TestAcceso {
   rolNombre: string;
   tipoPermiso: string;
   permisos: string[];
-  establecimientoId: string | null;
-  establecimientoNombre: string | null;
+  establecimiento: { id: string; nombre: string; estado: string } | null;
+  suspension: { motivo: string | null; fechaHoraFin: string } | null;
 }
 
 type TestStore = {
@@ -29,8 +29,10 @@ async function simularLogin(page: import("@playwright/test").Page) {
       rolNombre: tipoPermiso,
       tipoPermiso,
       permisos,
-      establecimientoId: null,
-      establecimientoNombre: null,
+      // El navbar deriva de `tipoPermiso`, así que alcanza con un acceso sin
+      // establecimiento; el switcher del panel no entra en estas pruebas.
+      establecimiento: null,
+      suspension: null,
     });
     (window as unknown as { __authStore: TestStore }).__authStore
       .getState()
