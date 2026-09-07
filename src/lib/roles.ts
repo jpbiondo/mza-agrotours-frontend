@@ -1,6 +1,6 @@
 import { TipoPermiso } from "@/lib/permisos";
 import type { Permiso } from "@/lib/permisos";
-import type { Acceso, Rol } from "@/types/auth";
+import type { Acceso, EstablecimientoRef, Rol, SuspensionAcceso } from "@/types/auth";
 
 /** `tipoPermiso` de cada acceso → rol interno. */
 const POR_TIPO: Record<TipoPermiso, Rol> = {
@@ -65,7 +65,7 @@ function enAmbito(accesos: Acceso[], ambito: AmbitoRol): Acceso[] {
   return accesos.filter(
     (a) =>
       (!tipo || tipoDe(a) === tipo) &&
-      (!establecimiento || a?.establecimientoId === establecimiento),
+      (!establecimiento || a?.establecimiento?.id === establecimiento),
   );
 }
 
@@ -135,13 +135,14 @@ export function nombreRol(accesos: Acceso[] | undefined, tipoPermiso: TipoPermis
   return acceso?.rolNombre ?? "";
 }
 
-/** Un establecimiento donde la cuenta es productora, listo para el switcher. */
 export interface EstablecimientoAcceso {
   id: string;
   nombre: string;
   /** Rol de la cuenta en ese establecimiento, p. ej. "Propietaria". */
   rolNombre: string;
-  suspendido: boolean;
+  establecimientoSuspendido: boolean;
+  /* La cuenta está suspendida *en* ese establecimiento. != null para true */
+  suspension: SuspensionAcceso | null;
 }
 
 const ESTADO_SUSPENDIDO = "SUSPENDIDO";
@@ -150,20 +151,16 @@ function estaSuspendido(estado: string | null | undefined): boolean {
   return String(estado ?? "").trim().toUpperCase() === ESTADO_SUSPENDIDO;
 }
 
-/**
- * Establecimientos de los accesos de tipo PRODUCTOR, en el orden en que vienen.
- * Descarta los que no traen `establecimientoId`: sin id no hay nada que
- * seleccionar ni por dónde pedir los datos.
- */
 export function establecimientosDe(accesos: Acceso[] | undefined): EstablecimientoAcceso[] {
   if (!Array.isArray(accesos)) return [];
   return accesos
     .filter((a) => tipoDe(a) === TipoPermiso.PRODUCTOR)
-    .filter((a) => typeof a?.establecimientoId === "string" && a.establecimientoId.trim() !== "")
+    .filter((a) => typeof a?.establecimiento?.id === "string" && a.establecimiento.id.trim() !== "")
     .map((a) => ({
-      id: a.establecimientoId as string,
-      nombre: a.establecimientoNombre ?? "",
+      id: (a.establecimiento as EstablecimientoRef).id,
+      nombre: a.establecimiento?.nombre ?? "",
       rolNombre: a.rolNombre ?? "",
-      suspendido: estaSuspendido(a.establecimientoEstado),
+      establecimientoSuspendido: estaSuspendido(a.establecimiento?.estado),
+      suspension: a.suspension ?? null,
     }));
 }

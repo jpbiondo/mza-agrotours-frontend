@@ -1,5 +1,17 @@
 export type Rol = "visitante" | "productor" | "admin";
 
+export interface EstablecimientoRef {
+  id: string;
+  nombre: string;
+  /** "ACTIVO" | "SUSPENDIDO"; leerlo con los helpers de `lib/roles`. */
+  estado?: string | null;
+}
+
+export interface SuspensionAcceso {
+  motivo: string | null;
+  fechaHoraFin: string;
+}
+
 /**
  * Un rol del usuario junto con los permisos que ese rol le da. Un mismo usuario
  * puede tener varios: uno de ADMIN y uno por establecimiento como PRODUCTOR.
@@ -11,10 +23,10 @@ export interface Acceso {
   tipoPermiso: string;
   /** Permisos finos del rol, p. ej. "LEER_ADMIN", "GESTIONAR_ADMIN". */
   permisos: string[];
-  /** Sólo en accesos de PRODUCTOR; alimenta el switcher del panel. */
-  establecimientoId: string | null;
-  establecimientoNombre: string | null;
-  establecimientoEstado?: string | null;
+  /** Sólo en accesos de PRODUCTOR; `null` en los de ADMIN y VISITANTE. */
+  establecimiento: EstablecimientoRef | null;
+  /** `null` cuando el productor no está suspendido en ese establecimiento. */
+  suspension: SuspensionAcceso | null;
 }
 
 /** Datos del usuario que devuelve el backend en el campo `data`. */
