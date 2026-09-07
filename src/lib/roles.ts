@@ -141,6 +141,13 @@ export interface EstablecimientoAcceso {
   nombre: string;
   /** Rol de la cuenta en ese establecimiento, p. ej. "Propietaria". */
   rolNombre: string;
+  suspendido: boolean;
+}
+
+const ESTADO_SUSPENDIDO = "SUSPENDIDO";
+
+function estaSuspendido(estado: string | null | undefined): boolean {
+  return String(estado ?? "").trim().toUpperCase() === ESTADO_SUSPENDIDO;
 }
 
 /**
@@ -157,5 +164,6 @@ export function establecimientosDe(accesos: Acceso[] | undefined): Establecimien
       id: a.establecimientoId as string,
       nombre: a.establecimientoNombre ?? "",
       rolNombre: a.rolNombre ?? "",
+      suspendido: estaSuspendido(a.establecimientoEstado),
     }));
 }
