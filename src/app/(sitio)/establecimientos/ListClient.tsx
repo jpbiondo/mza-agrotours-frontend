@@ -1,25 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Sprout, MapPin, ChevronRight, RotateCcw, Building2, CalendarDays, ArrowRight, SearchX } from "lucide-react";
-import Photo from "@/components/landing/Photo";
+import { Sprout, ChevronRight, RotateCcw, Building2, CalendarDays, ArrowRight, SearchX } from "lucide-react";
+import AsyncBoundary from "@/components/AsyncBoundary";
+import Photo, { seedDeId } from "@/components/landing/Photo";
 import { FilterSelect, Pagination, ActiveFilterPill, CropChip } from "@/components/catalog/controls";
-import { ESTABLECIMIENTOS, buildCultivoOpts } from "@/data/establecimientos";
-import type { Establecimiento } from "@/types/catalogo";
+import { Skeleton } from "@/components/ui";
+import { useEstablecimientosPublicos, useTiposCultivo } from "@/hooks/useCatalogoEstablecimientos";
+import type { EstablecimientoResumen } from "@/types/catalogo";
 
 const PAGE_SIZE = 8;
 
-function EstablecimientoCard({ est, cropFilter }: { est: Establecimiento; cropFilter: string | null }) {
+function EstablecimientoCard({ est, cropFilter }: { est: EstablecimientoResumen; cropFilter: string | null }) {
   return (
     <Link href={`/establecimientos/${est.id}`} className="card-hover" style={{ textDecoration: "none", display: "flex", flexDirection: "column", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-      <div style={{ position: "relative" }}>
-        <Photo seed={est.seed} height={150} radius={0} />
-        <span style={{ position: "absolute", top: 12, left: 12, display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(251,249,248,.95)", borderRadius: "var(--radius-pill)", padding: "5px 11px", boxShadow: "0 2px 8px rgba(45,90,39,.16)" }}>
-          <MapPin size={13} color="var(--brown-700)" />
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--fg-1)" }}>{est.depto}</span>
-        </span>
-      </div>
+      {/* TODO backend: el listado todavía no manda imágenes ni departamento. */}
+      <Photo seed={seedDeId(est.id)} height={150} radius={0} />
 
       <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: 18, gap: 11 }}>
         <div>
@@ -30,8 +27,8 @@ function EstablecimientoCard({ est, cropFilter }: { est: Establecimiento; cropFi
           </div>
         </div>
 
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 14, lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
-          {est.descripcion}
+        <p style={{ margin: 0, color: est.descripcion ? "var(--fg-2)" : "var(--fg-3)", fontSize: 14, lineHeight: 1.55, fontStyle: est.descripcion ? "normal" : "italic", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
+          {est.descripcion || "Todavía no cargó una descripción."}
         </p>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -41,7 +38,7 @@ function EstablecimientoCard({ est, cropFilter }: { est: Establecimiento; cropFi
         <div style={{ marginTop: "auto", paddingTop: 14, borderTop: "1px solid var(--cream-tert)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "var(--fg-3)" }}>
             <CalendarDays size={13} color="var(--brown-700)" />
-            {est.actividades.length} {est.actividades.length === 1 ? "actividad" : "actividades"}
+            {est.cantidadActividades} {est.cantidadActividades === 1 ? "actividad" : "actividades"}
           </span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 600, color: "var(--green-800)" }}>
             Ver establecimiento <ArrowRight size={16} />
@@ -52,7 +49,27 @@ function EstablecimientoCard({ est, cropFilter }: { est: Establecimiento; cropFi
   );
 }
 
-function NoResultados({ onClear }: { onClear: () => void }) {
+/** Mismo alto y misma grilla que las tarjetas, para que nada salte al llegar los datos. */
+function GrillaSkeleton() {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+          <Skeleton className="h-[150px] rounded-none" />
+          <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 11 }}>
+            <Skeleton className="h-5 w-3/5" />
+            <Skeleton className="h-3.5 w-2/5" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-4/5" />
+            <Skeleton className="h-6 w-1/3 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SinResultados({ cultivo, onClear }: { cultivo: string | null; onClear: () => void }) {
   return (
     <div style={{ textAlign: "center", padding: "64px 32px", background: "var(--surface)", border: "1px dashed var(--sand)", borderRadius: "var(--radius-lg)" }}>
       <div style={{ width: 68, height: 68, borderRadius: "50%", background: "var(--cream-tert)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
@@ -60,25 +77,33 @@ function NoResultados({ onClear }: { onClear: () => void }) {
       </div>
       <h3 style={{ margin: "0 0 8px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 21, color: "var(--fg-1)" }}>No encontramos establecimientos</h3>
       <p style={{ margin: "0 auto 22px", color: "var(--fg-2)", fontSize: 15.5, maxWidth: 420, lineHeight: 1.5 }}>
-        Ningún establecimiento trabaja el cultivo elegido. Probá quitando el filtro para ver todos.
+        {cultivo
+          ? "Ningún establecimiento trabaja el cultivo elegido. Probá quitando el filtro para ver todos."
+          : "Todavía no hay establecimientos publicados. Volvé a mirar en unos días."}
       </p>
-      <button type="button" className="btn btn-neutral" onClick={onClear}>
-        <RotateCcw size={17} /> Quitar filtro
-      </button>
+      {cultivo && (
+        <button type="button" className="btn btn-neutral" onClick={onClear}>
+          <RotateCcw size={17} /> Quitar filtro
+        </button>
+      )}
     </div>
   );
 }
 
 export default function ListClient() {
-  const base = useMemo(() => ESTABLECIMIENTOS.filter((e) => e.vigente), []);
-  const cultivoOpts = useMemo(() => buildCultivoOpts(base), [base]);
   const [cultivo, setCultivo] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  const filtrados = useMemo(() => base.filter((e) => !cultivo || e.cultivos.includes(cultivo)), [base, cultivo]);
-  const pages = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
+  // El filtro lo aplica el backend, así que cambiarlo vuelve a pedir el listado.
+  const { data, isLoading, error, reload } = useEstablecimientosPublicos(cultivo);
+  const tipos = useTiposCultivo();
+
+  const lista = data ?? [];
+  const pages = Math.max(1, Math.ceil(lista.length / PAGE_SIZE));
   const pageSafe = Math.min(page, pages);
-  const visibles = filtrados.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE);
+  const visibles = lista.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE);
+
+  const elegirCultivo = (v: string | null) => { setCultivo(v); setPage(1); };
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 28px 80px" }}>
@@ -97,33 +122,42 @@ export default function ListClient() {
       </div>
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: 20, marginBottom: 22, display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
-        <FilterSelect icon={<Sprout size={18} />} label="Tipo de cultivo" allLabel="Todos los cultivos" value={cultivo} options={cultivoOpts} onChange={(v) => { setCultivo(v); setPage(1); }} />
+        <FilterSelect
+          icon={<Sprout size={18} />}
+          label="Tipo de cultivo"
+          allLabel={tipos.isLoading ? "Cargando cultivos…" : "Todos los cultivos"}
+          value={cultivo}
+          options={tipos.data ?? []}
+          onChange={elegirCultivo}
+        />
         {cultivo && (
-          <button type="button" onClick={() => { setCultivo(null); setPage(1); }} style={{ height: 46, display: "inline-flex", alignItems: "center", gap: 7, background: "transparent", border: "none", cursor: "pointer", color: "var(--green-800)", fontFamily: "var(--font-sans)", fontSize: 14.5, fontWeight: 600, padding: "0 6px" }}>
+          <button type="button" onClick={() => elegirCultivo(null)} style={{ height: 46, display: "inline-flex", alignItems: "center", gap: 7, background: "transparent", border: "none", cursor: "pointer", color: "var(--green-800)", fontFamily: "var(--font-sans)", fontSize: 14.5, fontWeight: 600, padding: "0 6px" }}>
             <RotateCcw size={16} color="var(--green-800)" /> Quitar filtro
           </button>
         )}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 15, color: "var(--fg-2)" }}>
-          <strong style={{ color: "var(--fg-1)", fontWeight: 700 }}>{filtrados.length}</strong>{" "}
-          {filtrados.length === 1 ? "establecimiento" : "establecimientos"}
-          {cultivo ? " encontrados" : " disponibles"}
-        </span>
-        {cultivo && <ActiveFilterPill icon={<Sprout size={13} />} label={cultivo} onClear={() => setCultivo(null)} />}
-      </div>
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<GrillaSkeleton />}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 15, color: "var(--fg-2)" }}>
+            <strong style={{ color: "var(--fg-1)", fontWeight: 700 }}>{lista.length}</strong>{" "}
+            {lista.length === 1 ? "establecimiento" : "establecimientos"}
+            {cultivo ? " encontrados" : " disponibles"}
+          </span>
+          {cultivo && <ActiveFilterPill icon={<Sprout size={13} />} label={cultivo} onClear={() => elegirCultivo(null)} />}
+        </div>
 
-      {filtrados.length === 0 ? (
-        <NoResultados onClear={() => setCultivo(null)} />
-      ) : (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
-            {visibles.map((est) => <EstablecimientoCard key={est.id} est={est} cropFilter={cultivo} />)}
-          </div>
-          <Pagination page={pageSafe} pages={pages} onPage={setPage} />
-        </>
-      )}
+        {lista.length === 0 ? (
+          <SinResultados cultivo={cultivo} onClear={() => elegirCultivo(null)} />
+        ) : (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
+              {visibles.map((est) => <EstablecimientoCard key={est.id} est={est} cropFilter={cultivo} />)}
+            </div>
+            <Pagination page={pageSafe} pages={pages} onPage={setPage} />
+          </>
+        )}
+      </AsyncBoundary>
 
       <style>{`
         .card-hover { transition: box-shadow .16s, border-color .16s, transform .16s; }

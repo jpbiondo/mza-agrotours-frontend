@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ActivityForm from "@/components/panel/ActivityForm";
+import GuardSuspension from "@/components/panel/GuardSuspension";
 import { emptyActividadForm } from "@/data/actividad-form";
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function CrearActividadPage() {
-  return <ActivityForm initial={emptyActividadForm()} />;
+  return (
+    <GuardSuspension>
+      <ActivityForm initial={emptyActividadForm()} />
+    </GuardSuspension>
+  );
 }

@@ -90,6 +90,7 @@ const NAV: NavEntry[] = [
     iconC: Warehouse,
     label: "Establecimientos",
     href: "/admin/establecimientos",
+    permiso: PermisoAdmin.LEER_ESTABLECIMIENTO,
   },
   { section: "Contenido" },
   { id: "cultivos", iconC: Sprout, label: "Cultivos", href: "/admin/cultivos" },

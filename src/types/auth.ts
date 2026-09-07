@@ -14,6 +14,7 @@ export interface Acceso {
   /** Sólo en accesos de PRODUCTOR; alimenta el switcher del panel. */
   establecimientoId: string | null;
   establecimientoNombre: string | null;
+  establecimientoEstado?: string | null;
 }
 
 /** Datos del usuario que devuelve el backend en el campo `data`. */

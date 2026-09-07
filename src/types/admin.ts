@@ -17,6 +17,42 @@ export interface RolAdmin {
   descripcion: string;
 }
 
+export type EstadoEstab = "activo" | "suspendido";
+
+/**
+ * Estado actual de un establecimiento con su sello: quién lo dejó así, cuándo y
+ * por qué. Va aparte porque es lo único que devuelven las dos operaciones sobre
+ * la suspensión, sin los contadores.
+ */
+export interface EstadoAdminEstab {
+  estado: EstadoEstab;
+  /**
+   * Motivo del estado actual. Sólo tiene sentido mostrarlo en los suspendidos:
+   * al reactivar, el backend lo pisa con "Reactivación de establecimiento".
+   */
+  motivoEstado: string;
+  /** Cuándo pasó a este estado (ISO), o null si el backend no lo mandó. */
+  fechaEstado: string | null;
+  /** Administrador que lo dejó en este estado. Vacío si lo cambió el sistema. */
+  ejecutorEstado: string;
+}
+
+/** Item de GET /admin/establecimientos. */
+export interface AdminEstab extends EstadoAdminEstab {
+  id: string;
+  nombre: string;
+  /** Nombre del productor líder del establecimiento. */
+  productorLider: string;
+  /** Nombre del departamento; la provincia es siempre Mendoza. */
+  departamento: string;
+  /** Fecha del alta (ISO), o null si el backend no la mandó. */
+  fechaAlta: string | null;
+  /** Actividades publicadas hoy. */
+  actividades: number;
+  /** Reservas históricas, no las vigentes. */
+  reservas: number;
+}
+
 
 /* ---- Mock del resto del panel de administración ------------------------- */
 
@@ -61,18 +97,3 @@ export interface RegisteredUser {
   dni: string;
 }
 
-export type EstadoEstab = "activo" | "suspendido";
-
-export interface AdminEstab {
-  id: string;
-  nombre: string;
-  titular: string;
-  ubicacion: string;
-  actividades: number;
-  reservas: number;
-  alta: string;
-  estado: EstadoEstab;
-  motivo?: string;
-  suspendido?: string;
-  suspendidoPor?: string;
-}

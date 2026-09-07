@@ -9,6 +9,8 @@ interface EstablecimientoState {
    */
   elegido: string | null;
   elegir: (id: string) => void;
+  /** true una vez rehidratado desde localStorage. Ver `useEstablecimientos`. */
+  hasHydrated: boolean;
 }
 
 /**
@@ -25,12 +27,17 @@ export const useEstablecimientoStore = create<EstablecimientoState>()(
     (set) => ({
       elegido: null,
       elegir: (id) => set({ elegido: id }),
+      hasHydrated: false,
     }),
     {
       name: "agrotours-establecimiento",
       storage: createJSONStorage(() => localStorage),
+      // La bandera de hidratación no se persiste: describe esta pestaña.
       partialize: (s) => ({ elegido: s.elegido }),
       skipHydration: true,
+      onRehydrateStorage: () => () => {
+        useEstablecimientoStore.setState({ hasHydrated: true });
+      },
     },
   ),
 );

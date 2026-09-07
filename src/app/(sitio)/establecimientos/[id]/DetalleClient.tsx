@@ -1,62 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  ChevronLeft, ChevronRight, ChevronRight as Crumb, Image as ImageIcon, Info, Sprout,
-  CalendarDays, Phone, Mail, MapPin, Mountain, ArrowLeft, ArrowRight, Star, Building2,
-  Globe, AtSign,
+  ChevronRight as Crumb, Info, Sprout, CalendarDays, Phone, Mail, MapPin,
+  ArrowLeft, ArrowRight, Star, Building2, SearchX,
 } from "lucide-react";
-import Photo from "@/components/landing/Photo";
-import { actividadesDeEst } from "@/data/establecimientos";
+import AsyncBoundary from "@/components/AsyncBoundary";
+import Photo, { seedDeId } from "@/components/landing/Photo";
+import { Skeleton } from "@/components/ui";
+import { useEstablecimientoPublico } from "@/hooks/useCatalogoEstablecimientos";
 import { moneyAr } from "@/lib/format";
-import type { Actividad, Establecimiento, ImagenEst } from "@/types/catalogo";
-
-/* ---- Carrusel ---------------------------------------------------------- */
-function Carrusel({ imagenes }: { imagenes: ImagenEst[] }) {
-  const [i, setI] = useState(0);
-  const n = imagenes.length;
-  const go = (d: number) => setI((p) => (p + d + n) % n);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") go(-1);
-      if (e.key === "ArrowRight") go(1);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [n]);
-
-  return (
-    <div style={{ position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden", border: "1px solid var(--outline-variant)" }}>
-      <Photo seed={imagenes[i].seed} height={420} radius={0} caption={imagenes[i].caption} />
-      {n > 1 && (
-        <>
-          <button type="button" aria-label="Imagen anterior" onClick={() => go(-1)} style={navBtn("left")}><ChevronLeft size={20} /></button>
-          <button type="button" aria-label="Imagen siguiente" onClick={() => go(1)} style={navBtn("right")}><ChevronRight size={20} /></button>
-          <span style={{ position: "absolute", top: 14, right: 14, zIndex: 2, background: "rgba(20,33,18,.62)", color: "#fff", borderRadius: "var(--radius-pill)", padding: "4px 11px", fontSize: 12.5, fontWeight: 600, fontFamily: "var(--font-mono)", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <ImageIcon size={13} /> {i + 1} / {n}
-          </span>
-          <div style={{ position: "absolute", left: 0, right: 0, bottom: 36, display: "flex", justifyContent: "center", gap: 8, zIndex: 2 }}>
-            {imagenes.map((_, idx) => (
-              <button key={idx} type="button" aria-label={`Ir a la imagen ${idx + 1}`} onClick={() => setI(idx)} style={{ width: idx === i ? 26 : 9, height: 9, borderRadius: 999, border: "none", cursor: "pointer", background: idx === i ? "#fff" : "rgba(255,255,255,.55)", transition: "width .2s, background .2s" }} />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function navBtn(side: "left" | "right"): React.CSSProperties {
-  return {
-    position: "absolute", top: "50%", transform: "translateY(-50%)", [side]: 14, zIndex: 2,
-    width: 44, height: 44, borderRadius: "50%", cursor: "pointer",
-    background: "rgba(251,249,248,.92)", border: "1px solid var(--outline-variant)", boxShadow: "0 2px 10px rgba(45,90,39,.18)",
-    display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--fg-1)",
-  };
-}
+import type { ActividadOfrecida, EstablecimientoPublico } from "@/types/catalogo";
 
 /* ---- Fila de contacto -------------------------------------------------- */
 function ContactRow({ icon, label, value, href }: { icon: React.ReactNode; label: string; value: string; href?: string }) {
@@ -74,16 +28,18 @@ function ContactRow({ icon, label, value, href }: { icon: React.ReactNode; label
 }
 
 /* ---- Card de actividad ofrecida ---------------------------------------- */
-function ActividadCard({ act }: { act: Actividad }) {
+function ActividadCard({ act }: { act: ActividadOfrecida }) {
   return (
     <Link href={`/explorar/${act.id}`} className="card-hover" style={{ display: "flex", flexDirection: "column", textDecoration: "none", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
       <div style={{ position: "relative" }}>
-        <Photo seed={act.seed} height={150} radius={0} />
-        <span style={{ position: "absolute", top: 12, right: 12, display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(251,249,248,.95)", borderRadius: "var(--radius-pill)", padding: "5px 11px", boxShadow: "0 2px 8px rgba(45,90,39,.16)" }}>
-          <Star size={14} color="#C9A227" fill="#C9A227" />
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 13.5, fontWeight: 700, color: "var(--fg-1)" }}>{act.rating.toFixed(1)}</span>
-        </span>
-        <span style={{ position: "absolute", top: 12, left: 12, background: "var(--brown-700)", color: "#fff", borderRadius: "var(--radius-pill)", padding: "4px 11px", fontSize: 11.5, fontWeight: 600 }}>{act.tipo}</span>
+        <Photo seed={seedDeId(act.id)} height={150} radius={0} />
+        {/* Sin reseñas todavía no hay puntuación que mostrar. */}
+        {act.puntuacion !== null && (
+          <span style={{ position: "absolute", top: 12, right: 12, display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(251,249,248,.95)", borderRadius: "var(--radius-pill)", padding: "5px 11px", boxShadow: "0 2px 8px rgba(45,90,39,.16)" }}>
+            <Star size={14} color="#C9A227" fill="#C9A227" />
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13.5, fontWeight: 700, color: "var(--fg-1)" }}>{act.puntuacion.toFixed(1)}</span>
+          </span>
+        )}
       </div>
       <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: 16, gap: 10 }}>
         <h4 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16.5, color: "var(--fg-1)", lineHeight: 1.3 }}>{act.nombre}</h4>
@@ -97,10 +53,14 @@ function ActividadCard({ act }: { act: Actividad }) {
         <div style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid var(--cream-tert)", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
           <div>
             <div className="t-label" style={{ marginBottom: 2 }}>Desde</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 17, fontWeight: 700, color: "var(--fg-1)" }}>{moneyAr(act.precioAdulto)}</span>
-              <span style={{ fontSize: 12, color: "var(--fg-3)" }}>/ adulto</span>
-            </div>
+            {act.precioDesde === null ? (
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--fg-3)" }}>A consultar</span>
+            ) : (
+              <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 17, fontWeight: 700, color: "var(--fg-1)" }}>{moneyAr(act.precioDesde)}</span>
+                <span style={{ fontSize: 12, color: "var(--fg-3)" }}>/ adulto</span>
+              </div>
+            )}
           </div>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--green-800)", whiteSpace: "nowrap" }}>
             Ver detalle <ArrowRight size={15} />
@@ -123,64 +83,91 @@ function Seccion({ icon, titulo, children }: { icon: React.ReactNode; titulo: st
   );
 }
 
-/* ---- Página ------------------------------------------------------------ */
-export default function DetalleClient({ est }: { est: Establecimiento }) {
-  const actividades = actividadesDeEst(est);
-  const c = est.contacto;
-
+/** Caja de texto para lo que el establecimiento todavía no cargó. */
+function Vacio({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 28px 80px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--fg-3)", fontSize: 13, marginBottom: 14 }}>
-        <Link href="/establecimientos" style={{ color: "var(--fg-3)", textDecoration: "none" }}>Establecimientos</Link>
-        <Crumb size={14} />
-        <span style={{ color: "var(--fg-2)", fontWeight: 500 }}>{est.nombre}</span>
+    <div style={{ background: "var(--surface)", border: "1px dashed var(--sand)", borderRadius: "var(--radius-lg)", padding: "36px 24px", textAlign: "center", color: "var(--fg-2)", fontSize: 14.5 }}>
+      {children}
+    </div>
+  );
+}
+
+function DetalleSkeleton() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <Skeleton className="h-10 w-2/5" />
+      <Skeleton className="h-[420px] w-full rounded-2xl" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-4/5" />
+      <Skeleton className="h-4 w-3/5" />
+    </div>
+  );
+}
+
+function NoEncontrado() {
+  return (
+    <div style={{ textAlign: "center", padding: "64px 32px", background: "var(--surface)", border: "1px dashed var(--sand)", borderRadius: "var(--radius-lg)" }}>
+      <div style={{ width: 68, height: 68, borderRadius: "50%", background: "var(--cream-tert)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
+        <SearchX size={30} color="var(--fg-3)" />
       </div>
-
-      <Link href="/establecimientos" style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--green-800)", fontSize: 14, fontWeight: 600, textDecoration: "none", marginBottom: 18 }}>
-        <ArrowLeft size={16} color="var(--green-800)" /> Volver al listado
+      <h1 style={{ margin: "0 0 8px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, color: "var(--fg-1)" }}>No encontramos ese establecimiento</h1>
+      <p style={{ margin: "0 auto 22px", color: "var(--fg-2)", fontSize: 15.5, maxWidth: 420, lineHeight: 1.5 }}>
+        Puede que haya dejado de estar publicado o que el enlace esté mal.
+      </p>
+      <Link href="/establecimientos" className="btn btn-primary" style={{ textDecoration: "none" }}>
+        <ArrowLeft size={16} /> Volver al listado
       </Link>
+    </div>
+  );
+}
 
+/* ---- Contenido --------------------------------------------------------- */
+function Detalle({ est }: { est: EstablecimientoPublico }) {
+  return (
+    <>
       <div style={{ marginBottom: 22 }}>
         <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 36, color: "var(--fg-1)", margin: 0, letterSpacing: "-.01em", lineHeight: 1.12 }}>{est.nombre}</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginTop: 10 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14, color: "var(--fg-2)" }}><Building2 size={15} color="var(--fg-3)" /> {est.razonSocial}</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14, color: "var(--fg-2)" }}><MapPin size={15} color="var(--brown-700)" /> {est.ubicacion.localidad}, {est.ubicacion.provincia}</span>
+          {est.razonSocial && <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14, color: "var(--fg-2)" }}><Building2 size={15} color="var(--fg-3)" /> {est.razonSocial}</span>}
+          {est.departamento && <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14, color: "var(--fg-2)" }}><MapPin size={15} color="var(--brown-700)" /> {est.departamento}, Mendoza</span>}
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", gap: 40, alignItems: "start" }} className="est-detail-grid">
         <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 38 }}>
-          <div>
-            <Carrusel imagenes={est.imagenes} />
-            {est.imagenes.length > 1 && (
-              <div style={{ display: "grid", gridTemplateColumns: `repeat(${est.imagenes.length}, 1fr)`, gap: 12, marginTop: 12 }}>
-                {est.imagenes.map((im, idx) => <Photo key={idx} seed={im.seed} height={76} radius={10} />)}
-              </div>
-            )}
+          {/* TODO backend: el detalle todavía no manda imágenes; va el placeholder. */}
+          <div style={{ borderRadius: "var(--radius-lg)", overflow: "hidden", border: "1px solid var(--outline-variant)" }}>
+            <Photo seed={seedDeId(est.id)} height={420} radius={0} />
           </div>
 
           <Seccion icon={<Info size={19} color="var(--green-800)" />} titulo="Sobre el establecimiento">
-            <p style={{ margin: 0, color: "var(--fg-1)", fontSize: 15.5, lineHeight: 1.65 }}>{est.descripcionLarga}</p>
+            {est.descripcion ? (
+              <p style={{ margin: 0, color: "var(--fg-1)", fontSize: 15.5, lineHeight: 1.65 }}>{est.descripcion}</p>
+            ) : (
+              <Vacio>Este establecimiento todavía no cargó su descripción.</Vacio>
+            )}
           </Seccion>
 
           <Seccion icon={<Sprout size={19} color="var(--green-800)" />} titulo="Cultivos populares">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
-              {est.cultivos.map((cult) => (
-                <span key={cult} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "var(--green-050)", color: "var(--green-800)", border: "1px solid var(--green-100)", borderRadius: "var(--radius-pill)", padding: "8px 15px", fontSize: 14, fontWeight: 600 }}>
-                  <Sprout size={15} color="var(--green-700)" /> {cult}
-                </span>
-              ))}
-            </div>
+            {est.cultivos.length === 0 ? (
+              <Vacio>Este establecimiento todavía no cargó sus cultivos.</Vacio>
+            ) : (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
+                {est.cultivos.map((cult) => (
+                  <span key={cult} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "var(--green-050)", color: "var(--green-800)", border: "1px solid var(--green-100)", borderRadius: "var(--radius-pill)", padding: "8px 15px", fontSize: 14, fontWeight: 600 }}>
+                    <Sprout size={15} color="var(--green-700)" /> {cult}
+                  </span>
+                ))}
+              </div>
+            )}
           </Seccion>
 
-          <Seccion icon={<CalendarDays size={19} color="var(--green-800)" />} titulo={`Actividades ofrecidas (${actividades.length})`}>
-            {actividades.length === 0 ? (
-              <div style={{ background: "var(--surface)", border: "1px dashed var(--sand)", borderRadius: "var(--radius-lg)", padding: "36px 24px", textAlign: "center", color: "var(--fg-2)", fontSize: 14.5 }}>
-                Este establecimiento todavía no publicó actividades.
-              </div>
+          <Seccion icon={<CalendarDays size={19} color="var(--green-800)" />} titulo={`Actividades ofrecidas (${est.actividades.length})`}>
+            {est.actividades.length === 0 ? (
+              <Vacio>Este establecimiento todavía no publicó actividades.</Vacio>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 18 }}>
-                {actividades.map((act) => <ActividadCard key={act.id} act={act} />)}
+                {est.actividades.map((act) => <ActividadCard key={act.id} act={act} />)}
               </div>
             )}
           </Seccion>
@@ -193,13 +180,15 @@ export default function DetalleClient({ est }: { est: Establecimiento }) {
                 <Phone size={18} color="var(--green-800)" />
                 <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: "var(--fg-1)" }}>Contacto</h3>
               </div>
-              <ContactRow icon={<Mail size={17} color="var(--green-800)" />} label="Email" value={c.email} href={`mailto:${c.email}`} />
-              <div style={{ height: 1, background: "var(--cream-tert)" }} />
-              <ContactRow icon={<Phone size={17} color="var(--green-800)" />} label="Teléfono" value={c.telefono} href={`tel:${c.telefono.replace(/\s/g, "")}`} />
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
-                <a href="#" onClick={(e) => e.preventDefault()} style={socialChip}><Globe size={15} color="var(--green-700)" /> {c.web}</a>
-                <a href="#" onClick={(e) => e.preventDefault()} style={socialChip}><AtSign size={15} color="var(--green-700)" /> {c.instagram}</a>
-              </div>
+              {!est.email && !est.telefono ? (
+                <p style={{ margin: "8px 0 0", color: "var(--fg-2)", fontSize: 14 }}>Todavía no publicó datos de contacto.</p>
+              ) : (
+                <>
+                  {est.email && <ContactRow icon={<Mail size={17} color="var(--green-800)" />} label="Email" value={est.email} href={`mailto:${est.email}`} />}
+                  {est.email && est.telefono && <div style={{ height: 1, background: "var(--cream-tert)" }} />}
+                  {est.telefono && <ContactRow icon={<Phone size={17} color="var(--green-800)" />} label="Teléfono" value={est.telefono} href={`tel:${est.telefono.replace(/\s/g, "")}`} />}
+                </>
+              )}
             </div>
 
             <div className="card">
@@ -207,17 +196,42 @@ export default function DetalleClient({ est }: { est: Establecimiento }) {
                 <MapPin size={18} color="var(--green-800)" />
                 <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: "var(--fg-1)" }}>Ubicación</h3>
               </div>
-              <div style={{ fontSize: 14.5, color: "var(--fg-1)", lineHeight: 1.6 }}>
-                <div style={{ fontWeight: 600 }}>{est.ubicacion.calle}</div>
-                <div style={{ color: "var(--fg-2)" }}>{est.ubicacion.localidad}, {est.ubicacion.provincia}</div>
-              </div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12, padding: "5px 12px", background: "var(--cream-tert)", borderRadius: "var(--radius-pill)", fontSize: 12.5, fontWeight: 600, color: "var(--brown-800)" }}>
-                <Mountain size={13} color="var(--brown-700)" /> {est.ubicacion.zona}
-              </div>
+              {!est.ubicacion && !est.departamento ? (
+                <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 14 }}>Todavía no publicó su ubicación.</p>
+              ) : (
+                <div style={{ fontSize: 14.5, color: "var(--fg-1)", lineHeight: 1.6 }}>
+                  {est.ubicacion && <div style={{ fontWeight: 600 }}>{est.ubicacion}</div>}
+                  {est.departamento && <div style={{ color: "var(--fg-2)" }}>{est.departamento}, Mendoza</div>}
+                </div>
+              )}
             </div>
           </div>
         </aside>
       </div>
+    </>
+  );
+}
+
+/* ---- Página ------------------------------------------------------------ */
+export default function DetalleClient({ id }: { id: string }) {
+  const { data, isLoading, error, reload } = useEstablecimientoPublico(id);
+
+  return (
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 28px 80px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--fg-3)", fontSize: 13, marginBottom: 14 }}>
+        <Link href="/establecimientos" style={{ color: "var(--fg-3)", textDecoration: "none" }}>Establecimientos</Link>
+        <Crumb size={14} />
+        <span style={{ color: "var(--fg-2)", fontWeight: 500 }}>{data?.nombre ?? "Detalle"}</span>
+      </div>
+
+      <Link href="/establecimientos" style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--green-800)", fontSize: 14, fontWeight: 600, textDecoration: "none", marginBottom: 18 }}>
+        <ArrowLeft size={16} color="var(--green-800)" /> Volver al listado
+      </Link>
+
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<DetalleSkeleton />}>
+        {/* `data` en null es un id que no existe, no una falla de la lectura. */}
+        {data ? <Detalle est={data} /> : <NoEncontrado />}
+      </AsyncBoundary>
 
       <style>{`
         .card-hover { transition: box-shadow .16s, border-color .16s, transform .16s; }
@@ -227,9 +241,3 @@ export default function DetalleClient({ est }: { est: Establecimiento }) {
     </div>
   );
 }
-
-const socialChip: React.CSSProperties = {
-  display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none",
-  background: "var(--surface)", border: "1px solid var(--sand)", borderRadius: "var(--radius-pill)",
-  padding: "7px 13px", fontSize: 13, fontWeight: 600, color: "var(--fg-1)",
-};
