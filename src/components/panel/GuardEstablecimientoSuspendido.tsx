@@ -24,10 +24,10 @@ const LISTADO = "/panel/actividades";
  * Es control de navegación, no de seguridad —los accesos salen de un store que
  * se puede editar desde el navegador—: la barrera real es el backend.
  */
-export default function GuardSuspension({ children }: { children: ReactNode }) {
+export default function GuardEstablecimientoSuspendido({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { activo, listo } = useEstablecimientos();
-  const bloqueado = listo && !!activo?.suspendido;
+  const bloqueado = listo && !!activo?.establecimientoSuspendido;
 
   useEffect(() => {
     if (bloqueado) router.replace(LISTADO);
