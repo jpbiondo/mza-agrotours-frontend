@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EMAIL_RE } from "@/data/auth";
+import { EMAIL_RE, TELEFONO_RE } from "@/data/auth";
 
 /**
  * Solicitud de alta de establecimiento (US-EST-03). Sólo los campos de texto;
@@ -43,7 +43,11 @@ export const solicitarAltaSchema = z.object({
     .trim()
     .min(1, "El teléfono es obligatorio.")
     .min(7, "Debe tener al menos 7 caracteres.")
-    .max(16, "Hasta 16 caracteres."),
+    .max(16, "Hasta 16 caracteres.")
+    .regex(
+      TELEFONO_RE,
+      "Solo se permiten números, espacios y los signos + ( ) -",
+    ),
   cvu: z
     .string()
     .trim()

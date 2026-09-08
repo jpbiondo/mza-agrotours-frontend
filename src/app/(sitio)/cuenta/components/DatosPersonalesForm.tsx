@@ -151,17 +151,19 @@ export default function DatosPersonalesForm({
                 <FormControl>
                   <TextField
                     {...field}
-                    onChange={(v) => field.onChange(v.replace(/\D/g, ""))}
+                    onChange={(v) =>
+                      field.onChange(v.replace(/[^\d+\s()-]/g, ""))
+                    }
                     icon={<Phone />}
                     maxLength={16}
-                    inputMode="numeric"
+                    inputMode="tel"
                     placeholder="Ej.: 2615558842"
                     autoComplete="tel"
                   />
                 </FormControl>
                 {!fieldState.error && (
                   <FormDescription>
-                    Solo números (7 a 16 dígitos)
+                    Entre 7 y 16 caracteres, podés incluir + ( ) - y espacios
                   </FormDescription>
                 )}
                 <FormMessage />

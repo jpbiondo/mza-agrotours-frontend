@@ -1,4 +1,4 @@
-import { EMAIL_RE } from "@/data/auth";
+import { EMAIL_RE, TELEFONO_RE } from "@/data/auth";
 
 /** Los administradores no se autoeliminan, pero contemplamos el rol. */
 export type RolCuenta = "visitante" | "productor" | "admin";
@@ -65,7 +65,7 @@ export function validarPerfil(v: Perfil): Partial<Record<keyof Perfil, string>> 
 
   const tel = (v.telefono || "").trim();
   if (!tel) e.telefono = "Este campo es obligatorio";
-  else if (!/^\d{7,16}$/.test(tel)) e.telefono = "Ingresá entre 7 y 16 dígitos";
+  else if (!TELEFONO_RE.test(tel)) e.telefono = "El teléfono debe tener entre 7 y 16 caracteres (números, espacios y + ( ) -)";
 
   return e;
 }

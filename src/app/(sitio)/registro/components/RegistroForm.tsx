@@ -252,14 +252,14 @@ export default function RegistroForm({
                   {...field}
                   icon={<Phone />}
                   type="tel"
-                  maxLength={15}
+                  maxLength={16}
                   placeholder="Ej. +54 261 555 1234"
                   inputMode="tel"
                   autoComplete="tel"
                 />
               </FormControl>
               <FormDescription>
-                Entre 7 y 15 caracteres, podés incluir el código de área
+                Entre 7 y 16 caracteres, podés incluir el código de área
               </FormDescription>
               <FormMessage />
             </FormItem>

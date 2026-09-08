@@ -1,5 +1,7 @@
 /* Validaciones de los campos editables del establecimiento (US-EST-05). */
 
+import { TELEFONO_RE } from "@/data/auth";
+
 export function validarDescripcion(v: string): string | null {
   if (v.length > 2000) return "La descripción no puede superar los 2000 caracteres.";
   return null;
@@ -10,6 +12,7 @@ export function validarTelefono(v: string): string | null {
   if (!t) return "El teléfono no puede estar vacío.";
   if (t.length < 7) return "El teléfono debe tener al menos 7 caracteres.";
   if (t.length > 16) return "El teléfono no puede superar los 16 caracteres.";
+  if (!TELEFONO_RE.test(t)) return "Solo se permiten números, espacios y los signos + ( ) -.";
   return null;
 }
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { EMAILS_REGISTRADOS } from "@/data/registro";
-import { NOMBRE_RE } from "@/data/auth";
+import { NOMBRE_RE, TELEFONO_RE } from "@/data/auth";
 
 const SPECIAL_RE = /[!@#$%^&*(),.?":{}|<>_\-[\]\\/;'`~+=]/;
 
@@ -36,8 +36,12 @@ export const registroSchema = z
       .string()
       .trim()
       .min(1, "Este campo es obligatorio")
-      .min(7, "El teléfono debe tener entre 7 y 15 caracteres")
-      .max(15, "El teléfono debe tener entre 7 y 15 caracteres"),
+      .min(7, "El teléfono debe tener entre 7 y 16 caracteres")
+      .max(16, "El teléfono debe tener entre 7 y 16 caracteres")
+      .regex(
+        TELEFONO_RE,
+        "El teléfono solo puede contener números, espacios y los signos + ( ) -",
+      ),
     password: z
       .string()
       .min(1, "Este campo es obligatorio")
