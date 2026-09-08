@@ -49,6 +49,12 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "agrotours-auth",
       storage: createJSONStorage(() => localStorage),
+      version: 1,
+      migrate: (estado) => ({
+        ...(estado as Partial<AuthState>),
+        accesos: [],
+        roles: [],
+      }),
       // Solo persistimos los datos de sesión, no la bandera de hidratación.
       partialize: (s) => ({
         nombre: s.nombre,

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import PanelShell from "@/components/panel/PanelShell";
+import GuardProductorSuspendido from "@/components/panel/GuardProductorSuspendido";
 import GuardRol from "@/components/GuardRol";
 
 /**
@@ -14,7 +15,9 @@ import GuardRol from "@/components/GuardRol";
 export default function PanelLayout({ children }: { children: ReactNode }) {
   return (
     <PanelShell>
-      <GuardRol rol="productor">{children}</GuardRol>
+      <GuardRol rol="productor">
+        <GuardProductorSuspendido>{children}</GuardProductorSuspendido>
+      </GuardRol>
     </PanelShell>
   );
 }

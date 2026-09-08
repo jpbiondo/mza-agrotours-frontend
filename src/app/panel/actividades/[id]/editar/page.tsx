@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import GuardSuspension from "@/components/panel/GuardSuspension";
+import GuardEstablecimientoSuspendido from "@/components/panel/GuardEstablecimientoSuspendido";
 import EditarActividadClient from "./EditarActividadClient";
 
 export const metadata: Metadata = {
@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 export default async function EditarActividadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return (
-    <GuardSuspension>
+    <GuardEstablecimientoSuspendido>
       <EditarActividadClient actividadId={id} />
-    </GuardSuspension>
+    </GuardEstablecimientoSuspendido>
   );
 }
