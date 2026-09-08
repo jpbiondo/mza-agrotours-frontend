@@ -6,6 +6,8 @@ export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
  *  apóstrofos (Ana-María, O'Brien). Sin números ni otros caracteres especiales. */
 export const NOMBRE_RE = /^[\p{L}\p{M}\s'’-]+$/u;
 
+export const TELEFONO_RE = /^[0-9+()\-\s]{7,16}$/;
+
 /** Forma de las cuentas mock (demo/recuperación); desacoplada del tipo Cuenta real. */
 interface CuentaMock {
   email: string;
