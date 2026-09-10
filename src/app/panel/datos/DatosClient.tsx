@@ -229,6 +229,7 @@ function Campo({
           maxLength={maxLength}
           onChange={(v) => onChange?.(v)}
           aria-invalid={!!error}
+          disabled={disabled}
         />
       )}
 
