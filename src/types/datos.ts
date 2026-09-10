@@ -5,8 +5,9 @@ export interface CultivoRef {
 }
 
 /**
- * Item de GET /establecimientos/{id}. `ubicacion` y `localidad` no se editan
- * desde el panel; el resto sí, y viaja entero en cada PUT (ver `useGuardarEstablecimiento`).
+ * Item de GET /establecimientos/{id}. `ubicacion`, `localidad` y `cultivos` son
+ * de sólo lectura —los cultivos salen de las actividades del establecimiento—;
+ * el resto se edita y viaja entero en cada PUT (ver `useGuardarEstablecimiento`).
  */
 export interface EstablecimientoDatos {
   id: string;
@@ -28,5 +29,4 @@ export interface EstablecimientoEditable {
   telefono: string;
   email: string;
   cvu: string;
-  cultivosIds: string[];
 }

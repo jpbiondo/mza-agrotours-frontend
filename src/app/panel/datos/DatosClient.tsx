@@ -1,17 +1,43 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
-  Home, MapPin, Phone, Landmark, Sprout, Pencil, X, Check, Lock, Plus,
-  Search, Loader, ExternalLink, Inbox, Trash2, AlertTriangle,
+  Home,
+  MapPin,
+  Phone,
+  Landmark,
+  Sprout,
+  Pencil,
+  X,
+  Check,
+  Lock,
+  Loader,
+  ExternalLink,
+  Inbox,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, buttonClasses, Card, IconCircle, Modal, Skeleton, Toast } from "@/components/ui";
+import {
+  Alert,
+  Button,
+  buttonClasses,
+  Card,
+  IconCircle,
+  Modal,
+  Skeleton,
+  Toast,
+} from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
-import { validarCvu, validarDescripcion, validarEmail, validarTelefono } from "@/data/datos";
+import {
+  validarCvu,
+  validarDescripcion,
+  validarEmail,
+  validarTelefono,
+} from "@/data/datos";
 import { cn } from "@/lib/utils";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import {
@@ -19,11 +45,10 @@ import {
   useEstablecimientoDatos,
   useGuardarEstablecimiento,
 } from "@/hooks/useEstablecimientoDatos";
-import { useTiposCultivo } from "@/hooks/useTiposCultivo";
-import type { CultivoRef, EstablecimientoDatos } from "@/types/datos";
+import type { EstablecimientoDatos } from "@/types/datos";
 
 /** Secciones que se pueden editar; una por vez. */
-type Seccion = "identidad" | "contacto" | "operacion" | "cultivos";
+type Seccion = "identidad" | "contacto" | "operacion";
 
 function mensajeGuardar(code?: string): string {
   // TODO backend: mapear los códigos de dominio del PUT cuando existan.
@@ -68,15 +93,25 @@ function EliminarModal({
       </div>
 
       <p className="mt-4 text-[14.5px] leading-relaxed text-fg-2">
-        Vas a eliminar <strong className="text-fg-1">{nombre}</strong>. Se dan de baja sus
-        actividades, cultivos y datos asociados. Esta acción no se puede deshacer.
+        Vas a eliminar <strong className="text-fg-1">{nombre}</strong>. Se dan
+        de baja sus actividades, cultivos y datos asociados. Esta acción no se
+        puede deshacer.
       </p>
 
       <div className="field mt-4">
-        <label htmlFor="confirmar-baja" className="text-[13.5px] font-semibold text-fg-1">
-          Escribí <span className="font-mono text-danger-fg">ELIMINAR</span> para confirmar
+        <label
+          htmlFor="confirmar-baja"
+          className="text-[13.5px] font-semibold text-fg-1"
+        >
+          Escribí <span className="font-mono text-danger-fg">ELIMINAR</span>{" "}
+          para confirmar
         </label>
-        <TextField id="confirmar-baja" value={texto} onChange={setTexto} placeholder="ELIMINAR" />
+        <TextField
+          id="confirmar-baja"
+          value={texto}
+          onChange={setTexto}
+          placeholder="ELIMINAR"
+        />
       </div>
 
       {error && <Alert className="mt-4">{error}</Alert>}
@@ -85,8 +120,16 @@ function EliminarModal({
         <Button variant="ghost" onClick={onCancel} disabled={busy}>
           Cancelar
         </Button>
-        <Button variant="danger" onClick={onConfirm} disabled={!confirmado || busy}>
-          {busy ? <Loader className="spin size-[17px]" /> : <Trash2 className="size-[17px]" />}
+        <Button
+          variant="danger"
+          onClick={onConfirm}
+          disabled={!confirmado || busy}
+        >
+          {busy ? (
+            <Loader className="spin size-[17px]" />
+          ) : (
+            <Trash2 className="size-[17px]" />
+          )}
           Eliminar establecimiento
         </Button>
       </div>
@@ -127,19 +170,41 @@ function SectionCard({
           <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-green-050">
             {icon}
           </span>
-          <h2 className="font-display text-[18px] font-semibold text-fg-1">{title}</h2>
+          <h2 className="font-display text-[18px] font-semibold text-fg-1">
+            {title}
+          </h2>
         </div>
         {locked ? null : !isEditing ? (
-          <Button variant="ghost" size="sm" className="text-sm" onClick={onEdit}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-sm"
+            onClick={onEdit}
+          >
             <Pencil className="size-[15px]" /> Editar
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" className="text-sm" onClick={onCancel} disabled={saving}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-sm"
+              onClick={onCancel}
+              disabled={saving}
+            >
               <X className="size-[15px]" /> Cancelar
             </Button>
-            <Button size="sm" className="text-sm" onClick={onSave} disabled={!canSave || saving}>
-              {saving ? <Loader className="spin size-[15px]" /> : <Check className="size-[15px]" />}
+            <Button
+              size="sm"
+              className="text-sm"
+              onClick={onSave}
+              disabled={!canSave || saving}
+            >
+              {saving ? (
+                <Loader className="spin size-[15px]" />
+              ) : (
+                <Check className="size-[15px]" />
+              )}
               Guardar cambios
             </Button>
           </div>
@@ -151,7 +216,15 @@ function SectionCard({
 }
 
 /** Fila de lectura: rótulo a la izquierda, valor a la derecha. */
-function ReadRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function ReadRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
     <div className="grid grid-cols-1 gap-x-6 gap-y-1 border-b border-dashed border-cream-tert py-3.5 sm:grid-cols-[200px_1fr]">
       <div className="t-label">{label}</div>
@@ -196,7 +269,10 @@ function Campo({
   return (
     <div className="field">
       <div className="flex items-baseline justify-between gap-3">
-        <label htmlFor={id} className="font-display text-base font-semibold text-fg-1">
+        <label
+          htmlFor={id}
+          className="font-display text-base font-semibold text-fg-1"
+        >
           {label}
         </label>
         {count != null && (
@@ -219,7 +295,11 @@ function Campo({
           maxLength={maxLength}
           rows={4}
           onChange={(e) => onChange?.(e.target.value)}
-          className={cn("textarea min-h-[110px]", error && "err", disabled && "bg-cream-tert text-fg-2")}
+          className={cn(
+            "textarea min-h-[110px]",
+            error && "err",
+            disabled && "bg-cream-tert text-fg-2",
+          )}
         />
       ) : (
         <TextField
@@ -238,7 +318,9 @@ function Campo({
           <Lock className="size-3" /> Este dato no puede modificarse
         </div>
       )}
-      {!disabled && hint && !error && <div className="text-[12.5px] text-fg-3">{hint}</div>}
+      {!disabled && hint && !error && (
+        <div className="text-[12.5px] text-fg-3">{hint}</div>
+      )}
       {error && <div className="err-msg">{error}</div>}
     </div>
   );
@@ -246,151 +328,13 @@ function Campo({
 
 /* ---- Cultivos ----------------------------------------------------------- */
 
-function CultivoChip({
-  nombre,
-  removable,
-  onRemove,
-}: {
-  nombre: string;
-  removable?: boolean;
-  onRemove?: () => void;
-}) {
+/** Sólo lectura: los cultivos salen de las actividades, no se editan acá. */
+function CultivoChip({ nombre }: { nombre: string }) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-2 rounded-pill border border-green-100 bg-green-050 text-[14px] font-semibold text-green-800",
-        removable ? "py-1.5 pr-1.5 pl-3.5" : "px-4 py-2",
-      )}
-    >
+    <span className="inline-flex items-center gap-2 rounded-pill border border-green-100 bg-green-050 px-4 py-2 text-[14px] font-semibold text-green-800">
       <Sprout className="size-[15px] text-green-700" />
       {nombre}
-      {removable && (
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={`Quitar ${nombre}`}
-          title="Quitar cultivo"
-          className="inline-flex size-[22px] cursor-pointer items-center justify-center rounded-full bg-green-100"
-        >
-          <X className="size-[13px] text-green-800" />
-        </button>
-      )}
     </span>
-  );
-}
-
-function AgregarCultivoModal({
-  yaAsociados,
-  onCancel,
-  onSelect,
-}: {
-  yaAsociados: CultivoRef[];
-  onCancel: () => void;
-  onSelect: (cultivos: CultivoRef[]) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [sel, setSel] = useState<Set<string>>(() => new Set());
-  const { cultivos, isLoading, error } = useTiposCultivo(true);
-
-  const disponibles = useMemo(() => {
-    const tiene = new Set(yaAsociados.map((c) => c.id));
-    const q = query.trim().toLowerCase();
-    return cultivos
-      .filter((c) => !tiene.has(c.id))
-      .filter((c) => c.nombre.toLowerCase().includes(q));
-  }, [cultivos, yaAsociados, query]);
-
-  const toggle = (id: string) =>
-    setSel((cur) => {
-      const s = new Set(cur);
-      if (s.has(id)) s.delete(id);
-      else s.add(id);
-      return s;
-    });
-
-  return (
-    <Modal onClose={onCancel} padding="p-0" className="w-[520px]">
-      <div className="flex items-center justify-between gap-4 border-b border-cream-tert px-[22px] py-5">
-        <div className="flex items-center gap-3">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-green-050">
-            <Sprout className="size-4 text-green-800" />
-          </span>
-          <h3 className="font-display text-[18px] font-semibold text-fg-1">Agregar cultivo</h3>
-        </div>
-        <button
-          type="button"
-          onClick={onCancel}
-          aria-label="Cerrar"
-          className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-outline-variant bg-surface"
-        >
-          <X className="size-4 text-fg-2" />
-        </button>
-      </div>
-
-      <div className="px-[22px] pt-4">
-        <TextField
-          value={query}
-          onChange={setQuery}
-          icon={<Search />}
-          placeholder="Buscá por nombre del cultivo"
-        />
-      </div>
-
-      <div className="max-h-[300px] overflow-y-auto px-3.5 py-2.5">
-        {isLoading ? (
-          <div className="flex flex-col gap-1.5 p-2">
-            {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : error ? (
-          <Alert className="m-2">{error}</Alert>
-        ) : disponibles.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-fg-3">
-            {cultivos.length === 0
-              ? "Todavía no hay cultivos cargados en el sistema."
-              : `No quedan cultivos para asociar${query.trim() ? ` con “${query.trim()}”` : ""}.`}
-          </div>
-        ) : (
-          disponibles.map((c) => {
-            const on = sel.has(c.id);
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => toggle(c.id)}
-                className="flex w-full cursor-pointer items-center gap-3 border-b border-cream-tert px-2 py-2.5 text-left last:border-b-0 hover:bg-cream-tert"
-              >
-                <span
-                  className={cn(
-                    "inline-flex size-5 shrink-0 items-center justify-center rounded-[5px] border-[1.5px]",
-                    on ? "border-green-800 bg-green-800" : "border-sand bg-surface",
-                  )}
-                >
-                  {on && <Check className="size-3.5 text-white" />}
-                </span>
-                <span className="inline-flex items-center gap-2 text-[14.5px] font-medium text-fg-1">
-                  <Sprout className="size-[15px] text-green-700" /> {c.nombre}
-                </span>
-              </button>
-            );
-          })
-        )}
-      </div>
-
-      <div className="flex justify-end gap-2.5 border-t border-cream-tert px-[22px] py-4">
-        <Button variant="ghost" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button
-          disabled={sel.size === 0}
-          onClick={() => onSelect(cultivos.filter((c) => sel.has(c.id)))}
-        >
-          <Check className="size-[17px] shrink-0" />
-          Seleccionar{sel.size > 0 ? ` (${sel.size})` : ""}
-        </Button>
-      </div>
-    </Modal>
   );
 }
 
@@ -409,7 +353,8 @@ function DatosSkeleton() {
           Datos del establecimiento
         </h1>
         <p className="mt-1.5 text-[15px] text-fg-2">
-          Información general, contacto y cultivos de la finca. Editá cada sección por separado.
+          Información general, contacto y cultivos de la finca. Editá cada
+          sección por separado.
         </p>
       </div>
       {SECCIONES_SKELETON.map((filas, i) => (
@@ -424,7 +369,10 @@ function DatosSkeleton() {
           <div className="px-7 pt-2 pb-7">
             {filas > 0 ? (
               Array.from({ length: filas }, (_, f) => (
-                <div key={f} className="grid grid-cols-[200px_1fr] gap-6 py-3.5">
+                <div
+                  key={f}
+                  className="grid grid-cols-[200px_1fr] gap-6 py-3.5"
+                >
                   <Skeleton className="h-3.5 w-[120px]" />
                   <Skeleton className="h-3.5 w-[240px]" />
                 </div>
@@ -464,12 +412,12 @@ function Inner({
   const [descErr, setDescErr] = useState<string | null>(null);
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
-  const [contactoErr, setContactoErr] = useState<{ telefono?: string | null; email?: string | null }>({});
+  const [contactoErr, setContactoErr] = useState<{
+    telefono?: string | null;
+    email?: string | null;
+  }>({});
   const [cvu, setCvu] = useState("");
   const [cvuErr, setCvuErr] = useState<string | null>(null);
-  const [cultivos, setCultivos] = useState<CultivoRef[]>([]);
-  const [addOpen, setAddOpen] = useState(false);
-  const [aQuitar, setAQuitar] = useState<CultivoRef | null>(null);
 
   function notificar(title: string) {
     setToast({ tone: "success", title });
@@ -485,9 +433,6 @@ function Inner({
     setContactoErr({});
     setCvu(datos.cvu);
     setCvuErr(null);
-    setCultivos(datos.cultivos);
-    setAddOpen(false);
-    setAQuitar(null);
     setEditando(seccion);
   }
 
@@ -505,7 +450,6 @@ function Inner({
       telefono: merged.telefono,
       email: merged.email,
       cvu: merged.cvu,
-      cultivosIds: merged.cultivos.map((c) => c.id),
     });
     if (!res.ok) {
       setErrorGuardar(mensajeGuardar(res.code));
@@ -533,11 +477,6 @@ function Inner({
     window.location.href = "/explorar";
   }
 
-  const enCultivos = editando === "cultivos";
-  const listaCultivos = enCultivos ? cultivos : datos.cultivos;
-  const cultivosCambiaron =
-    cultivos.map((c) => c.id).join() !== datos.cultivos.map((c) => c.id).join();
-
   return (
     <div className="mx-auto max-w-[1000px] px-7 pt-7 pb-20">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -546,7 +485,8 @@ function Inner({
             Datos del establecimiento
           </h1>
           <p className="mt-1.5 text-[15px] text-fg-2">
-            Información general, contacto y cultivos de la finca. Editá cada sección por separado.
+            Información general, contacto y cultivos de la finca. Editá cada
+            sección por separado.
           </p>
         </div>
         <Link
@@ -624,7 +564,8 @@ function Inner({
         <ReadRow label="Dirección" value={datos.ubicacion} />
         <ReadRow label="Localidad (Departamento)" value={datos.localidad} />
         <div className="mt-3 flex items-center gap-1.5 text-xs text-fg-3">
-          <Lock className="size-3" /> La ubicación no puede modificarse desde acá.
+          <Lock className="size-3" /> La ubicación no puede modificarse desde
+          acá.
         </div>
       </SectionCard>
 
@@ -661,7 +602,8 @@ function Inner({
               hint="Entre 7 y 16 caracteres."
               onChange={(v) => {
                 setTelefono(v);
-                if (contactoErr.telefono) setContactoErr((e) => ({ ...e, telefono: null }));
+                if (contactoErr.telefono)
+                  setContactoErr((e) => ({ ...e, telefono: null }));
               }}
             />
             <Campo
@@ -673,14 +615,14 @@ function Inner({
               hint="Hasta 100 caracteres."
               onChange={(v) => {
                 setEmail(v);
-                if (contactoErr.email) setContactoErr((e) => ({ ...e, email: null }));
+                if (contactoErr.email)
+                  setContactoErr((e) => ({ ...e, email: null }));
               }}
             />
           </div>
         )}
       </SectionCard>
 
-      {/* Operación: el CVU ahora sí se edita. */}
       <SectionCard
         title="Operación"
         icon={<Landmark className="size-4 text-green-800" />}
@@ -718,39 +660,26 @@ function Inner({
       <SectionCard
         title="Cultivos asociados"
         icon={<Sprout className="size-4 text-green-800" />}
-        isEditing={enCultivos}
-        saving={saving}
-        canSave={cultivosCambiaron}
-        onEdit={() => abrir("cultivos")}
-        onCancel={() => setEditando(null)}
-        onSave={() => guardarSeccion({ cultivos })}
+        isEditing={false}
+        locked
+        onEdit={() => {}}
+        onCancel={() => {}}
       >
-        {listaCultivos.length === 0 ? (
+        {datos.cultivos.length === 0 ? (
           <p className="pt-2 text-sm text-fg-3">
             No hay cultivos asociados a este establecimiento.
           </p>
         ) : (
           <div className="flex flex-wrap gap-2.5 pt-1">
-            {listaCultivos.map((c) => (
-              <CultivoChip
-                key={c.id}
-                nombre={c.nombre || c.id}
-                removable={enCultivos}
-                onRemove={() => setAQuitar(c)}
-              />
+            {datos.cultivos.map((c) => (
+              <CultivoChip key={c.id} nombre={c.nombre || c.id} />
             ))}
           </div>
         )}
-
-        {enCultivos && (
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-sand bg-surface px-4 py-2.5 text-[13.5px] font-semibold text-green-800 hover:border-green-800 hover:bg-green-050"
-          >
-            <Plus className="size-4" /> Agregar cultivo
-          </button>
-        )}
+        <div className="mt-4 flex items-center gap-1.5 text-xs text-fg-3">
+          <Lock className="size-3" /> Los cultivos listados son los ofrecidos
+          por las actividades.
+        </div>
       </SectionCard>
 
       <div className="mt-8 flex justify-end">
@@ -775,45 +704,6 @@ function Inner({
         />
       )}
 
-      {addOpen && (
-        <AgregarCultivoModal
-          yaAsociados={cultivos}
-          onCancel={() => setAddOpen(false)}
-          onSelect={(nuevos) => {
-            setCultivos((cur) => [...cur, ...nuevos]);
-            setAddOpen(false);
-          }}
-        />
-      )}
-
-      {aQuitar && (
-        <Modal onClose={() => setAQuitar(null)}>
-          <h3 className="font-display text-[19px] font-semibold text-fg-1">
-            ¿Quitar este cultivo?
-          </h3>
-          <p className="mt-3 text-[14.5px] leading-relaxed text-fg-2">
-            Se saca el cultivo del establecimiento. El cambio se aplica cuando guardes la sección.
-          </p>
-          <div className="mt-4">
-            <CultivoChip nombre={aQuitar.nombre || aQuitar.id} />
-          </div>
-          <div className="mt-6 flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setAQuitar(null)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => {
-                setCultivos((cur) => cur.filter((c) => c.id !== aQuitar.id));
-                setAQuitar(null);
-              }}
-            >
-              Quitar
-            </Button>
-          </div>
-        </Modal>
-      )}
-
       {toast && <Toast {...toast} />}
     </div>
   );
@@ -835,7 +725,8 @@ export default function DatosClient() {
   // El establecimiento activo lo elige el switcher del shell.
   const { activo } = useEstablecimientos();
   const fincaId = activo?.id ?? "";
-  const { datos, isLoading, error, reload, aplicar } = useEstablecimientoDatos(fincaId);
+  const { datos, isLoading, error, reload, aplicar } =
+    useEstablecimientoDatos(fincaId);
 
   if (!fincaId) return <SinEstablecimiento />;
 
