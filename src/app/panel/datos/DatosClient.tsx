@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -340,6 +340,25 @@ function DatosSkeleton() {
 
 /* ---- Pantalla ----------------------------------------------------------- */
 
+/** Segundos que el aviso de baja queda a la vista antes de sacar al usuario. */
+const ESPERA_SALIDA_MS = 5000;
+
+/**
+ * Se sale del panel, no a otra pantalla de adentro: si éste era el único
+ * establecimiento, la cuenta deja de ser productora y el guard de /panel
+ * rebotaría con el aviso de sin acceso.
+ *
+ * Navegación dura a propósito: los establecimientos salen de los accesos del
+ * store, y ésos se refrescan recién cuando AuthSync vuelve a pedir el perfil.
+ * Sin esto el switcher seguiría ofreciendo el que se dio de baja.
+ *
+ * Fuera del componente para que el efecto que la difiere dependa sólo del
+ * estado de la baja.
+ */
+function salirDelPanel() {
+  window.location.href = "/explorar";
+}
+
 function Inner({
   datos,
   onGuardado,
@@ -349,6 +368,7 @@ function Inner({
 }) {
   const { guardar, isLoading: saving } = useGuardarEstablecimiento();
   const [bajaAbierta, setBajaAbierta] = useState(false);
+  const [bajaHecha, setBajaHecha] = useState(false);
   const [editando, setEditando] = useState<Seccion | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
@@ -373,6 +393,18 @@ function Inner({
     setToast({ tone: "success", title });
     setTimeout(() => setToast((t) => (t?.title === title ? null : t)), 3400);
   }
+
+  /**
+   * Tras la baja el aviso queda a la vista un rato y recién después se sale, así
+   * el usuario alcanza a leerlo. El cleanup cancela la salida si se desmonta
+   * antes —al navegar a otra pantalla del panel—, para no patearlo a /explorar
+   * desde donde sea que haya ido.
+   */
+  useEffect(() => {
+    if (!bajaHecha) return;
+    const t = setTimeout(salirDelPanel, ESPERA_SALIDA_MS);
+    return () => clearTimeout(t);
+  }, [bajaHecha]);
 
   function abrir(seccion: Seccion) {
     setErrorGuardar(null);
@@ -417,17 +449,6 @@ function Inner({
     setEditando(null);
     notificar("Cambios guardados correctamente.");
     return res;
-  }
-
-  function salirDelPanel() {
-    // Se sale del panel, no a otra pantalla de adentro: si éste era el único
-    // establecimiento, la cuenta deja de ser productora y el guard de /panel
-    // rebotaría con el aviso de sin acceso.
-    //
-    // Navegación dura a propósito: los establecimientos salen de los accesos
-    // del store, y ésos se refrescan recién cuando AuthSync vuelve a pedir el
-    // perfil. Sin esto el switcher seguiría ofreciendo el que se dio de baja.
-    window.location.href = "/explorar";
   }
 
   return (
@@ -513,6 +534,7 @@ function Inner({
             <div className="sm:col-span-2">
               <Campo
                 area
+                required
                 label="Descripción"
                 value={descripcion}
                 count={2000}
@@ -684,7 +706,13 @@ function Inner({
       </SectionCard>
 
       <div className="mt-8 flex justify-end">
-        <Button variant="danger" onClick={() => setBajaAbierta(true)}>
+        {/* Ya dado de baja, no tiene sentido volver a abrir el flujo en los
+            segundos que quedan hasta la salida. */}
+        <Button
+          variant="danger"
+          disabled={bajaHecha}
+          onClick={() => setBajaAbierta(true)}
+        >
           <Trash2 className="size-4" /> Eliminar establecimiento
         </Button>
       </div>
@@ -694,7 +722,15 @@ function Inner({
           id={datos.id}
           nombre={datos.nombre}
           onCancel={() => setBajaAbierta(false)}
-          onEliminado={salirDelPanel}
+          onEliminado={() => {
+            setBajaAbierta(false);
+            // Sin auto-ocultado: el aviso tiene que seguir ahí cuando se sale.
+            setToast({
+              tone: "success",
+              title: "Establecimiento eliminado correctamente.",
+            });
+            setBajaHecha(true);
+          }}
         />
       )}
 

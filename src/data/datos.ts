@@ -13,6 +13,8 @@ export function validarNombre(v: string): string | null {
 }
 
 export function validarDescripcion(v: string): string | null {
+  if (!v.trim()) return "La descripción no puede estar vacía.";
+  // Sobre el valor sin recortar: es el largo que muestra el contador del campo.
   if (v.length > 2000) return "La descripción no puede superar los 2000 caracteres.";
   return null;
 }
