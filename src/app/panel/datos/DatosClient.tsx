@@ -498,9 +498,9 @@ function Inner({
                 required
                 label="Nombre del establecimiento"
                 value={nombre}
-                maxLength={80}
+                maxLength={100}
                 error={identidadErr.nombre}
-                hint="Entre 3 y 80 caracteres. Así lo ven los visitantes en el sitio público."
+                hint="Hasta 100 caracteres, sin caracteres especiales. Así lo ven los visitantes en el sitio público."
                 onChange={(v) => {
                   setNombre(v);
                   if (identidadErr.nombre)

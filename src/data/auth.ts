@@ -8,6 +8,11 @@ export const NOMBRE_RE = /^[\p{L}\p{M}\s'’-]+$/u;
 
 export const TELEFONO_RE = /^[0-9+()\-\s]{7,16}$/;
 
+/** Nombre de establecimiento: alfanumérico con acentos y ñ, espacios, guiones y
+ *  guiones bajos. Sin otros caracteres especiales. Copia del regex del backend,
+ *  que lo aplica tanto en el alta como en la edición del establecimiento. */
+export const NOMBRE_ESTABLECIMIENTO_RE = /^[a-zA-Z0-9áéíóúüÁÉÍÓÚÜñÑ _-]*$/;
+
 /** Forma de las cuentas mock (demo/recuperación); desacoplada del tipo Cuenta real. */
 interface CuentaMock {
   email: string;

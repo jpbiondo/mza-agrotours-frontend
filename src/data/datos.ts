@@ -1,12 +1,14 @@
 /* Validaciones de los campos editables del establecimiento (US-EST-05). */
 
-import { TELEFONO_RE } from "@/data/auth";
+import { NOMBRE_ESTABLECIMIENTO_RE, TELEFONO_RE } from "@/data/auth";
 
 export function validarNombre(v: string): string | null {
   const t = v.trim();
   if (!t) return "El nombre del establecimiento no puede estar vacío.";
-  if (t.length < 3) return "El nombre debe tener al menos 3 caracteres.";
-  if (t.length > 80) return "El nombre no puede superar los 80 caracteres.";
+  if (t.length > 100) return "El nombre no puede superar los 100 caracteres.";
+  if (!NOMBRE_ESTABLECIMIENTO_RE.test(t)) {
+    return "Solo se permiten letras, números, espacios, guiones y guiones bajos.";
+  }
   return null;
 }
 

@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { EMAIL_RE, TELEFONO_RE } from "@/data/auth";
+import {
+  EMAIL_RE,
+  NOMBRE_ESTABLECIMIENTO_RE,
+  TELEFONO_RE,
+} from "@/data/auth";
 
 /**
  * Solicitud de alta de establecimiento (US-EST-03). Sólo los campos de texto;
@@ -10,7 +14,11 @@ export const solicitarAltaSchema = z.object({
     .string()
     .trim()
     .min(1, "El nombre del establecimiento es obligatorio.")
-    .max(100, "Hasta 100 caracteres."),
+    .max(100, "Hasta 100 caracteres.")
+    .regex(
+      NOMBRE_ESTABLECIMIENTO_RE,
+      "Solo se permiten letras, números, espacios, guiones y guiones bajos.",
+    ),
   razonSocial: z
     .string()
     .trim()
