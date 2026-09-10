@@ -2,6 +2,14 @@
 
 import { TELEFONO_RE } from "@/data/auth";
 
+export function validarNombre(v: string): string | null {
+  const t = v.trim();
+  if (!t) return "El nombre del establecimiento no puede estar vacío.";
+  if (t.length < 3) return "El nombre debe tener al menos 3 caracteres.";
+  if (t.length > 80) return "El nombre no puede superar los 80 caracteres.";
+  return null;
+}
+
 export function validarDescripcion(v: string): string | null {
   if (v.length > 2000) return "La descripción no puede superar los 2000 caracteres.";
   return null;

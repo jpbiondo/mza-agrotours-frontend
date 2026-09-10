@@ -17,7 +17,8 @@ import {
   ExternalLink,
   Inbox,
   Trash2,
-  AlertTriangle,
+  Info,
+  ArrowRight,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import {
@@ -25,8 +26,6 @@ import {
   Button,
   buttonClasses,
   Card,
-  IconCircle,
-  Modal,
   Skeleton,
   Toast,
 } from "@/components/ui";
@@ -36,105 +35,34 @@ import {
   validarCvu,
   validarDescripcion,
   validarEmail,
+  validarNombre,
   validarTelefono,
 } from "@/data/datos";
 import { cn } from "@/lib/utils";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import {
-  useEliminarEstablecimiento,
   useEstablecimientoDatos,
   useGuardarEstablecimiento,
 } from "@/hooks/useEstablecimientoDatos";
+import EliminarEstablecimientoFlow from "./EliminarEstablecimientoFlow";
 import type { EstablecimientoDatos } from "@/types/datos";
 
 /** Secciones que se pueden editar; una por vez. */
 type Seccion = "identidad" | "contacto" | "operacion";
 
+/** El nombre es único entre establecimientos: el PUT contesta 409 con este código. */
+const NOMBRE_DUPLICADO = "E.nombreYaExiste";
+
+/** Errores de dominio del PUT. El resto cae en el genérico. */
+const ERROR_GUARDAR: Record<string, string> = {
+  [NOMBRE_DUPLICADO]:
+    "Ya existe un establecimiento con ese nombre. Probá con otro.",
+  // TODO backend: mapear el resto de los códigos del PUT cuando existan.
+};
+
 function mensajeGuardar(code?: string): string {
-  // TODO backend: mapear los códigos de dominio del PUT cuando existan.
-  return code
-    ? "No se pudieron guardar los cambios."
-    : "No se pudieron guardar los cambios. Probá de nuevo en unos minutos.";
-}
-
-function mensajeBaja(code?: string): string {
-  // TODO backend: mapear los códigos de dominio del DELETE cuando existan.
-  return code
-    ? "No se pudo eliminar el establecimiento."
-    : "No se pudo eliminar el establecimiento. Probá de nuevo en unos minutos.";
-}
-
-/** Confirmación de la baja: hay que escribir ELIMINAR, como en el diseño. */
-function EliminarModal({
-  nombre,
-  busy,
-  error,
-  onCancel,
-  onConfirm,
-}: {
-  nombre: string;
-  busy: boolean;
-  error: string | null;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const [texto, setTexto] = useState("");
-  const confirmado = texto.trim().toUpperCase() === "ELIMINAR";
-
-  return (
-    <Modal onClose={onCancel} dismissable={!busy}>
-      <div className="flex items-center gap-3.5">
-        <IconCircle tone="danger">
-          <AlertTriangle className="size-[22px] text-danger-fg" />
-        </IconCircle>
-        <h3 className="font-display text-[19px] font-semibold text-fg-1">
-          Eliminar establecimiento
-        </h3>
-      </div>
-
-      <p className="mt-4 text-[14.5px] leading-relaxed text-fg-2">
-        Vas a eliminar <strong className="text-fg-1">{nombre}</strong>. Se dan
-        de baja sus actividades, cultivos y datos asociados. Esta acción no se
-        puede deshacer.
-      </p>
-
-      <div className="field mt-4">
-        <label
-          htmlFor="confirmar-baja"
-          className="text-[13.5px] font-semibold text-fg-1"
-        >
-          Escribí <span className="font-mono text-danger-fg">ELIMINAR</span>{" "}
-          para confirmar
-        </label>
-        <TextField
-          id="confirmar-baja"
-          value={texto}
-          onChange={setTexto}
-          placeholder="ELIMINAR"
-        />
-      </div>
-
-      {error && <Alert className="mt-4">{error}</Alert>}
-
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="ghost" onClick={onCancel} disabled={busy}>
-          Cancelar
-        </Button>
-        <Button
-          variant="danger"
-          onClick={onConfirm}
-          disabled={!confirmado || busy}
-        >
-          {busy ? (
-            <Loader className="spin size-[17px]" />
-          ) : (
-            <Trash2 className="size-[17px]" />
-          )}
-          Eliminar establecimiento
-        </Button>
-      </div>
-    </Modal>
-  );
+  if (code) return ERROR_GUARDAR[code] ?? "No se pudieron guardar los cambios.";
+  return "No se pudieron guardar los cambios. Probá de nuevo en unos minutos.";
 }
 
 /* ---- Tarjeta de sección ------------------------------------------------- */
@@ -149,6 +77,7 @@ function SectionCard({
   canSave = true,
   saving,
   locked,
+  aside,
   children,
 }: {
   title: string;
@@ -161,6 +90,8 @@ function SectionCard({
   saving?: boolean;
   /** Sección de sólo lectura: no ofrece editar. */
   locked?: boolean;
+  /** Reemplaza los botones del encabezado en las secciones `locked`. */
+  aside?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -174,7 +105,9 @@ function SectionCard({
             {title}
           </h2>
         </div>
-        {locked ? null : !isEditing ? (
+        {locked ? (
+          aside
+        ) : !isEditing ? (
           <Button
             variant="ghost"
             size="sm"
@@ -253,6 +186,7 @@ function Campo({
   error,
   maxLength,
   count,
+  required,
 }: {
   label: string;
   value: string;
@@ -264,6 +198,7 @@ function Campo({
   error?: string | null;
   maxLength?: number;
   count?: number;
+  required?: boolean;
 }) {
   const id = `campo-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
@@ -274,6 +209,13 @@ function Campo({
           className="font-display text-base font-semibold text-fg-1"
         >
           {label}
+          {/* aria-hidden: el asterisco es decorativo, lo obligatorio lo dice el
+              mensaje de error. Mismo patrón que el FormLabel de ui/form.tsx. */}
+          {required && (
+            <span aria-hidden className="ml-[3px] text-danger">
+              *
+            </span>
+          )}
         </label>
         {count != null && (
           <span
@@ -378,9 +320,15 @@ function DatosSkeleton() {
                 </div>
               ))
             ) : (
-              <div className="flex gap-2.5 pt-3">
-                <Skeleton className="h-9 w-[130px] rounded-pill" />
-                <Skeleton className="h-9 w-[110px] rounded-pill" />
+              // Cultivos: la nota de "se deriva de las actividades", los chips
+              // y el link a actividades.
+              <div className="pt-1">
+                <Skeleton className="h-[62px] w-full rounded-md" />
+                <div className="mt-4.5 flex gap-2.5">
+                  <Skeleton className="h-9 w-[130px] rounded-pill" />
+                  <Skeleton className="h-9 w-[110px] rounded-pill" />
+                </div>
+                <Skeleton className="mt-4.5 h-[34px] w-[140px]" />
               </div>
             )}
           </div>
@@ -400,16 +348,18 @@ function Inner({
   onGuardado: (cambios: Partial<EstablecimientoDatos>) => void;
 }) {
   const { guardar, isLoading: saving } = useGuardarEstablecimiento();
-  const { eliminar, isLoading: eliminando } = useEliminarEstablecimiento();
   const [bajaAbierta, setBajaAbierta] = useState(false);
-  const [errorBaja, setErrorBaja] = useState<string | null>(null);
   const [editando, setEditando] = useState<Seccion | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
 
   // Borradores por sección.
+  const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [descErr, setDescErr] = useState<string | null>(null);
+  const [identidadErr, setIdentidadErr] = useState<{
+    nombre?: string | null;
+    descripcion?: string | null;
+  }>({});
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [contactoErr, setContactoErr] = useState<{
@@ -426,8 +376,9 @@ function Inner({
 
   function abrir(seccion: Seccion) {
     setErrorGuardar(null);
+    setNombre(datos.nombre);
     setDescripcion(datos.descripcion);
-    setDescErr(null);
+    setIdentidadErr({});
     setTelefono(datos.telefono);
     setEmail(datos.email);
     setContactoErr({});
@@ -442,31 +393,33 @@ function Inner({
    * sección. Al salir bien se aplican localmente —sabemos exactamente qué se
    * mandó— en vez de volver a pedir la pantalla entera.
    */
-  async function guardarSeccion(cambios: Partial<EstablecimientoDatos>) {
+  async function guardarSeccion(
+    cambios: Partial<EstablecimientoDatos>,
+    /** Código que la sección muestra en su propio campo: no va al aviso de arriba. */
+    codigoPropio?: string,
+  ): Promise<{ ok: boolean; code?: string }> {
     setErrorGuardar(null);
     const merged = { ...datos, ...cambios };
     const res = await guardar(datos.id, {
+      nombre: merged.nombre,
       descripcion: merged.descripcion,
       telefono: merged.telefono,
       email: merged.email,
       cvu: merged.cvu,
     });
     if (!res.ok) {
-      setErrorGuardar(mensajeGuardar(res.code));
-      return;
+      if (!res.code || res.code !== codigoPropio) {
+        setErrorGuardar(mensajeGuardar(res.code));
+      }
+      return res;
     }
     onGuardado(cambios);
     setEditando(null);
     notificar("Cambios guardados correctamente.");
+    return res;
   }
 
-  async function confirmarBaja() {
-    setErrorBaja(null);
-    const res = await eliminar(datos.id);
-    if (!res.ok) {
-      setErrorBaja(mensajeBaja(res.code));
-      return;
-    }
+  function salirDelPanel() {
     // Se sale del panel, no a otra pantalla de adentro: si éste era el único
     // establecimiento, la cuenta deja de ser productora y el guard de /panel
     // rebotaría con el aviso de sin acceso.
@@ -499,22 +452,31 @@ function Inner({
 
       {errorGuardar && <Alert className="mb-5">{errorGuardar}</Alert>}
 
-      {/* Identidad: sólo la descripción se edita. */}
+      {/* Identidad: nombre y descripción se editan; CUIT y razón social no. */}
       <SectionCard
         title="Identidad de la finca"
         icon={<Home className="size-4 text-green-800" />}
         isEditing={editando === "identidad"}
         saving={saving}
-        canSave={descripcion !== datos.descripcion}
+        canSave={nombre !== datos.nombre || descripcion !== datos.descripcion}
         onEdit={() => abrir("identidad")}
         onCancel={() => setEditando(null)}
-        onSave={() => {
-          const e = validarDescripcion(descripcion);
-          if (e) {
-            setDescErr(e);
+        onSave={async () => {
+          const ne = validarNombre(nombre);
+          const de = validarDescripcion(descripcion);
+          if (ne || de) {
+            setIdentidadErr({ nombre: ne, descripcion: de });
             return;
           }
-          guardarSeccion({ descripcion });
+          // El nombre duplicado es un problema de ese campo, no de la pantalla:
+          // se muestra abajo del input y la sección queda abierta para corregirlo.
+          const res = await guardarSeccion(
+            { nombre: nombre.trim(), descripcion },
+            NOMBRE_DUPLICADO,
+          );
+          if (res.code === NOMBRE_DUPLICADO) {
+            setIdentidadErr({ nombre: mensajeGuardar(NOMBRE_DUPLICADO) });
+          }
         }}
       >
         {editando !== "identidad" ? (
@@ -531,6 +493,21 @@ function Inner({
           </>
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Campo
+                required
+                label="Nombre del establecimiento"
+                value={nombre}
+                maxLength={80}
+                error={identidadErr.nombre}
+                hint="Entre 3 y 80 caracteres. Así lo ven los visitantes en el sitio público."
+                onChange={(v) => {
+                  setNombre(v);
+                  if (identidadErr.nombre)
+                    setIdentidadErr((e) => ({ ...e, nombre: null }));
+                }}
+              />
+            </div>
             <Campo label="CUIT" value={datos.cuit} disabled />
             <Campo label="Razón social" value={datos.razonSocial} disabled />
             <div className="sm:col-span-2">
@@ -540,11 +517,12 @@ function Inner({
                 value={descripcion}
                 count={2000}
                 maxLength={2000}
-                error={descErr}
+                error={identidadErr.descripcion}
                 hint="Hasta 2000 caracteres."
                 onChange={(v) => {
                   setDescripcion(v);
-                  if (descErr) setDescErr(null);
+                  if (identidadErr.descripcion)
+                    setIdentidadErr((e) => ({ ...e, descripcion: null }));
                 }}
               />
             </div>
@@ -657,6 +635,7 @@ function Inner({
         )}
       </SectionCard>
 
+      {/* Derivada: los cultivos salen de las actividades, no se editan acá. */}
       <SectionCard
         title="Cultivos asociados"
         icon={<Sprout className="size-4 text-green-800" />}
@@ -664,43 +643,58 @@ function Inner({
         locked
         onEdit={() => {}}
         onCancel={() => {}}
+        aside={
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-pill border border-outline-variant px-3 py-1.5 text-xs text-fg-3">
+            <Lock className="size-3" /> Se actualiza solo
+          </span>
+        }
       >
+        <div className="mt-1 mb-4.5 flex items-start gap-2.5 rounded-md border border-outline-variant bg-cream-tert px-3.5 py-3 text-[13.5px] leading-normal text-pretty text-fg-2">
+          <Info className="mt-px size-[15px] shrink-0 text-info-fg" />
+          <span>
+            Esta lista se genera a partir de los cultivos cargados en las
+            actividades de la finca. Para agregar o quitar un cultivo, editá los
+            cultivos de la actividad correspondiente.
+          </span>
+        </div>
+
         {datos.cultivos.length === 0 ? (
-          <p className="pt-2 text-sm text-fg-3">
-            No hay cultivos asociados a este establecimiento.
+          <p className="py-1 text-sm text-fg-3">
+            Todavía no hay cultivos asociados. Se mostrarán acá cuando cargues
+            actividades con cultivos.
           </p>
         ) : (
-          <div className="flex flex-wrap gap-2.5 pt-1">
+          <div className="flex flex-wrap gap-2.5">
             {datos.cultivos.map((c) => (
               <CultivoChip key={c.id} nombre={c.nombre || c.id} />
             ))}
           </div>
         )}
-        <div className="mt-4 flex items-center gap-1.5 text-xs text-fg-3">
-          <Lock className="size-3" /> Los cultivos listados son los ofrecidos
-          por las actividades.
-        </div>
+
+        <Link
+          href="/panel/actividades"
+          className={buttonClasses({
+            variant: "ghost",
+            size: "sm",
+            className: "mt-4.5 text-sm",
+          })}
+        >
+          <ArrowRight className="size-[15px]" /> Ver actividades
+        </Link>
       </SectionCard>
 
       <div className="mt-8 flex justify-end">
-        <Button
-          variant="danger"
-          onClick={() => {
-            setErrorBaja(null);
-            setBajaAbierta(true);
-          }}
-        >
+        <Button variant="danger" onClick={() => setBajaAbierta(true)}>
           <Trash2 className="size-4" /> Eliminar establecimiento
         </Button>
       </div>
 
       {bajaAbierta && (
-        <EliminarModal
+        <EliminarEstablecimientoFlow
+          id={datos.id}
           nombre={datos.nombre}
-          busy={eliminando}
-          error={errorBaja}
           onCancel={() => setBajaAbierta(false)}
-          onConfirm={confirmarBaja}
+          onEliminado={salirDelPanel}
         />
       )}
 
