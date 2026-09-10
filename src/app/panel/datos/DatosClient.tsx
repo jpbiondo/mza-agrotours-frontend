@@ -8,7 +8,7 @@ import {
   Search, Loader, ExternalLink, Inbox, Trash2, AlertTriangle,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Card, IconCircle, Modal, Skeleton, Toast } from "@/components/ui";
+import { Alert, Button, buttonClasses, Card, IconCircle, Modal, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { validarCvu, validarDescripcion, validarEmail, validarTelefono } from "@/data/datos";
@@ -82,7 +82,7 @@ function EliminarModal({
       {error && <Alert className="mt-4">{error}</Alert>}
 
       <div className="mt-6 flex justify-end gap-3">
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
+        <Button variant="ghost" onClick={onCancel} disabled={busy}>
           Cancelar
         </Button>
         <Button variant="danger" onClick={onConfirm} disabled={!confirmado || busy}>
@@ -124,18 +124,18 @@ function SectionCard({
     <Card className="mb-6 overflow-hidden">
       <header className="flex items-center justify-between gap-4 border-b border-cream-tert px-7 py-5">
         <div className="flex items-center gap-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-green-050">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-green-050">
             {icon}
           </span>
           <h2 className="font-display text-[18px] font-semibold text-fg-1">{title}</h2>
         </div>
         {locked ? null : !isEditing ? (
-          <Button variant="neutral" size="sm" className="text-sm" onClick={onEdit}>
+          <Button variant="ghost" size="sm" className="text-sm" onClick={onEdit}>
             <Pencil className="size-[15px]" /> Editar
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button variant="neutral" size="sm" className="text-sm" onClick={onCancel} disabled={saving}>
+            <Button variant="ghost" size="sm" className="text-sm" onClick={onCancel} disabled={saving}>
               <X className="size-[15px]" /> Cancelar
             </Button>
             <Button size="sm" className="text-sm" onClick={onSave} disabled={!canSave || saving}>
@@ -378,7 +378,7 @@ function AgregarCultivoModal({
       </div>
 
       <div className="flex justify-end gap-2.5 border-t border-cream-tert px-[22px] py-4">
-        <Button variant="neutral" onClick={onCancel}>
+        <Button variant="ghost" onClick={onCancel}>
           Cancelar
         </Button>
         <Button
@@ -550,7 +550,7 @@ function Inner({
         </div>
         <Link
           href={`/establecimientos/${datos.id}`}
-          className="btn btn-neutral inline-flex shrink-0 items-center gap-2 no-underline"
+          className={buttonClasses({ variant: "ghost", className: "shrink-0" })}
         >
           <ExternalLink className="size-4" /> Ver perfil público
         </Link>
@@ -754,8 +754,7 @@ function Inner({
 
       <div className="mt-8 flex justify-end">
         <Button
-          variant="neutral"
-          className="border-danger text-danger"
+          variant="danger"
           onClick={() => {
             setErrorBaja(null);
             setBajaAbierta(true);
@@ -798,7 +797,7 @@ function Inner({
             <CultivoChip nombre={aQuitar.nombre || aQuitar.id} />
           </div>
           <div className="mt-6 flex justify-end gap-3">
-            <Button variant="neutral" onClick={() => setAQuitar(null)}>
+            <Button variant="ghost" onClick={() => setAQuitar(null)}>
               Cancelar
             </Button>
             <Button
