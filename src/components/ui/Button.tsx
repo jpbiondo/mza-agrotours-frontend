@@ -14,7 +14,7 @@ const variants: Record<Variant, string> = {
     "border-sand bg-surface text-fg-1 shadow-[var(--btn-tactile-neutral)] hover:border-outline hover:bg-cream-tert active:translate-y-px active:shadow-none",
   ghost: "border-transparent bg-transparent text-green-800 hover:bg-green-050",
   danger:
-    "border-transparent bg-danger text-white shadow-[inset_0_-2px_0_var(--danger-fg)] active:translate-y-px active:shadow-none",
+    "border-transparent bg-danger text-white shadow-[inset_0_-2px_0_var(--danger-fg)] hover:bg-danger-hover active:translate-y-px active:shadow-none",
 };
 
 const sizes: Record<Size, string> = {
