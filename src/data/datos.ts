@@ -1,8 +1,20 @@
 /* Validaciones de los campos editables del establecimiento (US-EST-05). */
 
-import { TELEFONO_RE } from "@/data/auth";
+import { NOMBRE_ESTABLECIMIENTO_RE, TELEFONO_RE } from "@/data/auth";
+
+export function validarNombre(v: string): string | null {
+  const t = v.trim();
+  if (!t) return "El nombre del establecimiento no puede estar vacío.";
+  if (t.length > 100) return "El nombre no puede superar los 100 caracteres.";
+  if (!NOMBRE_ESTABLECIMIENTO_RE.test(t)) {
+    return "Solo se permiten letras, números, espacios, guiones y guiones bajos.";
+  }
+  return null;
+}
 
 export function validarDescripcion(v: string): string | null {
+  if (!v.trim()) return "La descripción no puede estar vacía.";
+  // Sobre el valor sin recortar: es el largo que muestra el contador del campo.
   if (v.length > 2000) return "La descripción no puede superar los 2000 caracteres.";
   return null;
 }

@@ -1,5 +1,5 @@
 export { ActionBtn } from "./ActionBtn";
-export { Button } from "./Button";
+export { Button, buttonClasses } from "./Button";
 export { Card } from "./Card";
 export { Modal } from "./Modal";
 export { Panel } from "./Panel";

@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "neutral" | "danger";
+type Variant = "primary" | "neutral" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
 /** Variantes tácticas (sombra inset inferior) equivalentes a las clases .btn-* heredadas. */
@@ -12,8 +12,9 @@ const variants: Record<Variant, string> = {
     "border-transparent bg-green-800 text-fg-on-dark shadow-[var(--btn-tactile-primary)] hover:bg-green-700 active:translate-y-px active:bg-green-900 active:shadow-none",
   neutral:
     "border-sand bg-surface text-fg-1 shadow-[var(--btn-tactile-neutral)] hover:border-outline hover:bg-cream-tert active:translate-y-px active:shadow-none",
+  ghost: "border-transparent bg-transparent text-green-800 hover:bg-green-050",
   danger:
-    "border-transparent bg-danger text-white shadow-[inset_0_-2px_0_var(--danger-fg)] active:translate-y-px active:shadow-none",
+    "border-transparent bg-danger text-white shadow-[inset_0_-2px_0_var(--danger-fg)] hover:bg-danger-hover active:translate-y-px active:shadow-none",
 };
 
 const sizes: Record<Size, string> = {

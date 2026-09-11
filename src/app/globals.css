@@ -55,7 +55,7 @@
   /* Semantic */
   --color-success: #2D7A33;  --color-success-fill: #E4EDDF;  --color-success-fg: #14470F;
   --color-warning: #C77F2A;  --color-warning-fill: #F8ECD7;  --color-warning-fg: #6E4410;
-  --color-danger:  #B23A2E;  --color-danger-fill:  #F6E0DC;  --color-danger-fg:  #6E1F18;
+  --color-danger:  #B23A2E;  --color-danger-fill:  #F6E0DC;  --color-danger-fg:  #6E1F18;  --color-danger-hover: #9C3025;
   --color-info:    #3A6B7A;  --color-info-fill:    #E0EAEC;  --color-info-fg:    #1C3A43;
 
   /* Radii — rounded-sm / rounded-md / rounded-lg / rounded-pill */

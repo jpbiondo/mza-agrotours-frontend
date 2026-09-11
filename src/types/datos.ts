@@ -5,8 +5,9 @@ export interface CultivoRef {
 }
 
 /**
- * Item de GET /establecimientos/{id}. `ubicacion` y `localidad` no se editan
- * desde el panel; el resto sí, y viaja entero en cada PUT (ver `useGuardarEstablecimiento`).
+ * Item de GET /establecimientos/{id}. `ubicacion`, `localidad` y `cultivos` son
+ * de sólo lectura —los cultivos salen de las actividades del establecimiento—;
+ * el resto se edita y viaja entero en cada PUT (ver `useGuardarEstablecimiento`).
  */
 export interface EstablecimientoDatos {
   id: string;
@@ -22,11 +23,22 @@ export interface EstablecimientoDatos {
   cultivos: CultivoRef[];
 }
 
+/**
+ * Condición que el establecimiento NO cumple para poder darse de baja, tal como
+ * la devuelve GET /establecimientos/{id}/condiciones-baja. Misma forma que la
+ * de la baja de cuenta (`CondicionIncumplida` en `@/data/cuenta`), pero son
+ * dominios distintos: se repite el tipo en vez de acoplar las dos pantallas.
+ */
+export interface CondicionBaja {
+  nombre: string;
+  descripcion: string;
+}
+
 /** Cuerpo de PUT /establecimientos/{id}: todo lo editable, siempre completo. */
 export interface EstablecimientoEditable {
+  nombre: string;
   descripcion: string;
   telefono: string;
   email: string;
   cvu: string;
-  cultivosIds: string[];
 }

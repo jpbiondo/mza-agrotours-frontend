@@ -4,7 +4,11 @@ import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
 import { aCultivos } from "@/hooks/useTiposCultivo";
-import type { EstablecimientoDatos, EstablecimientoEditable } from "@/types/datos";
+import type {
+  CondicionBaja,
+  EstablecimientoDatos,
+  EstablecimientoEditable,
+} from "@/types/datos";
 
 const BASE = "/establecimientos";
 
@@ -150,6 +154,38 @@ export function useGuardarEstablecimiento() {
 
 
 /* ---- Baja ---------------------------------------------------------------- */
+
+/**
+ * GET /establecimientos/{id}/condiciones-baja. `data` son las condiciones que el
+ * establecimiento **no** cumple: lista vacía significa que la baja puede seguir.
+ * Es una lectura que dispara el usuario al abrir el modal, así que va con
+ * `conToken` y no con `onAuthStateChanged`.
+ *
+ * Un fallo técnico hace throw en `apiFetch`; quien llama lo muestra como error.
+ */
+export function useCondicionesBaja() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function verificar(
+    id: string,
+  ): Promise<{ ok: boolean; condiciones: CondicionBaja[] }> {
+    setIsLoading(true);
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(
+          `${BASE}/${encodeURIComponent(id)}/condiciones-baja`,
+          { token },
+        ),
+      );
+      const env = comoEnvelope<CondicionBaja[]>(res);
+      return { ok: env.ok, condiciones: env.data ?? [] };
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return { verificar, isLoading };
+}
 
 export function useEliminarEstablecimiento() {
   const [isLoading, setIsLoading] = useState(false);
