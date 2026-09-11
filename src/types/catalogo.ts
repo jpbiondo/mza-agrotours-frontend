@@ -1,3 +1,5 @@
+import type { CultivoRef } from "@/types/datos";
+
 export interface Actividad {
   id: string;
   nombre: string;
@@ -54,15 +56,37 @@ export interface Establecimiento {
    `Establecimiento` de arriba, que todavía alimenta la landing y /explorar
    desde los mocks de `@/data/establecimientos`. */
 
-/** Item de GET /establecimientos. */
+/** Departamento tal como lo nombra el catálogo. */
+export interface DepartamentoRef {
+  id: string;
+  nombre: string;
+}
+
+/** Item de GET /establecimientos/catalogo. */
 export interface EstablecimientoResumen {
   id: string;
   nombre: string;
   razonSocial: string;
   /** Puede venir vacía: el backend la manda `null` si nadie la cargó. */
   descripcion: string;
-  cultivos: string[];
+  /** `null` si el establecimiento todavía no tiene departamento cargado. */
+  departamento: DepartamentoRef | null;
+  /** Con id, no sólo el nombre: el filtro del catálogo viaja por id. */
+  cultivos: CultivoRef[];
   cantidadActividades: number;
+}
+
+/**
+ * Filtros del catálogo, tal como los toma GET /establecimientos/catalogo.
+ * Los cultivos son varios y suman (el backend trae los que trabajen **alguno**
+ * de ellos); el departamento es uno solo y acota a ese.
+ */
+export interface ConsultaCatalogo {
+  cultivosIds: string[];
+  departamentoId: string | null;
+  /** 0-based, como lo numera el `Pageable` del backend. */
+  page: number;
+  size: number;
 }
 
 /** Actividad ofrecida, tal como la lista el detalle de un establecimiento. */
