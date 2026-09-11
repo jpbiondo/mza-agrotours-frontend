@@ -21,6 +21,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
+import { SinPermiso } from "@/components/GuardRol";
 import {
   Alert,
   Button,
@@ -38,7 +39,10 @@ import {
   validarNombre,
   validarTelefono,
 } from "@/data/datos";
+import { TipoPermiso } from "@/lib/permisos";
+import { ROL_PRODUCTOR_LIDER, tieneRol } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/authStore";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import {
   useEstablecimientoDatos,
@@ -751,14 +755,26 @@ function SinEstablecimiento() {
   );
 }
 
+const SIN_ACCESO =
+  "Sólo el Productor Líder puede ver y modificar los datos del establecimiento. Pedíselo al Productor Líder de la finca.";
+
 export default function DatosClient() {
   // El establecimiento activo lo elige el switcher del shell.
   const { activo } = useEstablecimientos();
   const fincaId = activo?.id ?? "";
-  const { datos, isLoading, error, reload, aplicar } =
-    useEstablecimientoDatos(fincaId);
+  const accesos = useAuthStore((s) => s.accesos);
+
+  const esLider = tieneRol(accesos, ROL_PRODUCTOR_LIDER, {
+    tipoPermiso: TipoPermiso.PRODUCTOR,
+    establecimientoId: fincaId,
+  });
+
+  const { datos, isLoading, error, reload, aplicar } = useEstablecimientoDatos(
+    esLider ? fincaId : "",
+  );
 
   if (!fincaId) return <SinEstablecimiento />;
+  if (!esLider) return <SinPermiso motivo={SIN_ACCESO} />;
 
   return (
     <AsyncBoundary
