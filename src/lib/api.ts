@@ -70,6 +70,39 @@ export interface Envelope<T> {
   data?: T;
 }
 
+export interface Pagina<T> {
+  items: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+/**
+ * Normaliza el `Page` de Spring, quedándose con `content` y los contadores.
+ * Acepta también un array suelto —por si el endpoint todavía no pagina— y en
+ * ese caso lo trata como una única página.
+ */
+export function comoPagina<T>(data: unknown): Pagina<T> {
+  const items = Array.isArray(data)
+    ? (data as T[])
+    : Array.isArray((data as { content?: unknown })?.content)
+      ? ((data as { content: T[] }).content)
+      : [];
+
+  const p = (data ?? {}) as { number?: unknown; size?: unknown; totalElements?: unknown; totalPages?: unknown };
+  const numero = (v: unknown, porDefecto: number) =>
+    typeof v === "number" && Number.isFinite(v) ? v : porDefecto;
+
+  return {
+    items,
+    page: numero(p.number, 0),
+    size: numero(p.size, items.length),
+    totalElements: numero(p.totalElements, items.length),
+    totalPages: numero(p.totalPages, items.length === 0 ? 0 : 1),
+  };
+}
+
 /**
  * Normaliza la respuesta al envelope `{ ok, code, data }`. Sigue aceptando el
  * payload crudo —un array o un objeto suelto— por si algún endpoint todavía no
