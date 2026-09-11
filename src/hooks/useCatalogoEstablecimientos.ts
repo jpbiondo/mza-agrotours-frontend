@@ -1,22 +1,28 @@
 import { useAsync } from "@/hooks/useAsync";
 import type { AsyncState } from "@/hooks/useAsync";
-import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
+import { ApiError, apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
+import type { Pagina } from "@/lib/api";
+import type { CultivoRef } from "@/types/datos";
 import type {
   ActividadOfrecida,
+  ConsultaCatalogo,
+  DepartamentoRef,
   EstablecimientoPublico,
   EstablecimientoResumen,
   FilterOption,
 } from "@/types/catalogo";
 
 /**
- * Catálogo público de establecimientos: el listado del visitante, su detalle y
- * los tipos de cultivo con los que se filtra.
+ * Catálogo público de establecimientos: el listado paginado del visitante, su
+ * detalle y las dos facetas con las que se filtra (cultivos y departamentos).
  *
- * Las tres lecturas van **sin token**: son pantallas de `(sitio)`, que se ven
+ * Todas las lecturas van **sin token**: son pantallas de `(sitio)`, que se ven
  * sin sesión. Mismo criterio que `useDepartamentos` y `usePaises`.
  */
 const BASE = "/establecimientos";
-const TIPOS_CULTIVO = "/tipo-cultivo";
+const CATALOGO = `${BASE}/catalogo`;
+const FILTRO_CULTIVOS = `${BASE}/filtros/cultivos`;
+const FILTRO_DEPARTAMENTOS = `${BASE}/filtros/departamentos`;
 
 /* ---- Respuestas crudas --------------------------------------------------- */
 
@@ -26,6 +32,7 @@ interface ResumenBackend {
   nombre?: string;
   razonSocial?: string;
   descripcion?: string | null;
+  dptoEstablecimiento?: unknown;
   cultivos?: unknown;
   cantidadActividades?: unknown;
 }
@@ -38,26 +45,28 @@ interface ActividadBackend {
   puntuacion?: unknown;
 }
 
-interface DetalleBackend extends ResumenBackend {
+/** El detalle nombra el departamento como texto, no como objeto. */
+interface DetalleBackend {
+  id?: string;
+  nombre?: string;
+  razonSocial?: string;
+  descripcion?: string | null;
   departamento?: string | null;
   email?: string | null;
   telefono?: string | null;
   ubicacion?: string | null;
+  cultivos?: unknown;
   actividades?: unknown;
 }
 
-interface TipoCultivoBackend {
+/** Opción de faceta: misma forma para cultivos y departamentos. */
+interface FiltroBackend {
   id?: string;
   nombre?: string;
+  cantidadEstablecimientos?: unknown;
 }
 
 /* ---- Mapeo --------------------------------------------------------------- */
-
-/** Nombres de cultivo, descartando lo que no sea un string con contenido. */
-function aCultivos(v: unknown): string[] {
-  if (!Array.isArray(v)) return [];
-  return v.filter((c): c is string => typeof c === "string" && c.trim() !== "");
-}
 
 function aTexto(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
@@ -72,12 +81,39 @@ function aNumeroOpcional(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
+/**
+ * Cultivos como `{ id, nombre }`. El id es lo que viaja en el filtro, así que
+ * la fila sin id —o sin nombre que mostrar— se descarta.
+ */
+function aCultivos(v: unknown): CultivoRef[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((c): c is { id?: unknown; nombre?: unknown } => !!c && typeof c === "object")
+    .map((c) => ({ id: aTexto(c.id), nombre: aTexto(c.nombre) }))
+    .filter((c) => c.id !== "" && c.nombre !== "");
+}
+
+/** Sólo los nombres: el detalle muestra los cultivos, no filtra por ellos. */
+function aNombresCultivo(v: unknown): string[] {
+  return aCultivos(v).map((c) => c.nombre);
+}
+
+/** El departamento del listado viene anidado y con la clave `idDepartamento`. */
+function aDepartamento(v: unknown): DepartamentoRef | null {
+  if (!v || typeof v !== "object") return null;
+  const d = v as { idDepartamento?: unknown; nombre?: unknown };
+  const nombre = aTexto(d.nombre);
+  // Sin nombre no hay nada que mostrar en la tarjeta.
+  return nombre === "" ? null : { id: aTexto(d.idDepartamento), nombre };
+}
+
 function aResumen(e: ResumenBackend): EstablecimientoResumen {
   return {
     id: aTexto(e.id),
     nombre: aTexto(e.nombre),
     razonSocial: aTexto(e.razonSocial),
     descripcion: aTexto(e.descripcion),
+    departamento: aDepartamento(e.dptoEstablecimiento),
     cultivos: aCultivos(e.cultivos),
     cantidadActividades: aNumero(e.cantidadActividades),
   };
@@ -87,7 +123,7 @@ function aActividad(a: ActividadBackend): ActividadOfrecida {
   return {
     id: aTexto(a.id),
     nombre: aTexto(a.nombre),
-    cultivos: aCultivos(a.cultivos),
+    cultivos: aNombresCultivo(a.cultivos),
     precioDesde: aNumeroOpcional(a.precioDesde),
     puntuacion: aNumeroOpcional(a.puntuacion),
   };
@@ -95,11 +131,15 @@ function aActividad(a: ActividadBackend): ActividadOfrecida {
 
 function aDetalle(d: DetalleBackend): EstablecimientoPublico {
   return {
-    ...aResumen(d),
+    id: aTexto(d.id),
+    nombre: aTexto(d.nombre),
+    razonSocial: aTexto(d.razonSocial),
+    descripcion: aTexto(d.descripcion),
     departamento: aTexto(d.departamento),
     email: aTexto(d.email),
     telefono: aTexto(d.telefono),
     ubicacion: aTexto(d.ubicacion),
+    cultivos: aNombresCultivo(d.cultivos),
     // Sin id no se puede linkear la actividad: se descarta la fila.
     actividades: Array.isArray(d.actividades)
       ? d.actividades
@@ -107,6 +147,14 @@ function aDetalle(d: DetalleBackend): EstablecimientoPublico {
           .map(aActividad)
           .filter((a) => a.id !== "")
       : [],
+  };
+}
+
+function aOpcion(f: FiltroBackend): FilterOption {
+  return {
+    value: aTexto(f.id),
+    label: aTexto(f.nombre),
+    count: aNumero(f.cantidadEstablecimientos),
   };
 }
 
@@ -119,17 +167,28 @@ async function leer<T>(path: string, mensaje: string): Promise<T | undefined> {
   return env.data;
 }
 
-async function listar(cultivo: string | null): Promise<EstablecimientoResumen[]> {
-  // El filtro lo resuelve el backend: por ahora viaja el nombre del cultivo.
-  const query = cultivo ? `?tipo-cultivo=${encodeURIComponent(cultivo)}` : "";
-  const data = await leer<ResumenBackend[]>(
-    `${BASE}${query}`,
+/**
+ * Query del catálogo. `cultivosIds` se repite una vez por cultivo, que es como
+ * Spring arma el `List<UUID>`; el departamento y la página van sueltos.
+ */
+function queryCatalogo({ cultivosIds, departamentoId, page, size }: ConsultaCatalogo): string {
+  const qs = new URLSearchParams();
+  for (const id of cultivosIds) qs.append("cultivosIds", id);
+  if (departamentoId) qs.set("departamentoId", departamentoId);
+  qs.set("page", String(page));
+  qs.set("size", String(size));
+  return `?${qs.toString()}`;
+}
+
+async function listarCatalogo(consulta: ConsultaCatalogo): Promise<Pagina<EstablecimientoResumen>> {
+  const data = await leer<unknown>(
+    `${CATALOGO}${queryCatalogo(consulta)}`,
     "No pudimos cargar los establecimientos",
   );
-  // Envelope ok sin `data` es lista vacía, no error. Sin id no hay a dónde
+  // Envelope ok sin `data` es página vacía, no error. Sin id no hay a dónde
   // linkear la tarjeta, así que esa fila se descarta.
-  if (!Array.isArray(data)) return [];
-  return data.map(aResumen).filter((e) => e.id !== "");
+  const pagina = comoPagina<ResumenBackend>(data);
+  return { ...pagina, items: pagina.items.map(aResumen).filter((e) => e.id !== "") };
 }
 
 async function verDetalle(id: string): Promise<EstablecimientoPublico | null> {
@@ -147,30 +206,31 @@ async function verDetalle(id: string): Promise<EstablecimientoPublico | null> {
   }
 }
 
-async function listarTiposCultivo(): Promise<FilterOption[]> {
-  const data = await leer<TipoCultivoBackend[]>(
-    TIPOS_CULTIVO,
-    "No pudimos cargar los cultivos",
-  );
+/** Opciones de una faceta, ordenadas por nombre y sin las que no se pueden filtrar. */
+async function listarFiltro(path: string, mensaje: string): Promise<FilterOption[]> {
+  const data = await leer<FiltroBackend[]>(path, mensaje);
   if (!Array.isArray(data)) return [];
-  // El filtro viaja por nombre, así que el nombre es el valor de la opción; los
-  // repetidos colapsan solos.
-  const nombres = new Set(data.map((t) => aTexto(t.nombre)).filter((n) => n !== ""));
-  return [...nombres]
-    .sort((a, b) => a.localeCompare(b, "es"))
-    .map((n) => ({ value: n, label: n }));
+  return data
+    .map(aOpcion)
+    .filter((o) => o.value !== "" && o.label !== "")
+    .sort((a, b) => a.label.localeCompare(b.label, "es"));
 }
 
 /* ---- Hooks --------------------------------------------------------------- */
 
 /**
- * Listado del catálogo. `cultivo` en `null` trae todos; con un nombre, el
- * backend filtra y la pantalla vuelve a pedir.
+ * Página del catálogo. Filtros y paginado los resuelve el backend, así que
+ * cambiar cualquiera de los dos vuelve a pedir el listado.
  */
-export function useEstablecimientosPublicos(
-  cultivo: string | null,
-): AsyncState<EstablecimientoResumen[]> {
-  return useAsync<EstablecimientoResumen[]>(() => listar(cultivo), [cultivo]);
+export function useCatalogoEstablecimientos(
+  consulta: ConsultaCatalogo,
+): AsyncState<Pagina<EstablecimientoResumen>> {
+  return useAsync<Pagina<EstablecimientoResumen>>(() => listarCatalogo(consulta), [
+    consulta.cultivosIds,
+    consulta.departamentoId,
+    consulta.page,
+    consulta.size,
+  ]);
 }
 
 /** Detalle de un establecimiento. `data` en `null` significa que no existe. */
@@ -180,7 +240,16 @@ export function useEstablecimientoPublico(
   return useAsync<EstablecimientoPublico | null>(() => verDetalle(id), [id]);
 }
 
-/** Opciones del filtro por cultivo. Sin `count`: el backend no los cuenta. */
-export function useTiposCultivo(): AsyncState<FilterOption[]> {
-  return useAsync<FilterOption[]>(listarTiposCultivo);
+/** Faceta de cultivos: el `count` es cuántos establecimientos trabajan cada uno. */
+export function useFiltroCultivos(): AsyncState<FilterOption[]> {
+  return useAsync<FilterOption[]>(() =>
+    listarFiltro(FILTRO_CULTIVOS, "No pudimos cargar los cultivos"),
+  );
+}
+
+/** Faceta de departamentos, con la misma forma que la de cultivos. */
+export function useFiltroDepartamentos(): AsyncState<FilterOption[]> {
+  return useAsync<FilterOption[]>(() =>
+    listarFiltro(FILTRO_DEPARTAMENTOS, "No pudimos cargar los departamentos"),
+  );
 }
