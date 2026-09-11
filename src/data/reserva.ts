@@ -3,14 +3,6 @@ import type { MesCalendario } from "@/types/catalogo";
 /** "Hoy" de referencia para calcular edades y la ventana de reembolso. */
 export const HOY = new Date(2026, 5, 21); // 21/06/2026
 
-/** Titular de la cuenta — autocompleta el primer visitante (mock). */
-export const TITULAR: Viajero = {
-  nombre: "Camila Ríos",
-  fechaNac: "1994-07-12",
-  tipoDoc: "DNI",
-  numDoc: "38402155",
-};
-
 export const TIPOS_DOC = ["DNI", "Pasaporte", "Otro"];
 
 export interface Viajero {
@@ -20,7 +12,8 @@ export interface Viajero {
   numDoc: string;
 }
 
-export type RangoId = "infantes" | "menores" | "adultos";
+/** Los rangos etarios los define el productor por actividad: no hay un set fijo. */
+export type RangoId = string;
 
 export interface Rango {
   id: RangoId;
@@ -32,12 +25,6 @@ export interface Rango {
 
 /** Precios por rango etario. null = el productor no habilitó el rango. */
 export type Precios = Record<RangoId, number | null>;
-
-export const RANGOS: Rango[] = [
-  { id: "infantes", label: "Infantes", sub: "0 a 2 años", min: 0, max: 2 },
-  { id: "menores", label: "Menores", sub: "3 a 17 años", min: 3, max: 17 },
-  { id: "adultos", label: "Adultos", sub: "18 años o más", min: 18, max: 200 },
-];
 
 export function precioRango(precios: Precios, id: RangoId): number {
   return precios[id] ?? 0;
@@ -59,9 +46,9 @@ export function edadEnAnios(iso: string): number | null {
   return e;
 }
 
-export function rangoParaEdad(edad: number | null): Rango | null {
+export function rangoParaEdad(edad: number | null, rangos: Rango[]): Rango | null {
   if (edad == null || edad < 0) return null;
-  return RANGOS.find((r) => edad >= r.min && edad <= r.max) || null;
+  return rangos.find((r) => edad >= r.min && edad <= r.max) || null;
 }
 
 export interface EvalViajero {
@@ -72,13 +59,28 @@ export interface EvalViajero {
   completo: boolean;
 }
 
-export function evalViajero(v: Viajero, precios: Precios): EvalViajero {
+export function evalViajero(v: Viajero, precios: Precios, rangos: Rango[]): EvalViajero {
   const edad = edadEnAnios(v.fechaNac);
-  const rango = rangoParaEdad(edad);
+  const rango = rangoParaEdad(edad, rangos);
   const permitido = !!(rango && rangoPermitido(precios, rango.id));
   const subtotal = permitido && rango ? precioRango(precios, rango.id) : 0;
   const completo = !!(v.nombre.trim() && v.fechaNac && rango && permitido && v.numDoc.trim());
   return { edad, rango, permitido, subtotal, completo };
+}
+
+/** Información de una actividad para armar la pantalla de reserva (GET /actividades/{id}/reservar). */
+export interface InfoParaReservar {
+  nombre: string;
+  ubicacion: string;
+  nombreEstablecimiento: string;
+  cupoMaximo: number;
+  calificacionPromedio: number;
+  diasMinReembolso: number;
+  rangos: Rango[];
+  precios: Precios;
+  calendario: MesCalendario[];
+  /** Titular de la cuenta — autocompleta el primer visitante. */
+  titular: Viajero;
 }
 
 /** dd/mm/yyyy para un día de un mes del calendario. */

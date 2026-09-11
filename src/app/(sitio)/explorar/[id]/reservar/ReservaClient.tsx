@@ -3,19 +3,21 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  MapPin, Star, Clock, Users, Ban, ShieldCheck, AlertTriangle, CalendarCheck,
+  MapPin, Star, Users, ShieldCheck, AlertTriangle, CalendarCheck,
   ChevronLeft, ChevronRight, ChevronRight as Crumb,
 } from "lucide-react";
 import { moneyAr } from "@/lib/format";
-import { CALENDARIO, CUPO_MAXIMO, NOMBRES_DIA } from "@/data/actividad-detalle";
+import { NOMBRES_DIA } from "@/data/actividad-detalle";
 import {
-  RANGOS, TITULAR, precioRango, rangoPermitido, evalViajero, fechaLabel,
-  type Viajero, type Precios,
+  precioRango, evalViajero, fechaLabel,
+  type Viajero, type InfoParaReservar,
 } from "@/data/reserva";
-import { useCrearReserva } from "@/hooks/useCheckout";
+import { useInfoParaReservar } from "@/hooks/useInfoParaReservar";
+import { useReserva , type RealizarReservaRequest } from "@/hooks/useCheckout";
+import AsyncBoundary from "@/components/AsyncBoundary";
 import TravelersList from "./Travelers";
-import { PaymentSheet, SuccessModal, FailModal, CancelToast, type Outcome } from "./PaymentSheet";
-import type { ActividadDetalle } from "@/types/catalogo";
+import { PaymentSheet, SuccessModal, FailModal, CancelToast } from "./PaymentSheet";
+import type { MesCalendario } from "@/types/catalogo";
 
 function SectionHead({ n, title, sub }: { n: string; title: string; sub: string }) {
   return (
@@ -30,12 +32,12 @@ function SectionHead({ n, title, sub }: { n: string; title: string; sub: string 
 }
 
 function MonthCalendar({
-  monthIdx, selDay, selMonthIdx, onMonth, onSelect,
+  meses, monthIdx, selDay, selMonthIdx, onMonth, onSelect,
 }: {
-  monthIdx: number; selDay: number | null; selMonthIdx: number | null;
+  meses: MesCalendario[]; monthIdx: number; selDay: number | null; selMonthIdx: number | null;
   onMonth: (i: number) => void; onSelect: (day: number, mi: number) => void;
 }) {
-  const mes = CALENDARIO[monthIdx];
+  const mes = meses[monthIdx];
   const firstDow = useMemo(() => (new Date(mes.year, mes.month, 1).getDay() + 6) % 7, [mes]);
   const daysInMonth = new Date(mes.year, mes.month + 1, 0).getDate();
   const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
@@ -45,7 +47,7 @@ function MonthCalendar({
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <button type="button" onClick={() => onMonth(Math.max(0, monthIdx - 1))} disabled={monthIdx === 0} style={navBtn(monthIdx === 0)}><ChevronLeft size={17} /></button>
         <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15.5, color: "var(--fg-1)" }}>{mes.label}</span>
-        <button type="button" onClick={() => onMonth(Math.min(CALENDARIO.length - 1, monthIdx + 1))} disabled={monthIdx === CALENDARIO.length - 1} style={navBtn(monthIdx === CALENDARIO.length - 1)}><ChevronRight size={17} /></button>
+        <button type="button" onClick={() => onMonth(Math.min(meses.length - 1, monthIdx + 1))} disabled={monthIdx === meses.length - 1} style={navBtn(monthIdx === meses.length - 1)}><ChevronRight size={17} /></button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 6 }}>
         {NOMBRES_DIA.map((d) => (
@@ -86,7 +88,7 @@ function navBtn(disabled: boolean): React.CSSProperties {
   return { width: 32, height: 32, borderRadius: 8, border: "1px solid var(--outline-variant)", background: "var(--surface)", cursor: disabled ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--fg-2)", opacity: disabled ? 0.4 : 1 };
 }
 
-function CuposPanel({ selLabel, cupos, reservados, totalRows, insuf }: { selLabel: string | null; cupos: number; reservados: number; totalRows: number; insuf: boolean }) {
+function CuposPanel({ selLabel, cupos, reservados, totalRows, insuf, cupoMaximo }: { selLabel: string | null; cupos: number; reservados: number; totalRows: number; insuf: boolean; cupoMaximo: number }) {
   if (!selLabel) {
     return (
       <div style={{ padding: "16px 14px", background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: 10, fontSize: 13, color: "var(--green-800)", height: "100%" }}>
@@ -108,11 +110,11 @@ function CuposPanel({ selLabel, cupos, reservados, totalRows, insuf }: { selLabe
       <div style={{ fontSize: 11, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: ".06em", fontWeight: 600 }}>Cupos disponibles</div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 7, margin: "3px 0 2px" }}>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 28, fontWeight: 700, color: numColor }}>{cupos}</span>
-        <span style={{ fontSize: 13, color: "var(--fg-3)" }}>de {CUPO_MAXIMO} lugares</span>
+        <span style={{ fontSize: 13, color: "var(--fg-3)" }}>de {cupoMaximo} lugares</span>
       </div>
       <div style={{ fontSize: 12, color: "var(--fg-3)", marginBottom: 12 }}>{reservados} ya reservados</div>
       <div style={{ height: 7, borderRadius: 4, background: "var(--cream-tert)", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${(cupos / CUPO_MAXIMO) * 100}%`, background: barColor, borderRadius: 4 }} />
+        <div style={{ height: "100%", width: `${(cupos / cupoMaximo) * 100}%`, background: barColor, borderRadius: 4 }} />
       </div>
       <div style={{ marginTop: 12, padding: "8px 10px", borderRadius: 8, background: insuf ? "var(--danger-fill)" : "var(--cream-tert)", fontSize: 12, fontWeight: 600, color: insuf ? "var(--danger-fg)" : "var(--fg-2)", display: "flex", alignItems: "center", gap: 7 }}>
         <Users size={14} color={insuf ? "var(--danger)" : "var(--fg-2)"} />
@@ -122,47 +124,38 @@ function CuposPanel({ selLabel, cupos, reservados, totalRows, insuf }: { selLabe
   );
 }
 
-function InfoReserva({ a, precios }: { a: ActividadDetalle; precios: Precios }) {
+function InfoReserva({ info }: { info: InfoParaReservar }) {
   return (
     <div className="card" style={{ padding: 22 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 16 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--fg-1)", lineHeight: 1.3 }}>{a.titulo}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--fg-1)", lineHeight: 1.3 }}>{info.nombre}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 5, fontSize: 13, color: "var(--fg-2)" }}>
-            <MapPin size={14} color="var(--brown-700)" /> {a.finca} · {a.loc}
+            <MapPin size={14} color="var(--brown-700)" /> {info.nombreEstablecimiento} · {info.ubicacion}
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "var(--cream-tert)", borderRadius: 999, fontSize: 12.5, fontWeight: 600, flexShrink: 0 }}>
-          <Star size={13} color="#C9A227" fill="#C9A227" /> {a.rating.toFixed(1)}
+          <Star size={13} color="#C9A227" fill="#C9A227" /> {info.calificacionPromedio.toFixed(1)}
         </div>
       </div>
 
       <div style={{ display: "flex", gap: 16, padding: "12px 14px", background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: 10, marginBottom: 18 }}>
-        <Meta icon={<Clock size={16} color="var(--green-800)" />} label="Duración" value={a.duracion} />
-        <div style={{ width: 1, background: "var(--green-300)" }} />
-        <Meta icon={<Users size={16} color="var(--green-800)" />} label="Cupo máximo" value={`${CUPO_MAXIMO} personas`} />
+        <Meta icon={<Users size={16} color="var(--green-800)" />} label="Cupo máximo" value={`${info.cupoMaximo} personas`} />
       </div>
 
       <div className="t-label" style={{ marginBottom: 10 }}>Precio por rango etario</div>
       <div>
-        {RANGOS.map((r, i) => {
-          const permitido = rangoPermitido(precios, r.id);
-          const p = precioRango(precios, r.id);
+        {info.rangos.map((r, i) => {
+          const p = precioRango(info.precios, r.id);
           return (
             <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderTop: i === 0 ? "none" : "1px solid var(--cream-tert)" }}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: permitido ? "var(--fg-1)" : "var(--fg-3)" }}>{r.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg-1)" }}>{r.label}</div>
                 <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{r.sub}</div>
               </div>
-              {permitido ? (
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 14.5, fontWeight: 600, color: p > 0 ? "var(--fg-1)" : "var(--green-800)" }}>
-                  {p > 0 ? moneyAr(p) : "Sin cargo"}
-                </div>
-              ) : (
-                <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, color: "var(--danger-fg)" }}>
-                  <Ban size={13} color="var(--danger)" /> No permitido
-                </span>
-              )}
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 14.5, fontWeight: 600, color: p > 0 ? "var(--fg-1)" : "var(--green-800)" }}>
+                {p > 0 ? moneyAr(p) : "Sin cargo"}
+              </div>
             </div>
           );
         })}
@@ -183,34 +176,40 @@ function Meta({ icon, label, value }: { icon: React.ReactNode; label: string; va
   );
 }
 
-const ESTADO_PILL: Record<string, { bg: string; fg: string; label: string }> = {
-  pendiente: { bg: "var(--warning-fill)", fg: "var(--warning-fg)", label: "Pendiente de pago" },
-  pagada: { bg: "var(--success-fill)", fg: "var(--success-fg)", label: "Pagada" },
-  expirada: { bg: "var(--danger-fill)", fg: "var(--danger-fg)", label: "Expirada" },
-};
+export default function ReservaClient({ id }: { id: string }) {
+  const { data: info, isLoading, error, reload } = useInfoParaReservar(id);
+  return (
+    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} pad={160}>
+      {info && <ReservaForm id={id} info={info} />}
+    </AsyncBoundary>
+  );
+}
 
-export default function ReservaClient({ a }: { a: ActividadDetalle }) {
-  const precios = a.precios as Precios;
+function ReservaForm({ id, info }: { id: string; info: InfoParaReservar }) {
+  const { calendario, rangos, precios } = info;
+
   const [monthIdx, setMonthIdx] = useState(0);
-  const [selDay, setSelDay] = useState<number | null>(25);
-  const [selMonthIdx, setSelMonthIdx] = useState<number | null>(0);
-  const [viajeros, setViajeros] = useState<Viajero[]>([{ ...TITULAR }]);
+  const [selDay, setSelDay] = useState<number | null>(null);
+  const [selMonthIdx, setSelMonthIdx] = useState<number | null>(null);
+  const [viajeros, setViajeros] = useState<Viajero[]>([{ ...info.titular }]);
 
-  const [reservaEstado, setReservaEstado] = useState<string | null>(null);
   const [codigo, setCodigo] = useState<string | null>(null);
   const [payOpen, setPayOpen] = useState(false);
   const [okOpen, setOkOpen] = useState(false);
   const [failOpen, setFailOpen] = useState(false);
   const [toast, setToast] = useState(false);
 
-  const selCal = selMonthIdx != null ? CALENDARIO[selMonthIdx] : null;
+  const [preferenceId, setPreferenceId] = useState<string>("");
+
+  const selCal = selMonthIdx != null ? calendario[selMonthIdx] : null;
   const selData = selCal && selDay ? selCal.days[selDay] : null;
   const haySeleccion = !!(selData && selData.state === "disponible");
   const cupos = haySeleccion ? selData!.cupos : 0;
-  const reservados = haySeleccion ? Math.max(0, CUPO_MAXIMO - cupos) : 0;
+  const cupoMaximoDia = haySeleccion ? selData!.cupoMaximo : 0;
+  const reservados = haySeleccion ? Math.max(0, cupoMaximoDia - cupos) : 0;
   const selLabel = haySeleccion && selCal && selDay ? fechaLabel(selCal, selDay) : null;
 
-  const evals = useMemo(() => viajeros.map((v) => evalViajero(v, precios)), [viajeros, precios]);
+  const evals = useMemo(() => viajeros.map((v) => evalViajero(v, precios, rangos)), [viajeros, precios, rangos]);
   const totalRows = viajeros.length;
   const cuposInsuficientes = haySeleccion && totalRows > cupos;
   const todosCompletos = evals.every((e) => e.completo);
@@ -220,37 +219,52 @@ export default function ReservaClient({ a }: { a: ActividadDetalle }) {
     const m: Record<string, { label: string; count: number; unit: number; sub: number }> = {};
     evals.forEach((e) => {
       if (!e.completo || !e.rango) return;
-      const id = e.rango.id;
-      if (!m[id]) m[id] = { label: e.rango.label, count: 0, unit: precioRango(precios, id), sub: 0 };
-      m[id].count++;
-      m[id].sub += precioRango(precios, id);
+      const rid = e.rango.id;
+      if (!m[rid]) m[rid] = { label: e.rango.label, count: 0, unit: precioRango(precios, rid), sub: 0 };
+      m[rid].count++;
+      m[rid].sub += precioRango(precios, rid);
     });
-    return RANGOS.map((r) => m[r.id]).filter(Boolean);
-  }, [evals, precios]);
+    return rangos.map((r) => m[r.id]).filter(Boolean);
+  }, [evals, precios, rangos]);
 
-  const { crear, isLoading: creando } = useCrearReserva();
+  const { crear, cancelarPago, isLoading: creando } = useReserva();
   const confirmable = haySeleccion && !cuposInsuficientes && todosCompletos && evals.some((e) => e.completo);
 
   const onConfirm = async () => {
-    const cod = await crear();
-    setCodigo(cod);
-    setReservaEstado("pendiente");
+    if (!selData) return;
+    const request: RealizarReservaRequest = {
+      diaActividadId: selData.id,
+      reservaDetalleList: viajeros.map((v) => ({
+        nombreApellido: v.nombre,
+        identificacion: v.numDoc,
+        tipoIdentificacion: v.tipoDoc,
+        fechaNacimiento: v.fechaNac,
+      })),
+    };
+    const res = await crear(request);
+    setPreferenceId(res.data?.preferenceId ?? "");
+    if (!res.ok || !res.data) return;
+    setCodigo(res.data.reservaDTO.idReserva);
     setPayOpen(true);
   };
-  const onResolve = (o: Outcome) => {
+  const onResolve = (prefId: String) => {
+    if(prefId==""){
+      setPayOpen(false);
+      setOkOpen(true);
+      return;
+    };
+    cancelarPago(prefId);
     setPayOpen(false);
-    if (o === "success") { setReservaEstado("pagada"); setOkOpen(true); }
-    else if (o === "cancel") { setReservaEstado("expirada"); setToast(true); }
-    else { setReservaEstado("expirada"); setFailOpen(true); }
   };
-  const onRetry = () => { setFailOpen(false); setReservaEstado("pendiente"); setPayOpen(true); };
+  
+  const onRetry = () => { setFailOpen(false); setPayOpen(true); };
 
   return (
     <div style={{ maxWidth: 1180, margin: "0 auto", padding: "22px 28px 90px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--fg-3)", fontSize: 13 }}>
         <Link href="/explorar" style={{ color: "var(--fg-3)", textDecoration: "none" }}>Explorar actividades</Link>
         <Crumb size={14} />
-        <Link href={`/explorar/${a.id}`} style={{ color: "var(--fg-3)", textDecoration: "none" }}>{a.titulo}</Link>
+        <Link href={`/explorar/${id}`} style={{ color: "var(--fg-3)", textDecoration: "none" }}>{info.nombre}</Link>
         <Crumb size={14} />
         <span style={{ color: "var(--fg-2)", fontWeight: 500 }}>Reservar</span>
       </div>
@@ -266,35 +280,37 @@ export default function ReservaClient({ a }: { a: ActividadDetalle }) {
             <SectionHead n="1" title="Elegí el día" sub="Seleccioná una fecha disponible para la actividad." />
             <div className="card" style={{ padding: 22, display: "grid", gridTemplateColumns: "minmax(0,1fr) 250px", gap: 24, alignItems: "start" }}>
               <div style={{ background: "var(--cream-tert)", border: "1px solid var(--outline-variant)", borderRadius: 12, padding: 16 }} className="cal-wrap">
-                <MonthCalendar
-                  monthIdx={monthIdx}
-                  selDay={selDay}
-                  selMonthIdx={selMonthIdx}
-                  onMonth={setMonthIdx}
-                  onSelect={(d, mi) => { setSelDay(d); setSelMonthIdx(mi); }}
-                />
+                {calendario.length > 0 ? (
+                  <MonthCalendar
+                    meses={calendario}
+                    monthIdx={monthIdx}
+                    selDay={selDay}
+                    selMonthIdx={selMonthIdx}
+                    onMonth={setMonthIdx}
+                    onSelect={(d, mi) => { setSelDay(d); setSelMonthIdx(mi); }}
+                  />
+                ) : (
+                  <div style={{ padding: "16px 4px", fontSize: 13.5, color: "var(--fg-3)", textAlign: "center" }}>
+                    Todavía no hay fechas disponibles para esta actividad.
+                  </div>
+                )}
               </div>
-              <CuposPanel selLabel={selLabel} cupos={cupos} reservados={reservados} totalRows={totalRows} insuf={cuposInsuficientes} />
+              <CuposPanel selLabel={selLabel} cupos={cupos} reservados={reservados} totalRows={totalRows} insuf={cuposInsuficientes} cupoMaximo={cupoMaximoDia} />
             </div>
           </section>
 
           <section>
             <SectionHead n="2" title="Visitantes" sub="El primer visitante viene autocompletado con tus datos. Editá lo que necesites y agregá más visitantes." />
-            <TravelersList viajeros={viajeros} precios={precios} onChange={setViajeros} />
+            <TravelersList viajeros={viajeros} precios={precios} rangos={rangos} onChange={setViajeros} />
           </section>
         </div>
 
         <div style={{ position: "sticky", top: 88, display: "flex", flexDirection: "column", gap: 18 }} className="reserva-side">
-          <InfoReserva a={a} precios={precios} />
+          <InfoReserva info={info} />
 
           <div className="card" style={{ padding: 22 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <div className="t-label">Total de reserva</div>
-              {reservaEstado && (
-                <span style={{ display: "inline-flex", alignItems: "center", borderRadius: "var(--radius-pill)", padding: "3px 10px", fontSize: 11.5, fontWeight: 700, background: ESTADO_PILL[reservaEstado].bg, color: ESTADO_PILL[reservaEstado].fg }}>
-                  {ESTADO_PILL[reservaEstado].label}
-                </span>
-              )}
             </div>
 
             {desglose.length > 0 ? (
@@ -328,7 +344,7 @@ export default function ReservaClient({ a }: { a: ActividadDetalle }) {
             <div style={{ marginTop: 14, padding: "12px 14px", background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: 10, display: "flex", gap: 10, alignItems: "flex-start" }}>
               <ShieldCheck size={18} color="var(--green-800)" style={{ marginTop: 1, flexShrink: 0 }} />
               <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--fg-2)" }}>
-                Podés realizar un reembolso total si cancelás con <strong style={{ color: "var(--green-800)" }}>3 o más días de anterioridad</strong> a la actividad.
+                Podés realizar un reembolso total si cancelás con <strong style={{ color: "var(--green-800)" }}>{info.diasMinReembolso} {info.diasMinReembolso === 1 ? "día" : "días"} o más</strong> de anterioridad a la actividad.
               </div>
             </div>
 
@@ -342,7 +358,17 @@ export default function ReservaClient({ a }: { a: ActividadDetalle }) {
         </div>
       </div>
 
-      {payOpen && <PaymentSheet monto={total} actividad={a} fecha={selLabel} viajeros={totalRows} codigo={codigo} onResolve={onResolve} />}
+      {payOpen && (
+        <PaymentSheet
+          monto={total}
+          actividad={{ titulo: info.nombre, finca: info.nombreEstablecimiento, loc: info.ubicacion }}
+          fecha={selLabel}
+          viajeros={totalRows}
+          codigo={codigo}
+          onResolve={onResolve}
+          preferenceId={preferenceId}
+        />
+      )}
       <SuccessModal open={okOpen} codigo={codigo} />
       <FailModal open={failOpen} onRetry={onRetry} onClose={() => setFailOpen(false)} />
       <CancelToast open={toast} onClose={() => setToast(false)} />
