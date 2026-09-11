@@ -7,10 +7,11 @@ import FaqSection from "@/components/landing/FaqSection";
 import ContactoSection from "@/components/landing/ContactoSection";
 import SiteFooter from "@/components/landing/SiteFooter";
 
-// El landing navega por anclas de sección (misma página), no por rutas.
+// El landing navega por anclas de sección (misma página), salvo
+// Establecimientos, que va al catálogo completo.
 const LANDING_LINKS: NavLink[] = [
   { id: "actividades", href: "#actividades", label: "Actividades" },
-  { id: "establecimientos", href: "#establecimientos", label: "Establecimientos" },
+  { id: "establecimientos", href: "/establecimientos", label: "Establecimientos" },
   { id: "faq", href: "#faq", label: "Preguntas frecuentes" },
   { id: "contacto", href: "#contacto", label: "Contacto" },
 ];

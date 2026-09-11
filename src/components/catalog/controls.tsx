@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Check, RotateCcw, X } from "lucide-react";
 import type { FilterOption } from "@/types/catalogo";
 
 /* ---- Hook: cerrar popover al click fuera / Esc ------------------------- */
@@ -18,10 +18,23 @@ function useOutside(open: boolean, close: () => void) {
   return ref;
 }
 
-function Option({ label, count, on, onClick }: { label: string; count?: number; on: boolean; onClick: () => void }) {
+/* ---- Piezas compartidas por los dos selectores -------------------------- */
+
+const ESTILO_MENU: React.CSSProperties = {
+  position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50,
+  background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: 12,
+  boxShadow: "var(--shadow-pop)", padding: 6, maxHeight: 330, overflowY: "auto",
+};
+
+/** Fila del popover. El hover sólo pinta la que no está elegida. */
+function Fila({ on, onClick, role, style, children }: {
+  on: boolean; onClick: () => void; role?: "option"; style?: React.CSSProperties; children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
+      role={role}
+      aria-selected={role === "option" ? on : undefined}
       onClick={onClick}
       onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = "var(--cream-tert)"; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = on ? "var(--green-050)" : "transparent"; }}
@@ -29,16 +42,55 @@ function Option({ label, count, on, onClick }: { label: string; count?: number; 
         width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 11px",
         border: "none", borderRadius: 9, cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 14.5,
         textAlign: "left", marginBottom: 1, background: on ? "var(--green-050)" : "transparent",
+        ...style,
       }}
     >
-      <span style={{ flex: 1, fontWeight: on ? 600 : 500, color: on ? "var(--green-800)" : "var(--fg-1)" }}>{label}</span>
-      {count !== undefined && <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-3)" }}>{count}</span>}
-      {on && <Check size={16} color="var(--green-800)" />}
+      {children}
     </button>
   );
 }
 
-/* ---- Selector tipo input con popover ----------------------------------- */
+/** Campo con label y popover: el disparador es igual en los dos selectores. */
+function Campo({ label, icon, activo, open, texto, onToggle, onClose, extra, children }: {
+  label: string; icon: React.ReactNode; activo: boolean; open: boolean; texto: string;
+  onToggle: () => void; onClose: () => void; extra?: React.ReactNode; children: React.ReactNode;
+}) {
+  const ref = useOutside(open, onClose);
+
+  return (
+    <div ref={ref} style={{ position: "relative", flex: "1 1 240px", minWidth: 220 }}>
+      <span className="t-label" style={{ display: "block", marginBottom: 7 }}>{label}</span>
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={onToggle}
+        style={{
+          width: "100%", height: 46, display: "flex", alignItems: "center", gap: 10,
+          padding: "0 14px", textAlign: "left", cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 15,
+          background: "var(--surface)", borderRadius: "var(--radius)",
+          border: `${open ? 2 : 1}px solid ${open ? "var(--green-800)" : "var(--sand)"}`,
+          color: activo ? "var(--fg-1)" : "var(--fg-3)",
+        }}
+      >
+        <span style={{ color: activo ? "var(--green-700)" : "var(--fg-3)", display: "inline-flex" }}>{icon}</span>
+        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: activo ? 600 : 500 }}>
+          {texto}
+        </span>
+        {extra}
+        <ChevronDown size={16} color="var(--fg-3)" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .16s" }} />
+      </button>
+
+      {open && children}
+    </div>
+  );
+}
+
+function Contador({ children }: { children: React.ReactNode }) {
+  return <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-3)" }}>{children}</span>;
+}
+
+/* ---- Selector de un valor ----------------------------------------------- */
 export function FilterSelect({
   icon, label, allLabel, value, options, onChange,
 }: {
@@ -46,45 +98,114 @@ export function FilterSelect({
   value: string | null; options: FilterOption[]; onChange: (v: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useOutside(open, () => setOpen(false));
   const selected = options.find((o) => o.value === value) || null;
 
   return (
-    <div ref={ref} style={{ position: "relative", flex: "1 1 240px", minWidth: 220 }}>
-      <span className="t-label" style={{ display: "block", marginBottom: 7 }}>{label}</span>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          width: "100%", height: 46, display: "flex", alignItems: "center", gap: 10,
-          padding: "0 14px", textAlign: "left", cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 15,
-          background: "var(--surface)", borderRadius: "var(--radius)",
-          border: `${open ? 2 : 1}px solid ${open ? "var(--green-800)" : "var(--sand)"}`,
-          color: selected ? "var(--fg-1)" : "var(--fg-3)",
-        }}
-      >
-        <span style={{ color: selected ? "var(--green-700)" : "var(--fg-3)", display: "inline-flex" }}>{icon}</span>
-        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: selected ? 600 : 500 }}>
-          {selected ? selected.label : allLabel}
+    <Campo
+      label={label}
+      icon={icon}
+      activo={!!selected}
+      open={open}
+      texto={selected ? selected.label : allLabel}
+      onToggle={() => setOpen((o) => !o)}
+      onClose={() => setOpen(false)}
+      extra={selected && (
+        <span onClick={(e) => { e.stopPropagation(); onChange(null); setOpen(false); }} style={{ display: "inline-flex", padding: 2, borderRadius: 6, lineHeight: 0 }}>
+          <X size={16} color="var(--fg-3)" />
         </span>
-        {selected && (
-          <span onClick={(e) => { e.stopPropagation(); onChange(null); setOpen(false); }} style={{ display: "inline-flex", padding: 2, borderRadius: 6, lineHeight: 0 }}>
-            <X size={16} color="var(--fg-3)" />
-          </span>
-        )}
-        <ChevronDown size={16} color="var(--fg-3)" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .16s" }} />
-      </button>
-
-      {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50, background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: 12, boxShadow: "var(--shadow-pop)", padding: 6, maxHeight: 320, overflowY: "auto" }}>
-          <Option label={allLabel} on={!selected} onClick={() => { onChange(null); setOpen(false); }} />
-          <div style={{ height: 1, background: "var(--outline-variant)", margin: "4px 0" }} />
-          {options.map((o) => (
-            <Option key={o.value} label={o.label} count={o.count} on={o.value === value} onClick={() => { onChange(o.value); setOpen(false); }} />
-          ))}
-        </div>
       )}
-    </div>
+    >
+      <div role="listbox" style={ESTILO_MENU}>
+        <Fila role="option" on={!selected} onClick={() => { onChange(null); setOpen(false); }}>
+          <span style={{ flex: 1, fontWeight: !selected ? 600 : 500, color: !selected ? "var(--green-800)" : "var(--fg-1)" }}>{allLabel}</span>
+          {!selected && <Check size={16} color="var(--green-800)" />}
+        </Fila>
+        <div style={{ height: 1, background: "var(--outline-variant)", margin: "4px 0" }} />
+        {options.map((o) => {
+          const on = o.value === value;
+          return (
+            <Fila key={o.value} role="option" on={on} onClick={() => { onChange(o.value); setOpen(false); }}>
+              <span style={{ flex: 1, fontWeight: on ? 600 : 500, color: on ? "var(--green-800)" : "var(--fg-1)" }}>{o.label}</span>
+              {o.count !== undefined && <Contador>{o.count}</Contador>}
+              {on && <Check size={16} color="var(--green-800)" />}
+            </Fila>
+          );
+        })}
+      </div>
+    </Campo>
+  );
+}
+
+/* ---- Selector de varios valores ----------------------------------------- */
+
+function CheckBox({ on }: { on: boolean }) {
+  return (
+    <span style={{
+      width: 18, height: 18, flex: "0 0 18px", borderRadius: 5,
+      border: on ? "none" : "1.5px solid var(--sand)",
+      background: on ? "var(--green-800)" : "var(--surface)",
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+    }}>
+      {on && <Check size={13} color="#fff" />}
+    </span>
+  );
+}
+
+/**
+ * Varias opciones a la vez: el listado trae los que cumplan **alguna** de las
+ * elegidas. `plural` es cómo se nombra el conjunto cuando hay más de uno
+ * ("3 cultivos seleccionados").
+ */
+export function MultiFilterSelect({
+  icon, label, allLabel, plural, values, options, onChange,
+}: {
+  icon: React.ReactNode; label: string; allLabel: string; plural: string;
+  values: string[]; options: FilterOption[]; onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const n = values.length;
+  const elegida = n === 1 ? options.find((o) => o.value === values[0]) : null;
+  // Con una sola se muestra cuál; con varias, cuántas. El nombre de la única
+  // elegida puede no estar todavía si las opciones siguen cargando.
+  const texto = n === 0 ? allLabel : n === 1 ? (elegida?.label ?? "1 seleccionado") : `${n} ${plural} seleccionados`;
+  const alternar = (v: string) => onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v]);
+
+  return (
+    <Campo
+      label={label}
+      icon={icon}
+      activo={n > 0}
+      open={open}
+      texto={texto}
+      onToggle={() => setOpen((o) => !o)}
+      onClose={() => setOpen(false)}
+      extra={n > 1 && (
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, fontWeight: 700, color: "#fff", background: "var(--green-800)", borderRadius: "var(--radius-pill)", padding: "2px 7px", lineHeight: 1.4 }}>
+          {n}
+        </span>
+      )}
+    >
+      <div role="listbox" aria-multiselectable="true" style={ESTILO_MENU}>
+        {options.map((o) => {
+          const on = values.includes(o.value);
+          return (
+            <Fila key={o.value} role="option" on={on} onClick={() => alternar(o.value)}>
+              <CheckBox on={on} />
+              <span style={{ flex: 1, fontWeight: on ? 600 : 500, color: on ? "var(--green-800)" : "var(--fg-1)" }}>{o.label}</span>
+              {o.count !== undefined && <Contador>{o.count}</Contador>}
+            </Fila>
+          );
+        })}
+        {n > 0 && (
+          <>
+            <div style={{ height: 1, background: "var(--outline-variant)", margin: "5px 0" }} />
+            <Fila on={false} onClick={() => onChange([])} style={{ justifyContent: "center", color: "var(--green-800)", fontWeight: 600 }}>
+              <RotateCcw size={15} color="var(--green-800)" /> Limpiar selección
+            </Fila>
+          </>
+        )}
+      </div>
+    </Campo>
   );
 }
 
