@@ -15,6 +15,7 @@ interface TextFieldProps {
   maxLength?: number;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   autoComplete?: string;
+  list?: string;
   rightSlot?: React.ReactNode;
   disabled?: boolean;
   "aria-invalid"?: boolean;
@@ -28,7 +29,7 @@ interface TextFieldProps {
  */
 export function TextField({
   id, name, value, onChange, onBlur, ref, icon, type = "text",
-  placeholder, maxLength, inputMode, autoComplete, rightSlot, disabled,
+  placeholder, maxLength, inputMode, autoComplete, list, rightSlot, disabled,
   "aria-invalid": ariaInvalid, "aria-describedby": describedBy,
 }: TextFieldProps) {
   const errored = ariaInvalid === true;
@@ -54,6 +55,7 @@ export function TextField({
         maxLength={maxLength}
         inputMode={inputMode}
         autoComplete={autoComplete}
+        list={list}
         disabled={disabled}
         aria-invalid={ariaInvalid}
         aria-describedby={describedBy}

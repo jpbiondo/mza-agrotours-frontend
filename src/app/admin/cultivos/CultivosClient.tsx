@@ -16,37 +16,41 @@ import {
   useCultivoDetalle,
   useEliminarCultivo,
 } from "@/hooks/useGestionCultivos";
-import type { CultivoCatalogo, DatosCultivo, Estacion } from "@/types/gestionCr";
+import type { CultivoCatalogo, DatosCultivo, Estacion, FilaNutricional } from "@/types/gestionCr";
 import {
   GcrConfirmDelete, GcrFormShell, GcrFormHeader, GcrFormFooter, GcrFieldLabel, GcrErr,
   GcrSeasonBar, GcrSeasonEditor, GcrListEditor, GcrStats, GcrSearchBar, GcrEmptyState, GcrPageHead,
   GcrNoMatch,
 } from "@/components/admin/gcr/shared";
+import {
+  GcrNutricionEditor, erroresNutricion, hayErroresNutricion, nutricionInicial,
+} from "@/components/admin/gcr/nutricion";
 
-/** Alta: doce meses en reposo y una fila de beneficio en blanco. */
+/** Alta: doce meses en reposo, un beneficio en blanco y la nutrición de siempre. */
 const CULTIVO_VACIO: DatosCultivo = {
   nombre: "",
   descripcion: "",
   beneficios: [""],
   calendario: Array(12).fill("r") as Estacion[],
+  ...nutricionInicial(),
 };
 
 /**
- * Errores de dominio al guardar. Lo que no esté acá cae en el genérico, que es
- * el único caso donde tiene sentido sugerir reintentar.
+ * Caracteres que acepta el nombre del lado del backend (`@SinCaracteresEspeciales`):
+ * letras con acentos, números, espacios, guion medio y guion bajo.
  */
-const ERROR_GUARDAR: Record<string, string> = {
-  // TODO backend: confirmar el código real del nombre repetido.
-  "tipoCultivo.tipoCultivoAlreadyExists": "Ya existe un cultivo con ese nombre. Elegí otro.",
-};
+const NOMBRE_VALIDO = /^[a-zA-Z0-9áéíóúüÁÉÍÓÚÜñÑ _-]*$/;
 
-function mensajeGuardar(code: string | undefined, editando: boolean): string {
-  return (
-    (code && ERROR_GUARDAR[code]) ||
-    (editando
-      ? "No pudimos guardar los cambios. Probá de nuevo en unos minutos."
-      : "No pudimos agregar el cultivo. Probá de nuevo en unos minutos.")
-  );
+/**
+ * Mensaje del rechazo al guardar. El backend manda sus motivos redactados
+ * —nombre repetido, campos del DTO— así que se muestran tal cual; el genérico
+ * queda para el fallo técnico, que es el único caso donde reintentar sirve.
+ */
+function mensajeGuardar(res: { errores?: string[] }, editando: boolean): string {
+  if (res.errores && res.errores.length > 0) return res.errores.join(" · ");
+  return editando
+    ? "No pudimos guardar los cambios. Probá de nuevo en unos minutos."
+    : "No pudimos agregar el cultivo. Probá de nuevo en unos minutos.";
 }
 
 function mensajeBaja(code?: string): string {
@@ -206,6 +210,8 @@ function CultivoForm({
     initial.beneficios.length > 0 ? initial.beneficios : [""],
   );
   const [calendario, setCalendario] = useState<Estacion[]>(initial.calendario);
+  const [porcion, setPorcion] = useState(initial.porcionReferencia);
+  const [filas, setFilas] = useState<FilaNutricional[]>(initial.informacionNutricional);
   const [attempted, setAttempted] = useState(false);
 
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
@@ -214,22 +220,38 @@ function CultivoForm({
     ? "Ingresá el nombre del cultivo."
     : nombre.trim().length > 60
       ? "El nombre es demasiado largo."
-      : isDup
-        ? "Ya existe un cultivo con ese nombre. Elegí otro."
-        : "";
+      : !NOMBRE_VALIDO.test(nombre)
+        ? "Usá solo letras, números, espacios, guiones y guiones bajos."
+        : isDup
+          ? "Ya existe un cultivo con ese nombre. Elegí otro."
+          : "";
   const errDesc = !descripcion.trim() ? "Escribí una breve descripción del cultivo." : "";
+  // El backend pide al menos uno de cada cosa: un beneficio cargado y un mes de
+  // cosecha. Validarlo acá evita mandar un formulario que ya sabemos rechazado.
+  const limpios = beneficios.map((b) => b.trim()).filter(Boolean);
+  const errBeneficios = limpios.length === 0 ? "Cargá al menos un beneficio." : "";
+  const errCalendario = calendario.includes("h")
+    ? ""
+    : "Marcá al menos un mes de cosecha: es lo que define la temporada del cultivo.";
+  const errNutri = useMemo(() => erroresNutricion(porcion, filas), [porcion, filas]);
   // El duplicado se avisa mientras se escribe; el resto, recién al guardar.
   const showNombre = (attempted && errNombre) || (isDup ? errNombre : "");
   const showDesc = attempted && errDesc;
 
   function handleSave() {
     setAttempted(true);
-    if (errNombre || errDesc) return;
+    if (errNombre || errDesc || errBeneficios || errCalendario || hayErroresNutricion(errNutri)) return;
     onSave({
       nombre: nombre.trim(),
       descripcion: descripcion.trim(),
-      beneficios: beneficios.map((b) => b.trim()).filter(Boolean),
+      beneficios: limpios,
       calendario,
+      porcionReferencia: porcion.trim(),
+      informacionNutricional: filas.map((f) => ({
+        ...f,
+        nombre: f.nombre.trim(),
+        valor: f.valor.trim(),
+      })),
     });
   }
 
@@ -286,15 +308,9 @@ function CultivoForm({
         </div>
 
         <div>
-          <GcrFieldLabel style={{ marginBottom: 4 }}>Estacionalidad anual</GcrFieldLabel>
-          <p className="mb-3 text-[13.5px] leading-relaxed text-fg-2">
-            Asigná a cada mes un estado: cosecha, crecimiento o reposo.
-          </p>
-          <GcrSeasonEditor value={calendario} onChange={setCalendario} />
-        </div>
-
-        <div>
-          <GcrFieldLabel style={{ marginBottom: 4 }}>Beneficios para la alimentación</GcrFieldLabel>
+          <GcrFieldLabel required style={{ marginBottom: 4 }}>
+            Beneficios para la alimentación
+          </GcrFieldLabel>
           <p className="mb-3 text-[13.5px] leading-relaxed text-fg-2">
             Se muestran como lista en la ficha pública del cultivo. Hasta 100 caracteres cada uno.
           </p>
@@ -305,6 +321,35 @@ function CultivoForm({
             addLabel="Agregar beneficio"
             maxLength={100}
           />
+          {attempted && errBeneficios && (
+            <div className="mt-[7px]">
+              <GcrErr msg={errBeneficios} />
+            </div>
+          )}
+        </div>
+
+        <GcrNutricionEditor
+          porcion={porcion}
+          filas={filas}
+          onPorcion={setPorcion}
+          onFilas={setFilas}
+          attempted={attempted}
+          errores={errNutri}
+        />
+
+        <div>
+          <GcrFieldLabel required style={{ marginBottom: 4 }}>
+            Estacionalidad anual
+          </GcrFieldLabel>
+          <p className="mb-3 text-[13.5px] leading-relaxed text-fg-2">
+            Asigná a cada mes un estado: cosecha, crecimiento o reposo.
+          </p>
+          <GcrSeasonEditor value={calendario} onChange={setCalendario} />
+          {attempted && errCalendario && (
+            <div className="mt-[7px]">
+              <GcrErr msg={errCalendario} />
+            </div>
+          )}
         </div>
       </div>
 
@@ -492,9 +537,9 @@ function Inner({
     setFormError(null);
     const res = editando ? await actualizar(form.id!, datos) : await crear(datos);
     if (!res.ok) {
-      // El panel queda abierto con lo cargado: rehacer el calendario y los
-      // beneficios sería cruel.
-      setFormError(mensajeGuardar(res.code, editando));
+      // El panel queda abierto con lo cargado: rehacer el calendario, los
+      // beneficios y la tabla nutricional sería cruel.
+      setFormError(mensajeGuardar(res, editando));
       return;
     }
     setForm(null);
