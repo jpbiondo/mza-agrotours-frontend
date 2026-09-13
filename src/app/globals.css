@@ -58,6 +58,10 @@
   --color-danger:  #B23A2E;  --color-danger-fill:  #F6E0DC;  --color-danger-fg:  #6E1F18;  --color-danger-hover: #9C3025;
   --color-info:    #3A6B7A;  --color-info-fill:    #E0EAEC;  --color-info-fg:    #1C3A43;
 
+  /* Estacionalidad: el dorado de los meses de crecimiento en el calendario de
+     un cultivo. La cosecha y el reposo usan green-800 y cream-tert. */
+  --color-season-growing: #C9A227;
+
   /* Radii — rounded-sm / rounded-md / rounded-lg / rounded-pill */
   --radius-sm:   0.375rem;
   --radius-md:   0.5rem;
