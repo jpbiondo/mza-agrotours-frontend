@@ -1,4 +1,5 @@
 import { Grape } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 const GRADIENTS = [
   "linear-gradient(135deg, #0e2e0c 0%, #1e5418 60%, #4a7c3f 100%)",
@@ -25,13 +26,15 @@ interface PhotoProps {
   height?: number | string;
   caption?: string;
   radius?: number | string;
+  /** Glifo de fondo. Por defecto la uva; los cultivos usan una hoja. */
+  icon?: LucideIcon;
 }
 
 /**
  * Placeholder de imagen con degradado determinístico por seed.
  * Sustituye a las fotos reales del catálogo hasta tener assets.
  */
-export default function Photo({ seed, height = 180, caption, radius = "var(--radius-lg)" }: PhotoProps) {
+export default function Photo({ seed, height = 180, caption, radius = "var(--radius-lg)", icon: Icon = Grape }: PhotoProps) {
   const bg = GRADIENTS[((seed % GRADIENTS.length) + GRADIENTS.length) % GRADIENTS.length];
   return (
     <div
@@ -40,7 +43,7 @@ export default function Photo({ seed, height = 180, caption, radius = "var(--rad
         background: bg, display: "flex", alignItems: "flex-end",
       }}
     >
-      <Grape
+      <Icon
         size={64}
         color="rgba(255,255,255,.14)"
         style={{ position: "absolute", top: 16, right: 16 }}
