@@ -3,9 +3,11 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
-import type { CultivoCatalogo, DatosCultivo, Estacion } from "@/types/gestionCr";
+import type {
+  CultivoCatalogo, DatosCultivo, Estacion, FilaNutricional, UnidadNutricional,
+} from "@/types/gestionCr";
 
-const BASE = "/tipos-cultivo";
+const BASE = "/admin/tipos-cultivo";
 
 /* ---- Traducción con el backend -------------------------------------------
    Privada al hook: es vocabulario del backend, no del design system. La
@@ -50,10 +52,11 @@ function calendarioVacio(): Estacion[] {
 }
 
 /**
- * Calendario desde el listado (`[{mes, nombre}]`). Indexa **por nombre de mes**,
- * no por posición, así que da igual si viene desordenado, incompleto o con
- * repetidos. Un mes o un estado que no se reconozca se descarta sin tirar la
- * fila entera.
+ * Calendario a partir de `[{mes, nombre}]`, que es como lo mandan tanto el
+ * listado (`calendarioEstacionalidad`) como el detalle (`estacionalidadPorMes`).
+ * Indexa **por nombre de mes**, no por posición, así que da igual si viene
+ * desordenado, incompleto o con repetidos. Un mes o un estado que no se
+ * reconozca se descarta sin tirar la fila entera.
  *
  * Siempre devuelve 12: `GcrSeasonBar` indexa `GCR_MESES[i]` y un array de otro
  * largo dibuja una barra corta o revienta.
@@ -70,20 +73,55 @@ function aCalendario(v: unknown): Estacion[] {
   return cal;
 }
 
-/** Calendario desde el detalle: lista ordenada, índice 0 = Enero. */
-function aCalendarioOrdenado(v: unknown): Estacion[] {
-  const cal = calendarioVacio();
-  if (!Array.isArray(v)) return cal;
-  for (let i = 0; i < 12; i++) {
-    const e = A_ESTACION[norm(v[i])];
-    if (e) cal[i] = e;
-  }
-  return cal;
-}
-
-/** La vuelta: siempre 12 strings, sea cual sea el largo que llegue. */
+/**
+ * La vuelta: siempre 12 strings, sea cual sea el largo que llegue. Ojo con la
+ * asimetría, que es del backend: el alta y la edición **mandan** una lista
+ * ordenada de estados (índice 0 = Enero), pero el detalle los **devuelve** como
+ * objetos `{mes, nombre}`.
+ */
 function aEstacionalidadPorMes(cal: Estacion[]): string[] {
   return Array.from({ length: 12 }, (_, i) => A_NOMBRE[cal[i]] ?? "REPOSO");
+}
+
+/** `UnidadNutricional` del backend → el símbolo que se muestra y se edita. */
+const A_UNIDAD: Record<string, UnidadNutricional> = {
+  KCAL: "kcal",
+  GRAMOS: "g",
+  MILIGRAMOS: "mg",
+  MICROGRAMOS: "mcg",
+  PORCENTAJE: "%",
+};
+
+const A_UNIDAD_BACKEND: Record<UnidadNutricional, string> = {
+  kcal: "KCAL",
+  g: "GRAMOS",
+  mg: "MILIGRAMOS",
+  mcg: "MICROGRAMOS",
+  "%": "PORCENTAJE",
+};
+
+/**
+ * Filas nutricionales del detalle. La unidad que no se reconozca cae en gramos,
+ * que es la de casi todos los nutrientes: perder la fila entera sería peor.
+ */
+function aFilasNutricionales(v: unknown): FilaNutricional[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((d): d is { nombre?: unknown; valor?: unknown; unidad?: unknown } => !!d && typeof d === "object")
+    .map((d) => ({
+      nombre: typeof d.nombre === "string" ? d.nombre : "",
+      valor: typeof d.valor === "string" ? d.valor : "",
+      unidad: A_UNIDAD[typeof d.unidad === "string" ? d.unidad : ""] ?? "g",
+    }));
+}
+
+/**
+ * El valor va como texto y el backend lo parsea con `Double.parseDouble`, que
+ * no entiende la coma decimal: "0,7" se escribe acá y viaja como "0.7". Las
+ * categorías que también acepta —alto, medio, bajo— pasan intactas.
+ */
+function aValorBackend(valor: string): string {
+  return valor.trim().replace(",", ".");
 }
 
 /* ---- Mapeo de las respuestas --------------------------------------------- */
@@ -109,6 +147,8 @@ interface DetalleBackend {
   descripcion?: string;
   beneficios?: unknown;
   estacionalidadPorMes?: unknown;
+  porcionReferencia?: string;
+  informacionNutricional?: unknown;
 }
 
 function aNumero(v: unknown): number {
@@ -240,7 +280,9 @@ export function useCultivoDetalle() {
           nombre: env.data.nombre ?? "",
           descripcion: env.data.descripcion ?? "",
           beneficios: aTextos(env.data.beneficios),
-          calendario: aCalendarioOrdenado(env.data.estacionalidadPorMes),
+          calendario: aCalendario(env.data.estacionalidadPorMes),
+          porcionReferencia: env.data.porcionReferencia ?? "",
+          informacionNutricional: aFilasNutricionales(env.data.informacionNutricional),
         },
       };
     } catch (e) {
@@ -256,7 +298,11 @@ export function useCultivoDetalle() {
 
 /* ---- Escrituras ---------------------------------------------------------- */
 
-type Resultado = { ok: boolean; code?: string };
+type Resultado = {
+  ok: boolean;
+  code?: string;
+  errores?: string[];
+};
 
 /** Cuerpo del alta y de la edición: el backend usa la misma forma para los dos. */
 function cuerpo(datos: DatosCultivo) {
@@ -265,11 +311,34 @@ function cuerpo(datos: DatosCultivo) {
     descripcion: datos.descripcion,
     beneficios: datos.beneficios,
     estacionalidadPorMes: aEstacionalidadPorMes(datos.calendario),
+    porcionReferencia: datos.porcionReferencia,
+    informacionNutricional: datos.informacionNutricional.map((f) => ({
+      nombre: f.nombre,
+      valor: aValorBackend(f.valor),
+      unidad: A_UNIDAD_BACKEND[f.unidad] ?? "GRAMOS",
+    })),
   });
 }
 
+/**
+ * Los rechazos de validación traen el detalle en `data`: una lista de motivos
+ * (`tipoCultivoValidacionMultiple`, p. ej. el nombre repetido) o un mapa
+ * campo→mensaje (`validationError`, las anotaciones del DTO). Los dos vienen en
+ * castellano y son mejores que el mensaje genérico de la pantalla.
+ */
+function erroresDe(res: unknown): string[] | undefined {
+  const data = (res as { data?: unknown } | undefined)?.data;
+  const msgs = Array.isArray(data)
+    ? data
+    : data && typeof data === "object"
+      ? Object.values(data as Record<string, unknown>)
+      : [];
+  const textos = msgs.filter((m): m is string => typeof m === "string" && m.trim() !== "");
+  return textos.length > 0 ? textos : undefined;
+}
+
 function comoResultado(e: unknown): Resultado {
-  if (e instanceof ApiError) return { ok: false, code: e.code };
+  if (e instanceof ApiError) return { ok: false, code: e.code, errores: erroresDe(e.body) };
   // `apiFetch` sólo llega a res.json() con un 2xx: un error de parseo es una
   // escritura hecha y contestada sin cuerpo.
   if (e instanceof SyntaxError) return { ok: true };
@@ -286,7 +355,7 @@ export function useCrearCultivo() {
         apiFetch<unknown>(`${BASE}/alta`, { method: "POST", token, body: cuerpo(datos) }),
       );
       const env = comoEnvelope<unknown>(res);
-      return env.ok ? { ok: true } : { ok: false, code: env.code };
+      return env.ok ? { ok: true } : { ok: false, code: env.code, errores: erroresDe(res) };
     } catch (e) {
       return comoResultado(e);
     } finally {
@@ -311,7 +380,7 @@ export function useActualizarCultivo() {
         }),
       );
       const env = comoEnvelope<unknown>(res);
-      return env.ok ? { ok: true } : { ok: false, code: env.code };
+      return env.ok ? { ok: true } : { ok: false, code: env.code, errores: erroresDe(res) };
     } catch (e) {
       return comoResultado(e);
     } finally {
@@ -332,7 +401,7 @@ export function useEliminarCultivo() {
         apiFetch<unknown>(`${BASE}/${encodeURIComponent(id)}`, { method: "DELETE", token }),
       );
       const env = comoEnvelope<unknown>(res);
-      return env.ok ? { ok: true } : { ok: false, code: env.code };
+      return env.ok ? { ok: true } : { ok: false, code: env.code, errores: erroresDe(res) };
     } catch (e) {
       return comoResultado(e);
     } finally {

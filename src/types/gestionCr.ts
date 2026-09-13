@@ -1,27 +1,9 @@
+import type { DificultadId } from "./recetas";
+export type { DificultadId };
+
 export type Estacion = "h" | "g" | "r";
-export type Dificultad = "Fácil" | "Media" | "Difícil";
-export type DuracionId = "rapida" | "media" | "larga";
 
-export interface GcrCultivo {
-  id: string;
-  nombre: string;
-  familia: string;
-  descripcion: string;
-  /** Gradiente CSS de la miniatura. */
-  color: string;
-  /** 12 meses, cada uno cosecha/crecimiento/reposo. */
-  calendario: Estacion[];
-  beneficios: string[];
-  /** Actividades vigentes que cosechan el cultivo (bloquea la baja). */
-  actividades: number;
-  estado: "activo";
-}
-
-/* ---- Catálogo de cultivos (wireado) --------------------------------------
-   `GcrCultivo` de arriba sigue siendo el modelo mock que alimenta la pantalla
-   de recetas. Estos tipos son los del backend y viven al lado en vez de
-   reemplazarlo: son dos universos con ciclos de vida distintos, y mutar
-   `GcrCultivo` rompería recetas sin ganar nada. */
+/* ---- Catálogo de cultivos (wireado) -------------------------------------- */
 
 /** Fila de GET /tipos-cultivo/catalogo. */
 export interface CultivoCatalogo {
@@ -37,32 +19,57 @@ export interface CultivoCatalogo {
   puedeEliminarse: boolean;
 }
 
+export type UnidadNutricional = "kcal" | "g" | "mg" | "mcg" | "%";
+
+export interface FilaNutricional {
+  nombre: string;
+  valor: string;
+  unidad: UnidadNutricional;
+}
+
 /**
  * Datos editables de un cultivo: es a la vez lo que devuelve
  * GET /tipos-cultivo/{id} y lo que se manda en el alta y la edición.
  *
  * `calendario` es la representación interna, la que entienden el editor y la
  * barra. La traducción a `estacionalidadPorMes` vive en el borde del hook, así
- * el formulario nunca ve el castellano del backend.
+ * el formulario nunca ve el castellano del backend; lo mismo con las unidades
+ * nutricionales, que del lado del backend son un enum (`GRAMOS`, `KCAL`…).
  */
 export interface DatosCultivo {
   nombre: string;
   descripcion: string;
   beneficios: string[];
   calendario: Estacion[];
+  /** Sobre qué porción se informan los valores, p. ej. "100 g". */
+  porcionReferencia: string;
+  informacionNutricional: FilaNutricional[];
 }
 
-export interface GcrReceta {
+export interface CultivoOpcion {
   id: string;
   nombre: string;
-  dificultad: Dificultad;
-  tiempo: string;
-  duracion: DuracionId;
+}
+
+export interface RecetaCatalogo {
+  id: string;
+  nombre: string;
+  nombresCultivos: string[];
+  dificultad: DificultadId;
+  tiempoMinsAprox: number;
+  /** "Rápida", "Media" o "Larga". La deduce el backend del tiempo. */
+  duracionNombre: string;
+  cantidadPasos: number;
   porciones: number;
-  /** IDs de cultivos asociados. */
-  cultivos: string[];
+}
+
+export interface DatosReceta {
+  nombre: string;
+  cultivosIds: string[];
+  dificultad: DificultadId;
+  tiempoMinsAprox: number;
+  porciones: number;
   descripcion: string;
   ingredientes: string[];
   pasos: string[];
-  estado: "activo";
 }

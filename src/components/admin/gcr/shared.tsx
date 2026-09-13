@@ -4,9 +4,10 @@ import { useEffect } from "react";
 import { Search, SearchX, Trash2, X, Plus, Check, AlertCircle, ChevronRight, Gauge } from "lucide-react";
 import { Alert, Button, Card, IconCircle, Modal, Toast } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
-import { GCR_MESES, GCR_ESTACIONES, GCR_EST_ORDEN, gcrCultivoNombre, gcrCultivoColor } from "@/data/gestionCr";
+import { GCR_MESES, GCR_ESTACIONES, GCR_EST_ORDEN } from "@/data/gestionCr";
+import { gradienteDe } from "@/lib/color";
 import { cn } from "@/lib/utils";
-import type { Dificultad, Estacion, GcrCultivo } from "@/types/gestionCr";
+import type { CultivoOpcion, DificultadId, Estacion } from "@/types/gestionCr";
 
 /* ---- Escape-to-close hook ---------------------------------------------- */
 function useEscape(onClose: () => void) {
@@ -325,7 +326,7 @@ export function GcrCultivoMultiSelect({
   selected,
   onChange,
 }: {
-  cultivos: GcrCultivo[];
+  cultivos: CultivoOpcion[];
   selected: string[];
   onChange: (v: string[]) => void;
 }) {
@@ -334,64 +335,66 @@ export function GcrCultivoMultiSelect({
 
   return (
     <div className="flex flex-wrap gap-2">
-      {cultivos
-        .filter((c) => c.estado === "activo")
-        .map((c) => {
-          const on = selected.includes(c.id);
-          return (
-            <button
-              key={c.id}
-              type="button"
-              role="checkbox"
-              aria-checked={on}
-              onClick={() => toggle(c.id)}
-              className={cn(
-                "inline-flex cursor-pointer items-center gap-2.5 rounded-pill border py-[7px] pr-[13px] pl-2 text-[13.5px]",
-                on
-                  ? "border-green-800 bg-green-050 font-semibold text-green-800 shadow-[inset_0_-2px_0_var(--green-100)]"
-                  : "border-outline-variant bg-surface font-medium text-fg-2",
-              )}
-            >
-              <span className="size-5 shrink-0 rounded-full" style={{ background: c.color }} />
-              {c.nombre}
-              {on && <Check className="size-[15px]" />}
-            </button>
-          );
-        })}
+      {cultivos.map((c) => {
+        const on = selected.includes(c.id);
+        return (
+          <button
+            key={c.id}
+            type="button"
+            role="checkbox"
+            aria-checked={on}
+            onClick={() => toggle(c.id)}
+            className={cn(
+              "inline-flex cursor-pointer items-center gap-2.5 rounded-pill border py-[7px] pr-[13px] pl-2 text-[13.5px]",
+              on
+                ? "border-green-800 bg-green-050 font-semibold text-green-800 shadow-[inset_0_-2px_0_var(--green-100)]"
+                : "border-outline-variant bg-surface font-medium text-fg-2",
+            )}
+          >
+            {/* El backend no manda color: sale del nombre, estable entre pantallas. */}
+            <span className="size-5 shrink-0 rounded-full" style={{ background: gradienteDe(c.nombre) }} />
+            {c.nombre}
+            {on && <Check className="size-[15px]" />}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 /* ---- Chip de cultivo (lectura) ----------------------------------------- */
-export function GcrCultivoChip({ id, cultivos }: { id: string; cultivos: GcrCultivo[] }) {
+export function GcrCultivoChip({ nombre }: { nombre: string }) {
   return (
     <span className="inline-flex items-center gap-[7px] rounded-pill border border-sand bg-cream-tert py-[3px] pr-2.5 pl-1 text-[12.5px] font-medium whitespace-nowrap text-fg-1">
-      <span
-        className="size-4 shrink-0 rounded-full"
-        style={{ background: gcrCultivoColor(id, cultivos) }}
-      />
-      {gcrCultivoNombre(id, cultivos)}
+      <span className="size-4 shrink-0 rounded-full" style={{ background: gradienteDe(nombre) }} />
+      {nombre}
     </span>
   );
 }
 
 /* ---- Pill de dificultad ------------------------------------------------ */
-const DIFICULTAD_TONO: Record<string, string> = {
-  "Fácil": "border-green-300 bg-green-050 text-green-800",
-  "Media": "border-[#E6CA72] bg-[#FBF3D6] text-[#8A6D12]",
-  "Difícil": "border-danger bg-danger-fill text-danger-fg",
+const DIFICULTAD_META: Record<DificultadId, { label: string; tono: string }> = {
+  FACIL: { label: "Fácil", tono: "border-green-300 bg-green-050 text-green-800" },
+  MEDIA: { label: "Media", tono: "border-[#E6CA72] bg-[#FBF3D6] text-[#8A6D12]" },
+  DIFICIL: { label: "Difícil", tono: "border-danger bg-danger-fill text-danger-fg" },
 };
 
-export function GcrDifficultyPill({ dificultad }: { dificultad: Dificultad }) {
+/** Etiqueta de una dificultad, para los controles que la muestran sin píldora. */
+export function gcrDificultadLabel(dificultad: DificultadId): string {
+  return DIFICULTAD_META[dificultad]?.label ?? dificultad;
+}
+
+export function GcrDifficultyPill({ dificultad }: { dificultad: DificultadId }) {
+  const meta = DIFICULTAD_META[dificultad] ?? DIFICULTAD_META.MEDIA;
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-[12.5px] font-semibold whitespace-nowrap",
-        DIFICULTAD_TONO[dificultad] ?? DIFICULTAD_TONO["Media"],
+        meta.tono,
       )}
     >
       <Gauge className="size-[13px]" />
-      {dificultad}
+      {meta.label}
     </span>
   );
 }
@@ -457,8 +460,9 @@ export function GcrEmptyState({
   icon: React.ReactNode;
   title: string;
   body: string;
-  actionLabel: string;
-  onAction: () => void;
+  /** Sin acción la caja queda sólo informativa: es lo que ve quien sólo puede leer. */
+  actionLabel?: string;
+  onAction?: () => void;
 }) {
   return (
     <div className="px-7 py-[60px] text-center">
@@ -466,10 +470,12 @@ export function GcrEmptyState({
         {icon}
       </div>
       <h3 className="mb-2 font-display text-[21px] font-bold text-fg-1">{title}</h3>
-      <p className="mx-auto mb-[22px] max-w-[440px] text-[15px] leading-relaxed text-fg-2">{body}</p>
-      <Button onClick={onAction}>
-        <Plus className="size-[17px]" /> {actionLabel}
-      </Button>
+      <p className="mx-auto max-w-[440px] text-[15px] leading-relaxed text-fg-2">{body}</p>
+      {actionLabel && onAction && (
+        <Button className="mt-[22px]" onClick={onAction}>
+          <Plus className="size-[17px]" /> {actionLabel}
+        </Button>
+      )}
     </div>
   );
 }
@@ -482,6 +488,7 @@ export function GcrPageHead({
   actionLabel,
   onAction,
   accionDeshabilitada,
+  accionTitulo,
 }: {
   crumb: string;
   title: string;
@@ -490,6 +497,8 @@ export function GcrPageHead({
   onAction: () => void;
   /** El esqueleto muestra el mismo botón apagado. */
   accionDeshabilitada?: boolean;
+  /** Por qué está apagado, p. ej. el permiso que falta. */
+  accionTitulo?: string;
 }) {
   return (
     <>
@@ -503,7 +512,7 @@ export function GcrPageHead({
           <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">{title}</h1>
           <p className="mt-2.5 max-w-[680px] text-[15.5px] leading-relaxed text-fg-2">{desc}</p>
         </div>
-        <Button size="lg" onClick={onAction} disabled={accionDeshabilitada}>
+        <Button size="lg" onClick={onAction} disabled={accionDeshabilitada} title={accionTitulo}>
           <Plus className="size-[18px]" /> {actionLabel}
         </Button>
       </div>

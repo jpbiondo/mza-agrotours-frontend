@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-interface TipoIdSelectProps {
+interface SimpleSelectProps {
   id?: string;
   name?: string;
   value: string;
@@ -17,15 +17,12 @@ interface TipoIdSelectProps {
   options: readonly string[];
   placeholder?: string;
   icon?: React.ReactNode;
+  className?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
 }
 
-/**
- * Select simple (pocas opciones) sobre el Select de shadcn/Base UI.
- * Reenvía ref/onBlur/aria-* para integrarse con react-hook-form (<FormControl>).
- */
-export function TipoIdSelect({
+export function SimpleSelect({
   id,
   name,
   value,
@@ -35,9 +32,10 @@ export function TipoIdSelect({
   options,
   placeholder,
   icon,
+  className,
   "aria-invalid": ariaInvalid,
   "aria-describedby": describedBy,
-}: TipoIdSelectProps) {
+}: SimpleSelectProps) {
   const errored = ariaInvalid === true;
   return (
     <Select
@@ -54,6 +52,7 @@ export function TipoIdSelect({
         className={cn(
           "h-11! w-full rounded-md bg-surface pl-3.5 text-base",
           errored && "bg-danger-fill",
+          className,
         )}
       >
         <span className="flex items-center gap-2.5">

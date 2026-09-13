@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import GuardRol from "@/components/GuardRol";
+import { PermisoAdmin } from "@/lib/permisos";
 import CultivosClient from "./CultivosClient";
 
 export const metadata: Metadata = {
@@ -7,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function CultivosPage() {
-  return <CultivosClient />;
+  return (
+    <GuardRol rol="admin" permiso={PermisoAdmin.LEER_CULTIVOS}>
+      <CultivosClient />
+    </GuardRol>
+  );
 }

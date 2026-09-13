@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ChevronDown,
   UserRound,
+  CalendarCheck,
   ClipboardList,
   LifeBuoy,
   ShieldCheck,
@@ -204,6 +205,9 @@ export default function AccountMenu() {
           </div>
           <div style={{ padding: 6 }}>
             {item(UserRound, "Mi cuenta", "/cuenta")}
+            {/* Las reservas salieron de la navbar —su lugar lo ocupa Recetas— y
+                viven acá: son de la cuenta, no del catálogo público. */}
+            {item(CalendarCheck, "Mis reservas", "/mis-reservas")}
             {/* Sin gating por rol: el alta de establecimiento es del espacio de
                 visitante y cualquier usuario logueado puede pedirla. */}
             {item(ClipboardList, "Mis solicitudes", "/mis-solicitudes")}

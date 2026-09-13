@@ -13,7 +13,7 @@ import {
   Loader,
 } from "lucide-react";
 import { TextField } from "@/components/ui/text-field";
-import { TipoIdSelect } from "@/components/ui/tipo-id-select";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { CountrySelect } from "@/components/ui/country-select";
 import { DateField } from "@/components/ui/date-field";
 import {
@@ -178,7 +178,7 @@ export default function DatosPersonalesForm({
               <FormItem>
                 <FormLabel required>Tipo de identificación</FormLabel>
                 <FormControl>
-                  <TipoIdSelect
+                  <SimpleSelect
                     {...field}
                     icon={<BadgeCheck />}
                     options={TIPOS_IDENTIFICACION}

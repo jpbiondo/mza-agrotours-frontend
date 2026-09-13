@@ -22,15 +22,9 @@ const APP_LINKS: NavLink[] = [
   { id: "explorar", href: "/explorar", label: "Actividades" },
   { id: "establecimientos", href: "/establecimientos", label: "Establecimientos" },
   { id: "cultivos", href: "/cultivos", label: "Cultivos" },
-  { id: "mis-reservas", href: "/mis-reservas", label: "Mis reservas" },
+  { id: "recetas", href: "/recetas", label: "Recetas" },
   { id: "faq", href: "/#faq", label: "Preguntas frecuentes" },
 ];
-
-/**
- * Rutas que no tienen entrada propia en el nav pero cuelgan de una. Las recetas
- * se llegan desde Cultivos, así que marcan ese ítem.
- */
-const ALIAS: Record<string, string> = { "/recetas": "cultivos" };
 
 /**
  * Ítem activo según la URL: el href más específico que sea prefijo del path.
@@ -39,9 +33,6 @@ const ALIAS: Record<string, string> = { "/recetas": "cultivos" };
  * Las anclas del landing (`/#faq`) no participan.
  */
 function idActivo(pathname: string, links: NavLink[]): string | undefined {
-  for (const [prefijo, id] of Object.entries(ALIAS)) {
-    if (pathname === prefijo || pathname.startsWith(prefijo + "/")) return id;
-  }
   let largo = 0;
   let id: string | undefined;
   for (const l of links) {

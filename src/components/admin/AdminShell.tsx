@@ -93,8 +93,20 @@ const NAV: NavEntry[] = [
     permiso: PermisoAdmin.LEER_ESTABLECIMIENTO,
   },
   { section: "Contenido" },
-  { id: "cultivos", iconC: Sprout, label: "Cultivos", href: "/admin/cultivos" },
-  { id: "recetas", iconC: Utensils, label: "Recetas", href: "/admin/recetas" },
+  {
+    id: "cultivos",
+    iconC: Sprout,
+    label: "Cultivos",
+    href: "/admin/cultivos",
+    permiso: PermisoAdmin.LEER_CULTIVOS,
+  },
+  {
+    id: "recetas",
+    iconC: Utensils,
+    label: "Recetas",
+    href: "/admin/recetas",
+    permiso: PermisoAdmin.LEER_RECETAS,
+  },
   { section: "Parámetros" },
   {
     id: "rangos",
