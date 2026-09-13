@@ -457,8 +457,9 @@ export function GcrEmptyState({
   icon: React.ReactNode;
   title: string;
   body: string;
-  actionLabel: string;
-  onAction: () => void;
+  /** Sin acción la caja queda sólo informativa: es lo que ve quien sólo puede leer. */
+  actionLabel?: string;
+  onAction?: () => void;
 }) {
   return (
     <div className="px-7 py-[60px] text-center">
@@ -466,10 +467,12 @@ export function GcrEmptyState({
         {icon}
       </div>
       <h3 className="mb-2 font-display text-[21px] font-bold text-fg-1">{title}</h3>
-      <p className="mx-auto mb-[22px] max-w-[440px] text-[15px] leading-relaxed text-fg-2">{body}</p>
-      <Button onClick={onAction}>
-        <Plus className="size-[17px]" /> {actionLabel}
-      </Button>
+      <p className="mx-auto max-w-[440px] text-[15px] leading-relaxed text-fg-2">{body}</p>
+      {actionLabel && onAction && (
+        <Button className="mt-[22px]" onClick={onAction}>
+          <Plus className="size-[17px]" /> {actionLabel}
+        </Button>
+      )}
     </div>
   );
 }
@@ -482,6 +485,7 @@ export function GcrPageHead({
   actionLabel,
   onAction,
   accionDeshabilitada,
+  accionTitulo,
 }: {
   crumb: string;
   title: string;
@@ -490,6 +494,8 @@ export function GcrPageHead({
   onAction: () => void;
   /** El esqueleto muestra el mismo botón apagado. */
   accionDeshabilitada?: boolean;
+  /** Por qué está apagado, p. ej. el permiso que falta. */
+  accionTitulo?: string;
 }) {
   return (
     <>
@@ -503,7 +509,7 @@ export function GcrPageHead({
           <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">{title}</h1>
           <p className="mt-2.5 max-w-[680px] text-[15.5px] leading-relaxed text-fg-2">{desc}</p>
         </div>
-        <Button size="lg" onClick={onAction} disabled={accionDeshabilitada}>
+        <Button size="lg" onClick={onAction} disabled={accionDeshabilitada} title={accionTitulo}>
           <Plus className="size-[18px]" /> {actionLabel}
         </Button>
       </div>

@@ -2,13 +2,16 @@
 
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Sprout, Utensils, Leaf, Scissors, Grape, Pencil, Trash2, Lock, Loader } from "lucide-react";
+import { Sprout, Utensils, Leaf, Scissors, Grape, Pencil, Trash2, Lock, Loader, Eye } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Button, Card, Skeleton, Toast } from "@/components/ui";
+import { Alert, Button, Card, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { gradienteDe } from "@/lib/color";
+import { PermisoAdmin } from "@/lib/permisos";
+import { tienePermiso } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/authStore";
 import {
   useActualizarCultivo,
   useCatalogoCultivos,
@@ -40,6 +43,9 @@ const CULTIVO_VACIO: DatosCultivo = {
  * letras con acentos, números, espacios, guion medio y guion bajo.
  */
 const NOMBRE_VALIDO = /^[a-zA-Z0-9áéíóúüÁÉÍÓÚÜñÑ _-]*$/;
+
+/** Motivo de los botones apagados cuando falta GESTIONAR_CULTIVOS. */
+const SIN_GESTION = "Necesitás el permiso de gestión de cultivos";
 
 /**
  * Mensaje del rechazo al guardar. El backend manda sus motivos redactados
@@ -370,11 +376,14 @@ function CultivoForm({
 function Filas({
   cultivos,
   detalleId,
+  gestionar,
   onEdit,
   onAskDelete,
 }: {
   cultivos: CultivoCatalogo[];
   detalleId: string | null;
+  /** Sin GESTIONAR_CULTIVOS la pantalla es de sólo lectura. */
+  gestionar: boolean;
   onEdit: (c: CultivoCatalogo) => void;
   onAskDelete: (c: CultivoCatalogo) => void;
 }) {
@@ -439,7 +448,8 @@ function Filas({
                   variant="neutral"
                   size="sm"
                   className="text-sm"
-                  disabled={abriendo}
+                  disabled={abriendo || !gestionar}
+                  title={gestionar ? "Editar el cultivo" : SIN_GESTION}
                   onClick={() => onEdit(c)}
                 >
                   {abriendo ? (
@@ -453,14 +463,16 @@ function Filas({
                   variant="neutral"
                   size="sm"
                   className="border-danger text-sm text-danger"
-                  disabled={!c.puedeEliminarse}
-                  title={c.puedeEliminarse ? "Eliminar el cultivo" : motivo}
+                  disabled={!c.puedeEliminarse || !gestionar}
+                  title={!gestionar ? SIN_GESTION : c.puedeEliminarse ? "Eliminar el cultivo" : motivo}
                   onClick={() => onAskDelete(c)}
                 >
                   <Trash2 className="size-[15px]" /> Eliminar
                 </Button>
               </div>
-              {!c.puedeEliminarse && (
+              {/* El candado explica por qué no se puede borrar *este* cultivo; el
+                  permiso que falta ya lo dice el aviso de arriba de la tabla. */}
+              {gestionar && !c.puedeEliminarse && (
                 <div className="mt-2 flex items-center justify-end gap-1.5 text-[11.5px] text-fg-3">
                   <Lock className="size-[13px]" />
                   {motivo}
@@ -479,10 +491,13 @@ function Filas({
 function Inner({
   cultivos,
   totalRecetas,
+  gestionar,
   onRefrescar,
 }: {
   cultivos: CultivoCatalogo[];
   totalRecetas: number;
+  /** `LEER_CULTIVOS` alcanza para ver; crear, editar y borrar piden `GESTIONAR_CULTIVOS`. */
+  gestionar: boolean;
   onRefrescar: () => void;
 }) {
   const { cargar } = useCultivoDetalle();
@@ -573,6 +588,8 @@ function Inner({
         desc="Administrá el catálogo de cultivos de la plataforma. Cada cultivo queda disponible para que los establecimientos lo asocien a sus actividades y para las recetas de la finca."
         actionLabel="Agregar cultivo"
         onAction={abrirAlta}
+        accionDeshabilitada={!gestionar}
+        accionTitulo={gestionar ? undefined : SIN_GESTION}
       />
 
       <GcrStats
@@ -592,20 +609,33 @@ function Inner({
 
       <GcrSearchBar query={query} onQuery={setQuery} placeholder="Buscar por nombre" />
 
+      {/* Con todas las acciones apagadas, decir por qué una sola vez evita que
+          haya que apuntar cada botón para enterarse. */}
+      {!gestionar && (
+        <Alert tone="warning" icon={<Eye className="size-[18px]" />} className="mb-4">
+          Estás viendo el catálogo en modo lectura. {SIN_GESTION} para agregar, editar o eliminar.
+        </Alert>
+      )}
+
       <Card className="overflow-hidden p-0">
         {cultivos.length === 0 ? (
           <GcrEmptyState
             icon={<Sprout className="size-8 text-brown-700" />}
             title="Todavía no hay cultivos cargados"
-            body="Empezá creando el primero. Una vez cargado, los establecimientos van a poder asociarlo a sus actividades y recetas."
-            actionLabel="Agregar el primer cultivo"
-            onAction={abrirAlta}
+            body={
+              gestionar
+                ? "Empezá creando el primero. Una vez cargado, los establecimientos van a poder asociarlo a sus actividades y recetas."
+                : "Cuando se cargue el primero vas a poder consultarlo acá, con su estacionalidad y sus valores nutricionales."
+            }
+            actionLabel={gestionar ? "Agregar el primer cultivo" : undefined}
+            onAction={gestionar ? abrirAlta : undefined}
           />
         ) : visibles.length > 0 ? (
           <Tabla>
             <Filas
               cultivos={visibles}
               detalleId={detalleId}
+              gestionar={gestionar}
               onEdit={abrirEdicion}
               onAskDelete={(c) => {
                 setDeleteError(null);
@@ -660,6 +690,9 @@ function Inner({
 
 export default function CultivosClient() {
   const { cultivos, totalRecetas, isLoading, error, reload, refrescar } = useCatalogoCultivos();
+  const accesos = useAuthStore((s) => s.accesos);
+  const gestionar = tienePermiso(accesos, PermisoAdmin.GESTIONAR_CULTIVOS);
+
   return (
     <AsyncBoundary
       loading={isLoading}
@@ -669,7 +702,12 @@ export default function CultivosClient() {
     >
       {/* Sin copia local: los contadores y `puedeEliminarse` los calcula el
           backend, así que después de mutar hay que volver a pedirlos. */}
-      <Inner cultivos={cultivos} totalRecetas={totalRecetas} onRefrescar={refrescar} />
+      <Inner
+        cultivos={cultivos}
+        totalRecetas={totalRecetas}
+        gestionar={gestionar}
+        onRefrescar={refrescar}
+      />
     </AsyncBoundary>
   );
 }
