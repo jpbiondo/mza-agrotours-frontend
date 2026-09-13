@@ -1,3 +1,6 @@
+import type { DificultadId } from "./recetas";
+export type { DificultadId };
+
 export type Estacion = "h" | "g" | "r";
 
 /* ---- Catálogo de cultivos (wireado) -------------------------------------- */
@@ -43,24 +46,14 @@ export interface DatosCultivo {
   informacionNutricional: FilaNutricional[];
 }
 
-/* ---- Recetario (wireado) --------------------------------------------------
-   Mismo criterio que el catálogo de cultivos de arriba: tipos propios del
-   backend, con el vocabulario traducido en el borde del hook. */
-
-/** Dificultad de una receta, con el valor que viaja al backend. */
-export type DificultadId = "FACIL" | "MEDIA" | "DIFICIL";
-
-/** Cultivo que se puede asociar a una receta. */
 export interface CultivoOpcion {
   id: string;
   nombre: string;
 }
 
-/** Fila de GET /admin/recetas. */
 export interface RecetaCatalogo {
   id: string;
   nombre: string;
-  /** Sólo los nombres: el listado no manda los ids de los cultivos. */
   nombresCultivos: string[];
   dificultad: DificultadId;
   tiempoMinsAprox: number;
@@ -70,13 +63,6 @@ export interface RecetaCatalogo {
   porciones: number;
 }
 
-/**
- * Datos editables de una receta: lo que devuelve GET /admin/recetas/{id} y lo
- * que se manda en el alta y la edición.
- *
- * No incluye la duración: el backend la calcula a partir de `tiempoMinsAprox`
- * contra los rangos que tiene configurados, así que mandarla sería mentir.
- */
 export interface DatosReceta {
   nombre: string;
   cultivosIds: string[];

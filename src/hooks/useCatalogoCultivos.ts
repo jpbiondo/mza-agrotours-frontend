@@ -10,8 +10,10 @@ import type {
   DatoNutricional,
   EstadoMes,
   MesEstacionalidad,
+  RecetaDeCultivo,
   TotalesTemporada,
 } from "@/types/cultivos";
+import type { DificultadId } from "@/types/recetas";
 
 /**
  * Catálogo de cultivos del visitante: el listado paginado, los totales con los
@@ -48,6 +50,14 @@ interface NutricionBackend {
   unidad?: string;
 }
 
+interface RecetaBackend {
+  id?: string;
+  nombre?: string;
+  tiempo?: string | null;
+  porciones?: unknown;
+  dificultad?: unknown;
+}
+
 interface ActividadBackend {
   id?: string;
   titulo?: string;
@@ -64,6 +74,7 @@ interface DetalleBackend {
   calendario?: unknown;
   porcionReferencia?: string | null;
   informacionNutricional?: unknown;
+  recetas?: unknown;
   actividades?: unknown;
 }
 
@@ -97,6 +108,9 @@ const ESTADOS: Record<string, EstadoMes> = {
   CRECIMIENTO: "crecimiento",
   REPOSO: "reposo",
 };
+
+/** Valores del enum `Dificultad`, para descartar el que no conozcamos. */
+const DIFICULTADES: DificultadId[] = ["FACIL", "MEDIA", "DIFICIL"];
 
 /** `UnidadNutricional` del backend → el símbolo que se muestra. */
 const UNIDADES: Record<string, string> = {
@@ -165,6 +179,20 @@ function aNutricion(v: unknown): DatoNutricional[] {
     .filter((d) => d.nombre !== "" && d.valor !== "");
 }
 
+/** La dificultad es obligatoria en el alta de la receta; si faltara, la media. */
+function aReceta(r: RecetaBackend): RecetaDeCultivo {
+  const dificultad = aTexto(r.dificultad);
+  return {
+    id: aTexto(r.id),
+    nombre: aTexto(r.nombre),
+    tiempo: aTexto(r.tiempo),
+    porciones: aNumero(r.porciones),
+    dificultad: DIFICULTADES.includes(dificultad as DificultadId)
+      ? (dificultad as DificultadId)
+      : "MEDIA",
+  };
+}
+
 function aActividad(a: ActividadBackend): ActividadDeCultivo {
   return {
     id: aTexto(a.id),
@@ -190,6 +218,13 @@ function aDetalle(d: DetalleBackend): CultivoDetalle {
     calendario: aCalendario(d.calendario),
     porcionReferencia: aTexto(d.porcionReferencia),
     informacionNutricional: aNutricion(d.informacionNutricional),
+    // Sin id no se puede linkear la receta: se descarta la tarjeta.
+    recetas: Array.isArray(d.recetas)
+      ? d.recetas
+          .filter((r): r is RecetaBackend => !!r && typeof r === "object")
+          .map(aReceta)
+          .filter((r) => r.id !== "")
+      : [],
     // Sin id no se puede linkear la actividad: se descarta la fila.
     actividades: Array.isArray(d.actividades)
       ? d.actividades

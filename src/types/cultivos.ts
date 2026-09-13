@@ -1,3 +1,5 @@
+import type { DificultadId } from "./recetas";
+
 export type EstadoMes = "cosecha" | "crecimiento" | "reposo";
 
 export interface MesEstacionalidad {
@@ -34,6 +36,19 @@ export interface ActividadDeCultivo {
   precio: number | null;
 }
 
+/**
+ * Receta en la que entra el cultivo, tal como la lista su detalle. Es un resumen
+ * más corto que el del recetario: no trae ni cultivos ni cantidad de pasos.
+ */
+export interface RecetaDeCultivo {
+  id: string;
+  nombre: string;
+  /** Ya viene formateado del backend, p. ej. "1 h 15 min". */
+  tiempo: string;
+  porciones: number;
+  dificultad: DificultadId;
+}
+
 export interface CultivoDetalle {
   id: string;
   nombre: string;
@@ -42,9 +57,8 @@ export interface CultivoDetalle {
   calendario: MesEstacionalidad[];
   porcionReferencia: string;
   informacionNutricional: DatoNutricional[];
+  recetas: RecetaDeCultivo[];
   actividades: ActividadDeCultivo[];
-  // TODO backend: el detalle también manda `recetas`; las recetas siguen yendo
-  // por mocks, así que no se mapean todavía.
 }
 
 /** Filtro de temporada del listado. `null` es "todos". */
@@ -57,49 +71,3 @@ export interface ConsultaCultivos {
   size: number;
 }
 
-export type MesEstado = "r" | "g" | "h"; // reposo · crecimiento · cosecha
-
-export interface NutricionItem {
-  label: string;
-  value: string;
-}
-
-export interface Cultivo {
-  id: string;
-  nombre: string;
-  familia: string;
-  descripcion: string;
-  seed: number;
-  photo: string;
-  color: string;
-  calendario: MesEstado[];
-  nutricion: { porcion: string; items: NutricionItem[] };
-  beneficios: string[];
-  recetas: string[];
-  actividades: string[];
-}
-
-export interface Receta {
-  id: string;
-  nombre: string;
-  tiempo: string;
-  porciones: number;
-  dificultad: string;
-  seed: number;
-  photo: string;
-  cultivos: string[];
-  descripcion: string;
-  ingredientes: string[];
-  pasos: string[];
-}
-
-export interface ActividadCultivo {
-  id: string;
-  titulo: string;
-  finca: string;
-  loc: string;
-  dur: string;
-  precio: string;
-  seed: number;
-  photo: string;
-}

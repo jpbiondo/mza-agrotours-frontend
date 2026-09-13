@@ -17,6 +17,7 @@ interface SimpleSelectProps {
   options: readonly string[];
   placeholder?: string;
   icon?: React.ReactNode;
+  className?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
 }
@@ -31,6 +32,7 @@ export function SimpleSelect({
   options,
   placeholder,
   icon,
+  className,
   "aria-invalid": ariaInvalid,
   "aria-describedby": describedBy,
 }: SimpleSelectProps) {
@@ -50,6 +52,7 @@ export function SimpleSelect({
         className={cn(
           "h-11! w-full rounded-md bg-surface pl-3.5 text-base",
           errored && "bg-danger-fill",
+          className,
         )}
       >
         <span className="flex items-center gap-2.5">
