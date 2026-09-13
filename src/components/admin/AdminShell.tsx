@@ -100,7 +100,13 @@ const NAV: NavEntry[] = [
     href: "/admin/cultivos",
     permiso: PermisoAdmin.LEER_CULTIVOS,
   },
-  { id: "recetas", iconC: Utensils, label: "Recetas", href: "/admin/recetas" },
+  {
+    id: "recetas",
+    iconC: Utensils,
+    label: "Recetas",
+    href: "/admin/recetas",
+    permiso: PermisoAdmin.LEER_RECETAS,
+  },
   { section: "Parámetros" },
   {
     id: "rangos",
