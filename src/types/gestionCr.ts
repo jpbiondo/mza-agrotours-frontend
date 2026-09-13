@@ -37,19 +37,31 @@ export interface CultivoCatalogo {
   puedeEliminarse: boolean;
 }
 
+export type UnidadNutricional = "kcal" | "g" | "mg" | "mcg" | "%";
+
+export interface FilaNutricional {
+  nombre: string;
+  valor: string;
+  unidad: UnidadNutricional;
+}
+
 /**
  * Datos editables de un cultivo: es a la vez lo que devuelve
  * GET /tipos-cultivo/{id} y lo que se manda en el alta y la edición.
  *
  * `calendario` es la representación interna, la que entienden el editor y la
  * barra. La traducción a `estacionalidadPorMes` vive en el borde del hook, así
- * el formulario nunca ve el castellano del backend.
+ * el formulario nunca ve el castellano del backend; lo mismo con las unidades
+ * nutricionales, que del lado del backend son un enum (`GRAMOS`, `KCAL`…).
  */
 export interface DatosCultivo {
   nombre: string;
   descripcion: string;
   beneficios: string[];
   calendario: Estacion[];
+  /** Sobre qué porción se informan los valores, p. ej. "100 g". */
+  porcionReferencia: string;
+  informacionNutricional: FilaNutricional[];
 }
 
 export interface GcrReceta {
