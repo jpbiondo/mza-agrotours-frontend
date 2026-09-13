@@ -77,7 +77,7 @@ function CultivoCard({ cultivo }: { cultivo: CultivoResumen }) {
   return (
     <Link
       href={`/cultivos/${cultivo.id}`}
-      className="flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline transition-[box-shadow,border-color,transform] hover:-translate-y-0.5 hover:border-sand hover:shadow-hover"
+      className="flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline transition-[box-shadow,border-color,transform] hover:-translate-y-px hover:border-sand hover:shadow-hover"
     >
       <div className="relative">
         {/* TODO backend: el listado todavía no manda imágenes. */}

@@ -103,7 +103,7 @@ Quedan pantallas con estilos inline heredados del diseño original; se migran de
 
 ### Cuando escribas un test e2e
 
-Dos cosas rompen los selectores obvios: el `*` de campo obligatorio es `aria-hidden`, pero Playwright igual lo cuenta en `getByLabel`, así que para los inputs usá `getByPlaceholder`; y los selects propios (`country-select`, `tipo-id-select`, `searchable-select`) exponen sus opciones como `role="option"`, no como `button`. Ejemplo: `e2e/registro.spec.ts`.
+Dos cosas rompen los selectores obvios: el `*` de campo obligatorio es `aria-hidden`, pero Playwright igual lo cuenta en `getByLabel`, así que para los inputs usá `getByPlaceholder`; y los selects propios (`country-select`, `simple-select`, `searchable-select`) exponen sus opciones como `role="option"`, no como `button`. Ejemplo: `e2e/registro.spec.ts`.
 
 ### Dónde va cada cosa
 

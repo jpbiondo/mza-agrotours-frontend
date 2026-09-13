@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import type { ActividadDeCultivo, CultivoDetalle } from "@/types/cultivos";
 
 const TARJETA_HOVER =
-  "transition-[box-shadow,border-color,transform] hover:-translate-y-0.5 hover:border-sand hover:shadow-hover";
+  "transition-[box-shadow,border-color,transform] hover:-translate-y-px hover:border-sand hover:shadow-hover";
 
 /* ---- Piezas -------------------------------------------------------------- */
 
