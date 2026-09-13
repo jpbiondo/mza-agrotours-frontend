@@ -6,7 +6,7 @@ import {
   Utensils, Sprout, Users, List as ListIcon, Clock, Pencil, Trash2, Loader, Eye,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Card, Skeleton, Toast } from "@/components/ui";
+import { ActionBtn, Alert, Card, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { gcrRecetaInitials } from "@/data/gestionCr";
@@ -202,8 +202,8 @@ function RecetasSkeleton() {
                 </td>
                 <td className="p-4 align-middle">
                   <div className="flex justify-end gap-2.5">
-                    <Skeleton className="h-[34px] w-[86px]" />
-                    <Skeleton className="h-[34px] w-[96px]" />
+                    <Skeleton className="h-[38px] w-[92px]" />
+                    <Skeleton className="h-[38px] w-[106px]" />
                   </div>
                 </td>
               </tr>
@@ -540,27 +540,27 @@ function Filas({
 
             <td className="p-4 align-middle">
               <div className="flex items-center justify-end gap-2.5">
-                <Button
-                  variant="neutral"
-                  size="sm"
-                  className="text-sm"
+                <ActionBtn
+                  icon={
+                    abriendo ? (
+                      <Loader className="spin size-[17px]" />
+                    ) : (
+                      <Pencil className="size-[17px]" />
+                    )
+                  }
+                  label="Editar"
                   disabled={abriendo || !gestionar}
                   title={gestionar ? "Editar la receta" : SIN_GESTION}
                   onClick={() => onEdit(r)}
-                >
-                  {abriendo ? <Loader className="spin size-[15px]" /> : <Pencil className="size-[15px]" />}
-                  Editar
-                </Button>
-                <Button
-                  variant="neutral"
-                  size="sm"
-                  className="border-danger text-sm text-danger"
+                />
+                <ActionBtn
+                  icon={<Trash2 className="size-[17px]" />}
+                  label="Eliminar"
+                  tone="danger"
                   disabled={!gestionar}
                   title={gestionar ? "Eliminar la receta" : SIN_GESTION}
                   onClick={() => onAskDelete(r)}
-                >
-                  <Trash2 className="size-[15px]" /> Eliminar
-                </Button>
+                />
               </div>
             </td>
           </tr>

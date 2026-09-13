@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Sprout, Utensils, Leaf, Scissors, Grape, Pencil, Trash2, Lock, Loader, Eye } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Card, Skeleton, Toast } from "@/components/ui";
+import { ActionBtn, Alert, Card, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { gradienteDe } from "@/lib/color";
@@ -178,8 +178,8 @@ function CultivosSkeleton() {
                 </td>
                 <td className="p-4 align-middle">
                   <div className="flex justify-end gap-2.5">
-                    <Skeleton className="h-[34px] w-[86px]" />
-                    <Skeleton className="h-[34px] w-[96px]" />
+                    <Skeleton className="h-[38px] w-[92px]" />
+                    <Skeleton className="h-[38px] w-[106px]" />
                   </div>
                 </td>
               </tr>
@@ -444,31 +444,27 @@ function Filas({
 
             <td className="p-4 align-middle">
               <div className="flex items-center justify-end gap-2.5">
-                <Button
-                  variant="neutral"
-                  size="sm"
-                  className="text-sm"
+                <ActionBtn
+                  icon={
+                    abriendo ? (
+                      <Loader className="spin size-[17px]" />
+                    ) : (
+                      <Pencil className="size-[17px]" />
+                    )
+                  }
+                  label="Editar"
                   disabled={abriendo || !gestionar}
                   title={gestionar ? "Editar el cultivo" : SIN_GESTION}
                   onClick={() => onEdit(c)}
-                >
-                  {abriendo ? (
-                    <Loader className="spin size-[15px]" />
-                  ) : (
-                    <Pencil className="size-[15px]" />
-                  )}
-                  Editar
-                </Button>
-                <Button
-                  variant="neutral"
-                  size="sm"
-                  className="border-danger text-sm text-danger"
+                />
+                <ActionBtn
+                  icon={<Trash2 className="size-[17px]" />}
+                  label="Eliminar"
+                  tone="danger"
                   disabled={!c.puedeEliminarse || !gestionar}
                   title={!gestionar ? SIN_GESTION : c.puedeEliminarse ? "Eliminar el cultivo" : motivo}
                   onClick={() => onAskDelete(c)}
-                >
-                  <Trash2 className="size-[15px]" /> Eliminar
-                </Button>
+                />
               </div>
               {/* El candado explica por qué no se puede borrar *este* cultivo; el
                   permiso que falta ya lo dice el aviso de arriba de la tabla. */}
