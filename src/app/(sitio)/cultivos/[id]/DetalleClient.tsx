@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import {
-  ArrowLeft, ArrowRight, BookOpen, CalendarDays, CheckCircle2, ChevronRight, Leaf, MapPin,
-  SearchX, Tractor,
+  ArrowLeft, ArrowRight, BookOpen, CalendarDays, CheckCircle2, ChevronRight, Clock, Gauge, Leaf,
+  MapPin, SearchX, Tractor, UtensilsCrossed, Users,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import CalendarioTemporada from "@/components/cultivos/CalendarioTemporada";
@@ -13,7 +13,14 @@ import { useCultivoDetalle } from "@/hooks/useCatalogoCultivos";
 import { useMesActual } from "@/hooks/useMesActual";
 import { moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { ActividadDeCultivo, CultivoDetalle } from "@/types/cultivos";
+import type { ActividadDeCultivo, CultivoDetalle, RecetaDeCultivo } from "@/types/cultivos";
+import type { DificultadId } from "@/types/recetas";
+
+const DIFICULTAD_LABEL: Record<DificultadId, string> = {
+  FACIL: "Fácil",
+  MEDIA: "Media",
+  DIFICIL: "Difícil",
+};
 
 const TARJETA_HOVER =
   "transition-[box-shadow,border-color,transform] hover:-translate-y-px hover:border-sand hover:shadow-hover";
@@ -100,6 +107,35 @@ function NutricionCard({ cultivo }: { cultivo: CultivoDetalle }) {
         </div>
       )}
     </Card>
+  );
+}
+
+function RecetaCard({ receta }: { receta: RecetaDeCultivo }) {
+  return (
+    <Link
+      href={`/recetas/${receta.id}`}
+      className={cn("flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline", TARJETA_HOVER)}
+    >
+      {/* TODO backend: el detalle todavía no manda imágenes de las recetas. */}
+      <Photo seed={seedDeId(receta.id)} height={140} radius={0} icon={UtensilsCrossed} />
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <h4 className="m-0 font-display text-base leading-tight font-semibold text-fg-1">{receta.nombre}</h4>
+        <div className="flex flex-wrap gap-3 text-xs text-fg-3">
+          {/* El tiempo ya viene formateado del backend ("1 h 15 min"). */}
+          {receta.tiempo && (
+            <span className="inline-flex items-center gap-1"><Clock size={12} /> {receta.tiempo}</span>
+          )}
+          <span className="inline-flex items-center gap-1"><Users size={12} /> {receta.porciones} porc.</span>
+          <span className="inline-flex items-center gap-1">
+            <Gauge size={12} /> {DIFICULTAD_LABEL[receta.dificultad]}
+          </span>
+        </div>
+        <div className="mt-auto flex items-center justify-between border-t border-cream-tert pt-2.5">
+          <span className="text-xs text-fg-3">Ver receta</span>
+          <ArrowRight size={14} className="text-green-800" />
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -224,8 +260,22 @@ function Detalle({ cultivo }: { cultivo: CultivoDetalle }) {
         <NutricionCard cultivo={cultivo} />
       </div>
 
-      {/* TODO backend: el detalle también manda `recetas`; falta wirear la
-          pantalla de recetas, que todavía sale de los mocks. */}
+      <Seccion
+        className="mt-12"
+        icon={<UtensilsCrossed size={18} className="text-green-800" />}
+        titulo="Recetas asociadas"
+        sub={cultivo.recetas.length > 0
+          ? `Ideas para cocinar con ${cultivo.nombre.toLowerCase()} de la finca.`
+          : undefined}
+      >
+        {cultivo.recetas.length === 0 ? (
+          <Vacio>Todavía no hay recetas cargadas para este cultivo.</Vacio>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3">
+            {cultivo.recetas.map((r) => <RecetaCard key={r.id} receta={r} />)}
+          </div>
+        )}
+      </Seccion>
 
       <Seccion
         className="mt-12"
