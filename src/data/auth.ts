@@ -6,7 +6,14 @@ export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
  *  apóstrofos (Ana-María, O'Brien). Sin números ni otros caracteres especiales. */
 export const NOMBRE_RE = /^[\p{L}\p{M}\s'’-]+$/u;
 
-export const TELEFONO_RE = /^[0-9+()\-\s]{7,16}$/;
+/** Teléfono en E.164: '+' obligatorio y entre 8 y 15 dígitos, sin separadores.
+ *  Copia del regex del backend, que es lo que después recibe Firebase Admin SDK. */
+export const TELEFONO_RE = /^\+[1-9]\d{7,14}$/;
+
+/** Mensaje único para `TELEFONO_RE`. Vive acá para que las cuatro pantallas que
+ *  validan teléfono no puedan quedar diciendo cosas distintas. */
+export const TELEFONO_MSG =
+  "Debe escribirse en formato internacional, sin espacios: primero con un + y luego seguido de 8 a 15 dígitos (ej. +542615551234)";
 
 /** Nombre de establecimiento: alfanumérico con acentos y ñ, espacios, guiones y
  *  guiones bajos. Sin otros caracteres especiales. Copia del regex del backend,
