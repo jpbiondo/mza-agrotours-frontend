@@ -1,27 +1,6 @@
 export type Estacion = "h" | "g" | "r";
-export type Dificultad = "Fácil" | "Media" | "Difícil";
-export type DuracionId = "rapida" | "media" | "larga";
 
-export interface GcrCultivo {
-  id: string;
-  nombre: string;
-  familia: string;
-  descripcion: string;
-  /** Gradiente CSS de la miniatura. */
-  color: string;
-  /** 12 meses, cada uno cosecha/crecimiento/reposo. */
-  calendario: Estacion[];
-  beneficios: string[];
-  /** Actividades vigentes que cosechan el cultivo (bloquea la baja). */
-  actividades: number;
-  estado: "activo";
-}
-
-/* ---- Catálogo de cultivos (wireado) --------------------------------------
-   `GcrCultivo` de arriba sigue siendo el modelo mock que alimenta la pantalla
-   de recetas. Estos tipos son los del backend y viven al lado en vez de
-   reemplazarlo: son dos universos con ciclos de vida distintos, y mutar
-   `GcrCultivo` rompería recetas sin ganar nada. */
+/* ---- Catálogo de cultivos (wireado) -------------------------------------- */
 
 /** Fila de GET /tipos-cultivo/catalogo. */
 export interface CultivoCatalogo {
@@ -64,17 +43,47 @@ export interface DatosCultivo {
   informacionNutricional: FilaNutricional[];
 }
 
-export interface GcrReceta {
+/* ---- Recetario (wireado) --------------------------------------------------
+   Mismo criterio que el catálogo de cultivos de arriba: tipos propios del
+   backend, con el vocabulario traducido en el borde del hook. */
+
+/** Dificultad de una receta, con el valor que viaja al backend. */
+export type DificultadId = "FACIL" | "MEDIA" | "DIFICIL";
+
+/** Cultivo que se puede asociar a una receta. */
+export interface CultivoOpcion {
   id: string;
   nombre: string;
-  dificultad: Dificultad;
-  tiempo: string;
-  duracion: DuracionId;
+}
+
+/** Fila de GET /admin/recetas. */
+export interface RecetaCatalogo {
+  id: string;
+  nombre: string;
+  /** Sólo los nombres: el listado no manda los ids de los cultivos. */
+  nombresCultivos: string[];
+  dificultad: DificultadId;
+  tiempoMinsAprox: number;
+  /** "Rápida", "Media" o "Larga". La deduce el backend del tiempo. */
+  duracionNombre: string;
+  cantidadPasos: number;
   porciones: number;
-  /** IDs de cultivos asociados. */
-  cultivos: string[];
+}
+
+/**
+ * Datos editables de una receta: lo que devuelve GET /admin/recetas/{id} y lo
+ * que se manda en el alta y la edición.
+ *
+ * No incluye la duración: el backend la calcula a partir de `tiempoMinsAprox`
+ * contra los rangos que tiene configurados, así que mandarla sería mentir.
+ */
+export interface DatosReceta {
+  nombre: string;
+  cultivosIds: string[];
+  dificultad: DificultadId;
+  tiempoMinsAprox: number;
+  porciones: number;
   descripcion: string;
   ingredientes: string[];
   pasos: string[];
-  estado: "activo";
 }
