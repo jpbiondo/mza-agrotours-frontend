@@ -69,73 +69,42 @@ function CardAction({
   );
 }
 
-/* ---- Toggle Borrador / Publicar ----------------------------------------- */
-function PublishToggle({
-  act, busy, onPublicar, onBorrador,
-}: {
-  act: ActividadProd;
-  busy: boolean;
-  onPublicar: () => void;
-  onBorrador: () => void;
-}) {
+/* ---- Estado de publicación (solo lectura) -------------------------------
+   TODO - esto solía ser un toggle para cambiar el modo en Publicado/Borrador 
+   pero no hay endpoint en el back así que ahora es solo lectura.
+*/
+function PublishToggle({ act }: { act: ActividadProd }) {
   const publicada = act.estado === "publicado";
-  // Mientras el listado no traiga las reservas esto queda siempre en 0 y el
-  // botón nunca se bloquea; el backend es el que tiene que rechazar el cambio.
-  const reservas = act.reservas ?? 0;
-  const sinBorrador = reservas > 0;
 
-  const seg = (activo: boolean, deshabilitado: boolean) =>
+  const seg = (activo: boolean) =>
     cn(
-      "inline-flex items-center gap-1.5 rounded-pill border-none px-[13px] py-1.5 text-[13px] font-semibold whitespace-nowrap transition-colors",
+      "inline-flex cursor-default items-center gap-1.5 rounded-pill border-none px-[13px] py-1.5 text-[13px] font-semibold whitespace-nowrap transition-colors",
       activo ? "bg-green-800 text-fg-on-dark" : "text-fg-2",
-      deshabilitado ? "cursor-not-allowed opacity-40" : activo ? "cursor-default" : "cursor-pointer",
     );
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div
-        role="group"
-        aria-label="Estado de publicación"
-        className="inline-flex gap-[3px] rounded-pill border border-outline-variant bg-cream-tert p-[3px]"
-      >
-        <button
-          type="button"
-          className={seg(!publicada, sinBorrador || busy)}
-          disabled={sinBorrador || busy}
-          title={sinBorrador ? "No se puede ocultar: tiene reservas asociadas" : "Ocultar (guardar como borrador)"}
-          onClick={() => { if (!sinBorrador && publicada) onBorrador(); }}
-        >
-          <EyeOff className="size-[13px]" /> Borrador
-        </button>
-        <button
-          type="button"
-          className={seg(publicada, busy)}
-          disabled={busy}
-          title="Publicar (visible para visitantes)"
-          onClick={() => { if (!publicada) onPublicar(); }}
-        >
-          <Eye className="size-[13px]" /> Publicar
-        </button>
-      </div>
-      {sinBorrador && (
-        <span className="text-[11.5px] text-fg-3">
-          {reservas} {reservas === 1 ? "reserva asociada" : "reservas asociadas"}
-        </span>
-      )}
+    <div
+      role="group"
+      aria-label="Estado de publicación"
+      className="inline-flex gap-[3px] rounded-pill border border-outline-variant bg-cream-tert p-[3px]"
+    >
+      <span className={seg(!publicada)}>
+        <EyeOff className="size-[13px]" /> Borrador
+      </span>
+      <span className={seg(publicada)}>
+        <Eye className="size-[13px]" /> Público
+      </span>
     </div>
   );
 }
 
 /* ---- Tarjeta de actividad ----------------------------------------------- */
 function ActivityCard({
-  act, busy, suspendido, onEliminar, onPublicar, onBorrador,
+  act, suspendido, onEliminar,
 }: {
   act: ActividadProd;
-  busy: boolean;
   suspendido: boolean;
   onEliminar: () => void;
-  onPublicar: () => void;
-  onBorrador: () => void;
 }) {
   const IconC = ICONS[iconoDeCultivos(act.cultivos)] ?? Grape;
   // Una actividad dada de baja no se vuelve a tocar: queda de consulta, sin el
@@ -180,7 +149,7 @@ function ActivityCard({
                 <Ban className="mr-1.5 size-[13px]" /> Dada de baja
               </EstadoBadge>
             ) : (
-              <PublishToggle act={act} busy={busy} onPublicar={onPublicar} onBorrador={onBorrador} />
+              <PublishToggle act={act} />
             )}
           </div>
 
@@ -342,7 +311,7 @@ export default function ActividadesClient() {
     size: PAGE_SIZE,
   });
   const estados = useEstadosActividad(establecimientoId);
-  const { darDeBaja, cambiarEstado, pendingId } = useActividadAcciones();
+  const { darDeBaja, pendingId } = useActividadAcciones();
 
   // Las acciones todavía no persisten: el override deja ver el resultado en la
   // tarjeta sin volver a pedir el listado. Se descarta al recargar, y no mueve
@@ -395,16 +364,6 @@ export default function ActividadesClient() {
     setOverrides((o) => ({ ...o, [act.id]: { ...o[act.id], estado: "dado_de_baja" } }));
     setToDelete(null);
     setToast({ tone: "success", title: "La actividad se dio de baja correctamente.", sub: `«${act.nombre}»` });
-  }
-
-  async function setEstado(act: ActividadProd, nuevo: EstadoActividad) {
-    await cambiarEstado(act.id, nuevo);
-    setOverrides((o) => ({ ...o, [act.id]: { ...o[act.id], estado: nuevo } }));
-    setToast({
-      tone: "success",
-      title: nuevo === "publicado" ? "La actividad se publicó correctamente." : "La actividad se ocultó correctamente.",
-      sub: `«${act.nombre}» · estado ${nuevo === "publicado" ? "Publicado" : "Borrador"}.`,
-    });
   }
 
   return (
@@ -548,11 +507,8 @@ export default function ActividadesClient() {
                     <ActivityCard
                       key={act.id}
                       act={act}
-                      busy={pendingId === act.id}
                       suspendido={suspendido}
                       onEliminar={() => pedirBaja(act)}
-                      onPublicar={() => setEstado(act, "publicado")}
-                      onBorrador={() => setEstado(act, "borrador")}
                     />
                   ))}
                 </div>
