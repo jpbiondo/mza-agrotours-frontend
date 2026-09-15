@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { AtSign, Globe } from "lucide-react";
 
@@ -32,8 +31,8 @@ export default function SiteFooter() {
         className="footer-grid"
       >
         <div>
+          {/* Sin logo: el pano no funciona sobre el verde oscuro del pie. */}
           <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 16 }}>
-            <Image src="/logo-mark.svg" width={36} height={36} alt="" />
             <div style={{ lineHeight: 1 }}>
               <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: "#fff" }}>Mendoza</div>
               <div style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 600, color: "var(--green-300)", marginTop: 2 }}>AgroTours</div>

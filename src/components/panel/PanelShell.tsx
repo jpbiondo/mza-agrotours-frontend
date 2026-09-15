@@ -445,7 +445,7 @@ export default function PanelShell({ children }: { children: ReactNode }) {
             href="/panel"
             className="flex min-w-0 flex-1 items-center gap-2.5 px-5 pt-5 pb-4 no-underline"
           >
-            <Image src="/logo-mark.svg" width={32} height={32} alt="" />
+            <Image src="/logo-pano.svg" width={45} height={30} alt="" />
             <span className="leading-none">
               <span className="block font-display text-[17px] font-bold text-green-800">
                 Mendoza

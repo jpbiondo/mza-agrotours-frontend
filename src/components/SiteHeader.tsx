@@ -77,7 +77,7 @@ export default function SiteHeader({ navLinks = APP_LINKS, maxWidth = 1200 }: Si
         className="mx-auto flex h-[68px] items-center justify-between gap-6 px-7"
       >
         <Link href="/" className="flex items-center gap-[11px] no-underline">
-          <Image src="/logo-mark.svg" width={36} height={36} alt="Mendoza AgroTours logo" />
+          <Image src="/logo-pano.svg" width={45} height={30} alt="Mendoza AgroTours logo" />
           <div className="leading-none">
             <div className="font-display text-[18px] font-bold text-green-800">Mendoza</div>
             <div className="mt-0.5 text-[10px] font-semibold tracking-[.12em] text-brown-700 uppercase">

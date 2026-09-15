@@ -2,7 +2,7 @@ import type { ParamField, ParametroKey, Parametros } from "@/types/parametros";
 
 /** Valores actuales de los parámetros (semilla). */
 export const PARAM_SEED: Parametros = {
-  logo: "/logo-mark.svg",
+  logo: "/logo-pano.svg",
   nombre: "Mendoza AgroTours",
   moneda: "ARS ($)",
   cvu: "0000003100010000000001",

@@ -455,7 +455,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             href="/"
             className="flex min-w-0 flex-1 items-center gap-2.5 px-5 pt-5 pb-4 no-underline"
           >
-            <Image src="/logo-mark.svg" alt="" width={32} height={32} />
+            <Image src="/logo-pano.svg" alt="" width={45} height={30} />
             <div className="leading-none">
               <div className="font-display text-[17px] font-bold text-green-800">
                 Mendoza

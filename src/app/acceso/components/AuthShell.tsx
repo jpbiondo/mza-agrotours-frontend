@@ -30,7 +30,7 @@ export function AuthHeader({ onHome }: { onHome?: () => void }) {
         }}
       >
         <div onClick={onHome} style={{ display: "flex", alignItems: "center", gap: 11, cursor: "pointer" }}>
-          <Image src="/logo-mark.svg" width={36} height={36} alt="Mendoza AgroTours logo" />
+          <Image src="/logo-pano.svg" width={45} height={30} alt="Mendoza AgroTours logo" />
           <div style={{ lineHeight: 1 }}>
             <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: "var(--green-800)" }}>Mendoza</div>
             <div style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 600, color: "var(--brown-700)", marginTop: 2 }}>AgroTours</div>
