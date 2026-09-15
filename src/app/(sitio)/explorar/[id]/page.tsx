@@ -1,29 +1,18 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { ACTIVIDADES } from "@/data/actividades";
-import { getActividadDetalle } from "@/data/actividad-detalle";
 import DetalleClient from "./DetalleClient";
 
-export function generateStaticParams() {
-  return ACTIVIDADES.map((a) => ({ id: a.id }));
-}
-
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
-  const a = getActividadDetalle(id);
-  if (!a) return { title: "Actividad no encontrada · Mendoza AgroTours" };
-  return {
-    title: `${a.titulo} · Mendoza AgroTours`,
-    description: a.descripcion[0],
-  };
-}
+/* El detalle sale del backend en el cliente, así que la metadata no puede
+   nombrar la actividad. TODO backend: si hiciera falta para SEO, habría que
+   pedir `GET /actividades/{id}` también acá en `generateMetadata`. */
+export const metadata: Metadata = {
+  title: "Actividad · Mendoza AgroTours",
+  description: "Mirá qué incluye la experiencia, dónde es y cuánto sale antes de reservar.",
+};
 
 export default async function DetalleActividadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const a = getActividadDetalle(id);
-  if (!a) notFound();
 
   return (
-    <DetalleClient a={a} />
+    <DetalleClient id={id} />
   );
 }

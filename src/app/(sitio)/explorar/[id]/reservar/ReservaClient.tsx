@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, ChevronRight as Crumb,
 } from "lucide-react";
 import { moneyAr } from "@/lib/format";
-import { NOMBRES_DIA } from "@/data/actividad-detalle";
+import { NOMBRES_DIA } from "@/data/calendario";
 import {
   precioRango, evalViajero, fechaLabel,
   type Viajero, type InfoParaReservar,

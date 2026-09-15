@@ -1,8 +1,9 @@
-import type { Actividad, FilterOption } from "@/types/catalogo";
+import type { Actividad } from "@/types/catalogo";
 
-export type { FilterOption };
-
-/** Catálogo completo de actividades publicadas. */
+/**
+ * Catálogo mock que le queda a la landing. `/explorar` ya sale del backend
+ * (`useCatalogoActividades`); esta sección se migra cuando se la toque.
+ */
 export const ACTIVIDADES: Actividad[] = [
   { id: "ACT-7K2M", nombre: "Cosecha de Malbec al amanecer", finca: "Finca La Escondida", depto: "Luján de Cuyo", cultivos: ["Malbec"], rating: 4.9, resenias: 47, precioAdulto: 12500, tipo: "Cosecha", tag: "Cupos limitados", seed: 0 },
   { id: "ACT-9C1R", nombre: "Degustación guiada de varietales", finca: "Bodega Los Álamos", depto: "Luján de Cuyo", cultivos: ["Malbec", "Cabernet Sauvignon"], rating: 4.8, resenias: 33, precioAdulto: 9800, tipo: "Degustación", tag: null, seed: 1 },
@@ -29,24 +30,3 @@ export const ACTIVIDADES_DESTACADAS: Actividad[] = [
   "ACT-7K2M", "ACT-8B3K", "ACT-9C1R", "ACT-8N2W", "ACT-9L1C", "ACT-2H6L",
 ].map((id) => ACTIVIDADES.find((a) => a.id === id)!).filter(Boolean);
 
-/** Opciones del filtro por cultivo, derivadas del catálogo. */
-export const CULTIVO_OPTS: FilterOption[] = (() => {
-  const counts: Record<string, number> = {};
-  ACTIVIDADES.forEach((a) => a.cultivos.forEach((c) => { counts[c] = (counts[c] || 0) + 1; }));
-  return Object.keys(counts)
-    .sort((a, b) => a.localeCompare(b, "es"))
-    .map((c) => ({ value: c, label: c, count: counts[c] }));
-})();
-
-/** Opciones del filtro por departamento, derivadas del catálogo. */
-export const DEPTO_OPTS: FilterOption[] = (() => {
-  const counts: Record<string, number> = {};
-  ACTIVIDADES.forEach((a) => { counts[a.depto] = (counts[a.depto] || 0) + 1; });
-  return Object.keys(counts)
-    .sort((a, b) => a.localeCompare(b, "es"))
-    .map((d) => ({ value: d, label: d, count: counts[d] }));
-})();
-
-export function getActividad(id: string): Actividad | undefined {
-  return ACTIVIDADES.find((a) => a.id === id);
-}
