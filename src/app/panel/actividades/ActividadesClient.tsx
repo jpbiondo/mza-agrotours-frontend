@@ -9,12 +9,13 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Pagination } from "@/components/catalog/controls";
-import { Alert, Button, Card, Modal, Skeleton, Toast } from "@/components/ui";
+import { Alert, Button, Card, EstadoBadge, Modal, Skeleton, Toast } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
 import type { ToastData } from "@/components/ui";
-import { iconoDeCultivos, normalizar } from "@/data/actividades-prod";
+import { iconoDeCultivos } from "@/data/actividades-prod";
+import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
-import { useActividades, useActividadAcciones } from "@/hooks/useActividades";
+import { useActividades, useActividadAcciones, useEstadosActividad } from "@/hooks/useActividades";
 import { moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ActividadProd, EstadoActividad } from "@/types/actividad-prod";
@@ -137,9 +138,12 @@ function ActivityCard({
   onBorrador: () => void;
 }) {
   const IconC = ICONS[iconoDeCultivos(act.cultivos)] ?? Grape;
+  // Una actividad dada de baja no se vuelve a tocar: queda de consulta, sin el
+  // toggle de publicación ni las acciones que la modifican.
+  const deBaja = act.estado === "dado_de_baja";
 
   return (
-    <Card className="overflow-hidden p-0">
+    <Card className={cn("overflow-hidden p-0", deBaja && "opacity-70")}>
       <div className="flex flex-wrap items-start gap-5 p-6">
         <div className="flex size-[54px] shrink-0 items-center justify-center rounded-[14px] border border-outline-variant bg-green-050">
           <IconC className="size-[26px] text-green-700" />
@@ -171,7 +175,13 @@ function ActivityCard({
 
         <div className="flex min-w-[220px] flex-[1_1_240px] flex-col items-start gap-3">
           <div className="self-end">
-            <PublishToggle act={act} busy={busy} onPublicar={onPublicar} onBorrador={onBorrador} />
+            {deBaja ? (
+              <EstadoBadge tone="danger">
+                <Ban className="mr-1.5 size-[13px]" /> Dada de baja
+              </EstadoBadge>
+            ) : (
+              <PublishToggle act={act} busy={busy} onPublicar={onPublicar} onBorrador={onBorrador} />
+            )}
           </div>
 
           <div className="w-full">
@@ -205,40 +215,49 @@ function ActivityCard({
       </div>
 
       <div className="flex flex-wrap justify-end gap-2.5 border-t border-outline-variant bg-cream-tert px-6 py-3.5">
-        <CardAction
-          icon={<Settings2 className="size-[15px] text-fg-2" />}
-          label="Modificar"
-          href={`/panel/actividades/${act.id}/editar`}
-          disabled={suspendido}
-          title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
-        />
-        <CardAction
-          icon={<CalendarPlus className="size-[15px] text-fg-2" />}
-          label="Agregar día"
-          href={`/panel/actividades/${act.id}/editar`}
-          disabled={suspendido}
-          title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
-        />
+        {!deBaja && (
+          <>
+            <CardAction
+              icon={<Settings2 className="size-[15px] text-fg-2" />}
+              label="Modificar"
+              href={`/panel/actividades/${act.id}/editar`}
+              disabled={suspendido}
+              title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
+            />
+            <CardAction
+              icon={<CalendarPlus className="size-[15px] text-fg-2" />}
+              label="Agregar día"
+              href={`/panel/actividades/${act.id}/editar`}
+              disabled={suspendido}
+              title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
+            />
+          </>
+        )}
         <CardAction icon={<CalendarDays className="size-[15px] text-fg-2" />} label="Ver calendario" href={`/panel/actividades/${act.id}/calendario`} />
-        <CardAction icon={<Trash2 className="size-[15px] text-danger" />} label="Eliminar" danger onClick={onEliminar} />
+        {!deBaja && <CardAction icon={<Trash2 className="size-[15px] text-danger" />} label="Eliminar" danger onClick={onEliminar} />}
       </div>
     </Card>
   );
 }
 
 /* ---- Selector de estado ------------------------------------------------- */
+/** Etiqueta de cada estado: el backend manda el contador sin el nombre. */
+const OPCIONES_ESTADO: { value: "todas" | EstadoActividad; label: string; icon: React.ReactNode }[] = [
+  { value: "todas", label: "Todas", icon: <LayoutGrid className="size-[15px]" /> },
+  { value: "borrador", label: "Borrador", icon: <FilePenLine className="size-[15px]" /> },
+  { value: "publicado", label: "Publicado", icon: <Eye className="size-[15px]" /> },
+  { value: "dado_de_baja", label: "Dadas de baja", icon: <Ban className="size-[15px]" /> },
+];
+
 function EstadoSelector({
   value, onChange, counts,
 }: {
   value: string;
   onChange: (v: "todas" | EstadoActividad) => void;
-  counts: Record<string, number>;
+  /** `null` mientras la faceta carga o si falló: ahí no se muestra contador. */
+  counts: Record<string, number> | null;
 }) {
-  const opciones: { value: "todas" | EstadoActividad; label: string; icon: React.ReactNode }[] = [
-    { value: "todas", label: "Todas", icon: <LayoutGrid className="size-[15px]" /> },
-    { value: "borrador", label: "Borrador", icon: <FilePenLine className="size-[15px]" /> },
-    { value: "publicado", label: "Publicado", icon: <Eye className="size-[15px]" /> },
-  ];
+  const opciones = OPCIONES_ESTADO;
   return (
     <div
       role="group"
@@ -260,14 +279,16 @@ function EstadoSelector({
           >
             <span className={cn("inline-flex", sel ? "text-fg-on-dark" : "text-fg-3")}>{o.icon}</span>
             {o.label}
-            <span
-              className={cn(
-                "min-w-5 rounded-pill px-1.5 py-px text-center font-mono text-[11.5px] font-bold",
-                sel ? "bg-white/20 text-fg-on-dark" : "border border-outline-variant bg-surface text-fg-2",
-              )}
-            >
-              {counts[o.value] ?? 0}
-            </span>
+            {counts && (
+              <span
+                className={cn(
+                  "min-w-5 rounded-pill px-1.5 py-px text-center font-mono text-[11.5px] font-bold",
+                  sel ? "bg-white/20 text-fg-on-dark" : "border border-outline-variant bg-surface text-fg-2",
+                )}
+              >
+                {counts[o.value] ?? 0}
+              </span>
+            )}
           </button>
         );
       })}
@@ -306,17 +327,27 @@ export default function ActividadesClient() {
   const { activo } = useEstablecimientos();
   const establecimientoId = activo?.id ?? "";
   const suspendido = !!activo?.establecimientoSuspendido;
-  const { data, isLoading, error, reload } = useActividades(establecimientoId);
+  const { texto, setTexto, busqueda, aplicarYa, limpiar } = useBusquedaDiferida();
+  const [estadoF, setEstadoF] = useState<"todas" | EstadoActividad>("todas");
+  // 0-based, igual que el `Pageable` del backend; la paginación se muestra en 1-based.
+  const [page, setPage] = useState(0);
+
+  // Búsqueda, filtro por estado y paginado los resuelve el backend, así que
+  // cualquier cambio vuelve a pedir el listado.
+  const { data, isLoading, error, reload } = useActividades({
+    establecimientoId,
+    busqueda,
+    estado: estadoF === "todas" ? null : estadoF,
+    page,
+    size: PAGE_SIZE,
+  });
+  const estados = useEstadosActividad(establecimientoId);
   const { darDeBaja, cambiarEstado, pendingId } = useActividadAcciones();
 
   // Las acciones todavía no persisten: el override deja ver el resultado en la
-  // tarjeta sin volver a pedir el listado. Se descarta al recargar.
+  // tarjeta sin volver a pedir el listado. Se descarta al recargar, y no mueve
+  // los contadores del selector, que ahora los cuenta el backend.
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
-  // Las dadas de baja no vuelven en el listado, así que se sacan de la vista.
-  const [eliminadas, setEliminadas] = useState<Set<string>>(() => new Set());
-  const [query, setQuery] = useState("");
-  const [estadoF, setEstadoF] = useState<"todas" | EstadoActividad>("todas");
-  const [page, setPage] = useState(1);
   const [toDelete, setToDelete] = useState<ActividadProd | null>(null);
   const [blocked, setBlocked] = useState<ActividadProd | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
@@ -327,31 +358,30 @@ export default function ActividadesClient() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const acts = useMemo(
-    () =>
-      (data ?? [])
-        .filter((a) => !eliminadas.has(a.id))
-        .map((a) => (overrides[a.id] ? { ...a, ...overrides[a.id] } : a)),
-    [data, overrides, eliminadas],
+  const visibles = useMemo(
+    () => (data?.items ?? []).map((a) => (overrides[a.id] ? { ...a, ...overrides[a.id] } : a)),
+    [data, overrides],
   );
 
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { todas: acts.length, borrador: 0, publicado: 0 };
-    acts.forEach((a) => { c[a.estado]++; });
-    return c;
-  }, [acts]);
+  const total = data?.totalElements ?? 0;
+  const hayFiltros = busqueda !== "" || estadoF !== "todas";
+  // Sin filtros y sin resultados: el establecimiento todavía no cargó ninguna,
+  // que no es lo mismo que "tu búsqueda no encontró nada".
+  const sinActividades = data !== null && total === 0 && !hayFiltros;
 
-  const filtradas = useMemo(() => {
-    let arr = acts;
-    if (estadoF !== "todas") arr = arr.filter((a) => a.estado === estadoF);
-    const q = normalizar(query.trim());
-    if (q) arr = arr.filter((a) => normalizar(a.nombre).includes(q));
-    return arr;
-  }, [acts, query, estadoF]);
+  // "Todas" es la suma de los tres, que es lo mismo que cuenta el listado sin
+  // filtro. Si la faceta no cargó no se inventa un 0: no se muestra contador.
+  const counts: Record<string, number> | null = estados.data && {
+    ...estados.data,
+    todas: estados.data.publicado + estados.data.borrador + estados.data.dado_de_baja,
+  };
 
-  const pages = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE));
-  const pageSafe = Math.min(page, pages);
-  const visibles = filtradas.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE);
+  // Cualquier cambio de criterio vuelve a la primera página: la que estabas
+  // mirando puede no existir con los resultados nuevos.
+  const escribir = (v: string) => { setTexto(v); setPage(0); };
+  const elegirEstado = (v: "todas" | EstadoActividad) => { setEstadoF(v); setPage(0); };
+  const limpiarBusqueda = () => { limpiar(); setPage(0); };
+  const limpiarTodo = () => { limpiar(); setEstadoF("todas"); setPage(0); };
 
   const pedirBaja = (act: ActividadProd) => {
     if ((act.reservasPagadas ?? 0) > 0) setBlocked(act);
@@ -360,7 +390,9 @@ export default function ActividadesClient() {
 
   async function confirmDelete(act: ActividadProd) {
     await darDeBaja(act.id);
-    setEliminadas((s) => new Set(s).add(act.id));
+    // La fila no desaparece del listado: el backend la devuelve como dada de
+    // baja y la ordena al final. El override refleja eso hasta la próxima carga.
+    setOverrides((o) => ({ ...o, [act.id]: { ...o[act.id], estado: "dado_de_baja" } }));
     setToDelete(null);
     setToast({ tone: "success", title: "La actividad se dio de baja correctamente.", sub: `«${act.nombre}»` });
   }
@@ -374,8 +406,6 @@ export default function ActividadesClient() {
       sub: `«${act.nombre}» · estado ${nuevo === "publicado" ? "Publicado" : "Borrador"}.`,
     });
   }
-
-  const sinActividades = !isLoading && !error && acts.length === 0;
 
   return (
     <div className="min-h-screen bg-cream-bg">
@@ -431,7 +461,9 @@ export default function ActividadesClient() {
           skeleton={<ListadoSkeleton />}
           pad={72}
         >
-          {sinActividades ? (
+          {/* Sin establecimiento elegido ya avisa el Alert de arriba: no tiene
+              sentido dibujar la barra de filtros ni un "0 actividades". */}
+          {!establecimientoId ? null : sinActividades ? (
             <Card className="border-dashed border-sand px-8 py-16 text-center">
               <div className="mb-5 inline-flex size-[72px] items-center justify-center rounded-full border border-green-100 bg-green-050">
                 <Grape className="size-[34px] text-green-700" />
@@ -455,31 +487,36 @@ export default function ActividadesClient() {
           ) : (
             <>
               <div className="mb-6 flex flex-wrap items-center gap-4">
-                <div className="relative max-w-[460px] min-w-[280px] flex-1">
+                <form
+                  role="search"
+                  onSubmit={(e) => { e.preventDefault(); aplicarYa(); }}
+                  className="relative max-w-[460px] min-w-[280px] flex-1"
+                >
                   <Search className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-fg-3" />
                   <input
                     type="text"
-                    value={query}
-                    onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                    value={texto}
+                    onChange={(e) => escribir(e.target.value)}
                     placeholder="Buscá por nombre de actividad…"
                     aria-label="Buscar actividad"
+                    autoComplete="off"
                     className="h-11 w-full rounded-md border border-sand bg-surface pr-10 pl-[42px] text-[14.5px] text-fg-1 outline-none transition-colors placeholder:text-fg-3 focus-visible:border-green-800 focus-visible:ring-3 focus-visible:ring-green-800/20"
                   />
-                  {query && (
+                  {texto && (
                     <button
                       type="button"
-                      onClick={() => { setQuery(""); setPage(1); }}
+                      onClick={limpiarBusqueda}
                       aria-label="Limpiar búsqueda"
                       className="absolute top-1/2 right-2.5 -translate-y-1/2 cursor-pointer p-1 text-fg-3 hover:text-fg-2"
                     >
                       <X className="size-4" />
                     </button>
                   )}
-                </div>
+                </form>
                 <div className="text-[13.5px] text-fg-2">
-                  <strong className="font-semibold text-fg-1">{filtradas.length}</strong>{" "}
-                  {filtradas.length === 1 ? "actividad" : "actividades"}
-                  {query ? " encontradas" : ""}
+                  <strong className="font-semibold text-fg-1">{total}</strong>{" "}
+                  {total === 1 ? "actividad" : "actividades"}
+                  {hayFiltros ? (total === 1 ? " encontrada" : " encontradas") : ""}
                 </div>
               </div>
 
@@ -487,26 +524,21 @@ export default function ActividadesClient() {
                 <span className="t-label inline-flex items-center gap-[7px]">
                   <SlidersHorizontal className="size-3.5 text-fg-2" /> Estado
                 </span>
-                <EstadoSelector
-                  value={estadoF}
-                  onChange={(v) => { setEstadoF(v); setPage(1); }}
-                  counts={counts}
-                />
+                <EstadoSelector value={estadoF} onChange={elegirEstado} counts={counts} />
               </div>
 
-              {filtradas.length === 0 ? (
+              {total === 0 ? (
                 <Card className="px-8 py-14 text-center">
                   <div className="mb-[18px] inline-flex size-[60px] items-center justify-center rounded-full bg-cream-tert">
                     <SearchX className="size-7 text-fg-3" />
                   </div>
                   <h3 className="mb-1.5 font-display text-xl font-bold text-fg-1">Sin coincidencias</h3>
                   <p className="mx-auto mb-5 max-w-[380px] text-[15px] text-fg-2">
-                    No hay actividades para los filtros elegidos.
+                    {busqueda !== ""
+                      ? "Ninguna actividad coincide con lo que buscaste."
+                      : "No hay actividades para los filtros elegidos."}
                   </p>
-                  <Button
-                    variant="neutral"
-                    onClick={() => { setQuery(""); setEstadoF("todas"); setPage(1); }}
-                  >
+                  <Button variant="neutral" onClick={limpiarTodo}>
                     <RotateCcw className="size-[17px]" /> Limpiar filtros
                   </Button>
                 </Card>
@@ -526,7 +558,8 @@ export default function ActividadesClient() {
                 </div>
               )}
 
-              <Pagination page={pageSafe} pages={pages} onPage={setPage} />
+              {/* El backend numera desde 0 y la paginación desde 1. */}
+              <Pagination page={page + 1} pages={data?.totalPages ?? 1} onPage={(n) => setPage(n - 1)} />
             </>
           )}
         </AsyncBoundary>
