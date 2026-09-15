@@ -7,19 +7,19 @@ import FaqSection from "@/components/landing/FaqSection";
 import ContactoSection from "@/components/landing/ContactoSection";
 import SiteFooter from "@/components/landing/SiteFooter";
 
-// El landing navega por anclas de sección (misma página), salvo
-// Establecimientos, que va al catálogo completo.
 const LANDING_LINKS: NavLink[] = [
-  { id: "actividades", href: "#actividades", label: "Actividades" },
-  { id: "establecimientos", href: "/establecimientos", label: "Establecimientos" },
+  { id: "explorar", href: "#actividades", label: "Actividades" },
+  { id: "establecimientos", href: "#establecimientos", label: "Establecimientos" },
+  { id: "cultivos", href: "/cultivos", label: "Cultivos" },
+  { id: "recetas", href: "/recetas", label: "Recetas" },
   { id: "faq", href: "#faq", label: "Preguntas frecuentes" },
-  { id: "contacto", href: "#contacto", label: "Contacto" },
+  { id: "contacto", href: "#contacto", label: "Contacto"},
 ];
 
 export default function Home() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
-      <SiteHeader navLinks={LANDING_LINKS} maxWidth={1160} />
+      <SiteHeader navLinks={LANDING_LINKS}/>
       <main>
         <Hero />
         <ActividadesSection />
