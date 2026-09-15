@@ -45,6 +45,25 @@ export function rolesDe(accesos: Acceso[] | undefined): Rol[] {
 }
 
 /**
+ * Jerarquía de los tipos de acceso, del de mayor alcance al de menor. Va como
+ * `Record` y no como array para que sumar un `Rol` no compile hasta decidir en
+ * qué posición entra.
+ */
+const ORDEN_ROL: Record<Rol, number> = { admin: 0, productor: 1, visitante: 2 };
+
+/**
+ * Los roles ordenados por jerarquía: administrador, productor y visitante.
+ *
+ * `rolesDe` respeta el orden en que el backend mandó los accesos, que no está
+ * garantizado, así que donde se muestran los roles juntos conviene fijarlo para
+ * que no se muevan de lugar entre una carga y otra.
+ */
+export function ordenarRoles(roles: Rol[]): Rol[] {
+  // Copia: el array puede venir del store y ordenar in situ lo mutaría.
+  return [...roles].sort((a, b) => ORDEN_ROL[a] - ORDEN_ROL[b]);
+}
+
+/**
  * Ámbito donde se busca un rol o un permiso. Ni uno ni otro son globales:
  * aplican dentro de un `tipoPermiso` y, cuando ése es PRODUCTOR, dentro de un
  * establecimiento —el mismo criterio de `establecimientosDe`—, porque alguien
