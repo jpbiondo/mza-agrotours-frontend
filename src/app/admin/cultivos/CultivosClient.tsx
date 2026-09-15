@@ -71,6 +71,7 @@ function mensajeBaja(code?: string): string {
  * que no publica: sin ella el mensaje mentiría.
  */
 function motivoNoBorrable(c: CultivoCatalogo): string {
+  if (c.cantidadRecetas > 0 && c.cantidadActividades > 0) return "No se puede eliminar con recetas y actividades vigentes asociadas";
   if (c.cantidadRecetas > 0) return "No se puede eliminar con recetas asociadas";
   if (c.cantidadActividades > 0) return "No se puede eliminar con actividades vigentes";
   return "Este cultivo no se puede eliminar";
