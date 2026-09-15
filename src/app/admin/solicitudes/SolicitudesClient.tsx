@@ -31,7 +31,7 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Button, Card, EstadoBadge } from "@/components/ui";
+import { Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { admInitials } from "@/data/admin";
@@ -107,6 +107,36 @@ function EstabTile({
 /* =========================== LISTADO =========================== */
 
 type Filtro = "todas" | EstadoSolicitud;
+
+/** La última va vacía: es la columna del botón de acción, alineada a la derecha. */
+const COLUMNAS = [
+  "Establecimiento",
+  "Departamento",
+  "Solicitado",
+  "Estado",
+  "",
+];
+
+/** Compartido entre la tabla y su esqueleto, para que no se desalineen. */
+function TablaHead() {
+  return (
+    <thead>
+      <tr>
+        {COLUMNAS.map((h, i) => (
+          <th
+            key={i}
+            className={cn(
+              "border-b-2 border-outline-variant px-[18px] py-3.5 text-[12.5px] font-bold tracking-[.05em] text-fg-2 uppercase whitespace-nowrap",
+              i === COLUMNAS.length - 1 ? "text-right" : "text-left",
+            )}
+          >
+            {h}
+          </th>
+        ))}
+      </tr>
+    </thead>
+  );
+}
 
 function List({
   solicitudes,
@@ -274,27 +304,7 @@ function List({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[880px] border-collapse">
-              <thead>
-                <tr>
-                  {[
-                    "Establecimiento",
-                    "Departamento",
-                    "Solicitado",
-                    "Estado",
-                    "",
-                  ].map((h, i) => (
-                    <th
-                      key={i}
-                      className={cn(
-                        "border-b-2 border-outline-variant px-[18px] py-3.5 text-[12.5px] font-bold tracking-[.05em] text-fg-2 uppercase whitespace-nowrap",
-                        i === 4 ? "text-right" : "text-left",
-                      )}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
+              <TablaHead />
               <tbody>
                 {visibles.map((s) => (
                   <tr key={s.id} className="border-b border-cream-tert">
@@ -349,6 +359,89 @@ function List({
             </table>
           </div>
         )}
+      </Card>
+    </div>
+  );
+}
+
+/**
+ * Esqueleto del listado. Repite la página entera —migas, título, métricas,
+ * buscador y tabla— porque el `AsyncBoundary` envuelve a `List` completa: si
+ * sólo se dibujara la tabla, el contenido aparecería 200px más arriba.
+ *
+ * El `<thead>` va con su texto real: las columnas son fijas, no hace falta
+ * esperarlas.
+ */
+function ListSkeleton() {
+  return (
+    <div className="mx-auto max-w-[1180px] px-7 pt-7 pb-20">
+      <Skeleton className="mb-3.5 h-4 w-64" />
+
+      <div className="mb-[22px]">
+        <Skeleton className="h-9 w-[420px] max-w-full" />
+        <div className="mt-2.5 flex max-w-[720px] flex-col gap-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/5" />
+        </div>
+      </div>
+
+      <div className="mb-5 flex flex-wrap gap-3.5">
+        {Array.from({ length: 3 }, (_, i) => (
+          <Card
+            key={i}
+            className="flex min-w-[180px] items-center gap-3 px-4 py-3"
+          >
+            <Skeleton className="size-[42px] shrink-0 rounded-[10px]" />
+            <div>
+              <Skeleton className="h-6 w-8" />
+              <Skeleton className="mt-1.5 h-3 w-20" />
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Skeleton className="h-11 min-w-[240px] flex-1" />
+        <div className="flex flex-wrap gap-2">
+          {["w-32", "w-30", "w-32", "w-22"].map((w) => (
+            <Skeleton key={w} className={cn("h-9.5 rounded-pill", w)} />
+          ))}
+        </div>
+      </div>
+
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[880px] border-collapse">
+            <TablaHead />
+            <tbody>
+              {Array.from({ length: 5 }, (_, i) => (
+                <tr key={i} className="border-b border-cream-tert">
+                  <td className="max-w-[360px] px-[18px] py-[15px]">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="size-11 shrink-0 rounded-[10px]" />
+                      <div className="min-w-0 flex-1">
+                        <Skeleton className="h-4.5 w-44" />
+                        <Skeleton className="mt-1.5 h-3.5 w-28" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-[18px] py-[15px]">
+                    <Skeleton className="h-4 w-28" />
+                  </td>
+                  <td className="px-[18px] py-[15px]">
+                    <Skeleton className="h-4 w-32" />
+                  </td>
+                  <td className="px-[18px] py-[15px]">
+                    <Skeleton className="h-6 w-22 rounded-pill" />
+                  </td>
+                  <td className="px-[18px] py-[15px]">
+                    <Skeleton className="ml-auto h-7.5 w-24" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
     </div>
   );
@@ -808,6 +901,138 @@ function Detail({
   );
 }
 
+/** Misma caja que `SectionBox`, con el icono y el título en barras. */
+function SectionBoxSkeleton({
+  tituloAncho = "w-48",
+  children,
+}: {
+  tituloAncho?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <header className="flex items-center gap-[11px] border-b border-cream-tert px-[22px] py-4">
+        <Skeleton className="size-[30px] rounded-lg" />
+        <Skeleton className={cn("h-4.5", tituloAncho)} />
+      </header>
+      <div className="px-[22px] pt-2 pb-[22px]">{children}</div>
+    </Card>
+  );
+}
+
+function CampoSkeleton({
+  span,
+  ancho = "w-3/5",
+}: {
+  span?: boolean;
+  ancho?: string;
+}) {
+  return (
+    <div className={cn("min-w-0", span && "sm:col-span-2")}>
+      <Skeleton className="mb-1.5 h-2.5 w-28" />
+      <Skeleton className={cn("h-4", ancho)} />
+    </div>
+  );
+}
+
+/**
+ * Esqueleto de la ficha. Repite el encabezado y las dos columnas de `Detail`.
+ * La tarjeta de acciones se dibuja porque el listado abre en "Pendientes" por
+ * defecto, que es el único estado donde `Detail` la muestra.
+ */
+function DetailSkeleton() {
+  return (
+    <div className="mx-auto max-w-[1080px] px-7 pt-6 pb-24">
+      <Skeleton className="mb-3.5 h-4 w-44" />
+
+      <div className="mb-6 flex min-w-0 items-center gap-4">
+        <Skeleton className="size-14 shrink-0 rounded-xl" />
+        <div className="min-w-0 flex-1">
+          <Skeleton className="h-8 w-[360px] max-w-full" />
+          <div className="mt-[11px] flex flex-wrap items-center gap-3.5">
+            <Skeleton className="h-10 w-28 rounded-pill" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-52" />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <SectionBoxSkeleton tituloAncho="w-36">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div
+                key={i}
+                className="border-b border-dashed border-cream-tert py-4"
+              >
+                <Skeleton className="mb-1.5 h-2.5 w-24" />
+                <Skeleton className="h-4 w-2/5" />
+              </div>
+            ))}
+          </SectionBoxSkeleton>
+
+          <SectionBoxSkeleton tituloAncho="w-56">
+            <div className="grid grid-cols-1 gap-[18px] pt-2 sm:grid-cols-2">
+              <CampoSkeleton ancho="w-2/5" />
+              <CampoSkeleton ancho="w-4/5" />
+              <CampoSkeleton ancho="w-2/5" />
+              <CampoSkeleton />
+              <CampoSkeleton span ancho="w-full" />
+            </div>
+          </SectionBoxSkeleton>
+
+          <SectionBoxSkeleton tituloAncho="w-64">
+            <Skeleton className="mt-1.5 mb-3.5 h-3.5 w-80 max-w-full" />
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3.5">
+              {Array.from({ length: 3 }, (_, i) => (
+                <div
+                  key={i}
+                  className="overflow-hidden rounded-md border border-outline-variant bg-surface"
+                >
+                  <Skeleton className="h-[108px] rounded-none" />
+                  <div className="border-t border-cream-tert px-3 py-2.5">
+                    <Skeleton className="h-3.5 w-4/5" />
+                    <Skeleton className="mt-[3px] ml-auto h-3 w-10" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionBoxSkeleton>
+        </div>
+
+        <aside className="flex flex-col gap-6">
+          <SectionBoxSkeleton tituloAncho="w-44">
+            <div className="flex items-center gap-3 border-b border-dashed border-cream-tert pt-2 pb-3.5">
+              <Skeleton className="size-11 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="mt-1.5 h-3 w-28" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2.5 pt-3">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </SectionBoxSkeleton>
+
+          <SectionBoxSkeleton tituloAncho="w-32">
+            <Skeleton className="mt-2 h-[120px]" />
+            <div className="mt-[7px] flex items-center justify-between">
+              <Skeleton className="h-3 w-36" />
+              <Skeleton className="h-3 w-12" />
+            </div>
+          </SectionBoxSkeleton>
+
+          <Card className="flex flex-col gap-2.5 p-[18px]">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </Card>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
 /** Carga el detalle de la solicitud abierta y delega el render. */
 function DetalleCargado({
   id,
@@ -846,7 +1071,7 @@ function DetalleCargado({
         loading={isLoading}
         error={error}
         onRetry={reload}
-        loadingLabel="Cargando la solicitud…"
+        skeleton={<DetailSkeleton />}
         pad={72}
       >
         {notFound || !solicitud ? (
@@ -918,7 +1143,7 @@ function Inner() {
           loading={isLoading}
           error={error}
           onRetry={reload}
-          loadingLabel="Cargando solicitudes…"
+          skeleton={<ListSkeleton />}
         >
           <List solicitudes={solicitudes} onOpen={setAbierta} />
         </AsyncBoundary>
