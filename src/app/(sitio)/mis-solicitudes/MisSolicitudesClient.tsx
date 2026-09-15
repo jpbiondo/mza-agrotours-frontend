@@ -7,7 +7,7 @@ import {
   Loader, PlusCircle, Building2, MapPin, CalendarDays, ChevronRight, Inbox,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { EstadoBadge } from "@/components/ui";
+import { EstadoBadge, Skeleton } from "@/components/ui";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { fmtFechaHora } from "@/lib/format";
 import { useMisSolicitudes } from "@/hooks/useMisSolicitudes";
@@ -53,6 +53,31 @@ function SolicitudRow({ s }: { s: SolicitudResumen }) {
       <EstadoBadge tone={meta?.tone ?? "neutral"}>{meta?.label ?? "Sin estado"}</EstadoBadge>
       <ChevronRight className="size-[18px] shrink-0 text-fg-3" />
     </Link>
+  );
+}
+
+/** Misma caja y mismo alto que `SolicitudRow`, para que la lista no salte. */
+function ListaSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      {Array.from({ length: 3 }, (_, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-[18px] rounded-md border border-outline-variant bg-surface px-5 py-[18px]"
+        >
+          <Skeleton className="size-11 shrink-0 rounded-[10px]" />
+          <div className="min-w-0 flex-1">
+            <Skeleton className="h-5 w-[55%]" />
+            <div className="mt-2.5 flex flex-wrap items-center gap-3.5">
+              <Skeleton className="h-3.5 w-38" />
+              <Skeleton className="h-3.5 w-48" />
+            </div>
+          </div>
+          <Skeleton className="h-6 w-22 shrink-0 rounded-pill" />
+          <Skeleton className="size-[18px] shrink-0" />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -107,7 +132,7 @@ export default function MisSolicitudesClient() {
         loading={isLoading}
         error={error}
         onRetry={reload}
-        loadingLabel="Cargando tus solicitudes…"
+        skeleton={<ListaSkeleton />}
         pad={72}
       >
         {solicitudes.length === 0 ? (
