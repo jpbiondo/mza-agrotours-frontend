@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
-import { apiFetch, comoEnvelope } from "@/lib/api";
+import { apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
 import { aCultivos } from "@/hooks/useTiposCultivo";
 import type { ActividadProd, DiaHorario, EstadoActividad } from "@/types/actividad-prod";
 
+/**
+ * El listado de un establecimiento es chico, así que se pide una sola página grande
+ */
 function actividadesPath(establecimientoId: string): string {
-  return `/establecimientos/${encodeURIComponent(establecimientoId)}/actividades`;
+  const qs = new URLSearchParams({ page: "0", size: "200" });
+  return `/establecimientos/${encodeURIComponent(establecimientoId)}/actividades?${qs.toString()}`;
 }
 
 /** Fila cruda del listado. Todo opcional: defensivo. */
@@ -107,7 +111,7 @@ export function useActividades(establecimientoId: string): UseActividadesReturn 
         const env = comoEnvelope<unknown>(r);
         setRes(
           env.ok
-            ? { clave, data: aActividades(env.data), error: null }
+            ? { clave, data: aActividades(comoPagina<unknown>(env.data).items), error: null }
             : { clave, data: null, error: env.code ?? "No pudimos cargar las actividades" },
         );
       } catch (e) {
