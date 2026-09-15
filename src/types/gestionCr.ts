@@ -5,7 +5,7 @@ export type Estacion = "h" | "g" | "r";
 
 /* ---- Catálogo de cultivos (wireado) -------------------------------------- */
 
-/** Fila de GET /tipos-cultivo/catalogo. */
+/** Fila de GET /admin/tipos-cultivo/catalogo. */
 export interface CultivoCatalogo {
   id: string;
   nombre: string;
@@ -29,7 +29,7 @@ export interface FilaNutricional {
 
 /**
  * Datos editables de un cultivo: es a la vez lo que devuelve
- * GET /tipos-cultivo/{id} y lo que se manda en el alta y la edición.
+ * GET /admin/tipos-cultivo/{id} y lo que se manda en el alta y la edición.
  *
  * `calendario` es la representación interna, la que entienden el editor y la
  * barra. La traducción a `estacionalidadPorMes` vive en el borde del hook, así

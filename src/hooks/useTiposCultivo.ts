@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../firebase.config";
+import { useAsync } from "@/hooks/useAsync";
 import { apiFetch, comoEnvelope } from "@/lib/api";
 import type { CultivoRef } from "@/types/datos";
 
-const TIPOS_CULTIVO = "/tipos-cultivo";
+const TIPOS_CULTIVO = "/tipo-cultivo/short";
+
+/** Identidad estable para el "todavía no hay nada": evita invalidar los `useMemo` de quien consume. */
+const SIN_CULTIVOS: CultivoRef[] = [];
 
 interface CultivoBackend {
   id?: string;
@@ -26,54 +27,37 @@ export function aCultivos(v: unknown): CultivoRef[] {
     .filter((c) => c.id !== "");
 }
 
+async function listarCultivos(): Promise<CultivoRef[]> {
+  const env = comoEnvelope<CultivoBackend[]>(await apiFetch<unknown>(TIPOS_CULTIVO));
+  if (!env.ok) throw new Error(env.code ?? "No pudimos cargar los cultivos");
+  return aCultivos(env.data);
+}
+
 /**
- * GET /tipos-cultivo: los cultivos que se pueden asociar, a un establecimiento
- * o a una actividad. `habilitado` deja pedirlo recién cuando hace falta —al
- * abrir un modal, por ejemplo— en vez de en cada carga de pantalla.
+ * GET /tipo-cultivo/short: los cultivos que se pueden asociar, a un
+ * establecimiento, una actividad o una receta. `habilitado` deja pedirlo recién
+ * cuando hace falta —al abrir un modal, por ejemplo— en vez de en cada carga de
+ * pantalla.
+ *
+ * Va contra `/short` y no contra `/tipo-cultivo` a secas porque ese último pasó
+ * a estar paginado: devuelve una `Page` con el resumen completo del cultivo,
+ * mientras que acá sólo hacen falta id y nombre para llenar el selector.
+ * `/short` devuelve la lista entera, sin paginar.
+ *
+ * Va **sin token**: `/tipo-cultivo/**` es público. No espera a que Firebase
+ * restaure la sesión porque no tiene nada que esperar, y por eso tampoco puede
+ * fallar por falta de sesión aunque lo usen pantallas que sí la exigen.
  */
 export function useTiposCultivo(habilitado: boolean) {
-  const [cultivos, setCultivos] = useState<CultivoRef[]>([]);
-  // Arranca en carga si ya está habilitado: prenderlo desde el efecto sería un
-  // render de más y un setState sincrónico adentro del efecto.
-  const [isLoading, setIsLoading] = useState(habilitado);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, error } = useAsync<CultivoRef[]>(
+    () => (habilitado ? listarCultivos() : Promise.resolve(SIN_CULTIVOS)),
+    [habilitado],
+  );
 
-  useEffect(() => {
-    if (!habilitado) return;
-    let active = true;
-
-    // Se espera a que Firebase restaure la sesión en vez de leer
-    // `auth.currentUser` de una: cuando el pedido sale al montar la pantalla,
-    // todavía no está poblado y el catálogo quedaba vacío sin decir por qué.
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!active) return;
-      if (!user) {
-        setError("Necesitás iniciar sesión para ver los cultivos");
-        setIsLoading(false);
-        return;
-      }
-      try {
-        const token = await user.getIdToken();
-        const res = await apiFetch<unknown>(TIPOS_CULTIVO, { token });
-        if (!active) return;
-        const env = comoEnvelope<CultivoBackend[]>(res);
-        if (!env.ok) {
-          setError(env.code ?? "No pudimos cargar los cultivos");
-          return;
-        }
-        setCultivos(aCultivos(env.data));
-      } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : "Error inesperado");
-      } finally {
-        if (active) setIsLoading(false);
-      }
-    });
-
-    return () => {
-      active = false;
-      unsub();
-    };
-  }, [habilitado]);
-
-  return { cultivos, isLoading, error };
+  return {
+    cultivos: data ?? SIN_CULTIVOS,
+    // Deshabilitado no es "cargando": el consumidor no tiene nada que esperar.
+    isLoading: habilitado && isLoading,
+    error,
+  };
 }

@@ -1,4 +1,4 @@
-/** Cultivo tal como lo devuelven `/tipos-cultivo` y el establecimiento. */
+/** Cultivo tal como lo devuelven `/tipo-cultivo` y el establecimiento. */
 export interface CultivoRef {
   id: string;
   nombre: string;
