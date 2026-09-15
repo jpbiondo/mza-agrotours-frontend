@@ -115,7 +115,7 @@ export default function CuentaClient({
     <>
       {unauthenticated ? (
         <div className="p-[120px_28px] text-center text-fg-3">
-          <Loader size={26} className="spin" />
+          <Loader size={26} className="spin mx-auto" />
           <div className="mt-3 text-sm">Redirigiendo…</div>
         </div>
       ) : (
