@@ -3,10 +3,7 @@ import { EMAIL_RE, NOMBRE_RE, TELEFONO_MSG, TELEFONO_RE } from "@/data/auth";
 
 const SPECIAL_RE = /[!@#$%^&*(),.?":{}|<>_\-[\]\\/;'`~+=]/;
 
-/**
- * Datos personales de la cuenta. Réplica en zod de `validarPerfil` (data/cuenta),
- * conservando mensajes y orden de chequeo.
- */
+/** Datos personales de la cuenta. */
 export const perfilSchema = z.object({
   nombre: z
     .string()

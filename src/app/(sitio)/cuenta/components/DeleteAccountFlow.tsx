@@ -15,8 +15,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { Modal, Alert, Button, IconCircle } from "@/components/ui";
-import { rolLabel } from "@/data/cuenta";
-import type { CondicionIncumplida, CuentaSesion } from "@/data/cuenta";
+import type { CondicionIncumplida } from "@/data/cuenta";
 import {
   useEliminarCuenta,
   useVerificarCondicionesBaja,
@@ -56,10 +55,10 @@ const condList = "flex list-none flex-col gap-2.5 p-0";
 const modalActions = "flex flex-wrap justify-end gap-3";
 
 export default function DeleteAccountFlow({
-  cuenta,
+  nombre,
   onClose,
 }: {
-  cuenta: CuentaSesion;
+  nombre: string;
   onClose: () => void;
 }) {
   const [step, setStep] = useState<Step>("checking");
@@ -141,8 +140,7 @@ export default function DeleteAccountFlow({
         <h3 className={`mb-2 ${modalTitle}`}>¿Querés eliminar tu cuenta?</h3>
         <p className={`mb-5 ${modalLead}`}>
           Vas a dar de baja la cuenta de{" "}
-          <strong className="text-fg-1">{cuenta.nombre}</strong> (
-          {rolLabel(cuenta.rol)}).
+          <strong className="text-fg-1">{nombre}</strong>.
         </p>
         <Alert tone="warning" className="mb-[18px]">
           Esta acción <strong>no se puede deshacer</strong>. Perderás el acceso
@@ -232,7 +230,7 @@ export default function DeleteAccountFlow({
           Tu cuenta ha sido eliminada
         </h3>
         <p className={`mb-5 text-center ${modalLead}`}>
-          La cuenta de <strong className="text-fg-1">{cuenta.nombre}</strong>{" "}
+          La cuenta de <strong className="text-fg-1">{nombre}</strong>{" "}
           fue dada de baja correctamente.
         </p>
         <div className="mb-6 inline-flex items-center gap-[9px] rounded-md border border-outline-variant bg-cream-tert p-[10px_16px]">

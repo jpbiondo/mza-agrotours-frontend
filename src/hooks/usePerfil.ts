@@ -15,7 +15,6 @@ import type {
   CondicionIncumplida,
   CuentaSesion,
   Perfil,
-  RolCuenta,
 } from "@/data/cuenta";
 import type { BackendProfile, Rol } from "@/types/auth";
 
@@ -27,13 +26,6 @@ interface PerfilState {
   /** No hay sesión de Firebase: la pantalla debe redirigir a /acceso. */
   unauthenticated: boolean;
   reload: () => void;
-}
-
-/** El backend aún no envía roles ni fecha/país; toma un rol primario para la UI. */
-function rolPrimario(roles: Rol[]): RolCuenta {
-  if (roles.includes("admin")) return "admin";
-  if (roles.includes("productor")) return "productor";
-  return "visitante";
 }
 
 /** Campos extra que el backend podría (aún no) incluir en /usuario/me. */
@@ -62,9 +54,7 @@ function aModelos(
     cuenta: {
       nombre: data.nombre,
       email: data.email,
-      rol: rolPrimario(roles),
-      // TODO backend: condiciones reales de baja; por ahora habilitado.
-      condicionesOk: true,
+      roles,
     },
     perfil: {
       nombre: data.nombre,

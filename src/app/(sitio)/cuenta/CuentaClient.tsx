@@ -7,9 +7,9 @@ import AsyncBoundary from "@/components/AsyncBoundary";
 import DatosPersonalesForm from "./components/DatosPersonalesForm";
 import ChangePasswordForm from "./components/ChangePasswordForm";
 import DeleteAccountFlow from "./components/DeleteAccountFlow";
-import { rolLabel } from "@/data/cuenta";
 import type { CuentaSesion, Perfil } from "@/data/cuenta";
 import { usePerfil } from "@/hooks/usePerfil";
+import { ordenarRoles } from "@/lib/roles";
 import { Card, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 
@@ -50,14 +50,22 @@ function Inner({
   return (
     <div className="mx-auto max-w-[820px] p-[40px_28px_80px]">
       <div className="mb-[26px]">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-pill border border-sand bg-cream-tert p-[6px_13px] text-[12.5px] font-semibold text-brown-700">
-          <UserCog size={14} /> {rolLabel(cuenta.rol)}
+        <div className="flex flex-row gap-1 mb-4">
+          {ordenarRoles(cuenta.roles).map((rol) => (
+            <div
+              className="inline-flex items-center gap-2 rounded-pill border border-sand bg-cream-tert p-[6px_13px] text-[12.5px] font-semibold text-brown-700"
+              key={rol}
+            >
+              <UserCog size={14} /> {rol}
+            </div>
+          ))}
         </div>
         <h1 className="m-0 font-display text-[32px] font-bold tracking-[-0.01em] text-fg-1">
           Mi cuenta
         </h1>
         <p className="mt-2.5 text-[15.5px] leading-[1.5] text-fg-2">
-          Actualizá tus datos personales, cambiá tu contraseña o gestioná la baja de tu cuenta.
+          Actualizá tus datos personales, cambiá tu contraseña o gestioná la
+          baja de tu cuenta.
         </p>
       </div>
 
@@ -79,16 +87,24 @@ function Inner({
       )}
 
       {deleting && (
-        <DeleteAccountFlow cuenta={cuenta} onClose={() => setDeleting(false)} />
+        <DeleteAccountFlow
+          nombre={cuenta.nombre}
+          onClose={() => setDeleting(false)}
+        />
       )}
       {toast && <Toast {...toast} />}
     </div>
   );
 }
 
-export default function CuentaClient({ initialTab = "datos" }: { initialTab?: Tab }) {
+export default function CuentaClient({
+  initialTab = "datos",
+}: {
+  initialTab?: Tab;
+}) {
   const router = useRouter();
-  const { cuenta, perfil, isLoading, error, unauthenticated, reload } = usePerfil();
+  const { cuenta, perfil, isLoading, error, unauthenticated, reload } =
+    usePerfil();
 
   // Ruta protegida: sin sesión, a la pantalla de login.
   useEffect(() => {
@@ -99,7 +115,7 @@ export default function CuentaClient({ initialTab = "datos" }: { initialTab?: Ta
     <>
       {unauthenticated ? (
         <div className="p-[120px_28px] text-center text-fg-3">
-          <Loader size={26} className="spin" />
+          <Loader size={26} className="spin mx-auto" />
           <div className="mt-3 text-sm">Redirigiendo…</div>
         </div>
       ) : (
