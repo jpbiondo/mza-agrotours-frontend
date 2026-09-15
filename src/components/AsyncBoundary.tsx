@@ -28,7 +28,7 @@ export default function AsyncBoundary({ loading, error, onRetry, loadingLabel = 
     if (skeleton) return <>{skeleton}</>;
     return (
       <div style={{ padding: `${pad}px 28px`, textAlign: "center", color: "var(--fg-3)" }}>
-        <Loader size={26} className="spin" />
+        <Loader size={26} className="spin mx-auto" />
         <div style={{ marginTop: 12, fontSize: 14 }}>{loadingLabel}</div>
       </div>
     );
