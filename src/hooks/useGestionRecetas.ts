@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
-import { useCatalogoCultivos } from "@/hooks/useCatalogoCultivos";
+import { useTiposCultivo } from "@/hooks/useTiposCultivo";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
 import type {
@@ -170,22 +170,19 @@ export function useCatalogoRecetas(): UseCatalogoReturn {
 /**
  * Cultivos que se pueden asociar a una receta, ordenados por nombre.
  *
- * Sale del catálogo público (`GET /tipo-cultivo`) y no de `/admin/tipos-cultivo`
- * a propósito: ese último exige GESTIONAR_CULTIVOS, y quien administra el
- * recetario no tiene por qué poder editar el catálogo de cultivos. Los nombres
- * de los cultivos son públicos, así que no se expone nada de más.
+ * Sale del catálogo público (`GET /tipo-cultivo/short`) y no de
+ * `/admin/tipos-cultivo` a propósito: ese último exige GESTIONAR_CULTIVOS, y
+ * quien administra el recetario no tiene por qué poder editar el catálogo de
+ * cultivos. Los nombres de los cultivos son públicos, así que no se expone nada
+ * de más.
  */
 export function useCultivosDisponibles(): { cultivos: CultivoOpcion[]; isLoading: boolean } {
-  // Una sola página grande: el catálogo de cultivos es chico y el selector los
-  // muestra todos juntos, sin paginar.
-  const { data, isLoading } = useCatalogoCultivos({ enTemporada: null, page: 0, size: 200 });
+  const { cultivos: sinOrden, isLoading } = useTiposCultivo(true);
 
+  // El backend no garantiza orden; el selector los muestra todos juntos.
   const cultivos = useMemo(
-    () =>
-      (data?.items ?? [])
-        .map((c) => ({ id: c.id, nombre: c.nombre }))
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es")),
-    [data],
+    () => [...sinOrden].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")),
+    [sinOrden],
   );
 
   return { cultivos, isLoading };
