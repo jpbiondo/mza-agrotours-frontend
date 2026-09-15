@@ -9,7 +9,8 @@ export const perfilSchema = z.object({
     .string()
     .trim()
     .min(1, "Este campo es obligatorio")
-    .max(40, "Máximo 40 caracteres")
+    .min(3, "Debe tener entre 3 y 40 caracteres")
+    .max(40, "Debe tener entre 3 y 40 caracteres")
     .regex(
       NOMBRE_RE,
       "El nombre solo puede contener letras, espacios, guiones y apóstrofos",
@@ -45,7 +46,8 @@ export const perfilSchema = z.object({
     .string()
     .trim()
     .min(1, "Este campo es obligatorio")
-    .max(20, "Máximo 20 caracteres"),
+    .min(5, "Debe tener entre 5 y 20 caracteres")
+    .max(20, "Debe tener entre 5 y 20 caracteres"),
   email: z
     .string()
     .trim()
