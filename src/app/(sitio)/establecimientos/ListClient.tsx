@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Sprout, MapPin, ChevronRight, RotateCcw, Building2, CalendarDays, ArrowRight, SearchX } from "lucide-react";
+import { Sprout, MapPin, ChevronRight, RotateCcw, Building2, CalendarDays, ArrowRight, SearchX, Search } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { FilterSelect, MultiFilterSelect, Pagination, ActiveFilterPill, CropChip } from "@/components/catalog/controls";
+import { FilterSelect, MultiFilterSelect, Pagination, ActiveFilterPill, CropChip, SearchField } from "@/components/catalog/controls";
 import { Skeleton } from "@/components/ui";
+import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
 import { useCatalogoEstablecimientos, useFiltroCultivos, useFiltroDepartamentos } from "@/hooks/useCatalogoEstablecimientos";
 import type { EstablecimientoResumen, FilterOption } from "@/types/catalogo";
 
@@ -106,21 +107,27 @@ export default function ListClient() {
   const [departamentoId, setDepartamentoId] = useState<string | null>(null);
   // 0-based, igual que el `Pageable` del backend; la paginación se muestra en 1-based.
   const [page, setPage] = useState(0);
+  const { texto, setTexto, busqueda, aplicarYa, limpiar } = useBusquedaDiferida();
 
-  // Filtros y paginado los resuelve el backend, así que cualquier cambio vuelve a pedir.
-  const { data, isLoading, error, reload } = useCatalogoEstablecimientos({ cultivosIds, departamentoId, page, size: PAGE_SIZE });
+  // Búsqueda, filtros y paginado los resuelve el backend, así que cualquier
+  // cambio vuelve a pedir el listado.
+  const { data, isLoading, error, reload } = useCatalogoEstablecimientos({ busqueda, cultivosIds, departamentoId, page, size: PAGE_SIZE });
   const cultivos = useFiltroCultivos();
   const departamentos = useFiltroDepartamentos();
 
   const total = data?.totalElements ?? 0;
-  const hayFiltros = cultivosIds.length > 0 || departamentoId !== null;
+  const hayFiltros = busqueda !== "" || cultivosIds.length > 0 || departamentoId !== null;
   // Sin filtros y sin resultados: no hay nada publicado todavía, que no es lo
-  // mismo que "tus filtros no encontraron nada".
+  // mismo que "tu búsqueda no encontró nada".
   const catalogoVacio = data !== null && total === 0 && !hayFiltros;
 
+  // Cualquier cambio de criterio vuelve a la primera página: la que estabas
+  // mirando puede no existir con los resultados nuevos.
+  const escribir = (v: string) => { setTexto(v); setPage(0); };
   const elegirCultivos = (v: string[]) => { setCultivosIds(v); setPage(0); };
   const elegirDepartamento = (v: string | null) => { setDepartamentoId(v); setPage(0); };
-  const limpiarFiltros = () => { setCultivosIds([]); setDepartamentoId(null); setPage(0); };
+  const limpiarBusqueda = () => { limpiar(); setPage(0); };
+  const limpiarTodo = () => { limpiar(); setCultivosIds([]); setDepartamentoId(null); setPage(0); };
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 28px 80px" }}>
@@ -134,13 +141,21 @@ export default function ListClient() {
           Conocé los <span style={{ color: "var(--green-800)" }}>establecimientos</span> de Mendoza
         </h1>
         <p style={{ color: "var(--fg-2)", fontSize: 16, lineHeight: 1.55, margin: "12px 0 0" }}>
-          Fincas, bodegas y olivares que abren sus puertas. Mirá un resumen de cada uno y filtrá por uno o varios tipos de cultivo y por departamento para encontrar el que querés visitar.
+          Fincas, bodegas y olivares que abren sus puertas. Mirá un resumen de cada uno, buscalo por nombre o filtrá por uno o varios tipos de cultivo y por departamento para encontrar el que querés visitar.
         </p>
       </div>
 
-      {/* Sin nada publicado no hay por qué filtrar. */}
+      {/* Sin nada publicado no hay por qué buscar ni filtrar. */}
       {!catalogoVacio && (
         <div style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: 20, marginBottom: 22, display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
+          <SearchField
+            label="Buscar establecimiento"
+            placeholder="Finca La Escondida, Bodega Los Álamos…"
+            value={texto}
+            onChange={escribir}
+            onSubmit={aplicarYa}
+            onClear={limpiarBusqueda}
+          />
           <MultiFilterSelect
             icon={<Sprout size={18} />}
             label="Tipos de cultivo"
@@ -159,9 +174,8 @@ export default function ListClient() {
             onChange={elegirDepartamento}
           />
           {hayFiltros && (
-            <button type="button" onClick={limpiarFiltros} style={{ height: 46, display: "inline-flex", alignItems: "center", gap: 7, background: "transparent", border: "none", cursor: "pointer", color: "var(--green-800)", fontFamily: "var(--font-sans)", fontSize: 14.5, fontWeight: 600, padding: "0 6px" }}>
-              <RotateCcw size={16} color="var(--green-800)" />
-              {cultivosIds.length + (departamentoId ? 1 : 0) > 1 ? "Quitar filtros" : "Quitar filtro"}
+            <button type="button" onClick={limpiarTodo} style={{ height: 46, display: "inline-flex", alignItems: "center", gap: 7, background: "transparent", border: "none", cursor: "pointer", color: "var(--green-800)", fontFamily: "var(--font-sans)", fontSize: 14.5, fontWeight: 600, padding: "0 6px" }}>
+              <RotateCcw size={16} color="var(--green-800)" /> Limpiar todo
             </button>
           )}
         </div>
@@ -180,6 +194,9 @@ export default function ListClient() {
                 {total === 1 ? "establecimiento" : "establecimientos"}
                 {hayFiltros ? (total === 1 ? " encontrado" : " encontrados") : " disponibles"}
               </span>
+              {busqueda !== "" && (
+                <ActiveFilterPill icon={<Search size={13} />} label={`«${busqueda}»`} onClear={limpiarBusqueda} />
+              )}
               {cultivosIds.map((id) => (
                 <ActiveFilterPill
                   key={id}
@@ -202,12 +219,14 @@ export default function ListClient() {
                 icon={<SearchX size={30} color="var(--fg-3)" />}
                 titulo="No encontramos establecimientos"
                 accion={
-                  <button type="button" className="btn btn-neutral" onClick={limpiarFiltros}>
-                    <RotateCcw size={17} /> Quitar filtros
+                  <button type="button" className="btn btn-neutral" onClick={limpiarTodo}>
+                    <RotateCcw size={17} /> Limpiar todo
                   </button>
                 }
               >
-                Ningún establecimiento coincide con los filtros elegidos. Probá quitándolos para ver todos.
+                {busqueda !== ""
+                  ? "Ningún establecimiento coincide con lo que buscaste. Probá con otras palabras o quitá los filtros."
+                  : "Ningún establecimiento coincide con los filtros elegidos. Probá quitándolos para ver todos."}
               </Vacio>
             ) : (
               <>
