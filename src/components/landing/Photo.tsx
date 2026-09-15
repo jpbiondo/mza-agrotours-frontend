@@ -28,13 +28,20 @@ interface PhotoProps {
   radius?: number | string;
   /** Glifo de fondo. Por defecto la uva; los cultivos usan una hoja. */
   icon?: LucideIcon;
+  /**
+   * Foto real, si la hay. Se dibuja **encima** del degradado, que queda de
+   * respaldo mientras carga o si la URL falla.
+   */
+  src?: string | null;
+  /** Texto alternativo de la foto real. Vacío = decorativa. */
+  alt?: string;
 }
 
 /**
- * Placeholder de imagen con degradado determinístico por seed.
- * Sustituye a las fotos reales del catálogo hasta tener assets.
+ * Imagen del catálogo: la foto real cuando el backend la manda, y si no un
+ * degradado determinístico por seed, para que la tarjeta nunca quede en blanco.
  */
-export default function Photo({ seed, height = 180, caption, radius = "var(--radius-lg)", icon: Icon = Grape }: PhotoProps) {
+export default function Photo({ seed, height = 180, caption, radius = "var(--radius-lg)", icon: Icon = Grape, src, alt = "" }: PhotoProps) {
   const bg = GRADIENTS[((seed % GRADIENTS.length) + GRADIENTS.length) % GRADIENTS.length];
   return (
     <div
@@ -48,6 +55,9 @@ export default function Photo({ seed, height = 180, caption, radius = "var(--rad
         color="rgba(255,255,255,.14)"
         style={{ position: "absolute", top: 16, right: 16 }}
       />
+      {/* eslint-disable-next-line @next/next/no-img-element -- el host del
+          object storage cambia por entorno y no está en `images.remotePatterns`. */}
+      {src && <img src={src} alt={alt} className="absolute inset-0 size-full object-cover" />}
       {caption && (
         <div
           style={{

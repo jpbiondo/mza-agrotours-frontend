@@ -257,7 +257,7 @@ export function useCatalogoCultivos(): UseCatalogoReturn {
 /* ---- Detalle ------------------------------------------------------------- */
 
 /**
- * GET /tipos-cultivo/{id}, imperativo: se dispara al tocar "Editar" y la
+ * GET /admin/tipos-cultivo/{id}, imperativo: se dispara al tocar "Editar" y la
  * pantalla necesita saber cuándo resolvió para recién ahí abrir el panel, ya
  * poblado. Reactivo obligaría a abrirlo vacío y rellenarlo después.
  */
