@@ -10,7 +10,8 @@ export const registroSchema = z
       .string()
       .trim()
       .min(1, "Este campo es obligatorio")
-      .max(40, "Máximo 40 caracteres")
+      .min(3, "Debe tener entre 3 y 40 caracteres")
+      .max(40, "Debe tener entre 3 y 40 caracteres")
       .regex(
         NOMBRE_RE,
         "El nombre solo puede contener letras, espacios, guiones y apóstrofos",
