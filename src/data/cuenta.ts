@@ -1,7 +1,4 @@
-import { EMAIL_RE, TELEFONO_MSG, TELEFONO_RE } from "@/data/auth";
-
-/** Los administradores no se autoeliminan, pero contemplamos el rol. */
-export type RolCuenta = "visitante" | "productor" | "admin";
+import type { Rol } from "@/types/auth";
 
 export interface Perfil {
   nombre: string;
@@ -13,61 +10,11 @@ export interface Perfil {
   paisIso2: string;
 }
 
-/** Cuenta en sesión (mock). En stateless demo, por defecto un visitante. */
+/** Cuenta en sesión, tal como la devuelve `GET /usuario/me`. */
 export interface CuentaSesion {
   nombre: string;
   email: string;
-  rol: RolCuenta;
-  /** Se cumplen las condiciones de dominio para darse de baja. */
-  condicionesOk: boolean;
-}
-
-export const CUENTA_ACTUAL: CuentaSesion = {
-  nombre: "Camila Ríos",
-  email: "camila.rios@gmail.com",
-  rol: "visitante",
-  condicionesOk: true,
-};
-
-/** Perfil precargado según la cuenta en sesión. */
-export function perfilInicial(cuenta: CuentaSesion): Perfil {
-  const base = cuenta.rol === "productor"
-    ? { nombre: "Lucía Funes", fechaNac: new Date(1986, 2, 22), tipoIdent: "DNI", identificacion: "32.118.745", telefono: "2614778820", paisIso2: "AR" }
-    : { nombre: "Camila Ríos", fechaNac: new Date(1994, 6, 15), tipoIdent: "DNI", identificacion: "38.422.190", telefono: "2615558842", paisIso2: "AR" };
-  return { ...base, email: cuenta.email };
-}
-
-/** Valida todos los campos del perfil → { campo: mensaje }. */
-export function validarPerfil(v: Perfil): Partial<Record<keyof Perfil, string>> {
-  const e: Partial<Record<keyof Perfil, string>> = {};
-  const nombre = (v.nombre || "").trim();
-  if (!nombre) e.nombre = "Este campo es obligatorio";
-  else if (nombre.length > 40) e.nombre = "Máximo 40 caracteres";
-
-  if (!v.fechaNac) e.fechaNac = "Este campo es obligatorio";
-  else {
-    const hoy = new Date();
-    const min = new Date(hoy.getFullYear() - 120, hoy.getMonth(), hoy.getDate());
-    if (v.fechaNac > hoy) e.fechaNac = "La fecha debe ser del pasado";
-    else if (v.fechaNac < min) e.fechaNac = "No puede ser anterior a hace 120 años";
-  }
-
-  if (!v.tipoIdent) e.tipoIdent = "Seleccioná un tipo de identificación";
-
-  const ident = (v.identificacion || "").trim();
-  if (!ident) e.identificacion = "Este campo es obligatorio";
-  else if (ident.length > 20) e.identificacion = "Máximo 20 caracteres";
-
-  const email = (v.email || "").trim();
-  if (!email) e.email = "Este campo es obligatorio";
-  else if (email.length > 100) e.email = "Máximo 100 caracteres";
-  else if (!EMAIL_RE.test(email)) e.email = "Ingresá un email válido (nombre@dominio.com)";
-
-  const tel = (v.telefono || "").trim();
-  if (!tel) e.telefono = "Este campo es obligatorio";
-  else if (!TELEFONO_RE.test(tel)) e.telefono = TELEFONO_MSG;
-
-  return e;
+  roles: Rol[];
 }
 
 /* ---- Condiciones para dar de baja la cuenta ---------------------------- */
@@ -75,11 +22,6 @@ export function validarPerfil(v: Perfil): Partial<Record<keyof Perfil, string>> 
 export interface CondicionIncumplida {
   nombre: string;
   descripcion: string;
-}
-
-
-export function rolLabel(rol: RolCuenta): string {
-  return rol === "productor" ? "productor líder" : rol === "admin" ? "administrador" : "visitante";
 }
 
 /** dd/mm/aaaa HH:MM (convención AR). */
