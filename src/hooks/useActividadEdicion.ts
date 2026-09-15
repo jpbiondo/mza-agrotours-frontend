@@ -130,6 +130,15 @@ function aSubidas(v: unknown): ArchivoUploadResponse[] {
   );
 }
 
+/**
+ * El formulario sólo puede guardar en "publicado" o "borrador": dar de baja es
+ * otra operación. Una actividad que ya está dada de baja cae en "borrador", que
+ * es la lectura prudente —nunca decir "publicada" algo que no lo está—.
+ */
+function aEstadoEditable(v: unknown): "publicado" | "borrador" {
+  return aEstado(v) === "publicado" ? "publicado" : "borrador";
+}
+
 function aActividadEditar(d: ActividadEditarBackend): ActividadEditarForm {
   const tarifas = aTarifas(d.rangosEtarios);
   const faqs = aFaqs(d.faqs);
@@ -145,7 +154,7 @@ function aActividadEditar(d: ActividadEditarBackend): ActividadEditarForm {
     incluye: conRenglonVacio(aTextos(d.incluye)),
     noIncluye: conRenglonVacio(aTextos(d.noIncluye)),
     faqs: faqs.length ? faqs : [{ q: "", a: "" }],
-    estado: aEstado(d.estado),
+    estado: aEstadoEditable(d.estado),
   };
 }
 
