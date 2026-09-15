@@ -139,14 +139,8 @@ function useLecturaConToken<T>(
       }
       try {
         const token = await user.getIdToken();
-        const r = await apiFetch<unknown>(actividadesPath(establecimientoId), { token });
-        if (!active) return;
-        const env = comoEnvelope<unknown>(r);
-        setRes(
-          env.ok
-            ? { clave, data: aActividades(comoPagina<unknown>(env.data).items), error: null }
-            : { clave, data: null, error: env.code ?? "No pudimos cargar las actividades" },
-        );
+        const data = await pedirRef.current(token);
+        if (active) setRes({ clave: claveConNonce, data, error: null });
       } catch (e) {
         if (active) setRes({ clave: claveConNonce, data: null, error: e instanceof Error ? e.message : "Error inesperado" });
       }
