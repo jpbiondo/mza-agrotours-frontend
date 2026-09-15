@@ -22,9 +22,10 @@ import type { DificultadId } from "@/types/recetas";
  * Todas las lecturas van **sin token**: son pantallas de `(sitio)`, que se ven
  * sin sesión. Mismo criterio que `useCatalogoEstablecimientos`.
  *
- * Ojo con el path: este es `/tipo-cultivo` (el controller del visitante), que
- * no es el `/tipos-cultivo` de `useTiposCultivo` —ese es el catálogo con token
- * que usan los formularios de panel y admin—.
+ * Comparte el controller `/tipo-cultivo` con `useTiposCultivo`, pero no son lo
+ * mismo: éste es el listado paginado que dibuja las tarjetas del catálogo;
+ * aquél va a `/tipo-cultivo/short`, que devuelve sólo id y nombre de todos los
+ * cultivos para llenar los selectores de panel y admin.
  */
 const BASE = "/tipo-cultivo";
 const FILTRO_TEMPORADA = `${BASE}/filtros/temporada`;
