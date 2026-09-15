@@ -9,7 +9,7 @@ import {
   CalendarDays, PlusCircle, FileSearch, Clock, CheckCircle2, XCircle,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { EstadoBadge } from "@/components/ui";
+import { EstadoBadge, Skeleton } from "@/components/ui";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { fmtFechaHora } from "@/lib/format";
 import { storageConfigurado, urlDeArchivo } from "@/lib/storage";
@@ -324,6 +324,120 @@ function Detalle({ s }: { s: SolicitudDetalle }) {
   );
 }
 
+/** Mismo encabezado y misma grilla que `Seccion`, con el título en barra. */
+function SeccionSkeleton({ cols = 2, children }: { cols?: 1 | 2; children: ReactNode }) {
+  return (
+    <div className="mt-7">
+      <div className="mb-4.5 border-b border-outline-variant pb-2.5">
+        <Skeleton className="h-4 w-44" />
+      </div>
+      <div
+        className={cn(
+          "grid gap-x-7 gap-y-5",
+          cols === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2",
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function DatoSkeleton({ span, ancho = "w-3/4" }: { span?: boolean; ancho?: string }) {
+  return (
+    <div className={cn("min-w-0", span && "sm:col-span-2")}>
+      <Skeleton className="mb-1.5 h-2.5 w-28" />
+      <Skeleton className={cn("h-4.5", ancho)} />
+    </div>
+  );
+}
+
+/**
+ * Esqueleto de la ficha. Repite la caja y las secciones de `Detalle` —con menos
+ * datos por sección— para que el contenido real caiga más o menos donde ya
+ * estaban los bloques grises.
+ */
+function DetalleSkeleton() {
+  return (
+    <div className="rounded-lg border border-outline-variant bg-surface px-[30px] pt-7 pb-8">
+      <div className="flex flex-wrap items-start justify-between gap-5">
+        <div className="min-w-0 flex-1">
+          <Skeleton className="h-8 w-3/5" />
+          <div className="mt-2.5 flex flex-wrap items-center gap-3.5">
+            <Skeleton className="h-3.5 w-28" />
+            <Skeleton className="h-3.5 w-48" />
+          </div>
+        </div>
+        <Skeleton className="h-10 w-32 shrink-0 rounded-pill" />
+      </div>
+
+      <SeccionSkeleton>
+        <DatoSkeleton span ancho="w-1/2" />
+        <DatoSkeleton />
+        <DatoSkeleton ancho="w-2/5" />
+        <DatoSkeleton span ancho="w-full" />
+      </SeccionSkeleton>
+
+      <SeccionSkeleton>
+        <DatoSkeleton ancho="w-2/5" />
+        <DatoSkeleton />
+      </SeccionSkeleton>
+
+      <SeccionSkeleton>
+        <DatoSkeleton />
+        <DatoSkeleton ancho="w-2/5" />
+      </SeccionSkeleton>
+
+      <SeccionSkeleton cols={1}>
+        <DatoSkeleton ancho="w-52" />
+      </SeccionSkeleton>
+
+      <SeccionSkeleton cols={1}>
+        <div className="flex flex-col gap-2.5">
+          {Array.from({ length: 2 }, (_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 rounded-md border border-outline-variant bg-cream-tert px-3.5 py-3"
+            >
+              {/* Sobre el fondo crema de la fila, el gris del esqueleto no se ve:
+                  estas barras van en `sand`. */}
+              <Skeleton className="size-9 shrink-0 rounded-[9px] bg-sand" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-4 w-2/5 bg-sand" />
+                <Skeleton className="mt-1.5 h-3 w-10 bg-sand" />
+              </div>
+              <Skeleton className="h-8 w-28 shrink-0 bg-sand" />
+            </div>
+          ))}
+        </div>
+      </SeccionSkeleton>
+
+      <SeccionSkeleton cols={1}>
+        <div className="flex flex-col">
+          {Array.from({ length: 2 }, (_, i) => {
+            const last = i === 1;
+            return (
+              <div key={i} className="flex gap-4">
+                <div className="flex shrink-0 flex-col items-center">
+                  <Skeleton className="size-8.5 rounded-full" />
+                  {!last && <span className="my-1 w-px flex-1 bg-outline-variant" />}
+                </div>
+                <div className={cn("min-w-0 flex-1", last ? "pb-0" : "pb-6")}>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3.5 w-40" />
+                  </div>
+                  <Skeleton className="mt-2.5 h-3.5 w-4/5" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </SeccionSkeleton>
+    </div>
+  );
+}
+
 function NoEncontrada() {
   return (
     <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-sand bg-surface px-6 py-16 text-center">
@@ -376,7 +490,7 @@ export default function SolicitudDetalleClient({ id }: { id: string }) {
         loading={isLoading}
         error={error}
         onRetry={reload}
-        loadingLabel="Cargando la solicitud…"
+        skeleton={<DetalleSkeleton />}
         pad={72}
       >
         {notFound || !solicitud ? <NoEncontrada /> : <Detalle s={solicitud} />}
