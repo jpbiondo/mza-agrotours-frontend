@@ -24,6 +24,7 @@ const APP_LINKS: NavLink[] = [
   { id: "cultivos", href: "/cultivos", label: "Cultivos" },
   { id: "recetas", href: "/recetas", label: "Recetas" },
   { id: "faq", href: "/#faq", label: "Preguntas frecuentes" },
+  { id: "contacto", href: "/#contacto", label: "Contacto"},
 ];
 
 /**
