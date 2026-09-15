@@ -601,11 +601,11 @@ function Inner({
             <Campo
               label="Teléfono"
               value={telefono}
-              maxLength={16}
+              maxLength={20}
               error={contactoErr.telefono}
-              hint="Entre 7 y 16 caracteres."
+              hint="Ingresá tu número en formato internacional, sin espacios: primero un + y luego 8 a 15 dígitos (el código de país va incluido)."
               onChange={(v) => {
-                setTelefono(v);
+                setTelefono(v.replace(/[^\d+]/g, "").slice(0, 16));
                 if (contactoErr.telefono)
                   setContactoErr((e) => ({ ...e, telefono: null }));
               }}

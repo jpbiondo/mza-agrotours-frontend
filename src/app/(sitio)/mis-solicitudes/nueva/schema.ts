@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   EMAIL_RE,
   NOMBRE_ESTABLECIMIENTO_RE,
+  TELEFONO_MSG,
   TELEFONO_RE,
 } from "@/data/auth";
 
@@ -50,12 +51,7 @@ export const solicitarAltaSchema = z.object({
     .string()
     .trim()
     .min(1, "El teléfono es obligatorio.")
-    .min(7, "Debe tener al menos 7 caracteres.")
-    .max(16, "Hasta 16 caracteres.")
-    .regex(
-      TELEFONO_RE,
-      "Solo se permiten números, espacios y los signos + ( ) -",
-    ),
+    .regex(TELEFONO_RE, TELEFONO_MSG),
   cvu: z
     .string()
     .trim()

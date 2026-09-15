@@ -89,7 +89,7 @@ test.describe("Registro page", () => {
     await page.getByRole("option", { name: "DNI" }).click();
 
     await page.getByPlaceholder(/Ej\. 30/).fill("30123456");
-    await page.getByPlaceholder("Ej. +54 261 555 1234").fill("+54261555123");
+    await page.getByPlaceholder("Ej. +542615551234").fill("+54261555123");
 
     await page.getByPlaceholder("Mínimo 8 caracteres").fill("Secure@1");
     await page.getByPlaceholder("Repetí la contraseña").fill("Secure@1");

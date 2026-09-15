@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EMAIL_RE, NOMBRE_RE, TELEFONO_RE } from "@/data/auth";
+import { EMAIL_RE, NOMBRE_RE, TELEFONO_MSG, TELEFONO_RE } from "@/data/auth";
 
 const SPECIAL_RE = /[!@#$%^&*(),.?":{}|<>_\-[\]\\/;'`~+=]/;
 
@@ -59,12 +59,7 @@ export const perfilSchema = z.object({
     .string()
     .trim()
     .min(1, "Este campo es obligatorio")
-    .min(7, "El teléfono debe tener entre 7 y 16 caracteres")
-    .max(16, "El teléfono debe tener entre 7 y 16 caracteres")
-    .regex(
-      TELEFONO_RE,
-      "El teléfono solo puede contener números, espacios y los signos + ( ) -",
-    ),
+    .regex(TELEFONO_RE, TELEFONO_MSG),
   paisIso2: z.string(),
 });
 

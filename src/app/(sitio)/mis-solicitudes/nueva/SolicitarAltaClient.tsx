@@ -604,18 +604,20 @@ export default function SolicitarAltaClient() {
                             {...field}
                             onChange={(v) =>
                               field.onChange(
-                                v.replace(/[^\d+\s()-]/g, "").slice(0, 16),
+                                v.replace(/[^\d+]/g, "").slice(0, 16),
                               )
                             }
                             icon={<Phone />}
-                            maxLength={16}
+                            maxLength={20}
                             inputMode="tel"
-                            placeholder="+54 9 261 555-1247"
+                            placeholder="+5492615551247"
                           />
                         </FormControl>
                         {!fieldState.error && (
                           <FormDescription>
-                            Entre 7 y 16 caracteres.
+                            Ingresá tu número en formato internacional, sin
+                            espacios: primero un + y luego 8 a 15 dígitos (el
+                            código de país va incluido).
                           </FormDescription>
                         )}
                         <FormMessage />

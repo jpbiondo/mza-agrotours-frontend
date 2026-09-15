@@ -250,16 +250,21 @@ export default function RegistroForm({
               <FormControl>
                 <TextField
                   {...field}
+                  onChange={(v) =>
+                    field.onChange(v.replace(/[^\d+]/g, "").slice(0, 16))
+                  }
                   icon={<Phone />}
                   type="tel"
-                  maxLength={16}
-                  placeholder="Ej. +54 261 555 1234"
+                  maxLength={20}
+                  placeholder="Ej. +542615551234"
                   inputMode="tel"
                   autoComplete="tel"
                 />
               </FormControl>
               <FormDescription>
-                Entre 7 y 16 caracteres, podés incluir el código de área
+                Ingresá tu número en formato internacional, sin espacios:
+                primero un + y luego 8 a 15 dígitos (el código de país va
+                incluido).
               </FormDescription>
               <FormMessage />
             </FormItem>
