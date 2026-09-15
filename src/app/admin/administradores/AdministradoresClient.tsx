@@ -57,6 +57,38 @@ import {
 /** Motivo de los botones deshabilitados cuando falta GESTIONAR_ADMIN. */
 const SIN_GESTION = "Necesitás el permiso de gestión de administradores";
 
+/** El backend lo rechaza; acá se apaga antes. */
+const AUTO_GESTION = "No podés gestionar tu propia cuenta de administrador";
+
+type Accion = "rol" | "borrar";
+
+const MOTIVO_LIDER: Record<Accion, string> = {
+  rol: "El rol del administrador líder no se puede cambiar",
+  borrar: "El administrador líder no se puede borrar",
+};
+
+const MOTIVO_OK: Record<Accion, string> = {
+  rol: "Cambiar el rol asignado",
+  borrar: "Quitar este administrador del sistema",
+};
+
+/**
+ * Por qué no se puede actuar sobre esta fila, o `null` si sí se puede. El orden
+ * importa: sin el permiso de gestión no se puede tocar ninguna fila, así que ése
+ * es el motivo que corresponde antes que los propios de cada administrador.
+ */
+function bloqueoDe(
+  a: AdminSistema,
+  gestionar: boolean,
+  propio: boolean,
+  accion: Accion,
+): string | null {
+  if (!gestionar) return SIN_GESTION;
+  if (propio) return AUTO_GESTION;
+  if (a.esLider) return MOTIVO_LIDER[accion];
+  return null;
+}
+
 /** Mensajes de error del alta que devuelve el backend. */
 const CODIGO_ALTA: Record<string, string> = {
   "AS.adminAlreadyExists": "Esa persona ya es administradora del sistema.",
@@ -931,6 +963,11 @@ function Inner() {
   // LEER_ADMIN ya lo exige el guard de la ruta; acá se distingue quién puede actuar.
   const accesos = useAuthStore((s) => s.accesos);
   const gestionar = tienePermiso(accesos, PermisoAdmin.GESTIONAR_ADMIN);
+  // El  no trae el id de usuario, así que la fila propia se reconoce por correo.
+  const emailSesion = useAuthStore((s) => s.email) ?? "";
+  const esPropio = (a: AdminSistema) =>
+    !!emailSesion &&
+    a.emailUsuario.trim().toLowerCase() === emailSesion.trim().toLowerCase();
   // `null` = cerrado; "nuevo" = alta; un administrador = cambio de rol.
   const [modal, setModal] = useState<"nuevo" | AdminSistema | null>(null);
   const [aBorrar, setABorrar] = useState<AdminSistema | null>(null);
@@ -1138,158 +1175,161 @@ function Inner() {
                 </td>
               </tr>
             ) : (
-              administradores.map((p) => (
-                <tr
-                  key={p.id}
-                  style={{ borderBottom: "1px solid var(--cream-tert)" }}
-                >
-                  <td style={{ padding: "14px 18px" }}>
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 14 }}
-                    >
-                      <span
-                        style={{
-                          width: 42,
-                          height: 42,
-                          borderRadius: "50%",
-                          flexShrink: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          background: "var(--green-050)",
-                          border: "1px solid var(--green-300)",
-                          color: "var(--green-800)",
-                          fontFamily: "var(--font-display)",
-                          fontWeight: 700,
-                          fontSize: 15.5,
-                        }}
-                      >
-                        {admInitials(p.nombreUsuario)}
-                      </span>
+              administradores.map((p) => {
+                const propio = esPropio(p);
+                const bloqRol = bloqueoDe(p, gestionar, propio, "rol");
+                const bloqBorrar = bloqueoDe(p, gestionar, propio, "borrar");
+
+                return (
+                  <tr
+                    key={p.id}
+                    style={{ borderBottom: "1px solid var(--cream-tert)" }}
+                  >
+                    <td style={{ padding: "14px 18px" }}>
                       <div
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: 8,
-                          flexWrap: "wrap",
+                          gap: 14,
                         }}
                       >
                         <span
                           style={{
+                            width: 42,
+                            height: 42,
+                            borderRadius: "50%",
+                            flexShrink: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "var(--green-050)",
+                            border: "1px solid var(--green-300)",
+                            color: "var(--green-800)",
                             fontFamily: "var(--font-display)",
-                            fontWeight: 600,
-                            fontSize: 16,
-                            color: "var(--fg-1)",
+                            fontWeight: 700,
+                            fontSize: 15.5,
                           }}
                         >
-                          {p.nombreUsuario}
+                          {admInitials(p.nombreUsuario)}
                         </span>
-                        {p.esLider && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
+                          }}
+                        >
                           <span
                             style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 5,
-                              fontSize: 11.5,
+                              fontFamily: "var(--font-display)",
                               fontWeight: 600,
-                              color: "var(--brown-700)",
-                              background: "var(--cream-tert)",
-                              border: "1px solid var(--sand)",
-                              borderRadius: "var(--radius-pill)",
-                              padding: "3px 10px",
+                              fontSize: 16,
+                              color: "var(--fg-1)",
                             }}
                           >
-                            <Crown size={12} color="var(--brown-700)" /> Líder
+                            {p.nombreUsuario}
                           </span>
-                        )}
+                          {p.esLider && (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 5,
+                                fontSize: 11.5,
+                                fontWeight: 600,
+                                color: "var(--brown-700)",
+                                background: "var(--cream-tert)",
+                                border: "1px solid var(--sand)",
+                                borderRadius: "var(--radius-pill)",
+                                padding: "3px 10px",
+                              }}
+                            >
+                              <Crown size={12} color="var(--brown-700)" /> Líder
+                            </span>
+                          )}
+                          {propio && (
+                            <span className="inline-flex items-center rounded-pill border border-outline-variant bg-surface px-2.5 py-[3px] text-[11.5px] font-semibold text-fg-3">
+                              Vos
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  {/* Con el layout fijo la columna ya no se estira: un correo largo
+                    </td>
+                    {/* Con el layout fijo la columna ya no se estira: un correo largo
                   corta en vez de desbordar la celda. */}
-                  <td
-                    style={{
-                      padding: "14px 18px",
-                      fontFamily: "var(--font-mono)",
-                      fontSize: 13.5,
-                      color: "var(--fg-1)",
-                      overflowWrap: "anywhere",
-                    }}
-                  >
-                    {p.emailUsuario}
-                  </td>
-                  <td
-                    style={{
-                      padding: "14px 18px",
-                      fontFamily: "var(--font-mono)",
-                      fontSize: 14,
-                      color: "var(--fg-1)",
-                    }}
-                  >
-                    {p.identificacion}
-                  </td>
-                  <td style={{ padding: "14px 18px" }}>
-                    <span
+                    <td
                       style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        background: "var(--green-050)",
-                        border: "1px solid var(--green-300)",
-                        borderRadius: "var(--radius-pill)",
-                        padding: "5px 11px",
-                        fontSize: 13,
-                        color: "var(--green-800)",
-                        fontWeight: 600,
-                        whiteSpace: "nowrap",
+                        padding: "14px 18px",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 13.5,
+                        color: "var(--fg-1)",
+                        overflowWrap: "anywhere",
                       }}
                     >
-                      <ShieldCheck size={14} color="var(--green-700)" />{" "}
-                      {p.nombreRol}
-                    </span>
-                  </td>
-                  <td style={{ padding: "14px 18px" }}>
-                    <div
+                      {p.emailUsuario}
+                    </td>
+                    <td
                       style={{
-                        display: "flex",
-                        gap: 10,
-                        justifyContent: "flex-end",
+                        padding: "14px 18px",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 14,
+                        color: "var(--fg-1)",
                       }}
                     >
-                      <ActionBtn
-                        icon={<Pencil size={17} />}
-                        label="Modificar rol"
-                        disabled={p.esLider || !gestionar}
-                        title={
-                          p.esLider
-                            ? "El rol del administrador líder no se puede cambiar"
-                            : !gestionar
-                              ? SIN_GESTION
-                              : "Cambiar el rol asignado"
-                        }
-                        onClick={() => setEditando(p)}
-                      />
-                      <ActionBtn
-                        icon={<Trash2 size={17} />}
-                        label="Borrar"
-                        tone="danger"
-                        disabled={p.esLider || !gestionar}
-                        title={
-                          p.esLider
-                            ? "El administrador líder no se puede borrar"
-                            : !gestionar
-                              ? SIN_GESTION
-                              : "Quitar este administrador del sistema"
-                        }
-                        onClick={() => {
-                          setErrorBaja(null);
-                          setABorrar(p);
+                      {p.identificacion}
+                    </td>
+                    <td style={{ padding: "14px 18px" }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 8,
+                          background: "var(--green-050)",
+                          border: "1px solid var(--green-300)",
+                          borderRadius: "var(--radius-pill)",
+                          padding: "5px 11px",
+                          fontSize: 13,
+                          color: "var(--green-800)",
+                          fontWeight: 600,
+                          whiteSpace: "nowrap",
                         }}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))
+                      >
+                        <ShieldCheck size={14} color="var(--green-700)" />{" "}
+                        {p.nombreRol}
+                      </span>
+                    </td>
+                    <td style={{ padding: "14px 18px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        <ActionBtn
+                          icon={<Pencil size={17} />}
+                          label="Modificar rol"
+                          disabled={!!bloqRol}
+                          title={bloqRol ?? MOTIVO_OK.rol}
+                          onClick={() => setEditando(p)}
+                        />
+                        <ActionBtn
+                          icon={<Trash2 size={17} />}
+                          label="Borrar"
+                          tone="danger"
+                          disabled={!!bloqBorrar}
+                          title={bloqBorrar ?? MOTIVO_OK.borrar}
+                          onClick={() => {
+                            setErrorBaja(null);
+                            setABorrar(p);
+                          }}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </Tabla>
@@ -1311,7 +1351,8 @@ function Inner() {
         >
           administrador líder
         </strong>{" "}
-        es una figura protegida: no se puede borrar ni cambiarle el rol.
+        es una figura protegida: no se puede borrar ni cambiarle el rol. Nadie
+        puede gestionar su propia cuenta de administrador.
       </div>
 
       {modal && (
