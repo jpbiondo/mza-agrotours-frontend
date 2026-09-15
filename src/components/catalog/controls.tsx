@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Check, RotateCcw, X } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, Check, RotateCcw, Search, X } from "lucide-react";
 import type { FilterOption } from "@/types/catalogo";
 
 /* ---- Hook: cerrar popover al click fuera / Esc ------------------------- */
@@ -88,6 +88,57 @@ function Campo({ label, icon, activo, open, texto, onToggle, onClose, extra, chi
 
 function Contador({ children }: { children: React.ReactNode }) {
   return <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-3)" }}>{children}</span>;
+}
+
+/* ---- Campo de búsqueda --------------------------------------------------- */
+
+/**
+ * Búsqueda por texto de un catálogo. Mismas medidas que el disparador de los
+ * selectores de arriba para que la fila de filtros quede pareja.
+ *
+ * Quien lo usa decide cuándo sale el pedido: `onChange` en cada tecla (con la
+ * espera de `useBusquedaDiferida`) y `onSubmit` cuando el visitante aprieta
+ * Enter y no quiere esperarla. Es un `<form>` para que Enter funcione solo.
+ */
+export function SearchField({
+  label, placeholder, value, onChange, onSubmit, onClear,
+}: {
+  label: string; placeholder: string; value: string;
+  onChange: (v: string) => void; onSubmit: () => void; onClear: () => void;
+}) {
+  const id = useId();
+
+  return (
+    <form
+      role="search"
+      className="w-full"
+      onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
+    >
+      <label htmlFor={id} className="t-label mb-[7px] block">{label}</label>
+      <div className="group relative flex items-center">
+        <Search className="pointer-events-none absolute left-3.5 size-[18px] text-fg-3 transition-colors group-focus-within:text-green-700" />
+        <input
+          id={id}
+          type="text"
+          value={value}
+          placeholder={placeholder}
+          autoComplete="off"
+          onChange={(e) => onChange(e.target.value)}
+          className="h-[46px] w-full rounded-md border border-sand bg-surface pr-11 pl-11 font-sans text-[15px] text-fg-1 placeholder:text-fg-3 focus:border-green-800 focus:ring-[3px] focus:ring-green-100 focus:outline-none"
+        />
+        {value !== "" && (
+          <button
+            type="button"
+            onClick={onClear}
+            aria-label="Limpiar búsqueda"
+            className="absolute right-3 inline-flex cursor-pointer rounded-sm p-1 text-fg-3 hover:text-fg-2"
+          >
+            <X className="size-4" />
+          </button>
+        )}
+      </div>
+    </form>
+  );
 }
 
 /* ---- Selector de un valor ----------------------------------------------- */

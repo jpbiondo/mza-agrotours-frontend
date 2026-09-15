@@ -169,10 +169,13 @@ async function leer<T>(path: string, mensaje: string): Promise<T | undefined> {
 
 /**
  * Query del catálogo. `cultivosIds` se repite una vez por cultivo, que es como
- * Spring arma el `List<UUID>`; el departamento y la página van sueltos.
+ * Spring arma el `List<UUID>`; el resto va suelto. La búsqueda vacía se omite:
+ * el backend la trata igual que ausente, pero así la URL queda limpia.
  */
-function queryCatalogo({ cultivosIds, departamentoId, page, size }: ConsultaCatalogo): string {
+function queryCatalogo({ busqueda, cultivosIds, departamentoId, page, size }: ConsultaCatalogo): string {
   const qs = new URLSearchParams();
+  const texto = busqueda.trim();
+  if (texto) qs.set("busqueda", texto);
   for (const id of cultivosIds) qs.append("cultivosIds", id);
   if (departamentoId) qs.set("departamentoId", departamentoId);
   qs.set("page", String(page));
@@ -219,13 +222,14 @@ async function listarFiltro(path: string, mensaje: string): Promise<FilterOption
 /* ---- Hooks --------------------------------------------------------------- */
 
 /**
- * Página del catálogo. Filtros y paginado los resuelve el backend, así que
- * cambiar cualquiera de los dos vuelve a pedir el listado.
+ * Página del catálogo. Búsqueda, filtros y paginado los resuelve el backend,
+ * así que cambiar cualquiera de ellos vuelve a pedir el listado.
  */
 export function useCatalogoEstablecimientos(
   consulta: ConsultaCatalogo,
 ): AsyncState<Pagina<EstablecimientoResumen>> {
   return useAsync<Pagina<EstablecimientoResumen>>(() => listarCatalogo(consulta), [
+    consulta.busqueda,
     consulta.cultivosIds,
     consulta.departamentoId,
     consulta.page,

@@ -79,9 +79,11 @@ export interface EstablecimientoResumen {
 /**
  * Filtros del catálogo, tal como los toma GET /establecimientos/catalogo.
  * Los cultivos son varios y suman (el backend trae los que trabajen **alguno**
- * de ellos); el departamento es uno solo y acota a ese.
+ * de ellos); el departamento es uno solo y acota a ese. La `busqueda` el
+ * backend la aplica sólo sobre el **nombre**: no alcanza la razón social.
  */
 export interface ConsultaCatalogo {
+  busqueda: string;
   cultivosIds: string[];
   departamentoId: string | null;
   /** 0-based, como lo numera el `Pageable` del backend. */
@@ -114,6 +116,90 @@ export interface EstablecimientoPublico {
   actividades: ActividadOfrecida[];
 }
 
+/* ---- Catálogo público de actividades (backend real) -----------------------
+   Lo que ven las pantallas de `/explorar`. Convive con `Actividad` de arriba,
+   que todavía alimenta la landing desde los mocks de `@/data/actividades`. */
+
+/** Archivo de object storage: la forma de `fotoPortada` y de cada `foto`. */
+export interface FotoRef {
+  key: string;
+  nombre: string;
+  /** URL absoluta servida por el backend; se puede pedir sin sesión. */
+  url: string;
+}
+
+/** Item de GET /actividades/explorar. */
+export interface ActividadResumen {
+  id: string;
+  nombre: string;
+  /** `null` es "todavía sin precio publicado", que no es lo mismo que $ 0. */
+  precioRegular: number | null;
+  /** Con id, no sólo el nombre: el filtro del listado viaja por id. */
+  cultivos: CultivoRef[];
+  /** `null` mientras la actividad no tenga ninguna foto cargada. */
+  fotoPortada: FotoRef | null;
+  nombreEstablecimiento: string;
+  nombreDepartamento: string;
+}
+
+/**
+ * Consulta de GET /actividades/explorar. Los cultivos son varios y suman (trae
+ * las que trabajen **alguno** de ellos); el departamento es uno solo. La
+ * `busqueda` el backend la aplica sólo sobre el **nombre de la actividad**:
+ * no alcanza al establecimiento ni al departamento.
+ */
+export interface ConsultaActividades {
+  busqueda: string;
+  cultivosIds: string[];
+  departamentoId: string | null;
+  /** 0-based, como lo numera el `Pageable` del backend. */
+  page: number;
+  size: number;
+}
+
+/** Tarifa por rango etario. La base es la que se publica como "precio desde". */
+export interface TarifaActividad {
+  id: string;
+  nombre: string;
+  edadMinima: number;
+  edadMaxima: number;
+  precio: number;
+  esBase: boolean;
+}
+
+/** Pregunta frecuente propia de la actividad, cargada por el productor. */
+export interface FaqActividad {
+  pregunta: string;
+  respuesta: string;
+}
+
+/** El establecimiento tal como lo resume el detalle de una actividad. */
+export interface EstablecimientoDeActividad {
+  /** Vacío si no vino: sin id no se puede linkear su ficha. */
+  id: string;
+  nombre: string;
+  departamento: string;
+  descripcion: string;
+}
+
+/** GET /actividades/{id}. Los textos vacíos son campos sin cargar. */
+export interface ActividadPublica {
+  id: string;
+  nombre: string;
+  cuposMax: number;
+  cultivos: string[];
+  fotos: FotoRef[];
+  descripcion: string;
+  incluye: string[];
+  noIncluye: string[];
+  establecimiento: EstablecimientoDeActividad;
+  /** Dirección para llegar; el nombre del lugar lo repite `establecimiento`. */
+  direccion: string;
+  preguntasFrecuentes: FaqActividad[];
+  tarifas: TarifaActividad[];
+  precioRegular: number | null;
+}
+
 /** Opción de un filtro de catálogo (valor + etiqueta + cantidad). */
 export interface FilterOption {
   value: string;
@@ -134,60 +220,6 @@ export interface FaqCategoria {
   label: string;
   /** Clave de ícono lucide. */
   icon: string;
-}
-
-export interface Resenia {
-  autor: string;
-  iniciales: string;
-  fecha: string;
-  rating: number;
-  texto: string;
-}
-
-export interface PreguntaRespuesta {
-  q: string;
-  a: string;
-}
-
-export interface ActividadDetalle {
-  id: string;
-  titulo: string;
-  finca: string;
-  estId: string | null;
-  loc: string;
-  tag: string;
-  tipo: string;
-  cultivos: string[];
-  duracion: string;
-  edadPermitida: string;
-  rating: number;
-  totalResenias: number;
-  precioDesde: number;
-  precios: { infantes: number; menores: number; adultos: number };
-  fotos: { seed: number; caption: string }[];
-  descripcion: string[];
-  incluye: string[];
-  noIncluye: string[];
-  establecimiento: {
-    nombre: string;
-    iniciales: string;
-    tipo: string;
-    loc: string;
-    desde: number;
-    generaciones: number;
-    bio: string;
-  };
-  cancelacion: { titulo: string; bullets: string[] };
-  faqs: PreguntaRespuesta[];
-  resenias: Resenia[];
-}
-
-/** Categoría etaria de viajeros para la reserva. */
-export interface CategoriaViajero {
-  id: "infantes" | "menores" | "adultos";
-  label: string;
-  sub: string;
-  edadMax: number;
 }
 
 /** Disponibilidad de un mes: cada día con estado y cupos. */
