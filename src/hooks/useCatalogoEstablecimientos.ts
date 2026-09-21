@@ -1,5 +1,6 @@
 import { useAsync } from "@/hooks/useAsync";
 import type { AsyncState } from "@/hooks/useAsync";
+import { aFoto } from "@/hooks/useCatalogoActividades";
 import { ApiError, apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
 import type { Pagina } from "@/lib/api";
 import type { CultivoRef } from "@/types/datos";
@@ -35,6 +36,7 @@ interface ResumenBackend {
   dptoEstablecimiento?: unknown;
   cultivos?: unknown;
   cantidadActividades?: unknown;
+  foto?: unknown;
 }
 
 interface ActividadBackend {
@@ -57,6 +59,7 @@ interface DetalleBackend {
   ubicacion?: string | null;
   cultivos?: unknown;
   actividades?: unknown;
+  foto?: unknown;
 }
 
 /** Opción de faceta: misma forma para cultivos y departamentos. */
@@ -116,6 +119,7 @@ function aResumen(e: ResumenBackend): EstablecimientoResumen {
     departamento: aDepartamento(e.dptoEstablecimiento),
     cultivos: aCultivos(e.cultivos),
     cantidadActividades: aNumero(e.cantidadActividades),
+    foto: aFoto(e.foto),
   };
 }
 
@@ -147,6 +151,7 @@ function aDetalle(d: DetalleBackend): EstablecimientoPublico {
           .map(aActividad)
           .filter((a) => a.id !== "")
       : [],
+    foto: aFoto(d.foto),
   };
 }
 

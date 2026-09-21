@@ -20,8 +20,9 @@ function EstablecimientoCard({ est, cultivosIds }: { est: EstablecimientoResumen
   return (
     <Link href={`/establecimientos/${est.id}`} className="card-hover" style={{ textDecoration: "none", display: "flex", flexDirection: "column", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
       <div style={{ position: "relative" }}>
-        {/* TODO backend: el listado todavía no manda imágenes. */}
-        <Photo seed={seedDeId(est.id)} height={150} radius={0} />
+        {/* Decorativa: el nombre de la finca ya está en el encabezado de al lado.
+            Sin portada cargada queda el degradado por seed. */}
+        <Photo seed={seedDeId(est.id)} height={150} radius={0} src={est.foto?.url} alt="" />
         {est.departamento && (
           <span style={{ position: "absolute", top: 12, left: 12, display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(251,249,248,.95)", borderRadius: "var(--radius-pill)", padding: "5px 11px", boxShadow: "0 2px 8px rgba(45,90,39,.16)" }}>
             <MapPin size={13} color="var(--brown-700)" />

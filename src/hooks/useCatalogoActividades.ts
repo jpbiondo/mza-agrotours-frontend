@@ -103,8 +103,13 @@ function aNombresCultivo(v: unknown): string[] {
   return aCultivos(v).map((c) => c.nombre);
 }
 
-/** Sin `downloadUrl` no hay nada que dibujar, así que esa foto no cuenta. */
-function aFoto(v: unknown): FotoRef | null {
+/**
+ * Sin `downloadUrl` no hay nada que dibujar, así que esa foto no cuenta.
+ *
+ * Se exporta porque el catálogo de establecimientos mapea su portada igual: los
+ * dos endpoints devuelven el mismo `DTOFotosResponse`.
+ */
+export function aFoto(v: unknown): FotoRef | null {
   if (!v || typeof v !== "object") return null;
   const f = v as { key?: unknown; nombre?: unknown; downloadUrl?: unknown };
   const url = aTexto(f.downloadUrl);

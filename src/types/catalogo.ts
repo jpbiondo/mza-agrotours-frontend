@@ -74,6 +74,8 @@ export interface EstablecimientoResumen {
   /** Con id, no sólo el nombre: el filtro del catálogo viaja por id. */
   cultivos: CultivoRef[];
   cantidadActividades: number;
+  /** Portada de la finca. `null` mientras el titular no haya cargado ninguna. */
+  foto: FotoRef | null;
 }
 
 /**
@@ -114,6 +116,8 @@ export interface EstablecimientoPublico {
   ubicacion: string;
   cultivos: string[];
   actividades: ActividadOfrecida[];
+  /** Portada de la finca. `null` mientras el titular no haya cargado ninguna. */
+  foto: FotoRef | null;
 }
 
 /* ---- Catálogo público de actividades (backend real) -----------------------
