@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   Home,
@@ -9,11 +8,7 @@ import {
   Phone,
   Landmark,
   Sprout,
-  Pencil,
-  X,
-  Check,
   Lock,
-  Loader,
   ExternalLink,
   Inbox,
   Trash2,
@@ -48,8 +43,11 @@ import {
   useEstablecimientoDatos,
   useGuardarEstablecimiento,
 } from "@/hooks/useEstablecimientoDatos";
+import { useFotoPortada } from "@/hooks/useFotoPortada";
 import EliminarEstablecimientoFlow from "./EliminarEstablecimientoFlow";
-import type { EstablecimientoDatos } from "@/types/datos";
+import { PortadaCard } from "./PortadaCard";
+import { SectionCard } from "./SectionCard";
+import type { EstablecimientoDatos, FotoPortada } from "@/types/datos";
 
 /** Secciones que se pueden editar; una por vez. */
 type Seccion = "identidad" | "contacto" | "operacion";
@@ -67,89 +65,6 @@ const ERROR_GUARDAR: Record<string, string> = {
 function mensajeGuardar(code?: string): string {
   if (code) return ERROR_GUARDAR[code] ?? "No se pudieron guardar los cambios.";
   return "No se pudieron guardar los cambios. Probá de nuevo en unos minutos.";
-}
-
-/* ---- Tarjeta de sección ------------------------------------------------- */
-
-function SectionCard({
-  title,
-  icon,
-  isEditing,
-  onEdit,
-  onCancel,
-  onSave,
-  canSave = true,
-  saving,
-  locked,
-  aside,
-  children,
-}: {
-  title: string;
-  icon: ReactNode;
-  isEditing: boolean;
-  onEdit: () => void;
-  onCancel: () => void;
-  onSave?: () => void;
-  canSave?: boolean;
-  saving?: boolean;
-  /** Sección de sólo lectura: no ofrece editar. */
-  locked?: boolean;
-  /** Reemplaza los botones del encabezado en las secciones `locked`. */
-  aside?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <Card className="mb-6 overflow-hidden">
-      <header className="flex items-center justify-between gap-4 border-b border-cream-tert px-7 py-5">
-        <div className="flex items-center gap-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-green-050">
-            {icon}
-          </span>
-          <h2 className="font-display text-[18px] font-semibold text-fg-1">
-            {title}
-          </h2>
-        </div>
-        {locked ? (
-          aside
-        ) : !isEditing ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-sm"
-            onClick={onEdit}
-          >
-            <Pencil className="size-[15px]" /> Editar
-          </Button>
-        ) : (
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-sm"
-              onClick={onCancel}
-              disabled={saving}
-            >
-              <X className="size-[15px]" /> Cancelar
-            </Button>
-            <Button
-              size="sm"
-              className="text-sm"
-              onClick={onSave}
-              disabled={!canSave || saving}
-            >
-              {saving ? (
-                <Loader className="spin size-[15px]" />
-              ) : (
-                <Check className="size-[15px]" />
-              )}
-              Guardar cambios
-            </Button>
-          </div>
-        )}
-      </header>
-      <div className="px-7 pt-2 pb-7">{children}</div>
-    </Card>
-  );
 }
 
 /** Fila de lectura: rótulo a la izquierda, valor a la derecha. */
@@ -371,6 +286,7 @@ function Inner({
   onGuardado: (cambios: Partial<EstablecimientoDatos>) => void;
 }) {
   const { guardar, isLoading: saving } = useGuardarEstablecimiento();
+  const fotoPortada = useFotoPortada(datos.id, datos.foto);
   const [bajaAbierta, setBajaAbierta] = useState(false);
   const [bajaHecha, setBajaHecha] = useState(false);
   const [editando, setEditando] = useState<Seccion | null>(null);
@@ -410,6 +326,18 @@ function Inner({
     return () => clearTimeout(t);
   }, [bajaHecha]);
 
+  /**
+   * La portada no entra en el ciclo de edición de las demás secciones: se elige
+   * o se quita y se guarda en el acto.
+   */
+  async function guardarPortada(portada: FotoPortada | null) {
+    await guardarSeccion(
+      { foto: portada },
+      undefined,
+      portada ? "Portada actualizada correctamente." : "Portada eliminada.",
+    );
+  }
+
   function abrir(seccion: Seccion) {
     setErrorGuardar(null);
     setNombre(datos.nombre);
@@ -433,6 +361,8 @@ function Inner({
     cambios: Partial<EstablecimientoDatos>,
     /** Código que la sección muestra en su propio campo: no va al aviso de arriba. */
     codigoPropio?: string,
+    /** Aviso propio de la sección. Por defecto, el genérico de guardado. */
+    mensaje = "Cambios guardados correctamente.",
   ): Promise<{ ok: boolean; code?: string }> {
     setErrorGuardar(null);
     const merged = { ...datos, ...cambios };
@@ -442,6 +372,9 @@ function Inner({
       telefono: merged.telefono,
       email: merged.email,
       cvu: merged.cvu,
+      // Va SIEMPRE, aunque la sección no la toque: el PUT reemplaza el estado
+      // completo y una `foto` ausente le dice al backend que la borre.
+      foto: merged.foto ? { key: merged.foto.key, nombre: merged.foto.nombre } : null,
     });
     if (!res.ok) {
       if (!res.code || res.code !== codigoPropio) {
@@ -451,7 +384,7 @@ function Inner({
     }
     onGuardado(cambios);
     setEditando(null);
-    notificar("Cambios guardados correctamente.");
+    notificar(mensaje);
     return res;
   }
 
@@ -555,6 +488,8 @@ function Inner({
           </div>
         )}
       </SectionCard>
+
+      <PortadaCard foto={fotoPortada} onGuardar={guardarPortada} guardando={saving} />
 
       {/* Ubicación: el backend no la expone para editar. */}
       <SectionCard
