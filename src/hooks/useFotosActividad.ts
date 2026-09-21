@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { apiFetch, comoEnvelope } from "@/lib/api";
-import { conToken } from "@/lib/sesion";
+import { pedirFirmas } from "@/lib/presign";
 import { putPrefirmado } from "@/lib/storage";
 import type { FotoActividad, FotoClaim } from "@/types/actividad-foto";
-import type { ArchivoUploadResponse } from "@/types/establecimiento";
 
 /**
  * Fotos de una actividad, subidas apenas se sueltan en el uploader.
@@ -24,48 +22,8 @@ import type { ArchivoUploadResponse } from "@/types/establecimiento";
  * latencia) y el reordenamiento posterior no obliga a resubir nada.
  */
 
-/** Item de `archivos` en el request de presign (DTO PresignedUrlRequest). */
-interface PresignItem {
-  filename: string;
-  fileSize: number;
-}
-
 function presignPath(establecimientoId: string): string {
   return `/establecimientos/${encodeURIComponent(establecimientoId)}/actividades/archivos/presign`;
-}
-
-function aRespuestas(v: unknown): ArchivoUploadResponse[] {
-  if (!Array.isArray(v)) return [];
-  return v.filter(
-    (r): r is ArchivoUploadResponse =>
-      !!r && typeof r === "object" && typeof (r as ArchivoUploadResponse).uploadUrl === "string",
-  );
-}
-
-/**
- * Pide las URLs prefirmadas. Devuelve `null` si el pedido falló entero —ahí
- * ninguna foto de la tanda puede subir— y el arreglo si salió bien.
- */
-async function pedirFirmas(
-  establecimientoId: string,
-  items: PresignItem[],
-): Promise<ArchivoUploadResponse[] | null> {
-  try {
-    const res = await conToken((token) =>
-      apiFetch<unknown>(presignPath(establecimientoId), {
-        method: "POST",
-        token,
-        body: JSON.stringify({ archivos: items }),
-      }),
-    );
-    const env = comoEnvelope<unknown>(res);
-    return env.ok ? aRespuestas(env.data) : null;
-  } catch {
-    // Un ApiError con code es de dominio (extensión no permitida, tamaño…) y
-    // uno sin code es técnico, pero para el uploader dan lo mismo: la tanda no
-    // se puede subir y cada tile queda en error con su reintento.
-    return null;
-  }
 }
 
 const SIN_FIRMA = "El backend no devolvió URL de subida para este archivo";
@@ -166,7 +124,7 @@ export function useFotosActividad(
       setFotos((prev) => [...prev, ...nuevas]);
 
       const firmas = await pedirFirmas(
-        establecimientoId,
+        presignPath(establecimientoId),
         files.map((f) => ({ filename: f.name, fileSize: f.size })),
       );
 
@@ -244,7 +202,7 @@ export function useFotosActividad(
       }
 
       // Sin firma previa —falló el presign— hay que pedir una nueva.
-      const firmas = await pedirFirmas(establecimientoId, [
+      const firmas = await pedirFirmas(presignPath(establecimientoId), [
         { filename: foto.file.name, fileSize: foto.file.size },
       ]);
       const firma = firmas?.[0];
