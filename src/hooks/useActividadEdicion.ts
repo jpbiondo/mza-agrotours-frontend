@@ -3,15 +3,13 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
-import { contentTypeDe } from "@/data/establecimiento";
 import { tarifasIniciales } from "@/data/actividad-form";
 import { limpiarLista } from "@/lib/actividad-form";
 import { aEstado } from "@/hooks/useActividades";
 import type { ActividadEditarForm } from "@/app/panel/actividades/[id]/editar/schema";
-import type { ArchivoGuardado } from "@/components/ui/uploader";
 import type { EstadoActividad } from "@/types/actividad-prod";
 import type { FaqItem, TarifaFila } from "@/types/actividad-form";
-import type { ArchivoUploadResponse } from "@/types/establecimiento";
+import type { FotoActividad, FotoClaim } from "@/types/actividad-foto";
 
 function editPath(establecimientoId: string, actividadId: string): string {
   return `/establecimientos/${encodeURIComponent(establecimientoId)}/actividades/edit/${encodeURIComponent(actividadId)}`;
@@ -42,7 +40,8 @@ interface FaqBackend {
 /** DTOFotosResponse. Se lee defensivo: sin `key` la foto no se puede conservar. */
 interface FotoBackend {
   key?: string;
-  url?: string;
+  /** URL de descarga prefirmada. El backend la llama así, no `url`. */
+  downloadUrl?: string;
   nombre?: string;
 }
 
@@ -51,7 +50,6 @@ interface ActividadEditarBackend {
   nombre?: string;
   descripcion?: string;
   cultivos?: unknown;
-  fotosParaSubir?: unknown;
   fotosGuardadas?: unknown;
   rangosEtarios?: unknown;
   incluye?: unknown;
@@ -108,26 +106,24 @@ function aFaqs(v: unknown): FaqItem[] {
     .filter((f) => f.q || f.a);
 }
 
-function aFotos(v: unknown): ArchivoGuardado[] {
+/**
+ * Las fotos que ya tiene la actividad, en el orden en que las devolvió el
+ * backend (las trae ordenadas por `orden`). Entran al uploader como cualquier
+ * otra: ya están en el bucket, así que arrancan en "lista".
+ */
+function aFotos(v: unknown): FotoActividad[] {
   if (!Array.isArray(v)) return [];
   return v
     .filter((f): f is FotoBackend => !!f && typeof f === "object")
     .map((f) => ({
+      id: typeof f.key === "string" ? f.key : "",
       key: typeof f.key === "string" ? f.key : "",
-      url: typeof f.url === "string" ? f.url : "",
       nombre: f.nombre ?? "",
+      previewUrl: typeof f.downloadUrl === "string" ? f.downloadUrl : "",
+      estado: "lista" as const,
     }))
     // Sin key no hay forma de decirle al backend que la conserve.
     .filter((f) => f.key !== "");
-}
-
-/** URLs prefirmadas devueltas por el POST, para subir las fotos nuevas. */
-function aSubidas(v: unknown): ArchivoUploadResponse[] {
-  if (!Array.isArray(v)) return [];
-  return v.filter(
-    (r): r is ArchivoUploadResponse =>
-      !!r && typeof r === "object" && typeof (r as ArchivoUploadResponse).uploadUrl === "string",
-  );
 }
 
 /**
@@ -149,8 +145,6 @@ function aActividadEditar(d: ActividadEditarBackend): ActividadEditarForm {
     // Una actividad sin rangos cargados arranca con la plantilla del alta, que
     // es más útil que una tabla vacía.
     tarifas: tarifas.length ? tarifas : tarifasIniciales(),
-    fotos: aFotos(d.fotosGuardadas),
-    nuevas: [],
     incluye: conRenglonVacio(aTextos(d.incluye)),
     noIncluye: conRenglonVacio(aTextos(d.noIncluye)),
     faqs: faqs.length ? faqs : [{ q: "", a: "" }],
@@ -160,6 +154,11 @@ function aActividadEditar(d: ActividadEditarBackend): ActividadEditarForm {
 
 interface UseActividadEdicionReturn {
   data: ActividadEditarForm | null;
+  /**
+   * Las fotos van aparte del formulario: tienen estado de subida propio y las
+   * administra `useFotosActividad`, no react-hook-form.
+   */
+  fotos: FotoActividad[];
   isLoading: boolean;
   error: string | null;
   reload: () => void;
@@ -182,9 +181,12 @@ export function useActividadEdicion(
 
   // La carga se deriva de si el resultado guardado corresponde a la clave
   // actual, en vez de prenderla con un setState adentro del efecto.
-  const [res, setRes] = useState<{ clave: string; data: ActividadEditarForm | null; error: string | null }>(
-    { clave: "", data: null, error: null },
-  );
+  const [res, setRes] = useState<{
+    clave: string;
+    data: ActividadEditarForm | null;
+    fotos: FotoActividad[];
+    error: string | null;
+  }>({ clave: "", data: null, fotos: [], error: null });
 
   useEffect(() => {
     if (!clave) return;
@@ -193,7 +195,7 @@ export function useActividadEdicion(
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!active) return;
       if (!user) {
-        setRes({ clave, data: null, error: "Necesitás iniciar sesión para editar la actividad" });
+        setRes({ clave, data: null, fotos: [], error: "Necesitás iniciar sesión para editar la actividad" });
         return;
       }
       try {
@@ -203,11 +205,18 @@ export function useActividadEdicion(
         const env = comoEnvelope<ActividadEditarBackend>(r);
         setRes(
           env.ok && env.data
-            ? { clave, data: aActividadEditar(env.data), error: null }
-            : { clave, data: null, error: env.code ?? "No pudimos cargar la actividad" },
+            ? {
+                clave,
+                data: aActividadEditar(env.data),
+                fotos: aFotos(env.data.fotosGuardadas),
+                error: null,
+              }
+            : { clave, data: null, fotos: [], error: env.code ?? "No pudimos cargar la actividad" },
         );
       } catch (e) {
-        if (active) setRes({ clave, data: null, error: e instanceof Error ? e.message : "Error inesperado" });
+        if (active) {
+          setRes({ clave, data: null, fotos: [], error: e instanceof Error ? e.message : "Error inesperado" });
+        }
       }
     });
 
@@ -222,6 +231,7 @@ export function useActividadEdicion(
 
   return {
     data: isLoading ? null : res.data,
+    fotos: isLoading ? [] : res.fotos,
     error: isLoading ? null : res.error,
     isLoading,
     reload,
@@ -240,19 +250,17 @@ interface TarifaEditDTO {
   esTarifaBase: boolean;
 }
 
-interface FotoNuevaDTO {
-  filename: string;
-  contentType: string;
-  fileSize: number;
-}
-
 export interface EdicionActividadDTO {
   nombre: string;
   descripcion: string;
   cultivos: string[];
-  fotosNuevas: FotoNuevaDTO[];
-  /** Keys de las que se conservan: las que falten acá se borran. */
-  fotosExistentes: string[];
+  /**
+   * TODAS las fotos que la actividad tiene que quedar teniendo, EN ORDEN: las
+   * que ya estaban y las recién subidas, mezcladas. El backend reordena las
+   * conocidas con el índice de este arreglo, reclama las que no conoce y borra
+   * las que no aparezcan.
+   */
+  fotos: FotoClaim[];
   tarifas: TarifaEditDTO[];
   incluye: string[];
   noIncluye: string[];
@@ -260,19 +268,16 @@ export interface EdicionActividadDTO {
   estado: string;
 }
 
-export function aPayloadEdicion(v: ActividadEditarForm, estado: EstadoActividad): EdicionActividadDTO {
+export function aPayloadEdicion(
+  v: ActividadEditarForm,
+  estado: EstadoActividad,
+  fotos: FotoClaim[] = [],
+): EdicionActividadDTO {
   return {
     nombre: v.nombre.trim(),
     descripcion: v.descripcion.trim(),
     cultivos: v.cultivos,
-    fotosNuevas: v.nuevas.map((f) => ({
-      filename: f.name,
-      // La misma función que usa el PUT prefirmado sobre el mismo File: así el
-      // content type firmado y el enviado no se pueden desincronizar.
-      contentType: contentTypeDe(f),
-      fileSize: f.size,
-    })),
-    fotosExistentes: v.fotos.map((f) => f.key),
+    fotos,
     tarifas: v.tarifas
       .filter((r) => r.on)
       .map((r) => ({
@@ -296,8 +301,6 @@ export function aPayloadEdicion(v: ActividadEditarForm, estado: EstadoActividad)
 export interface ResultadoEdicion {
   ok: boolean;
   code?: string;
-  /** URLs prefirmadas de las fotos nuevas, para subirlas después del guardado. */
-  subidas: ArchivoUploadResponse[];
   /** Avisos del backend (huecos de edad, por ejemplo). No impiden guardar. */
   advertencias: string[];
 }
@@ -311,6 +314,7 @@ export function useGuardarEdicion() {
     actividadId: string,
     data: ActividadEditarForm,
     estado: EstadoActividad,
+    fotos: FotoClaim[] = [],
   ): Promise<ResultadoEdicion> {
     setIsLoading(true);
     try {
@@ -318,22 +322,18 @@ export function useGuardarEdicion() {
         apiFetch<unknown>(editPath(establecimientoId, actividadId), {
           method: "PUT",
           token,
-          body: JSON.stringify(aPayloadEdicion(data, estado)),
+          body: JSON.stringify(aPayloadEdicion(data, estado, fotos)),
         }),
       );
       const env = comoEnvelope<ActividadEditarBackend>(res);
-      if (!env.ok) return { ok: false, code: env.code, subidas: [], advertencias: [] };
-      return {
-        ok: true,
-        subidas: aSubidas(env.data?.fotosParaSubir),
-        advertencias: aTextos(env.data?.advertencias),
-      };
+      if (!env.ok) return { ok: false, code: env.code, advertencias: [] };
+      return { ok: true, advertencias: aTextos(env.data?.advertencias) };
     } catch (e) {
-      if (e instanceof ApiError) return { ok: false, code: e.code, subidas: [], advertencias: [] };
+      if (e instanceof ApiError) return { ok: false, code: e.code, advertencias: [] };
       // `apiFetch` sólo llega a res.json() con un 2xx: un error de parseo es una
-      // edición hecha y contestada sin cuerpo. Sin cuerpo no hay URLs de subida.
-      if (e instanceof SyntaxError) return { ok: true, subidas: [], advertencias: [] };
-      return { ok: false, subidas: [], advertencias: [] };
+      // edición hecha y contestada sin cuerpo.
+      if (e instanceof SyntaxError) return { ok: true, advertencias: [] };
+      return { ok: false, advertencias: [] };
     } finally {
       setIsLoading(false);
     }
