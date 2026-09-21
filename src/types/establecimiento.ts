@@ -24,6 +24,12 @@ export interface ArchivoUploadResponse {
   extension: string;
   /** Nombre del archivo. Puede venir con o sin la extensión incluida. */
   nombre: string;
+  /**
+   * Content type que el backend metió DENTRO de la firma —lo deduce de la
+   * extensión, el cliente no lo elige—, así que el PUT tiene que repetir este
+   * y no uno calculado acá. Opcional porque los endpoints viejos no lo mandan.
+   */
+  contentType?: string;
 }
 
 /** `data` del envelope 2xx (DTO SolicitudEstablecimientoCreateResp). */
