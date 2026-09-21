@@ -9,10 +9,13 @@ import {
 import { Alert, Button, Card, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { ImageUploader } from "@/components/ui/image-uploader";
 import {
   PASOS, bloqueoDeTarifas, erroresDeActividad, huecosDeEdad, pasoDelError, soloDigitos,
 } from "@/lib/actividad-form";
+import { UPLOAD_FOTOS } from "@/data/actividad-form";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
+import { useFotosActividad } from "@/hooks/useFotosActividad";
 import { useTiposCultivo } from "@/hooks/useTiposCultivo";
 import { useGuardarActividad, type EstadoGuardado } from "@/hooks/useGuardarActividad";
 import type { ActividadFormData } from "@/types/actividad-form";
@@ -53,6 +56,7 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
   const [errorAlta, setErrorAlta] = useState<string | null>(null);
 
   const { guardar, isLoading } = useGuardarActividad();
+  const fotos = useFotosActividad(establecimientoId);
   const { cultivos: catalogo, isLoading: cargandoCultivos } = useTiposCultivo(true);
 
   const set = <K extends keyof ActividadFormData>(k: K, val: ActividadFormData[K]) =>
@@ -88,7 +92,9 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
       return;
     }
 
-    const res = await guardar(establecimientoId, v, estado);
+    // Las fotos ya están en el bucket: viaja la lista de keys, y su orden es el
+    // que el productor dejó en la grilla.
+    const res = await guardar(establecimientoId, v, estado, fotos.claims);
     if (!res.ok) {
       setErrorAlta(mensajeAlta(res.code));
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -101,7 +107,10 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
   const IconoPaso = ICONO_PASO[paso - 1];
   const metaPaso = PASOS[paso - 1];
   const guardando = isLoading || !!done;
-  const noSePuedeGuardar = guardando || !establecimientoId || !!bloqueoTarifas;
+  // No se guarda con una foto a medio subir —su key todavía no existe— ni con
+  // una fallada: publicar ahora la perdería sin avisar.
+  const noSePuedeGuardar =
+    guardando || !establecimientoId || !!bloqueoTarifas || fotos.subiendo || fotos.conError > 0;
 
   const toast: ToastData | null = done
     ? {
@@ -243,6 +252,18 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
                     }}
                   />
                   <ErrorMsg>{ver("cultivos")}</ErrorMsg>
+                </div>
+
+                <div className="mt-[26px]">
+                  <FieldLabel>Imágenes</FieldLabel>
+                  <ImageUploader
+                    limites={UPLOAD_FOTOS}
+                    fotos={fotos.fotos}
+                    onAgregar={fotos.agregar}
+                    onQuitar={fotos.quitar}
+                    onMover={fotos.mover}
+                    onReintentar={fotos.reintentar}
+                  />
                 </div>
               </div>
             )}

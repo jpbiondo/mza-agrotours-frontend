@@ -11,10 +11,9 @@ import { camposComunes, refinarTarifas } from "@/lib/actividad-form";
 export const actividadEditarSchema = z
   .object({
     ...camposComunes,
-    /** Fotos que siguen en el storage; quitarlas de la lista es borrarlas. */
-    fotos: z.array(z.object({ key: z.string(), nombre: z.string(), url: z.string().optional() })),
-    /** Fotos recién elegidas, todavía sin subir. */
-    nuevas: z.array(z.custom<File>()),
+    // Las fotos NO están acá: se suben apenas se sueltan y tienen estado
+    // propio (subiendo / error), que no es algo que react-hook-form modele
+    // bien. Las administra `useFotosActividad` y viajan aparte al guardar.
     /** Con el que vino del backend: decide el texto del botón de publicar. */
     estado: z.enum(["publicado", "borrador"]),
   })
