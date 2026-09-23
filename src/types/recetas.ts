@@ -1,3 +1,5 @@
+import type { FotoRef } from "@/types/catalogo";
+
 /** Enum `Dificultad` del backend. */
 export type DificultadId = "FACIL" | "MEDIA" | "DIFICIL";
 
@@ -22,6 +24,8 @@ export interface RecetaResumen {
   tiempo: string;
   porciones: number;
   cantidadPasos: number;
+  /** Imagen del plato. `null` mientras no se haya cargado ninguna. */
+  foto: FotoRef | null;
 }
 
 export interface PasoReceta {
@@ -39,6 +43,8 @@ export interface RecetaDetalle {
   cultivos: CultivoDeReceta[];
   ingredientes: string[];
   pasos: PasoReceta[];
+  /** Imagen del plato. `null` mientras no se haya cargado ninguna. */
+  foto: FotoRef | null;
 }
 
 /** Opción de un filtro, con cuántas recetas caen en ella. */

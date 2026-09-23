@@ -1,3 +1,5 @@
+import type { FotoRef } from "@/types/catalogo";
+
 import type { DificultadId } from "./recetas";
 
 export type EstadoMes = "cosecha" | "crecimiento" | "reposo";
@@ -13,6 +15,8 @@ export interface CultivoResumen {
   nombre: string;
   resumenCosecha: string;
   enTemporada: boolean;
+  /** Imagen representativa. `null` mientras el admin no haya cargado ninguna. */
+  foto: FotoRef | null;
 }
 
 export interface TotalesTemporada {
@@ -47,6 +51,8 @@ export interface RecetaDeCultivo {
   tiempo: string;
   porciones: number;
   dificultad: DificultadId;
+  /** Imagen del plato. `null` mientras no se haya cargado ninguna. */
+  foto: FotoRef | null;
 }
 
 export interface CultivoDetalle {
@@ -59,6 +65,8 @@ export interface CultivoDetalle {
   informacionNutricional: DatoNutricional[];
   recetas: RecetaDeCultivo[];
   actividades: ActividadDeCultivo[];
+  /** Imagen representativa. `null` mientras el admin no haya cargado ninguna. */
+  foto: FotoRef | null;
 }
 
 /** Filtro de temporada del listado. `null` es "todos". */

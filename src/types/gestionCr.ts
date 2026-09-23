@@ -1,3 +1,5 @@
+import type { ImagenGuardada } from "@/types/imagen";
+
 import type { DificultadId } from "./recetas";
 export type { DificultadId };
 
@@ -44,6 +46,11 @@ export interface DatosCultivo {
   /** Sobre qué porción se informan los valores, p. ej. "100 g". */
   porcionReferencia: string;
   informacionNutricional: FilaNutricional[];
+  /**
+   * Imagen representativa. `null` es "sin imagen", y como el alta y la edición
+   * mandan el estado completo, mandarla en `null` la borra.
+   */
+  foto: ImagenGuardada | null;
 }
 
 export interface CultivoOpcion {
@@ -61,6 +68,8 @@ export interface RecetaCatalogo {
   duracionNombre: string;
   cantidadPasos: number;
   porciones: number;
+  /** Imagen del plato. `null` mientras no se haya cargado ninguna. */
+  foto: ImagenGuardada | null;
 }
 
 export interface DatosReceta {
@@ -72,4 +81,9 @@ export interface DatosReceta {
   descripcion: string;
   ingredientes: string[];
   pasos: string[];
+  /**
+   * Imagen del plato. `null` es "sin imagen", y como el alta y la edición
+   * mandan el estado completo, mandarla en `null` la borra.
+   */
+  foto: ImagenGuardada | null;
 }
