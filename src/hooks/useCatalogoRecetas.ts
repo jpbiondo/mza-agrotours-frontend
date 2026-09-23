@@ -1,3 +1,4 @@
+import { aFoto } from "@/hooks/useCatalogoActividades";
 import { useAsync } from "@/hooks/useAsync";
 import type { AsyncState } from "@/hooks/useAsync";
 import { ApiError, apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
@@ -43,6 +44,7 @@ interface ResumenBackend {
   tiempo?: string | null;
   porciones?: unknown;
   cantidadPasos?: unknown;
+  foto?: unknown;
 }
 
 interface IngredienteBackend {
@@ -65,6 +67,7 @@ interface DetalleBackend {
   cultivos?: unknown;
   ingredientes?: unknown;
   pasos?: unknown;
+  foto?: unknown;
 }
 
 interface FiltroDificultadBackend {
@@ -129,6 +132,7 @@ function aResumen(r: ResumenBackend): RecetaResumen {
     tiempo: aTexto(r.tiempo),
     porciones: aNumero(r.porciones),
     cantidadPasos: aNumero(r.cantidadPasos),
+    foto: aFoto(r.foto),
   };
 }
 
@@ -169,6 +173,7 @@ function aDetalle(d: DetalleBackend): RecetaDetalle {
     cultivos: aCultivos(d.cultivos),
     ingredientes: aIngredientes(d.ingredientes),
     pasos: aPasos(d.pasos),
+    foto: aFoto(d.foto),
   };
 }
 

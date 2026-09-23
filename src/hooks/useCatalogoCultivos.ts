@@ -1,3 +1,4 @@
+import { aFoto } from "@/hooks/useCatalogoActividades";
 import { useAsync } from "@/hooks/useAsync";
 import type { AsyncState } from "@/hooks/useAsync";
 import { ApiError, apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
@@ -38,6 +39,7 @@ interface ResumenBackend {
   nombre?: string;
   resumenCosecha?: string | null;
   enTemporada?: unknown;
+  foto?: unknown;
 }
 
 interface MesBackend {
@@ -52,6 +54,7 @@ interface NutricionBackend {
 }
 
 interface RecetaBackend {
+  foto?: unknown;
   id?: string;
   nombre?: string;
   tiempo?: string | null;
@@ -77,6 +80,7 @@ interface DetalleBackend {
   informacionNutricional?: unknown;
   recetas?: unknown;
   actividades?: unknown;
+  foto?: unknown;
 }
 
 interface TotalesBackend {
@@ -145,6 +149,7 @@ function aResumen(c: ResumenBackend): CultivoResumen {
     // propias palabras en vez de mostrar un hueco.
     resumenCosecha: aTexto(c.resumenCosecha),
     enTemporada: c.enTemporada === true,
+    foto: aFoto(c.foto),
   };
 }
 
@@ -191,6 +196,7 @@ function aReceta(r: RecetaBackend): RecetaDeCultivo {
     dificultad: DIFICULTADES.includes(dificultad as DificultadId)
       ? (dificultad as DificultadId)
       : "MEDIA",
+    foto: aFoto(r.foto),
   };
 }
 
@@ -233,6 +239,7 @@ function aDetalle(d: DetalleBackend): CultivoDetalle {
           .map(aActividad)
           .filter((a) => a.id !== "")
       : [],
+    foto: aFoto(d.foto),
   };
 }
 
