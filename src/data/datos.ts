@@ -5,6 +5,7 @@ import {
   TELEFONO_MSG,
   TELEFONO_RE,
 } from "@/data/auth";
+import type { LimitesImagen } from "@/types/imagen";
 
 export function validarNombre(v: string): string | null {
   const t = v.trim();
@@ -74,3 +75,12 @@ export const PORTADA_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
  * cliente: el backend no mira las dimensiones.
  */
 export const PORTADA_ANCHO_MINIMO = 1200;
+
+export const LIMITES_PORTADA: LimitesImagen = {
+  extensiones: PORTADA_EXTENSIONES,
+  mimes: PORTADA_MIMES,
+  accept: PORTADA_ACCEPT,
+  maxBytes: PORTADA_MAX_BYTES,
+  formatosLabel: "JPG o PNG",
+  anchoMinimo: PORTADA_ANCHO_MINIMO,
+};

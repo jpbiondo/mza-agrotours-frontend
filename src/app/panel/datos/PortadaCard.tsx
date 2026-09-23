@@ -66,7 +66,7 @@ export function PortadaCard({
       onEdit={() => {}}
       onCancel={() => {}}
       aside={
-        foto.portada ? (
+        foto.imagen ? (
           <div className="flex shrink-0 gap-2">
             <Button variant="ghost" size="sm" className="text-sm" onClick={abrir} disabled={ocupada}>
               <Upload className="size-[15px]" /> Cambiar portada
@@ -91,21 +91,21 @@ export function PortadaCard({
         horizontal, con luz natural, que muestre el paisaje o el trabajo en el campo.
       </p>
 
-      {foto.portada ? (
+      {foto.imagen ? (
         <div>
           <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-outline-variant bg-cream-tert">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={foto.portada.previewUrl}
-              alt={`Portada de la finca — ${foto.portada.nombre}`}
+              src={foto.imagen.previewUrl}
+              alt={`Portada de la finca — ${foto.imagen.nombre}`}
               className="size-full object-cover"
             />
             {/* Vela inferior: despega la imagen del fondo crema de la tarjeta. */}
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(251,249,248,.35),transparent_42%)]" />
-            {foto.portada.ancho && (
+            {foto.imagen.ancho && (
               <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-pill bg-[rgba(20,33,18,0.6)] px-2.5 py-[5px] font-mono text-[11px] font-semibold text-white/95">
                 <Crop className="size-3" />
-                {foto.portada.ancho} × {foto.portada.alto} px
+                {foto.imagen.ancho} × {foto.imagen.alto} px
               </div>
             )}
             {ocupada && (
@@ -116,10 +116,10 @@ export function PortadaCard({
           </div>
           <div className="mt-3 flex items-center gap-2 text-[13px]">
             <ImageIcon className="size-3.5 shrink-0 text-fg-3" />
-            <span className="truncate font-medium text-fg-1">{foto.portada.nombre}</span>
-            {foto.portada.bytes !== undefined && (
+            <span className="truncate font-medium text-fg-1">{foto.imagen.nombre}</span>
+            {foto.imagen.bytes !== undefined && (
               <span className="shrink-0 font-mono text-xs text-fg-3">
-                {fmtBytes(foto.portada.bytes)}
+                {fmtBytes(foto.imagen.bytes)}
               </span>
             )}
           </div>
@@ -178,7 +178,7 @@ export function PortadaCard({
         </div>
       )}
 
-      {!foto.portada && !foto.error && (
+      {!foto.imagen && !foto.error && (
         <p className="mt-2.5 text-xs text-fg-3">
           Mínimo {PORTADA_ANCHO_MINIMO} px de ancho.
         </p>
