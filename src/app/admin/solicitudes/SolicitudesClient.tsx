@@ -38,12 +38,12 @@ import { admInitials } from "@/data/admin";
 import { fmtFecha, fmtFechaHora } from "@/lib/format";
 import { PermisoAdmin } from "@/lib/permisos";
 import { tienePermiso } from "@/lib/roles";
-import { storageConfigurado, urlDeArchivo } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import {
   BASE_ADMIN_SOLICITUDES,
   useSolicitudDetalle,
+  useUrlPrueba,
 } from "@/hooks/useSolicitudDetalle";
 import {
   useResolverSolicitud,
@@ -543,9 +543,26 @@ function DetailField({
   );
 }
 
-function PruebaCard({ p }: { p: PruebaSolicitud }) {
+/**
+ * Una prueba. La carpeta del bucket es privada, así que no hay link directo: al
+ * tocarla se pide una URL firmada y se abre en una pestaña nueva.
+ */
+function PruebaCard({
+  p,
+  solicitudId,
+  onAbrir,
+  cargando,
+}: {
+  p: PruebaSolicitud;
+  solicitudId: string;
+  onAbrir: (solicitudId: string, archivoId: string) => void;
+  /** Id del archivo que se está pidiendo ahora mismo. */
+  cargando: string | null;
+}) {
   const esPdf = p.extension === "pdf";
-  const href = urlDeArchivo(p.key);
+  // Sin id no hay a quién pedirle la URL.
+  const sePuedeAbrir = p.id !== "";
+  const pidiendo = cargando === p.id;
 
   const cuerpo = (
     <>
@@ -573,12 +590,14 @@ function PruebaCard({ p }: { p: PruebaSolicitud }) {
           {p.nombre || "Archivo sin nombre"}
         </div>
         <div className="mt-[3px] flex justify-end">
-          {href ? (
+          {!sePuedeAbrir ? (
+            <span className="text-[11.5px] text-fg-3">No disponible</span>
+          ) : pidiendo ? (
+            <span className="text-[11.5px] text-fg-3">Abriendo…</span>
+          ) : (
             <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-green-800">
               <ExternalLink className="size-3" /> Ver
             </span>
-          ) : (
-            <span className="text-[11.5px] text-fg-3">No disponible</span>
           )}
         </div>
       </div>
@@ -586,19 +605,19 @@ function PruebaCard({ p }: { p: PruebaSolicitud }) {
   );
 
   const clases =
-    "flex flex-col overflow-hidden rounded-md border border-outline-variant bg-surface no-underline";
-  return href ? (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+    "flex flex-col overflow-hidden rounded-md border border-outline-variant bg-surface text-left no-underline";
+  return sePuedeAbrir ? (
+    <button
+      type="button"
+      onClick={() => onAbrir(solicitudId, p.id)}
+      disabled={pidiendo}
       className={cn(
         clases,
-        "transition-[box-shadow,border-color] hover:border-sand hover:shadow-[var(--shadow-hover)]",
+        "cursor-pointer transition-[box-shadow,border-color] hover:border-sand hover:shadow-[var(--shadow-hover)] disabled:cursor-wait",
       )}
     >
       {cuerpo}
-    </a>
+    </button>
   ) : (
     <div className={clases}>{cuerpo}</div>
   );
@@ -620,6 +639,7 @@ function Detail({
   onResolver: (estado: Resolucion, obs: string) => void;
 }) {
   const [obs, setObs] = useState("");
+  const { abrir: abrirPrueba, cargando: abriendoPrueba } = useUrlPrueba();
   const readOnly = sol.estado !== "pendiente";
   const obsErr = obs.length > OBS_MAX;
   const bloqueado = busy || obsErr || !gestionar;
@@ -736,9 +756,8 @@ function Detail({
             title={`Prueba de existencia y titularidad (${sol.pruebas.length})`}
           >
             <p className="mt-1.5 mb-3.5 text-[13px] text-fg-3">
-              {storageConfigurado
-                ? "Archivos cargados por el postulante (PNG, JPG o PDF)."
-                : "No se pueden abrir: falta configurar la URL del almacenamiento."}
+              Archivos cargados por el postulante (PNG, JPG o PDF). Se abren en una pestaña
+              nueva con un enlace temporal.
             </p>
             {sol.pruebas.length === 0 ? (
               <p className="text-sm text-fg-2">
@@ -747,7 +766,13 @@ function Detail({
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3.5">
                 {sol.pruebas.map((p, i) => (
-                  <PruebaCard key={p.key || i} p={p} />
+                  <PruebaCard
+                    key={p.id || p.key || i}
+                    p={p}
+                    solicitudId={sol.id}
+                    onAbrir={abrirPrueba}
+                    cargando={abriendoPrueba}
+                  />
                 ))}
               </div>
             )}
