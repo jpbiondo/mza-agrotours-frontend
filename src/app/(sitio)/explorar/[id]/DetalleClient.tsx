@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Share2, Check, X, MapPin, Users, ChevronLeft, ChevronRight, SearchX,
-  Building2, Sprout, ChevronDown, Navigation, Droplets,
+  Building2, Sprout, ChevronDown, Navigation, Droplets, ExternalLink,
   Sun, CloudSun, Cloud, Cloudy, CloudDrizzle, CloudRain, CloudLightning, CloudSnow, CloudFog,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -135,6 +135,91 @@ function FaqRow({ q, a }: { q: string; a: string }) {
       </button>
       {open && <div className="pop" style={{ padding: "0 18px 18px", fontSize: 14, color: "var(--fg-2)", lineHeight: 1.6 }}>{a}</div>}
     </div>
+  );
+}
+
+/* ---- Ubicación --------------------------------------------------------- */
+
+/**
+ * Clave de la Embed API de Google Maps. Viaja en la URL del iframe, así que
+ * termina en el bundle del cliente: en la consola de Google tiene que estar
+ * restringida por referrer al dominio del sitio, y limitada a la Embed API.
+ */
+const GOOGLE_MAPS_EMBED_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY ?? "";
+
+/**
+ * Qué se busca en el mapa. El detalle no manda coordenadas, sólo la dirección
+ * que escribió el productor, así que se le agrega el departamento y la
+ * provincia: "San Martín 1250" solo existe en media Argentina.
+ */
+function consultaMapa(a: ActividadPublica): string {
+  return [a.direccion, a.establecimiento.departamento, "Mendoza, Argentina"].filter(Boolean).join(", ");
+}
+
+/** URL del embed en modo `place`, que resuelve la dirección como búsqueda de texto. */
+function urlEmbed(consulta: string): string {
+  const qs = new URLSearchParams({
+    key: GOOGLE_MAPS_EMBED_KEY,
+    q: consulta,
+    language: "es",
+    region: "AR",
+  });
+  return `https://www.google.com/maps/embed/v1/place?${qs.toString()}`;
+}
+
+/**
+ * Mapa del establecimiento con la Embed API de Google. El modo `place` busca por
+ * texto, no por coordenadas, así que una dirección mal cargada cae en el centro
+ * del departamento en vez de marcar un lugar equivocado.
+ *
+ * Sin `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` el iframe no se dibuja —Google
+ * devolvería su propio cartel de error— y queda sólo la barra de la dirección,
+ * que con el botón "Cómo llegar" sigue sirviendo igual.
+ *
+ * Esa barra va **debajo** del mapa y no flotando encima como en el diseño: ahí
+ * el mapa era un dibujo y acá es un iframe que se arrastra, así que una tarjeta
+ * encima le comería los clicks y taparía la atribución de Google.
+ */
+function MapaUbicacion({ a }: { a: ActividadPublica }) {
+  const consulta = consultaMapa(a);
+  const lugar = [a.establecimiento.nombre, a.establecimiento.departamento].filter(Boolean).join(" · ");
+  return (
+    <Block>
+      <SectionTitle sub={lugar || undefined}>Ubicación</SectionTitle>
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        {GOOGLE_MAPS_EMBED_KEY !== "" && (
+          <iframe
+            title={`Mapa de ${a.establecimiento.nombre || a.nombre}`}
+            src={urlEmbed(consulta)}
+            /* Está cerca del final de la página: no hace falta cargarlo hasta llegar. */
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+            style={{ display: "block", width: "100%", height: 280, border: "none" }}
+          />
+        )}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", padding: "14px 18px", borderTop: GOOGLE_MAPS_EMBED_KEY !== "" ? "1px solid var(--outline-variant)" : "none" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <MapPin size={18} color="var(--brown-700)" style={{ flexShrink: 0 }} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--fg-1)" }}>{a.direccion}</div>
+              {a.establecimiento.departamento && (
+                <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 1 }}>{a.establecimiento.departamento}, Mendoza</div>
+              )}
+            </div>
+          </div>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(consulta)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-neutral btn-sm"
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}
+          >
+            Cómo llegar <ExternalLink size={15} />
+          </a>
+        </div>
+      </div>
+    </Block>
   );
 }
 
@@ -438,6 +523,9 @@ function Detalle({ a }: { a: ActividadPublica }) {
               </div>
             </div>
           </Block>
+
+          {/* Sin dirección cargada no hay nada que buscar en el mapa. */}
+          {a.direccion && <MapaUbicacion a={a} />}
 
           {a.establecimiento.departamento && (
             <Pronostico departamento={a.establecimiento.departamento} />
