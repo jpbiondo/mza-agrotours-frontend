@@ -4,6 +4,7 @@ import { auth } from "../../firebase.config";
 import { useTiposCultivo } from "@/hooks/useTiposCultivo";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
+import { aImagenGuardada } from "@/lib/imagen";
 import type {
   CultivoOpcion, DatosReceta, DificultadId, RecetaCatalogo,
 } from "@/types/gestionCr";
@@ -42,6 +43,7 @@ interface RecetaBackend {
   duracionNombre?: string | null;
   cantidadPasos?: unknown;
   porciones?: unknown;
+  foto?: unknown;
 }
 
 interface CatalogoBackend {
@@ -59,6 +61,7 @@ interface DetalleBackend {
   descripcion?: string;
   ingredientes?: unknown;
   pasos?: unknown;
+  foto?: unknown;
 }
 
 function aReceta(r: RecetaBackend): RecetaCatalogo {
@@ -71,6 +74,7 @@ function aReceta(r: RecetaBackend): RecetaCatalogo {
     duracionNombre: aTexto(r.duracionNombre),
     cantidadPasos: aNumero(r.cantidadPasos),
     porciones: aNumero(r.porciones),
+    foto: aImagenGuardada(r.foto),
   };
 }
 
@@ -217,6 +221,7 @@ export function useRecetaDetalle() {
           descripcion: env.data.descripcion ?? "",
           ingredientes: aTextos(env.data.ingredientes),
           pasos: aTextos(env.data.pasos),
+          foto: aImagenGuardada(env.data.foto),
         },
       };
     } catch (e) {
@@ -244,8 +249,18 @@ type Resultado = {
  * `DatosReceta` ya tiene los nombres del DTO, así que va tal cual; la única
  * traducción —la dificultad— está en el propio tipo.
  */
+/**
+ * Cuerpo del alta y de la edición (DTORecetaAM). La foto se reduce a
+ * `{ key, nombre }`: el `downloadUrl` que trajo la lectura no va, y el campo
+ * viaja SIEMPRE porque el PUT reemplaza el estado completo —una `foto` ausente
+ * le dice al backend que la quite—.
+ */
 function cuerpo(datos: DatosReceta) {
-  return JSON.stringify(datos);
+  const { foto, ...resto } = datos;
+  return JSON.stringify({
+    ...resto,
+    foto: foto ? { key: foto.key, nombre: foto.nombre } : null,
+  });
 }
 
 /**
