@@ -5,14 +5,13 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Loader, ArrowLeft, Download, FileText, Image as ImageIcon, File as FileIcon,
+  Loader, ArrowLeft, FileText, Image as ImageIcon, File as FileIcon,
   CalendarDays, PlusCircle, FileSearch, Clock, CheckCircle2, XCircle,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { EstadoBadge, Skeleton } from "@/components/ui";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { fmtFechaHora } from "@/lib/format";
-import { storageConfigurado, urlDeArchivo } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { useSolicitudDetalle } from "@/hooks/useSolicitudDetalle";
 import type {
@@ -121,9 +120,12 @@ function Dato({
   );
 }
 
+/**
+ * Una prueba enviada. Sólo se listan: las pruebas viven en una carpeta privada
+ * del bucket y la URL firmada la reserva el backend para quien puede leer la
+ * solicitud (la administración), no para quien la mandó.
+ */
 function PruebaRow({ a }: { a: PruebaSolicitud }) {
-  const href = urlDeArchivo(a.key);
-
   return (
     <div className="flex items-center gap-3 rounded-md border border-outline-variant bg-cream-tert px-3.5 py-3">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-sand bg-surface">
@@ -139,21 +141,7 @@ function PruebaRow({ a }: { a: PruebaSolicitud }) {
           </span>
         )}
       </span>
-      {href ? (
-        <a
-          href={href}
-          // `download` sólo lo respeta el navegador si el archivo es del mismo
-          // origen; contra el storage abre en una pestaña, que sirve igual.
-          download={a.nombre || undefined}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-neutral btn-sm shrink-0 no-underline"
-        >
-          <Download className="size-[15px]" /> Descargar
-        </a>
-      ) : (
-        <span className="shrink-0 text-[12.5px] text-fg-3">No disponible</span>
-      )}
+      <span className="shrink-0 text-[12.5px] text-fg-3">Enviado</span>
     </div>
   );
 }
@@ -270,11 +258,10 @@ function Detalle({ s }: { s: SolicitudDetalle }) {
           <p className="text-[14px] text-fg-2">No hay pruebas asociadas a esta solicitud.</p>
         ) : (
           <div className="flex flex-col gap-2.5">
-            {!storageConfigurado && (
-              <p className="text-[12.5px] text-fg-3">
-                La descarga no está disponible: falta configurar la URL del almacenamiento.
-              </p>
-            )}
+            <p className="text-[12.5px] text-fg-3">
+              Estos son los archivos que enviaste. Por seguridad sólo los puede abrir la
+              administración durante la verificación.
+            </p>
             {s.pruebas.map((a, i) => (
               <PruebaRow key={a.key || `${a.nombre}-${i}`} a={a} />
             ))}
