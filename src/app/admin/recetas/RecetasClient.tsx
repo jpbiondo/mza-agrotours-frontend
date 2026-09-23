@@ -10,6 +10,9 @@ import { ActionBtn, Alert, Card, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { gcrRecetaInitials } from "@/data/gestionCr";
+
+/** No lleva id: la carpeta y el permiso los decide la ruta. */
+const PRESIGN_RECETA = "/admin/recetas/archivos/presign";
 import { PermisoAdmin } from "@/lib/permisos";
 import { tienePermiso } from "@/lib/roles";
 import { cn } from "@/lib/utils";
@@ -28,6 +31,9 @@ import {
   GcrListEditor, GcrCultivoMultiSelect, GcrCultivoChip, GcrDifficultyPill, gcrDificultadLabel,
   GcrStats, GcrSearchBar, GcrEmptyState, GcrPageHead, GcrNoMatch,
 } from "@/components/admin/gcr/shared";
+import { GcrImagePicker } from "@/components/admin/gcr/image-picker";
+import { LIMITES_IMAGEN_RECETA } from "@/data/gestionCr";
+import { useImagenUnica } from "@/hooks/useImagenUnica";
 
 /** Alta: una fila en blanco de cada lista y los valores más frecuentes. */
 const RECETA_VACIA: DatosReceta = {
@@ -37,6 +43,7 @@ const RECETA_VACIA: DatosReceta = {
   tiempoMinsAprox: 0,
   porciones: 4,
   descripcion: "",
+  foto: null,
   ingredientes: [""],
   pasos: [""],
 };
@@ -245,6 +252,9 @@ function RecetaForm({
   const [tiempo, setTiempo] = useState(initial.tiempoMinsAprox > 0 ? String(initial.tiempoMinsAprox) : "");
   const [porciones, setPorciones] = useState(initial.porciones > 0 ? String(initial.porciones) : "");
   const [descripcion, setDescripcion] = useState(initial.descripcion);
+  // El formulario monta recién con el detalle cargado, así que alcanza con
+  // pasarle la imagen inicial una vez.
+  const imagen = useImagenUnica(PRESIGN_RECETA, LIMITES_IMAGEN_RECETA, initial.foto);
   const [ingredientes, setIngredientes] = useState<string[]>(
     initial.ingredientes.length > 0 ? initial.ingredientes : [""],
   );
@@ -293,6 +303,8 @@ function RecetaForm({
       descripcion: descripcion.trim(),
       ingredientes: ingLimpios,
       pasos: pasosLimpios,
+      // Ya está en el bucket: lo que viaja es la key.
+      foto: imagen.claim && { ...imagen.claim, downloadUrl: imagen.imagen?.previewUrl ?? "" },
     });
   }
 
@@ -423,6 +435,15 @@ function RecetaForm({
         </div>
 
         <div>
+          <GcrFieldLabel style={{ marginBottom: 4 }}>Imagen representativa</GcrFieldLabel>
+          <p className="mb-3 text-[13.5px] leading-relaxed text-fg-2">
+            Opcional. Se muestra en el listado y en la ficha de la receta. Elegí una foto del plato
+            terminado, bien iluminada.
+          </p>
+          <GcrImagePicker imagen={imagen} limites={LIMITES_IMAGEN_RECETA} />
+        </div>
+
+        <div>
           <GcrFieldLabel required style={{ marginBottom: 12 }}>
             Ingredientes
           </GcrFieldLabel>
@@ -465,7 +486,9 @@ function RecetaForm({
         onSave={handleSave}
         saveLabel={editando ? "Guardar cambios" : "Agregar receta"}
         saveIcon={busy ? <Loader className="spin size-[17px]" /> : editando ? undefined : <Utensils className="size-[17px]" />}
-        busy={busy}
+        // Con la imagen a medio subir su key todavía no existe: guardar ahora
+        // la perdería sin avisar.
+        busy={busy || imagen.subiendo}
         error={error}
       />
     </>
@@ -496,8 +519,13 @@ function Filas({
           <tr key={r.id} className="border-b border-cream-tert">
             <td className="p-4 align-middle">
               <div className="flex items-center gap-3.5">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-[10px] border border-sand bg-[#F3ECE2] font-display text-[15px] font-bold text-brown-700">
-                  {gcrRecetaInitials(r.nombre)}
+                <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-sand bg-[#F3ECE2] font-display text-[15px] font-bold text-brown-700">
+                  {r.foto ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.foto.downloadUrl} alt="" className="size-full object-cover" />
+                  ) : (
+                    gcrRecetaInitials(r.nombre)
+                  )}
                 </span>
                 <div className="min-w-0">
                   <div className="font-display text-[15.5px] font-semibold text-fg-1">{r.nombre}</div>
