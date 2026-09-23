@@ -1,8 +1,9 @@
 /**
- * Contratos de POST /solicitudes-establecimiento/create en lo referido a la
- * carga de pruebas documentales. El backend no recibe los archivos: devuelve
- * una URL prefirmada por archivo y el navegador los sube directo al object
- * storage (ver `useSubirArchivos`).
+ * Contratos de la carga de pruebas documentales. El backend no recibe los
+ * archivos: firma una URL por archivo en
+ * `POST /solicitudes-establecimiento/archivos/presign`, el navegador los sube
+ * directo al object storage y después el alta de la solicitud manda sólo las
+ * keys para que las reclame.
  */
 
 /** Item de `archivos` en el request (DTO ArchivoUploadRequest). */
@@ -32,12 +33,15 @@ export interface ArchivoUploadResponse {
   contentType?: string;
 }
 
-/** `data` del envelope 2xx (DTO SolicitudEstablecimientoCreateResp). */
+/**
+ * `data` del envelope 2xx (DTO SolicitudEstablecimientoCreateResp). Ya no trae
+ * URLs de subida: para cuando el POST corre, los archivos ya están en el bucket
+ * (ver `useSolicitarEstablecimiento`).
+ */
 export interface SolicitudEstablecimientoCreateResp {
   solicitudId: string;
   /** Razón social del establecimiento (así lo documenta el backend). */
   nombreEstablecimiento: string;
-  archivoUploadResponses: ArchivoUploadResponse[];
 }
 
 /** Todo lo necesario para subir —o reintentar— un archivo. */

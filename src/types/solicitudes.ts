@@ -33,12 +33,19 @@ export interface SolicitudAdminItem {
   nombreSolicitante: string;
 }
 
-/** Prueba documental ya subida al object storage. */
+/**
+ * Prueba documental ya subida al object storage.
+ *
+ * La carpeta es privada, así que la key no alcanza para armar un link: la URL
+ * se pide aparte —y sólo la puede pedir quien tiene permiso de leer la
+ * solicitud— con `useUrlPrueba`.
+ */
 export interface PruebaSolicitud {
+  /** Id del archivo. Es lo que toma el endpoint que devuelve la URL firmada. */
+  id: string;
   /** Nombre visible del archivo, tal como lo cargó el usuario. */
   nombre: string;
   extension: string;
-  /** Ruta del objeto en el proveedor; se combina con la URL base para descargarlo. */
   key: string;
 }
 
