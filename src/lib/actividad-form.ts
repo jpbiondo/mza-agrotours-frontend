@@ -329,7 +329,7 @@ export function huecosDeEdad(filas: TarifaFila[]): string[] {
 /* ---- Pasos --------------------------------------------------------------- */
 
 export const PASOS = [
-  { n: 1, label: "Información general", sub: "Nombre, descripción y cultivos" },
+  { n: 1, label: "Información general", sub: "Nombre, cultivos e imágenes" },
   { n: 2, label: "Detalles de la experiencia", sub: "Qué incluye y preguntas" },
   { n: 3, label: "Participantes y tarifas", sub: "Cupos y precio según rango" },
   { n: 4, label: "Disponibilidad", sub: "Días y vigencia" },

@@ -135,9 +135,17 @@ function Detalle({ est }: { est: EstablecimientoPublico }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", gap: 40, alignItems: "start" }} className="est-detail-grid">
         <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 38 }}>
-          {/* TODO backend: el detalle todavía no manda imágenes; va el placeholder. */}
+          {/* Acá el diseño tiene un carrusel, pero el establecimiento guarda una
+              sola portada: queda como imagen única, sin flechas ni miniaturas.
+              Sin portada cargada queda el degradado por seed. */}
           <div style={{ borderRadius: "var(--radius-lg)", overflow: "hidden", border: "1px solid var(--outline-variant)" }}>
-            <Photo seed={seedDeId(est.id)} height={420} radius={0} />
+            <Photo
+              seed={seedDeId(est.id)}
+              height={420}
+              radius={0}
+              src={est.foto?.url}
+              alt={est.foto ? `Portada de ${est.nombre}` : ""}
+            />
           </div>
 
           <Seccion icon={<Info size={19} color="var(--green-800)" />} titulo="Sobre el establecimiento">

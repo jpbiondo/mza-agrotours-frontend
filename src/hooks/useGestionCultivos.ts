@@ -3,6 +3,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
+import { aImagenGuardada } from "@/lib/imagen";
 import type {
   CultivoCatalogo, DatosCultivo, Estacion, FilaNutricional, UnidadNutricional,
 } from "@/types/gestionCr";
@@ -149,6 +150,7 @@ interface DetalleBackend {
   estacionalidadPorMes?: unknown;
   porcionReferencia?: string;
   informacionNutricional?: unknown;
+  foto?: unknown;
 }
 
 function aNumero(v: unknown): number {
@@ -283,6 +285,7 @@ export function useCultivoDetalle() {
           calendario: aCalendario(env.data.estacionalidadPorMes),
           porcionReferencia: env.data.porcionReferencia ?? "",
           informacionNutricional: aFilasNutricionales(env.data.informacionNutricional),
+          foto: aImagenGuardada(env.data.foto),
         },
       };
     } catch (e) {
@@ -317,6 +320,9 @@ function cuerpo(datos: DatosCultivo) {
       valor: aValorBackend(f.valor),
       unidad: A_UNIDAD_BACKEND[f.unidad] ?? "GRAMOS",
     })),
+    // Va SIEMPRE, aunque no se haya tocado: el alta y la edición reemplazan el
+    // estado completo y una `foto` ausente le dice al backend que la borre.
+    foto: datos.foto ? { key: datos.foto.key, nombre: datos.foto.nombre } : null,
   });
 }
 

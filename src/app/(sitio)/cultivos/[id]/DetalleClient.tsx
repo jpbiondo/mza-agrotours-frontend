@@ -116,8 +116,8 @@ function RecetaCard({ receta }: { receta: RecetaDeCultivo }) {
       href={`/recetas/${receta.id}`}
       className={cn("flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline", TARJETA_HOVER)}
     >
-      {/* TODO backend: el detalle todavía no manda imágenes de las recetas. */}
-      <Photo seed={seedDeId(receta.id)} height={140} radius={0} icon={UtensilsCrossed} />
+      {/* Decorativa: el nombre de la receta está debajo. */}
+      <Photo seed={seedDeId(receta.id)} height={140} radius={0} icon={UtensilsCrossed} src={receta.foto?.url} alt="" />
       <div className="flex flex-1 flex-col gap-2 p-4">
         <h4 className="m-0 font-display text-base leading-tight font-semibold text-fg-1">{receta.nombre}</h4>
         <div className="flex flex-wrap gap-3 text-xs text-fg-3">
@@ -216,8 +216,15 @@ function Detalle({ cultivo }: { cultivo: CultivoDetalle }) {
   return (
     <>
       <div className="relative mb-8 overflow-hidden rounded-lg">
-        {/* TODO backend: el detalle todavía no manda imágenes; va el placeholder. */}
-        <Photo seed={seedDeId(cultivo.id)} height={360} radius={0} icon={Leaf} />
+        {/* Sin imagen cargada queda el degradado por seed. */}
+        <Photo
+          seed={seedDeId(cultivo.id)}
+          height={360}
+          radius={0}
+          icon={Leaf}
+          src={cultivo.foto?.url}
+          alt={cultivo.foto ? `Imagen de ${cultivo.nombre}` : ""}
+        />
         <div className="absolute inset-0 flex flex-col justify-end bg-linear-to-r from-green-900/80 via-green-900/25 to-transparent p-9">
           <div className="max-w-[600px]">
             {mesActual !== null && (

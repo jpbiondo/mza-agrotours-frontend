@@ -8,6 +8,7 @@ import type {
   CondicionBaja,
   EstablecimientoDatos,
   EstablecimientoEditable,
+  FotoPortada,
 } from "@/types/datos";
 
 const BASE = "/establecimientos";
@@ -25,6 +26,19 @@ interface DatosBackend {
   email?: string;
   cvu?: string;
   cultivos?: unknown;
+  foto?: unknown;
+}
+
+/** DTOFotosResponse. Sin `key` la portada no se puede conservar en el PUT. */
+function aFoto(v: unknown): FotoPortada | null {
+  if (!v || typeof v !== "object") return null;
+  const f = v as { key?: unknown; nombre?: unknown; downloadUrl?: unknown };
+  if (typeof f.key !== "string" || !f.key) return null;
+  return {
+    key: f.key,
+    nombre: typeof f.nombre === "string" ? f.nombre : "",
+    downloadUrl: typeof f.downloadUrl === "string" ? f.downloadUrl : "",
+  };
 }
 
 function aDatos(d: DatosBackend): EstablecimientoDatos {
@@ -40,6 +54,7 @@ function aDatos(d: DatosBackend): EstablecimientoDatos {
     email: d.email ?? "",
     cvu: d.cvu ?? "",
     cultivos: aCultivos(d.cultivos),
+    foto: aFoto(d.foto),
   };
 }
 

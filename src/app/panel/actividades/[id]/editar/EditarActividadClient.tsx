@@ -10,7 +10,7 @@ import {
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Alert, Button, Card, Modal, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
-import { Uploader } from "@/components/ui/uploader";
+import { ImageUploader } from "@/components/ui/image-uploader";
 import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
@@ -23,9 +23,10 @@ import { aErroresPlanosDeForm, bloqueoDeTarifas, huecosDeEdad } from "@/lib/acti
 import { cn } from "@/lib/utils";
 import { useActividadEdicion, useGuardarEdicion } from "@/hooks/useActividadEdicion";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
-import { useSubirArchivos } from "@/hooks/useSubirArchivos";
+import { useFotosActividad } from "@/hooks/useFotosActividad";
 import { useTiposCultivo } from "@/hooks/useTiposCultivo";
 import type { EstadoActividad } from "@/types/actividad-prod";
+import type { FotoActividad } from "@/types/actividad-foto";
 import { actividadEditarSchema, type ActividadEditarForm } from "./schema";
 
 const LISTADO = "/panel/actividades";
@@ -51,8 +52,6 @@ interface ResultadoGuardado {
   estado: EstadoActividad;
   /** Huecos de edad y demás avisos: la actividad quedó guardada igual. */
   advertencias: string[];
-  /** Fotos nuevas que no llegaron al storage. */
-  fallidas: number;
 }
 
 /* ---- Bloques con estado propio ------------------------------------------
@@ -86,20 +85,17 @@ function BloqueTarifas({
   );
 }
 
-function BloqueFotos({ control }: { control: Control<ActividadEditarForm> }) {
-  const guardadas = useController({ control, name: "fotos" });
-  const nuevas = useController({ control, name: "nuevas" });
-
+function BloqueFotos({ fotos }: { fotos: ReturnType<typeof useFotosActividad> }) {
   return (
     <div>
       <FieldLabel>Imágenes</FieldLabel>
-      <Uploader
-        vista="grilla"
+      <ImageUploader
         limites={UPLOAD_FOTOS}
-        guardados={guardadas.field.value}
-        onGuardados={guardadas.field.onChange}
-        files={nuevas.field.value}
-        onFiles={nuevas.field.onChange}
+        fotos={fotos.fotos}
+        onAgregar={fotos.agregar}
+        onQuitar={fotos.quitar}
+        onMover={fotos.mover}
+        onReintentar={fotos.reintentar}
       />
     </div>
   );
@@ -113,10 +109,12 @@ function Formulario({
   establecimientoId,
   actividadId,
   inicial,
+  fotosIniciales,
 }: {
   establecimientoId: string;
   actividadId: string;
   inicial: ActividadEditarForm;
+  fotosIniciales: FotoActividad[];
 }) {
   const router = useRouter();
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
@@ -124,7 +122,7 @@ function Formulario({
   const [confirmarSalida, setConfirmarSalida] = useState(false);
 
   const { guardar, isLoading } = useGuardarEdicion();
-  const { subir, isLoading: subiendo } = useSubirArchivos();
+  const fotos = useFotosActividad(establecimientoId, fotosIniciales);
   const { cultivos: catalogo, isLoading: cargandoCultivos } = useTiposCultivo(true);
 
   const form = useForm<ActividadEditarForm>({
@@ -139,7 +137,6 @@ function Formulario({
   const { control, formState } = form;
   const tarifas = useWatch({ control, name: "tarifas" });
   const nombre = useWatch({ control, name: "nombre" });
-  const nuevas = useWatch({ control, name: "nuevas" });
 
   // Los editores compartidos piden los errores por clave plana; RHF los guarda
   // anidados como los emitió el schema.
@@ -158,20 +155,13 @@ function Formulario({
     setErrorGuardado(null);
     setResultado(null);
 
-    const res = await guardar(establecimientoId, actividadId, data, estado);
+    // Las fotos ya están en el bucket: lo que viaja es la lista de keys, y su
+    // orden es el que el productor dejó en la grilla.
+    const res = await guardar(establecimientoId, actividadId, data, estado, fotos.claims);
     if (!res.ok) {
       setErrorGuardado(mensajeError(res.code));
       arriba();
       return;
-    }
-
-    // Las fotos no viajan en el POST: el backend firma una URL por archivo y el
-    // navegador las sube directo al storage. La actividad ya quedó guardada
-    // aunque alguna falle.
-    let fallidas = 0;
-    if (data.nuevas.length > 0 && res.subidas.length > 0) {
-      const subida = await subir(data.nuevas, res.subidas);
-      fallidas = subida.fallidos.length;
     }
 
     // Preferimos las advertencias del backend, que ve más que el formulario; si
@@ -183,10 +173,10 @@ function Formulario({
       ? [`Ninguno de tus rangos cubre ${huecos.join(", ")}. Las personas de esas edades no van a poder reservar.`]
       : [];
 
-    setResultado({ estado, advertencias, fallidas });
+    setResultado({ estado, advertencias });
     // Con algo que avisar se queda en la pantalla: si redirigiéramos, el aviso
     // se iría con ella.
-    if (advertencias.length === 0 && fallidas === 0) setTimeout(salir, 1400);
+    if (advertencias.length === 0) setTimeout(salir, 1400);
     else arriba();
   }
 
@@ -197,9 +187,11 @@ function Formulario({
       () => arriba(),
     );
 
-  const guardando = isLoading || subiendo || formState.isSubmitting;
-  const bloqueado = guardando || !!bloqueoTarifas || !!resultado;
-  const sucio = formState.isDirty || nuevas.length > 0;
+  const guardando = isLoading || formState.isSubmitting;
+  // No se guarda con una foto a medio subir —su key todavía no existe— ni con
+  // una fallada: irse ahora la perdería sin avisar.
+  const bloqueado = guardando || fotos.subiendo || fotos.conError > 0 || !!bloqueoTarifas || !!resultado;
+  const sucio = formState.isDirty || fotos.sucio;
 
   const toast: ToastData | null = resultado
     ? {
@@ -221,15 +213,6 @@ function Formulario({
           <div className="flex items-start gap-2.5">
             <Info className="mt-px size-[18px] shrink-0 text-info" />
             <div className="flex flex-col gap-1.5">
-              {resultado.fallidas > 0 && (
-                <span>
-                  Los cambios se guardaron, pero{" "}
-                  {resultado.fallidas === 1
-                    ? "una imagen no se pudo subir"
-                    : `${resultado.fallidas} imágenes no se pudieron subir`}
-                  . Volvé a cargarlas desde esta pantalla.
-                </span>
-              )}
               {resultado.advertencias.map((a) => (
                 <span key={a}>{a}</span>
               ))}
@@ -345,7 +328,7 @@ function Formulario({
                 />
 
                 <BloqueTarifas control={control} errs={errs} />
-                <BloqueFotos control={control} />
+                <BloqueFotos fotos={fotos} />
               </div>
 
               {/* ---------- Columna derecha · contenido de la experiencia ---------- */}
@@ -519,7 +502,7 @@ export default function EditarActividadClient({ actividadId }: { actividadId: st
   // El establecimiento activo lo elige el switcher del shell.
   const { activo } = useEstablecimientos();
   const establecimientoId = activo?.id ?? "";
-  const { data, isLoading, error, reload } = useActividadEdicion(establecimientoId, actividadId);
+  const { data, fotos, isLoading, error, reload } = useActividadEdicion(establecimientoId, actividadId);
 
   return (
     <div className="min-h-screen bg-cream-bg">
@@ -561,6 +544,7 @@ export default function EditarActividadClient({ actividadId }: { actividadId: st
                 establecimientoId={establecimientoId}
                 actividadId={actividadId}
                 inicial={data}
+                fotosIniciales={fotos}
               />
             )}
           </AsyncBoundary>

@@ -204,8 +204,9 @@ function RecetaCard({ receta }: { receta: RecetaResumen }) {
       className="flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline transition-[box-shadow,border-color,transform] hover:-translate-y-px hover:border-sand hover:shadow-hover"
     >
       <div className="relative">
-        {/* TODO backend: el recetario todavía no manda imágenes. */}
-        <Photo seed={seedDeId(receta.id)} height={176} radius={0} icon={UtensilsCrossed} />
+        {/* Decorativa: el nombre de la receta está en el encabezado de al lado.
+            Sin imagen cargada queda el degradado por seed. */}
+        <Photo seed={seedDeId(receta.id)} height={176} radius={0} icon={UtensilsCrossed} src={receta.foto?.url} alt="" />
         <EstadoBadge tone="neutral" className="absolute top-3 left-3 shadow-hover">
           {DIFICULTAD_LABEL[receta.dificultad]}
         </EstadoBadge>

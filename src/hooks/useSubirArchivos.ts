@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { contentTypeDe } from "@/data/establecimiento";
+import { putPrefirmado } from "@/lib/storage";
 import type {
   ArchivoFallido,
   ArchivoUploadResponse,
@@ -58,33 +59,20 @@ function aItem(file: File, upload?: ArchivoUploadResponse): ItemSubida {
     file,
     uploadUrl: upload?.uploadUrl ?? null,
     storageKey: upload?.key ?? null,
-    contentType: contentTypeDe(file),
+    // Se prefiere el que firmó el backend: si difiere del enviado, la firma V4
+    // no valida. El cálculo local queda de fallback para los endpoints que
+    // todavía no lo devuelven.
+    contentType: upload?.contentType ?? contentTypeDe(file),
   };
 }
 
 /**
- * PUT del archivo a su URL prefirmada. NO usa `apiFetch` a propósito: el destino
- * es el object storage, no el backend. `apiFetch` fuerza
- * `Content-Type: application/json`, adjunta el ID token de Firebase (filtrarlo a
- * un host de terceros sería un problema de seguridad) y hace `res.json()` sobre
- * el 200/204 vacío del storage, que rompería.
- *
- * Nunca lanza: devuelve el motivo del fallo, o `null` si salió bien.
+ * PUT del archivo a su URL prefirmada (ver `putPrefirmado`). Nunca lanza:
+ * devuelve el motivo del fallo, o `null` si salió bien.
  */
 async function putArchivo(item: ItemSubida): Promise<string | null> {
   if (!item.uploadUrl) return SIN_URL;
-  try {
-    const res = await fetch(item.uploadUrl, {
-      method: "PUT",
-      // Único header: cualquier extra puede romper la firma V4.
-      headers: { "Content-Type": item.contentType },
-      body: item.file,
-    });
-    return res.ok ? null : `HTTP ${res.status}`;
-  } catch (e) {
-    // Incluye el TypeError opaco de CORS: el navegador no lo distingue de un fallo de red.
-    return e instanceof Error ? e.message : "Error de red";
-  }
+  return putPrefirmado(item.uploadUrl, item.file, item.contentType);
 }
 
 interface UseSubirArchivosReturn {

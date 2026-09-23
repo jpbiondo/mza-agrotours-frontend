@@ -4,6 +4,7 @@ import { conToken } from "@/lib/sesion";
 import { DIAS } from "@/data/actividad-form";
 import { limpiarLista } from "@/lib/actividad-form";
 import type { ActividadFormData, DiaKey } from "@/types/actividad-form";
+import type { FotoClaim } from "@/types/actividad-foto";
 
 export type EstadoGuardado = "publicado" | "borrador";
 
@@ -46,7 +47,12 @@ export interface AltaActividadDTO {
   descripcion: string;
   cultivos: string[];
   estado: string;
-  fotos: string[];
+  /**
+   * Las fotos que ya se subieron al bucket, EN ORDEN: el backend numera
+   * `ActividadFoto.orden` con el índice de este arreglo. Nunca va `null` —el
+   * backend lo recorre sin chequear—, así que sin fotos va `[]`.
+   */
+  fotos: FotoClaim[];
   incluye: string[];
   noIncluye: string[];
   faqs: FaqDTO[];
@@ -83,14 +89,17 @@ function aDias(days: ActividadFormData["days"]): DiaDTO[] {
   }));
 }
 
-export function aPayload(v: ActividadFormData, estado: EstadoGuardado): AltaActividadDTO {
+export function aPayload(
+  v: ActividadFormData,
+  estado: EstadoGuardado,
+  fotos: FotoClaim[] = [],
+): AltaActividadDTO {
   return {
     nombre: v.nombre.trim(),
     descripcion: v.descripcion.trim(),
     cultivos: v.cultivos,
     estado: estado === "publicado" ? "PUBLICADO" : "BORRADOR",
-    // TODO backend: las fotos todavía no se suben.
-    fotos: [],
+    fotos,
     incluye: limpiarLista(v.incluye),
     noIncluye: limpiarLista(v.noIncluye),
     faqs: v.faqs
@@ -114,13 +123,14 @@ export function useGuardarActividad() {
     establecimientoId: string,
     data: ActividadFormData,
     estado: EstadoGuardado,
+    fotos: FotoClaim[] = [],
   ): Promise<{ ok: boolean; code?: string }> {
     setIsLoading(true);
     try {
       const res = await conToken((token) =>
         apiFetch<unknown>(
           `/establecimientos/${encodeURIComponent(establecimientoId)}/actividades/alta`,
-          { method: "POST", token, body: JSON.stringify(aPayload(data, estado)) },
+          { method: "POST", token, body: JSON.stringify(aPayload(data, estado, fotos)) },
         ),
       );
       const env = comoEnvelope<unknown>(res);

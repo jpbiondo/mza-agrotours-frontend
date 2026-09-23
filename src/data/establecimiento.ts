@@ -35,7 +35,8 @@ export const REQUISITOS_DOC: RequisitoDoc[] = [
 /** Límites del uploader de pruebas. */
 export const UPLOAD_MAX_FILES = 10;
 export const UPLOAD_ACCEPT_LABEL = "PDF, JPG o PNG";
-export const UPLOAD_MAX_BYTES = 30 * 1024 * 1024; // 30 MB
+export const UPLOAD_MAX_BYTES = 30 * 1024 * 1024; // 30 MB en total
+export const UPLOAD_MAX_BYTES_POR_ARCHIVO = 10 * 1024 * 1024; // 10 MB c/u (lo fija el backend)
 
 /** Únicos formatos aceptados como prueba documental. */
 export const UPLOAD_EXTENSIONES = ["pdf", "png", "jpg", "jpeg"] as const;
@@ -55,6 +56,9 @@ export const UPLOAD_MIME_POR_EXT: Record<
 
 export const UPLOAD_PRUEBAS: LimitesUploader = {
   maxFiles: UPLOAD_MAX_FILES,
+  // Tope por archivo de `CarpetaArchivo.SOLICITUDES_ESTABLECIMIENTO`: uno más
+  // pesado lo rechaza el presign, así que conviene atajarlo antes de pedirlo.
+  maxBytesPorArchivo: UPLOAD_MAX_BYTES_POR_ARCHIVO,
   maxBytesTotal: UPLOAD_MAX_BYTES,
   accept: UPLOAD_ACCEPT,
   acceptLabel: UPLOAD_ACCEPT_LABEL,

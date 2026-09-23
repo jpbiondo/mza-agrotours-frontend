@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
+import { conToken } from "@/lib/sesion";
 import type {
   CambioEstado,
   EstadoSolicitud,
@@ -11,6 +12,7 @@ import type {
 
 /** Prueba cruda del backend. Campos opcionales: defensivo. */
 interface PruebaBackend {
+  id?: string;
   nombre?: string;
   extension?: string;
   key?: string;
@@ -77,6 +79,7 @@ function aEstado(v: unknown): EstadoSolicitud {
 
 function aPrueba(p: PruebaBackend): PruebaSolicitud {
   return {
+    id: typeof p.id === "string" ? p.id : "",
     nombre: p.nombre ?? "",
     extension: (p.extension ?? "").trim().toLowerCase().replace(/^\.+/, ""),
     key: p.key ?? "",
@@ -210,4 +213,46 @@ export function useSolicitudDetalle(
   }, []);
 
   return { solicitud, isLoading, error, notFound, unauthenticated, reload };
+}
+
+/* ---- URL de una prueba --------------------------------------------------- */
+
+/**
+ * GET /solicitudes-establecimiento/{solicitudId}/pruebas/{archivoId}/url.
+ *
+ * Las pruebas viven en una carpeta **privada** del bucket, así que la key no
+ * alcanza para armar un link: hay que pedir una URL firmada, que vence. Por eso
+ * se pide al momento de abrir el archivo y no al armar el detalle.
+ *
+ * Ojo con el permiso: el backend la reserva para quien puede **leer la
+ * solicitud** (`LEER_SOLICITUD_ESTABLECIMIENTO`), es decir la administración.
+ * El solicitante ve la lista de sus pruebas pero no las puede descargar.
+ */
+export function useUrlPrueba() {
+  const [cargando, setCargando] = useState<string | null>(null);
+
+  async function abrir(solicitudId: string, archivoId: string): Promise<boolean> {
+    setCargando(archivoId);
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(
+          `${BASE_ADMIN_SOLICITUDES}/${encodeURIComponent(solicitudId)}/pruebas/${encodeURIComponent(archivoId)}/url`,
+          { token },
+        ),
+      );
+      const env = comoEnvelope<{ url?: unknown }>(res);
+      const url = typeof env.data?.url === "string" ? env.data.url : "";
+      if (!env.ok || !url) return false;
+      // La firma vence, así que la URL se usa en el momento y no se guarda.
+      window.open(url, "_blank", "noopener,noreferrer");
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setCargando(null);
+    }
+  }
+
+  /** Id del archivo que se está pidiendo, para el spinner de esa fila. */
+  return { abrir, cargando };
 }

@@ -171,8 +171,15 @@ function Detalle({ receta }: { receta: RecetaDetalle }) {
     <>
       <div className="grid grid-cols-1 items-stretch gap-8 min-[941px]:grid-cols-[1.05fr_1fr]">
         <div className="overflow-hidden rounded-lg">
-          {/* TODO backend: el recetario todavía no manda imágenes. */}
-          <Photo seed={seedDeId(receta.id)} height={380} radius={0} icon={UtensilsCrossed} />
+          {/* Sin imagen cargada queda el degradado por seed. */}
+          <Photo
+            seed={seedDeId(receta.id)}
+            height={380}
+            radius={0}
+            icon={UtensilsCrossed}
+            src={receta.foto?.url}
+            alt={receta.foto ? `Foto de ${receta.nombre}` : ""}
+          />
         </div>
 
         <div className="flex flex-col justify-center">
