@@ -80,8 +80,9 @@ function CultivoCard({ cultivo }: { cultivo: CultivoResumen }) {
       className="flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline transition-[box-shadow,border-color,transform] hover:-translate-y-px hover:border-sand hover:shadow-hover"
     >
       <div className="relative">
-        {/* TODO backend: el listado todavía no manda imágenes. */}
-        <Photo seed={seedDeId(cultivo.id)} height={170} radius={0} icon={Leaf} />
+        {/* Decorativa: el nombre del cultivo está en el encabezado de al lado.
+            Sin imagen cargada queda el degradado por seed. */}
+        <Photo seed={seedDeId(cultivo.id)} height={170} radius={0} icon={Leaf} src={cultivo.foto?.url} alt="" />
         <EstadoBadge tone={cultivo.enTemporada ? "success" : "neutral"} className="absolute top-3 right-3 shadow-hover">
           {cultivo.enTemporada ? "En temporada" : "Fuera de temporada"}
         </EstadoBadge>

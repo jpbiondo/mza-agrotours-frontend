@@ -28,6 +28,9 @@ import {
 import {
   GcrNutricionEditor, erroresNutricion, hayErroresNutricion, nutricionInicial,
 } from "@/components/admin/gcr/nutricion";
+import { GcrImagePicker } from "@/components/admin/gcr/image-picker";
+import { LIMITES_IMAGEN_CULTIVO } from "@/data/gestionCr";
+import { useImagenUnica } from "@/hooks/useImagenUnica";
 
 /** Alta: doce meses en reposo, un beneficio en blanco y la nutrición de siempre. */
 const CULTIVO_VACIO: DatosCultivo = {
@@ -35,8 +38,12 @@ const CULTIVO_VACIO: DatosCultivo = {
   descripcion: "",
   beneficios: [""],
   calendario: Array(12).fill("r") as Estacion[],
+  foto: null,
   ...nutricionInicial(),
 };
+
+/** No lleva id: la carpeta y el permiso los decide la ruta. */
+const PRESIGN_CULTIVO = "/admin/tipos-cultivo/archivos/presign";
 
 /**
  * Caracteres que acepta el nombre del lado del backend (`@SinCaracteresEspeciales`):
@@ -219,6 +226,9 @@ function CultivoForm({
   const [porcion, setPorcion] = useState(initial.porcionReferencia);
   const [filas, setFilas] = useState<FilaNutricional[]>(initial.informacionNutricional);
   const [attempted, setAttempted] = useState(false);
+  // El formulario monta recién con el detalle cargado, así que alcanza con
+  // pasarle la imagen inicial una vez.
+  const imagen = useImagenUnica(PRESIGN_CULTIVO, LIMITES_IMAGEN_CULTIVO, initial.foto);
 
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
   const isDup = nombre.trim().length > 0 && existingNames.map(norm).includes(norm(nombre));
@@ -258,6 +268,8 @@ function CultivoForm({
         nombre: f.nombre.trim(),
         valor: f.valor.trim(),
       })),
+      // Ya está en el bucket: lo que viaja es la key.
+      foto: imagen.claim && { ...imagen.claim, downloadUrl: imagen.imagen?.previewUrl ?? "" },
     });
   }
 
@@ -314,6 +326,15 @@ function CultivoForm({
         </div>
 
         <div>
+          <GcrFieldLabel style={{ marginBottom: 4 }}>Imagen representativa</GcrFieldLabel>
+          <p className="mb-3 text-[13.5px] leading-relaxed text-fg-2">
+            Opcional. Se muestra en el listado y en la ficha pública del cultivo. Elegí una foto con
+            luz natural del cultivo en el campo.
+          </p>
+          <GcrImagePicker imagen={imagen} limites={LIMITES_IMAGEN_CULTIVO} />
+        </div>
+
+        <div>
           <GcrFieldLabel required style={{ marginBottom: 4 }}>
             Beneficios para la alimentación
           </GcrFieldLabel>
@@ -364,7 +385,9 @@ function CultivoForm({
         onSave={handleSave}
         saveLabel={editando ? "Guardar cambios" : "Agregar cultivo"}
         saveIcon={busy ? <Loader className="spin size-[17px]" /> : editando ? undefined : <Sprout className="size-[17px]" />}
-        busy={busy}
+        // Con la imagen a medio subir su key todavía no existe: guardar ahora
+        // la perdería sin avisar.
+        busy={busy || imagen.subiendo}
         error={error}
       />
     </>
