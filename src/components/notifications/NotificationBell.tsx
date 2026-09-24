@@ -3,16 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Bell, CheckCheck, Check, CalendarCheck, MessageCircle, Star, Clock, CalendarDays, CreditCard,
-  CalendarX, Sprout, Users, Loader,
+  Bell, CheckCheck, Check, FileClock, FileCheck, FileX, CalendarX, Users, Loader, RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import { NOTIF_TONE } from "@/data/notificaciones";
 import { useNotificaciones, useMarcarLeidas } from "@/hooks/useNotificaciones";
 import type { Notificacion } from "@/types/notificaciones";
 
 const ICON: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
-  "calendar-check": CalendarCheck, "message-circle": MessageCircle, star: Star, clock: Clock,
-  "calendar-days": CalendarDays, "credit-card": CreditCard, "calendar-x": CalendarX, sprout: Sprout, users: Users,
+  "file-clock": FileClock, "file-check": FileCheck, "file-x": FileX,
+  "calendar-x": CalendarX, users: Users, bell: Bell,
 };
 
 const PAGE = 6;
@@ -21,14 +21,38 @@ const iconBtn: React.CSSProperties = { width: 38, height: 38, borderRadius: "var
 const badgeStyle: React.CSSProperties = { position: "absolute", top: -5, right: -5, minWidth: 18, height: 18, padding: "0 5px", background: "var(--green-800)", color: "#fff", borderRadius: 9, fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--cream-bg)", boxSizing: "content-box", lineHeight: 1 };
 
 export default function NotificationBell() {
-  const { data } = useNotificaciones();
-  return <BellIsland key={data ? "ready" : "loading"} initial={data ?? []} loaded={!!data} />;
+  const { notificaciones, noLeidas, isLoading, error, reload } = useNotificaciones();
+  // El `key` remonta la isla cuando llegan los datos: así el set de leídas se
+  // vuelve a sembrar con lo que dice el backend en vez de quedar en el vacío
+  // con el que arrancó mientras cargaba.
+  return (
+    <BellIsland
+      key={isLoading ? "loading" : "ready"}
+      initial={notificaciones}
+      noLeidas={noLeidas}
+      loading={isLoading}
+      error={error}
+      onRetry={reload}
+    />
+  );
 }
 
-function BellIsland({ initial, loaded }: { initial: Notificacion[]; loaded: boolean }) {
+interface BellIslandProps {
+  initial: Notificacion[];
+  noLeidas: number;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+}
+
+function BellIsland({ initial, noLeidas, loading, error, onRetry }: BellIslandProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [read, setRead] = useState<Set<string>>(new Set());
+  // Se siembra con lo que ya venía leído del backend; lo que el usuario marque
+  // acá se suma de forma optimista y se revierte si el PATCH falla.
+  const [read, setRead] = useState<Set<string>>(
+    () => new Set(initial.filter((n) => n.leida).map((n) => n.id)),
+  );
   const [count, setCount] = useState(PAGE);
   const wrap = useRef<HTMLDivElement>(null);
   const { marcar } = useMarcarLeidas();
@@ -42,11 +66,35 @@ function BellIsland({ initial, loaded }: { initial: Notificacion[]; loaded: bool
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
   }, [open]);
 
-  const unreadCount = useMemo(() => initial.filter((n) => !read.has(n.id)).length, [initial, read]);
+  /**
+   * El contador lo manda el backend —puede haber notificaciones más viejas que
+   * las de esta lista—, así que en vez de recalcularlo sobre `initial` se le
+   * descuentan las que el usuario marcó recién.
+   */
+  const marcadasAca = useMemo(
+    () => initial.filter((n) => !n.leida && read.has(n.id)).length,
+    [initial, read],
+  );
+  const unreadCount = Math.max(0, noLeidas - marcadasAca);
 
-  function markOne(id: string) { setRead((s) => new Set(s).add(id)); marcar([id]); }
-  function markAll() { setRead(new Set(initial.map((n) => n.id))); marcar(initial.map((n) => n.id)); }
-  function openNotif(n: Notificacion) { markOne(n.id); setOpen(false); router.push(n.href); }
+  async function markMany(ids: string[]) {
+    if (ids.length === 0) return;
+    setRead((s) => { const next = new Set(s); ids.forEach((id) => next.add(id)); return next; });
+    const r = await marcar(ids);
+    // Falló: se vuelven a mostrar sin leer. No se avisa con un toast porque la
+    // campana puede estar cerrada para cuando responde el backend.
+    if (!r.ok) setRead((s) => { const next = new Set(s); ids.forEach((id) => next.delete(id)); return next; });
+  }
+
+  function markAll() { markMany(initial.filter((n) => !read.has(n.id)).map((n) => n.id)); }
+
+  function openNotif(n: Notificacion) {
+    markMany([n.id]);
+    setOpen(false);
+    // Sin destino conocido la notificación sólo se marca como leída: el
+    // `urlLink` del backend no siempre mapea a una ruta del front.
+    if (n.href) router.push(n.href);
+  }
 
   function onScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
@@ -59,7 +107,7 @@ function BellIsland({ initial, loaded }: { initial: Notificacion[]; loaded: bool
     <div ref={wrap} style={{ position: "relative" }}>
       <button type="button" aria-haspopup="menu" aria-expanded={open} aria-label="Notificaciones" onClick={() => { setOpen((o) => !o); setCount(PAGE); }} style={{ ...iconBtn, background: open ? "var(--cream-tert)" : "var(--surface)" }}>
         <Bell size={18} color="var(--fg-2)" />
-        {loaded && unreadCount > 0 && <span style={badgeStyle}>{unreadCount > 9 ? "9+" : unreadCount}</span>}
+        {!loading && !error && unreadCount > 0 && <span style={badgeStyle}>{unreadCount > 9 ? "9+" : unreadCount}</span>}
       </button>
 
       {open && (
@@ -75,8 +123,14 @@ function BellIsland({ initial, loaded }: { initial: Notificacion[]; loaded: bool
           </div>
 
           <div style={{ maxHeight: 460, overflowY: "auto", overflowX: "hidden" }} onScroll={onScroll}>
-            {!loaded ? (
+            {loading ? (
               <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={22} className="spin" /></div>
+            ) : error ? (
+              <div style={{ padding: "40px 24px", textAlign: "center", color: "var(--fg-2)" }}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--danger-fill)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}><AlertTriangle size={24} color="var(--danger-fg)" /></div>
+                <div style={{ fontSize: 14, lineHeight: 1.5, marginBottom: 14 }}>No pudimos cargar tus notificaciones.</div>
+                <button type="button" className="btn btn-neutral btn-sm" onClick={onRetry}><RotateCcw size={15} /> Reintentar</button>
+              </div>
             ) : initial.length === 0 ? (
               <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--fg-2)" }}>
                 <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--cream-tert)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}><Bell size={24} color="var(--brown-700)" /></div>
@@ -100,7 +154,7 @@ function BellIsland({ initial, loaded }: { initial: Notificacion[]; loaded: bool
                           <div style={{ fontSize: 12.5, color: "var(--fg-2)", marginTop: 2, lineHeight: 1.4 }}>{n.body}</div>
                           <div style={{ fontSize: 11.5, color: "var(--fg-3)", marginTop: 4 }}>{n.time}</div>
                         </div>
-                        <button type="button" title={unread ? "Marcar como leída" : "Leída"} aria-label={unread ? "Marcar como leída" : "Leída"} disabled={!unread} onClick={(e) => { e.stopPropagation(); if (unread) markOne(n.id); }} style={{ flexShrink: 0, alignSelf: "center", width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: unread ? "pointer" : "default", border: "1px solid " + (unread ? "var(--green-300)" : "var(--outline-variant)"), background: unread ? "var(--surface)" : "var(--green-050)" }}>
+                        <button type="button" title={unread ? "Marcar como leída" : "Leída"} aria-label={unread ? "Marcar como leída" : "Leída"} disabled={!unread} onClick={(e) => { e.stopPropagation(); if (unread) markMany([n.id]); }} style={{ flexShrink: 0, alignSelf: "center", width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: unread ? "pointer" : "default", border: "1px solid " + (unread ? "var(--green-300)" : "var(--outline-variant)"), background: unread ? "var(--surface)" : "var(--green-050)" }}>
                           <Check size={15} color="var(--green-800)" />
                         </button>
                       </div>
