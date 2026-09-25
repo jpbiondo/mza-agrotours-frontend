@@ -1,4 +1,4 @@
-import type { EstChat, VisitorChat } from "@/types/chats";
+import type { EstChat } from "@/types/chats";
 
 /** Gradientes cálidos para el avatar de actividad. */
 export const CHAT_GRADS = [
@@ -70,43 +70,6 @@ export const EST_CHATS: EstChat[] = [
         { id: "g2", from: "productor", text: "Hola Valeria! El traslado no está incluido, pero te puedo pasar un remís de confianza si querés.", time: "13:02" },
         { id: "g3", from: "visitor", text: "No hace falta, vamos en auto. ¡Gracias!", time: "13:40" },
         { id: "g4", from: "productor", text: "¡Gracias a vos! Las esperamos el sábado.", time: "13:45" },
-      ] },
-    ],
-  },
-];
-
-/* ---- Chats del visitante ---------------------------------------------- */
-export const VISITOR_CHATS: VisitorChat[] = [
-  {
-    id: "CHAT-2K9F", activity: { id: "ACT-MALBEC-25", title: "Cosecha de Malbec al amanecer", finca: "Finca La Escondida", loc: "Maipú, Mendoza", seed: 0 }, unread: 2, lastTime: "10:42", lastFrom: "productor", lastText: "Sí, podés sumar a un acompañante sin problema. Avisanos el día anterior.",
-    days: [
-      { label: "Ayer", date: "31/05/2026", messages: [
-        { id: "m1", from: "visitor", text: "Hola! Quería consultar si para la cosecha del 25/03 puedo llevar a un acompañante.", time: "18:20" },
-        { id: "m2", from: "productor", text: "Hola Camila! ¿Cómo estás?", time: "19:05" },
-        { id: "m3", from: "productor", text: "Sí, podés sumar a un acompañante sin problema. Sólo avisanos el día anterior así contamos con el desayuno.", time: "19:06" },
-      ] },
-      { label: "Hoy", date: "01/06/2026", messages: [
-        { id: "m4", from: "visitor", text: "Perfecto, muchas gracias!", time: "09:15" },
-        { id: "m5", from: "productor", text: "¡A vos! Cualquier otra duda, escribinos por acá. Te recomiendo traer abrigo, a esa hora hace fresco.", time: "10:42" },
-      ] },
-    ],
-  },
-  {
-    id: "CHAT-7B2L", activity: { id: "ACT-DEG-12", title: "Degustación guiada de varietales", finca: "Bodega Los Álamos", loc: "Luján de Cuyo, Mendoza", seed: 1 }, unread: 0, lastTime: "Ayer", lastFrom: "visitor", lastText: "Buenísimo, llevamos el voucher impreso entonces.",
-    days: [
-      { label: "30/05/2026", date: "30/05/2026", messages: [
-        { id: "n1", from: "visitor", text: "Hola! Reservamos para 4 personas el 12/04, ¿hace falta llevar el voucher impreso?", time: "11:02" },
-        { id: "n2", from: "productor", text: "Hola Camila! Con el código de reserva alcanza, pero si lo querés traer impreso mejor.", time: "14:48" },
-        { id: "n3", from: "visitor", text: "Buenísimo, llevamos el voucher impreso entonces.", time: "17:30" },
-      ] },
-    ],
-  },
-  {
-    id: "CHAT-1A8C", activity: { id: "ACT-OLIVA-08", title: "Recorrido en finca de olivos", finca: "Lote Norte", loc: "Junín, Mendoza", seed: 2 }, unread: 1, lastTime: "26/05", lastFrom: "productor", lastText: "¡Hola! Te paso los horarios disponibles para mayo.",
-    days: [
-      { label: "26/05/2026", date: "26/05/2026", messages: [
-        { id: "o1", from: "visitor", text: "Hola! ¿Qué horarios tienen disponibles en mayo?", time: "08:10" },
-        { id: "o2", from: "productor", text: "¡Hola! Te paso los horarios disponibles para mayo: sábados de 10 a 12:30 y domingos de 15 a 17:30.", time: "09:24" },
       ] },
     ],
   },
