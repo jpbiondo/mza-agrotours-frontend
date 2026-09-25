@@ -2,17 +2,21 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Share2, Check, X, MapPin, Users, ChevronLeft, ChevronRight, SearchX,
-  Building2, Sprout, ChevronDown, Navigation, Droplets, ExternalLink,
+  ArrowRight, Sprout, ChevronDown, Navigation, Droplets, ExternalLink, MessageCircle, Loader,
   Sun, CloudSun, Cloud, Cloudy, CloudDrizzle, CloudRain, CloudLightning, CloudSnow, CloudFog,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { Skeleton } from "@/components/ui";
+import { Button, Skeleton, buttonClasses } from "@/components/ui";
 import { useActividadPublica } from "@/hooks/useCatalogoActividades";
 import { usePronosticoClima } from "@/hooks/useClima";
+import { useIniciarChat } from "@/hooks/useChats";
+import { useChatDrawer } from "@/stores/chatDrawerStore";
+import { auth } from "../../../../../firebase.config";
 import { moneyAr } from "@/lib/format";
 import type { ActividadPublica, FotoRef, TarifaActividad } from "@/types/catalogo";
 import type { CondicionClima, DiaPronostico } from "@/types/clima";
@@ -134,6 +138,50 @@ function FaqRow({ q, a }: { q: string; a: string }) {
         <ChevronDown size={19} color="var(--fg-3)" style={{ flexShrink: 0, transition: "transform .2s", transform: open ? "rotate(180deg)" : "none" }} />
       </button>
       {open && <div className="pop" style={{ padding: "0 18px 18px", fontSize: 14, color: "var(--fg-2)", lineHeight: 1.6 }}>{a}</div>}
+    </div>
+  );
+}
+
+/* ---- Establecimiento --------------------------------------------------- */
+
+/**
+ * "Ver detalle" lleva a la página del establecimiento; "Contactar" crea el chat
+ * (o encuentra el que ya había) y lo abre en el drawer global del header. Sin
+ * sesión no hay drawer, así que manda a iniciar sesión.
+ */
+function AccionesEstablecimiento({ id, nombre }: { id: string; nombre: string }) {
+  const router = useRouter();
+  const { iniciar, isLoading } = useIniciarChat();
+  const abrirChat = useChatDrawer((s) => s.abrir);
+  const [error, setError] = useState(false);
+
+  async function contactar() {
+    if (!auth.currentUser) {
+      router.push("/acceso");
+      return;
+    }
+    setError(false);
+    const res = await iniciar(id);
+    if (res.ok) abrirChat({ id: res.chatId, establecimientoId: id, titulo: nombre });
+    else setError(true);
+  }
+
+  return (
+    <div className="mt-3.5">
+      <div className="flex flex-wrap gap-2">
+        <Link href={`/establecimientos/${id}`} className={buttonClasses({ size: "sm" })}>
+          Ver detalle <ArrowRight size={15} />
+        </Link>
+        <Button variant="neutral" size="sm" onClick={contactar} disabled={isLoading}>
+          {isLoading ? <Loader size={15} className="spin" aria-hidden /> : <MessageCircle size={15} aria-hidden />}
+          Contactar
+        </Button>
+      </div>
+      {error && (
+        <p role="alert" className="mt-2 text-[13px] text-danger">
+          No pudimos abrir el chat con el establecimiento. Probá de nuevo en un rato.
+        </p>
+      )}
     </div>
   );
 }
@@ -516,9 +564,7 @@ function Detalle({ a }: { a: ActividadPublica }) {
                   <p style={{ fontSize: 14, color: "var(--fg-2)", lineHeight: 1.55, margin: "10px 0 0" }}>{a.establecimiento.descripcion}</p>
                 )}
                 {a.establecimiento.id && (
-                  <Link href={`/establecimientos/${a.establecimiento.id}`} className="btn btn-neutral btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginTop: 14 }}>
-                    <Building2 size={15} /> Ver establecimiento
-                  </Link>
+                  <AccionesEstablecimiento id={a.establecimiento.id} nombre={a.establecimiento.nombre} />
                 )}
               </div>
             </div>
