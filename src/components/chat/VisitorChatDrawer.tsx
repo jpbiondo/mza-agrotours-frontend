@@ -1,204 +1,436 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle, MessageCircleOff, ArrowLeft, X, Send, Grape, Loader } from "lucide-react";
-import { chatNow } from "@/data/chats";
-import { genId } from "@/lib/id";
-import { useVisitorChats, useEnviarMensaje } from "@/hooks/useChats";
-import type { ChatMensaje, VisitorChat } from "@/types/chats";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  AlertCircle, ArrowLeft, Grape, Loader, MessageCircle, MessageCircleOff, RotateCcw, Send, X,
+} from "lucide-react";
+import {
+  marcarChatLeido, useEnviarMensaje, useMensajes, useMisChats, type MensajeFallido,
+} from "@/hooks/useChats";
+import { useChatDrawer, type ChatAbierto } from "@/stores/chatDrawerStore";
+import { cn } from "@/lib/utils";
+import type { ChatResumen, MensajeChat } from "@/types/chats";
 
-const GRADS = [
-  "linear-gradient(135deg,#7FA876,#2D5A27)", "linear-gradient(135deg,#C9A227,#805533)",
-  "linear-gradient(135deg,#A6794F,#5C3B22)", "linear-gradient(135deg,#6F9E64,#1E5418)",
-  "linear-gradient(135deg,#D99A4E,#A6794F)", "linear-gradient(135deg,#B86B4F,#5C3B22)",
+/** Tope de caracteres por mensaje, como en el diseño. */
+const MAX = 300;
+
+const GRADIENTES = [
+  "bg-[linear-gradient(135deg,#7FA876,#2D5A27)]",
+  "bg-[linear-gradient(135deg,#C9A227,#805533)]",
+  "bg-[linear-gradient(135deg,#A6794F,#5C3B22)]",
+  "bg-[linear-gradient(135deg,#6F9E64,#1E5418)]",
+  "bg-[linear-gradient(135deg,#D99A4E,#A6794F)]",
+  "bg-[linear-gradient(135deg,#B86B4F,#5C3B22)]",
 ];
 
-function ActivityAvatar({ seed, size = 44, radius = 10 }: { seed: number; size?: number; radius?: number }) {
-  return <div style={{ width: size, height: size, borderRadius: radius, background: GRADS[seed % GRADS.length], flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.85)" }}><Grape size={Math.round(size * 0.5)} /></div>;
+/** El mismo establecimiento siempre con el mismo color. */
+function gradienteDe(id: string): string {
+  let h = 0;
+  for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return GRADIENTES[h % GRADIENTES.length];
 }
 
-function DaySeparator({ label }: { label: string }) {
+/* ---- Fechas -------------------------------------------------------------- */
+
+function dosDigitos(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function hora(ts: number): string {
+  const d = new Date(ts);
+  return `${dosDigitos(d.getHours())}:${dosDigitos(d.getMinutes())}`;
+}
+
+/** Días calendario entre `ts` y hoy, en hora local: 0 es hoy, 1 es ayer. */
+function diasAtras(ts: number): number {
+  const d = new Date(ts);
+  const hoy = new Date();
+  const inicio = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  return Math.round((inicio(hoy) - inicio(d)) / 86_400_000);
+}
+
+/** Hora si es de hoy, "Ayer", o la fecha corta. */
+function momentoCorto(ts: number): string {
+  if (!ts) return "";
+  const dias = diasAtras(ts);
+  if (dias <= 0) return hora(ts);
+  if (dias === 1) return "Ayer";
+  const d = new Date(ts);
+  return `${dosDigitos(d.getDate())}/${dosDigitos(d.getMonth() + 1)}`;
+}
+
+function etiquetaDia(ts: number): string {
+  const dias = diasAtras(ts);
+  if (dias <= 0) return "Hoy";
+  if (dias === 1) return "Ayer";
+  const d = new Date(ts);
+  return `${dosDigitos(d.getDate())}/${dosDigitos(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/* ---- Piezas -------------------------------------------------------------- */
+
+function AvatarEstablecimiento({ id, size }: { id: string; size: "sm" | "md" }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "8px 0 4px" }}>
-      <div style={{ flex: 1, height: 1, background: "var(--cream-tert)" }} />
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--fg-3)", padding: "4px 10px", background: "var(--cream-tert)", borderRadius: 999 }}>{label}</div>
-      <div style={{ flex: 1, height: 1, background: "var(--cream-tert)" }} />
+    <div
+      aria-hidden
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-[10px] text-white/85",
+        size === "md" ? "size-11" : "size-10",
+        gradienteDe(id),
+      )}
+    >
+      <Grape size={size === "md" ? 22 : 20} />
     </div>
   );
 }
 
-function Bubble({ msg, mine, sending }: { msg: ChatMensaje; mine: boolean; sending?: boolean }) {
+function BotonCerrar({ onClick }: { onClick: () => void }) {
   return (
-    <div className="bubble-in" style={{ display: "flex", flexDirection: "column", alignItems: mine ? "flex-end" : "flex-start", maxWidth: "82%", alignSelf: mine ? "flex-end" : "flex-start" }}>
-      <div style={{ background: mine ? "var(--green-800)" : "var(--surface)", color: mine ? "#fff" : "var(--fg-1)", border: `1px solid ${mine ? "transparent" : "var(--outline-variant)"}`, padding: "10px 14px", borderRadius: mine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", fontSize: 13.5, lineHeight: 1.45, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.text}</div>
-      <div style={{ marginTop: 4, fontSize: 11, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>{sending ? "Enviando…" : msg.time}</div>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Cerrar"
+      className="inline-flex size-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-outline-variant bg-cream-bg text-fg-2 hover:bg-cream-tert"
+    >
+      <X size={18} />
+    </button>
   );
 }
 
-function ChatRow({ chat, onOpen }: { chat: VisitorChat; onOpen: (c: VisitorChat) => void }) {
-  const hasUnread = chat.unread > 0;
-  const sendLabel = chat.lastFrom === "visitor" ? "Vos" : null;
+function FilaChat({ chat, onOpen }: { chat: ChatResumen; onOpen: (c: ChatResumen) => void }) {
+  const conNuevos = chat.noLeidos > 0;
   return (
-    <button onClick={() => onOpen(chat)} style={{ all: "unset", cursor: "pointer", boxSizing: "border-box", width: "100%", display: "flex", gap: 12, padding: "14px 20px", borderBottom: "1px solid var(--cream-tert)", alignItems: "flex-start" }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--cream-tert)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-      <ActivityAvatar seed={chat.activity.seed} size={44} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 14.5, fontWeight: 600, color: "var(--fg-1)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{chat.activity.title}</div>
-          <div style={{ fontSize: 11.5, color: hasUnread ? "var(--green-800)" : "var(--fg-3)", fontWeight: hasUnread ? 600 : 500, flexShrink: 0 }}>{chat.lastTime}</div>
+    <button
+      type="button"
+      onClick={() => onOpen(chat)}
+      className="flex w-full cursor-pointer items-start gap-3 border-b border-cream-tert px-5 py-3.5 text-left transition-colors hover:bg-cream-tert"
+    >
+      <AvatarEstablecimiento id={chat.establecimientoId} size="md" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <div className="min-w-0 truncate font-display text-[14.5px] font-semibold text-fg-1">{chat.titulo}</div>
+          <div className={cn("shrink-0 text-[11.5px]", conNuevos ? "font-semibold text-green-800" : "font-medium text-fg-3")}>
+            {momentoCorto(chat.timestamp)}
+          </div>
         </div>
-        <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{chat.activity.finca}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-          <div style={{ flex: 1, fontSize: 13, color: hasUnread ? "var(--fg-1)" : "var(--fg-2)", fontWeight: hasUnread ? 500 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sendLabel && <span style={{ color: "var(--fg-3)", fontWeight: 500 }}>{sendLabel}: </span>}{chat.lastText}</div>
-          {hasUnread && <span style={{ minWidth: 20, height: 20, padding: "0 6px", borderRadius: 999, background: "var(--green-800)", color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: "var(--font-mono)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{chat.unread}</span>}
+        <div className="mt-1.5 flex items-center gap-2">
+          <div className={cn("flex-1 truncate text-[13px]", conNuevos ? "font-medium text-fg-1" : "text-fg-2", !chat.ultimoMensaje && "italic text-fg-3")}>
+            {chat.ultimoMensaje || "Todavía no hay mensajes"}
+          </div>
+          {conNuevos && (
+            <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-pill bg-green-800 px-1.5 font-mono text-[11px] font-bold text-white">
+              {chat.noLeidos}
+            </span>
+          )}
         </div>
       </div>
     </button>
   );
 }
 
-function Conversation({ chat, pending, busy, onBack, onSend }: { chat: VisitorChat; pending: ChatMensaje | null; busy: boolean; onBack: () => void; onSend: (t: string) => void }) {
-  const [draft, setDraft] = useState("");
+function SeparadorDia({ label }: { label: string }) {
+  return (
+    <div className="mt-2 mb-1 flex items-center gap-3">
+      <div className="h-px flex-1 bg-cream-tert" />
+      <div className="rounded-pill bg-cream-tert px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[.08em] text-fg-3">{label}</div>
+      <div className="h-px flex-1 bg-cream-tert" />
+    </div>
+  );
+}
+
+type EstadoBurbuja = "enviado" | "enviando" | "error";
+
+function Burbuja({
+  texto, mine, momento, estado, code, onReintentar, onDescartar,
+}: {
+  texto: string;
+  mine: boolean;
+  momento: string;
+  estado: EstadoBurbuja;
+  code?: string;
+  onReintentar?: () => void;
+  onDescartar?: () => void;
+}) {
+  return (
+    <div className={cn("pop flex max-w-[82%] flex-col", mine ? "items-end self-end" : "items-start self-start")}>
+      <div
+        className={cn(
+          "whitespace-pre-wrap break-words border px-3.5 py-2.5 text-[13.5px] leading-[1.45]",
+          mine
+            ? "rounded-[16px_16px_4px_16px] border-transparent bg-green-800 text-white"
+            : "rounded-[16px_16px_16px_4px] border-outline-variant bg-surface text-fg-1",
+          estado === "error" && "opacity-70",
+        )}
+      >
+        {texto}
+      </div>
+      <div className="mt-1 flex items-center gap-1.5 font-mono text-[11px] text-fg-3">
+        {estado === "enviando" ? (
+          <span className="inline-flex items-center gap-1">
+            Enviando <Loader size={11} className="spin" aria-hidden />
+          </span>
+        ) : estado === "error" ? (
+          <span className="flex flex-wrap items-center gap-2">
+            <AlertCircle size={14} className="text-danger" aria-hidden />
+            <span className="font-sans text-[11.5px] text-danger">No se pudo enviar el mensaje</span>
+            {code && <span title="Código del error">{code}</span>}
+            <button type="button" onClick={onReintentar} aria-label="Reintentar envío" className="inline-flex cursor-pointer text-fg-2 hover:text-fg-1">
+              <RotateCcw size={14} />
+            </button>
+            <button type="button" onClick={onDescartar} aria-label="Descartar mensaje" className="inline-flex cursor-pointer text-fg-3 hover:text-fg-1">
+              <X size={14} />
+            </button>
+          </span>
+        ) : (
+          <span>{momento}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---- Conversación -------------------------------------------------------- */
+
+/** Lo que se dibuja en el hilo: lo confirmado por la base más lo que falló acá. */
+type Item =
+  | { tipo: "mensaje"; m: MensajeChat }
+  | { tipo: "fallido"; m: MensajeFallido };
+
+function Conversacion({ chat, noLeidos, onBack, onClose }: {
+  chat: ChatAbierto;
+  noLeidos: number;
+  onBack: () => void;
+  onClose: () => void;
+}) {
+  const { mensajes, isLoading, error } = useMensajes(chat.id);
+  const { enviar, enviando, fallidos, descartar } = useEnviarMensaje();
+  const [borrador, setBorrador] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
-  const MAX = 300;
-  const charsLeft = MAX - draft.length;
-  const canSend = draft.trim().length > 0 && draft.length <= MAX && !busy;
 
-  useEffect(() => { if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight; }, [chat.id, chat.days, pending]);
+  // Abrir la conversación (o recibir algo con ella abierta) la da por leída.
+  useEffect(() => {
+    if (noLeidos > 0) void marcarChatLeido(chat.id);
+  }, [chat.id, noLeidos]);
 
-  const submit = () => { if (!canSend) return; onSend(draft.trim()); setDraft(""); };
+  const items: Item[] = [
+    ...mensajes.map((m) => ({ tipo: "mensaje" as const, m })),
+    ...fallidos.filter((f) => f.chatId === chat.id).map((m) => ({ tipo: "fallido" as const, m })),
+  ].sort((a, b) => a.m.timestamp - b.m.timestamp);
+
+  useEffect(() => {
+    if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
+  }, [items.length]);
+
+  const puedeEnviar = borrador.trim().length > 0 && borrador.length <= MAX;
+
+  function submit() {
+    if (!puedeEnviar) return;
+    void enviar(chat, borrador.trim());
+    setBorrador("");
+  }
+
+  function reintentar(f: MensajeFallido) {
+    descartar(f.id);
+    void enviar(chat, f.texto);
+  }
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px 14px 12px", borderBottom: "1px solid var(--outline-variant)", background: "var(--surface)" }}>
-        <button onClick={onBack} aria-label="Volver al listado" style={{ all: "unset", cursor: "pointer", padding: 6, borderRadius: 8, display: "inline-flex", color: "var(--fg-2)" }}><ArrowLeft size={20} /></button>
-        <ActivityAvatar seed={chat.activity.seed} size={40} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 600, color: "var(--fg-1)", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{chat.activity.title}</div>
-          <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}><strong style={{ color: "var(--fg-2)", fontWeight: 600 }}>{chat.activity.finca}</strong> · {chat.activity.loc}</div>
+      <div className="flex items-center gap-3 border-b border-outline-variant bg-surface py-3.5 pr-4 pl-3">
+        <button type="button" onClick={onBack} aria-label="Volver al listado" className="inline-flex cursor-pointer rounded-md p-1.5 text-fg-2 hover:bg-cream-tert">
+          <ArrowLeft size={20} />
+        </button>
+        <AvatarEstablecimiento id={chat.establecimientoId} size="sm" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-display text-[15px] leading-tight font-semibold text-fg-1">{chat.titulo}</div>
+          <div className="mt-0.5 truncate text-xs text-fg-3">Consulta al establecimiento</div>
         </div>
+        <BotonCerrar onClick={onClose} />
       </div>
 
-      <div ref={scroller} style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px", background: "var(--cream-bg)", display: "flex", flexDirection: "column", gap: 8 }}>
-        {chat.days.map((day) => (
-          <div key={day.date} style={{ display: "contents" }}>
-            <DaySeparator label={day.label} />
-            {day.messages.map((m) => <Bubble key={m.id} msg={m} mine={m.from === "visitor"} />)}
+      <div ref={scroller} className="flex flex-1 flex-col gap-2 overflow-y-auto bg-cream-bg px-4 pt-4 pb-2">
+        {isLoading ? (
+          <div className="m-auto text-fg-3"><Loader size={22} className="spin" aria-label="Cargando mensajes" /></div>
+        ) : error ? (
+          <div className="m-auto max-w-[280px] text-center text-[13.5px] text-danger">{error}</div>
+        ) : items.length === 0 ? (
+          <div className="m-auto max-w-[280px] text-center text-[13.5px] leading-normal text-fg-2">
+            Escribí tu consulta y el establecimiento te va a responder por acá.
           </div>
-        ))}
-        {pending && <Bubble msg={pending} mine sending />}
+        ) : (
+          items.map((it, i) => {
+            const dia = etiquetaDia(it.m.timestamp);
+            const nuevoDia = i === 0 || etiquetaDia(items[i - 1].m.timestamp) !== dia;
+            return (
+              <div key={it.m.id} className="contents">
+                {nuevoDia && <SeparadorDia label={dia} />}
+                {it.tipo === "mensaje" ? (
+                  <Burbuja
+                    texto={it.m.texto}
+                    mine={it.m.tipoEmisor === "VISITANTE"}
+                    momento={hora(it.m.timestamp)}
+                    estado={enviando.has(it.m.id) ? "enviando" : "enviado"}
+                  />
+                ) : (
+                  <Burbuja
+                    texto={it.m.texto}
+                    mine
+                    momento={hora(it.m.timestamp)}
+                    estado="error"
+                    code={it.m.code}
+                    onReintentar={() => reintentar(it.m as MensajeFallido)}
+                    onDescartar={() => descartar(it.m.id)}
+                  />
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
-      <div style={{ borderTop: "1px solid var(--outline-variant)", background: "var(--surface)", padding: "12px 14px 14px" }}>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 10, background: "var(--cream-bg)", border: "1px solid var(--sand)", borderRadius: 14, padding: "8px 8px 8px 14px" }}>
-          <textarea value={draft} onChange={(e) => setDraft(e.target.value.slice(0, MAX))} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }} placeholder="Ingrese su consulta…" rows={1} aria-label="Mensaje" style={{ flex: 1, resize: "none", border: "none", outline: "none", background: "transparent", fontFamily: "var(--font-sans)", fontSize: 13.5, color: "var(--fg-1)", lineHeight: 1.45, padding: "6px 0", maxHeight: 110, minHeight: 24 }} />
-          <button onClick={submit} disabled={!canSend} aria-label="Enviar mensaje" style={{ width: 38, height: 38, borderRadius: 10, background: canSend ? "var(--green-800)" : "var(--cream-tert)", color: canSend ? "#fff" : "var(--fg-3)", border: "none", cursor: canSend ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: canSend ? "inset 0 -2px 0 var(--green-900, #0d2a0b)" : "none", flexShrink: 0 }}>{busy ? <Loader size={17} className="spin" /> : <Send size={17} />}</button>
+      <div className="border-t border-outline-variant bg-surface px-3.5 pt-3 pb-3.5">
+        <div className="flex items-end gap-2.5 rounded-[14px] border border-sand bg-cream-bg py-2 pr-2 pl-3.5 focus-within:border-green-700">
+          <textarea
+            value={borrador}
+            onChange={(e) => setBorrador(e.target.value.slice(0, MAX))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            placeholder="Ingrese su consulta…"
+            rows={1}
+            maxLength={MAX}
+            aria-label="Mensaje"
+            autoFocus
+            className="max-h-[110px] min-h-6 flex-1 resize-none border-none bg-transparent py-1.5 font-sans text-[13.5px] leading-[1.45] text-fg-1 outline-none"
+          />
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!puedeEnviar}
+            aria-label="Enviar mensaje"
+            className="flex size-[38px] shrink-0 cursor-pointer items-center justify-center rounded-[10px] bg-green-800 text-white shadow-[var(--btn-tactile-primary)] transition-colors disabled:cursor-not-allowed disabled:bg-cream-tert disabled:text-fg-3 disabled:shadow-none"
+          >
+            <Send size={17} />
+          </button>
         </div>
-        <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>
+        <div className="mt-1.5 flex justify-between font-mono text-[11px] text-fg-3">
           <span>Enter para enviar · Shift+Enter salto de línea</span>
-          <span style={{ color: charsLeft < 30 ? "var(--warning-fg)" : "var(--fg-3)", fontWeight: charsLeft < 30 ? 600 : 400 }}>{draft.length} / {MAX}</span>
+          <span className={cn(MAX - borrador.length < 30 && "font-semibold text-warning-fg")}>{borrador.length} / {MAX}</span>
         </div>
       </div>
     </>
   );
 }
 
+/* ---- Drawer -------------------------------------------------------------- */
+
+/**
+ * Botón de chats del header y el drawer que abre. El inbox se escucha siempre
+ * —así el contador está al día—; los mensajes, sólo con una conversación abierta.
+ */
 export default function VisitorChatDrawer() {
-  const { data } = useVisitorChats();
-  // Remonta al llegar los datos (siembra useState sin efecto de escritura).
-  return <DrawerIsland key={data ? "ready" : "loading"} initial={data ?? []} loaded={!!data} />;
-}
-
-function DrawerIsland({ initial, loaded }: { initial: VisitorChat[]; loaded: boolean }) {
-  const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"list" | "conversation">("list");
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [pending, setPending] = useState<ChatMensaje | null>(null);
-  const { enviar, isLoading } = useEnviarMensaje();
-  const [chats, setChats] = useState<VisitorChat[]>(initial);
-
-  const seeded = loaded ? chats : null;
+  const { chats, isLoading, error } = useMisChats();
+  const { abierto, chat, abrir, volver, cerrar } = useChatDrawer();
+  const totalNoLeidos = chats.reduce((s, c) => s + c.noLeidos, 0);
+  // Del inbox sale lo que el store no sabe: los no leídos, y el título si ya llegó.
+  const enInbox = chat ? chats.find((c) => c.id === chat.id) : undefined;
 
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    if (!abierto) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") cerrar(); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [abierto, cerrar]);
 
-  const totalUnread = useMemo(() => (seeded ? seeded.reduce((s, c) => s + c.unread, 0) : 0), [seeded]);
-  const active = seeded?.find((c) => c.id === activeId) || null;
-
-  function openChat(c: VisitorChat) {
-    setActiveId(c.id);
-    setView("conversation");
-    setPending(null);
-    setChats((arr) => arr.map((x) => (x.id === c.id ? { ...x, unread: 0 } : x)));
-  }
-
-  async function sendMessage(text: string) {
-    if (!activeId) return;
-    const time = chatNow();
-    setPending({ id: "pending", from: "visitor", text, time });
-    await enviar(activeId, text);
-    const n = new Date();
-    const todayStr = `${String(n.getDate()).padStart(2, "0")}/${String(n.getMonth() + 1).padStart(2, "0")}/${n.getFullYear()}`;
-    setChats((arr) => arr.map((c) => {
-      if (c.id !== activeId) return c;
-      const days = c.days.map((d) => ({ ...d, messages: [...d.messages] }));
-      const msg: ChatMensaje = { id: genId("v"), from: "visitor", text, time };
-      const last = days[days.length - 1];
-      if (last && last.label === "Hoy") last.messages.push(msg);
-      else days.push({ label: "Hoy", date: todayStr, messages: [msg] });
-      return { ...c, days, lastFrom: "visitor", lastText: text, lastTime: time };
-    }));
-    setPending(null);
-  }
+  // Al cerrar sesión el drawer desaparece del header, pero el store queda.
+  useEffect(() => () => cerrar(), [cerrar]);
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label="Mis chats" title="Mis chats" style={{ width: 38, height: 38, borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", background: open ? "var(--cream-tert)" : "var(--surface)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-        <MessageCircle size={18} color="var(--fg-2)" />
-        {totalUnread > 0 && <span style={{ position: "absolute", top: -5, right: -5, minWidth: 18, height: 18, padding: "0 5px", borderRadius: 9, background: "var(--green-800)", color: "#fff", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--cream-bg)", boxSizing: "content-box", lineHeight: 1 }}>{totalUnread}</span>}
+      <button
+        type="button"
+        onClick={() => abrir()}
+        aria-label="Mis chats"
+        title="Mis chats"
+        className={cn(
+          "relative inline-flex size-[38px] cursor-pointer items-center justify-center rounded-md border border-outline-variant",
+          abierto ? "bg-cream-tert" : "bg-surface",
+        )}
+      >
+        <MessageCircle size={18} className="text-fg-2" />
+        {totalNoLeidos > 0 && (
+          <span className="absolute -top-[5px] -right-[5px] box-content inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] border-2 border-cream-bg bg-green-800 px-[5px] text-[11px] leading-none font-bold text-white">
+            {totalNoLeidos}
+          </span>
+        )}
       </button>
 
-      {open && (
+      {/* Portal al body: el header tiene `backdrop-filter`, que vuelve al header
+          el contenedor de sus hijos `fixed`, y el drawer quedaba del alto del header.
+          `abierto` sólo pasa a true con un click, así que acá ya hay `document`. */}
+      {abierto && createPortal(
         <>
-          <div onMouseDown={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 190, background: "rgba(42,38,32,.4)", backdropFilter: "blur(2px)" }} />
-          <aside role="dialog" aria-label="Chats" className="pop" style={{ position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 200, width: "min(420px, 100%)", background: "var(--cream-bg)", borderLeft: "1px solid var(--outline-variant)", boxShadow: "-8px 0 30px rgba(45,90,39,.12)", display: "flex", flexDirection: "column" }}>
-            {view === "list" || !active ? (
+          <div onMouseDown={cerrar} className="fixed inset-0 z-[190] bg-[rgba(42,38,32,.32)] backdrop-blur-[2px]" />
+          <aside
+            role="dialog"
+            aria-label="Chats"
+            className="pop fixed inset-y-0 right-0 z-[200] flex w-[min(420px,100%)] flex-col border-l border-outline-variant bg-surface shadow-[0px_8px_32px_rgba(45,90,39,.18)]"
+          >
+            {chat ? (
+              <Conversacion
+                key={chat.id}
+                chat={enInbox ? { ...chat, titulo: enInbox.titulo } : chat}
+                noLeidos={enInbox?.noLeidos ?? 0}
+                onBack={volver}
+                onClose={cerrar}
+              />
+            ) : (
               <>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--outline-variant)", background: "var(--surface)" }}>
+                <div className="flex items-center justify-between border-b border-outline-variant bg-surface px-5 py-4">
                   <div>
-                    <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: "var(--fg-1)", lineHeight: 1.1 }}>Mis chats</div>
-                    <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 4 }}>Ordenados del más reciente al más antiguo</div>
+                    <div className="font-display text-lg leading-[1.1] font-bold text-fg-1">Mis chats</div>
+                    <div className="mt-1 text-xs text-fg-3">Ordenados del más reciente al más antiguo</div>
                   </div>
-                  <button onClick={() => setOpen(false)} aria-label="Cerrar" style={{ all: "unset", cursor: "pointer", color: "var(--fg-2)", width: 34, height: 34, borderRadius: 10, display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--outline-variant)", background: "var(--cream-bg)" }}><X size={18} /></button>
+                  <BotonCerrar onClick={cerrar} />
                 </div>
-                <div style={{ flex: 1, overflowY: "auto" }}>
-                  {!seeded ? (
-                    <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={22} className="spin" /></div>
-                  ) : seeded.length === 0 ? (
-                    <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--fg-2)" }}>
-                      <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--cream-tert)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}><MessageCircleOff size={26} color="var(--brown-700)" /></div>
-                      <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 17, color: "var(--fg-1)", marginBottom: 6 }}>Todavía no tenés chats</div>
-                      <div style={{ fontSize: 13.5, color: "var(--fg-2)", maxWidth: 280, margin: "0 auto", lineHeight: 1.5 }}>Cuando inicies una conversación con un establecimiento, vas a verla acá.</div>
+                <div className="flex-1 overflow-y-auto">
+                  {isLoading ? (
+                    <div className="px-6 py-12 text-center text-fg-3"><Loader size={22} className="spin inline" aria-label="Cargando chats" /></div>
+                  ) : error ? (
+                    <div className="px-6 py-12 text-center text-[13.5px] text-danger">{error}</div>
+                  ) : chats.length === 0 ? (
+                    <div className="px-6 py-12 text-center text-fg-2">
+                      <div className="mb-3 inline-flex size-14 items-center justify-center rounded-full bg-cream-tert">
+                        <MessageCircleOff size={26} className="text-brown-700" />
+                      </div>
+                      <div className="mb-1.5 font-display text-[17px] font-semibold text-fg-1">Todavía no tenés chats</div>
+                      <div className="mx-auto max-w-[280px] text-[13.5px] leading-normal">
+                        Cuando inicies una conversación con un establecimiento, vas a verla acá.
+                      </div>
                     </div>
                   ) : (
                     <>
-                      {totalUnread > 0 && <div style={{ padding: "10px 20px", fontSize: 12, color: "var(--fg-3)", borderBottom: "1px solid var(--cream-tert)", background: "var(--cream-tert)" }}><strong style={{ color: "var(--green-800)" }}>{totalUnread}</strong> {totalUnread === 1 ? "mensaje nuevo" : "mensajes nuevos"}</div>}
-                      {seeded.map((c) => <ChatRow key={c.id} chat={c} onOpen={openChat} />)}
+                      {totalNoLeidos > 0 && (
+                        <div className="border-b border-cream-tert bg-cream-tert px-5 py-2.5 text-xs text-fg-3">
+                          <strong className="text-green-800">{totalNoLeidos}</strong>{" "}
+                          {totalNoLeidos === 1 ? "mensaje nuevo" : "mensajes nuevos"}
+                        </div>
+                      )}
+                      {chats.map((c) => <FilaChat key={c.id} chat={c} onOpen={abrir} />)}
                     </>
                   )}
                 </div>
               </>
-            ) : (
-              <Conversation chat={active} pending={pending} busy={isLoading} onBack={() => { setView("list"); setPending(null); }} onSend={sendMessage} />
             )}
           </aside>
-        </>
+        </>,
+        document.body,
       )}
     </>
   );
 }
+
