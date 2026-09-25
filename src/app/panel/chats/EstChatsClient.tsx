@@ -5,7 +5,7 @@ import { Grape, Search, SearchX, Send, MessagesSquare, Mail, Loader } from "luci
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { chatNow } from "@/data/chats";
 import { genId } from "@/lib/id";
-import { useEstChats, useEnviarMensaje } from "@/hooks/useChats";
+import { useEstChats, useResponderChat } from "@/hooks/useChats";
 import type { ChatMensaje, EstChat } from "@/types/chats";
 
 function Avatar({ initials, size = 44, active }: { initials: string; size?: number; active?: boolean }) {
@@ -124,7 +124,7 @@ function Inner({ initial }: { initial: EstChat[] }) {
   const [activeId, setActiveId] = useState<string | null>(initial[0]?.id ?? null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"todos" | "no-leidos">("todos");
-  const { enviar, isLoading } = useEnviarMensaje();
+  const { enviar, isLoading } = useResponderChat();
 
   const totalUnread = useMemo(() => chats.reduce((s, c) => s + c.unread, 0), [chats]);
   const visible = useMemo(() => {
