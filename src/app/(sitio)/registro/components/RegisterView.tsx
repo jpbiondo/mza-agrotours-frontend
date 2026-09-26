@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ArrowLeft, CalendarCheck, Heart, Ticket } from "lucide-react";
-import RegistroForm from "./RegistroForm";
+import RegistroForm, { type ModoRegistro } from "./RegistroForm";
 import { Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import type { FormData } from "@/types/registro";
@@ -10,7 +10,23 @@ import type { FormData } from "@/types/registro";
 interface RegisterViewProps {
   onSuccess: (data: FormData) => void;
   onBack: () => void;
+  modo?: ModoRegistro;
+  /** Email de la cuenta de Firebase; sólo en modo `completar`. */
+  emailCuenta?: string;
 }
+
+const TEXTOS: Record<ModoRegistro, { titulo: string; bajada: string }> = {
+  alta: {
+    titulo: "Creá tu cuenta",
+    bajada:
+      "Completá tus datos para acceder a la plataforma y reservar experiencias en las fincas de Mendoza.",
+  },
+  completar: {
+    titulo: "Completá tu registro",
+    bajada:
+      "Tu cuenta ya está creada, pero nos faltan tus datos. Completalos para empezar a reservar experiencias en las fincas de Mendoza.",
+  },
+};
 
 const BENEFITS = [
   {
@@ -30,7 +46,12 @@ const BENEFITS = [
   },
 ];
 
-export default function RegisterView({ onSuccess, onBack }: RegisterViewProps) {
+export default function RegisterView({
+  onSuccess,
+  onBack,
+  modo = "alta",
+  emailCuenta,
+}: RegisterViewProps) {
   const [toast, setToast] = useState<ToastData | null>(null);
 
   function notify(t: ToastData | null) {
@@ -40,7 +61,9 @@ export default function RegisterView({ onSuccess, onBack }: RegisterViewProps) {
 
   return (
     <div
-      data-screen-label="Registro de cuenta"
+      data-screen-label={
+        modo === "alta" ? "Registro de cuenta" : "Completar registro"
+      }
       className="mx-auto max-w-[1100px] px-7 pt-8 pb-[72px]"
     >
       <button
@@ -55,14 +78,18 @@ export default function RegisterView({ onSuccess, onBack }: RegisterViewProps) {
         {/* Form column */}
         <div>
           <h1 className="font-display text-[34px] font-bold tracking-[-.01em] text-fg-1">
-            Creá tu cuenta
+            {TEXTOS[modo].titulo}
           </h1>
           <p className="mt-2.5 mb-7 max-w-[520px] text-[15.5px] text-fg-2">
-            Completá tus datos para acceder a la plataforma y reservar
-            experiencias en las fincas de Mendoza.
+            {TEXTOS[modo].bajada}
           </p>
           <div className="rounded-lg border border-outline-variant bg-surface px-8 py-[30px]">
-            <RegistroForm onSuccess={onSuccess} setToast={notify} />
+            <RegistroForm
+              onSuccess={onSuccess}
+              setToast={notify}
+              modo={modo}
+              emailCuenta={emailCuenta}
+            />
           </div>
         </div>
 
@@ -88,7 +115,9 @@ export default function RegisterView({ onSuccess, onBack }: RegisterViewProps) {
                     {icon}
                   </span>
                   <div>
-                    <div className="text-sm font-semibold text-fg-1">{title}</div>
+                    <div className="text-sm font-semibold text-fg-1">
+                      {title}
+                    </div>
                     <div className="mt-0.5 text-[12.5px] leading-snug text-fg-2">
                       {desc}
                     </div>
