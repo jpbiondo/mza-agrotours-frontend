@@ -1,17 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
-import { apiFetch } from "@/lib/api";
+import { cargarPerfil } from "@/hooks/useAuth";
 import { useAuthStore } from "@/stores/authStore";
-import type { BackendProfile } from "@/types/auth";
-
-interface ProfileResponse {
-  ok: boolean;
-  code?: string;
-  data?: BackendProfile;
-}
+import { RUTA_COMPLETAR_REGISTRO } from "@/data/auth";
 
 /**
  * Sincroniza el store con la fuente de verdad (la sesión de Firebase) y dispara
@@ -22,10 +17,17 @@ interface ProfileResponse {
  *   el store para que el navbar no muestre datos obsoletos,
  * - si hay sesión, revalida el perfil contra el backend: los permisos viven en
  *   `tipoPermisos` y lo cacheado puede haber quedado viejo (p. ej. al aprobarse
- *   una solicitud, la cuenta pasa a ser productora). Un fallo acá se ignora en
- *   silencio: se sigue con lo cacheado antes que dejar al usuario sin navbar.
+ *   una solicitud, la cuenta pasa a ser productora). Un fallo técnico acá se
+ *   ignora en silencio: se sigue con lo cacheado antes que dejar al usuario sin
+ *   navbar.
+ * - si hay sesión pero no perfil (el alta se cortó entre Firebase y el backend),
+ *   lleva a completar el registro. En `/registro*` no: ahí el alta está en curso
+ *   —el sign-up de Firebase dispara este listener antes de que exista el perfil—
+ *   o ya se está completando.
  */
 export default function AuthSync() {
+  const router = useRouter();
+
   useEffect(() => {
     useAuthStore.persist.rehydrate();
 
@@ -43,16 +45,13 @@ export default function AuthSync() {
         return;
       }
       try {
-        const token = await user.getIdToken();
-        const res = await apiFetch<ProfileResponse>("/usuario/me", { token });
-        if (!active || !res.ok || !res.data) return;
-        useAuthStore.getState().setSession({
-          nombre: res.data.nombre,
-          email: res.data.email,
-          accesos: res.data.accesos ?? [],
-        });
+        const perfil = await cargarPerfil(await user.getIdToken());
+        if (!active || perfil.estado !== "sinPerfil") return;
+        if (window.location.pathname.startsWith("/registro")) return;
+        useAuthStore.getState().clear();
+        router.replace(RUTA_COMPLETAR_REGISTRO);
       } catch {
-        // Backend caído o sin red: se conserva el perfil cacheado.
+        // Sin red al pedir el token: se conserva el perfil cacheado.
       }
     });
 
@@ -60,7 +59,7 @@ export default function AuthSync() {
       active = false;
       unsub();
     };
-  }, []);
+  }, [router]);
 
   return null;
 }
