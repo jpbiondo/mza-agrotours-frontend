@@ -106,14 +106,17 @@ export default function CuentaClient({
   const { cuenta, perfil, isLoading, error, unauthenticated, reload } =
     usePerfil();
 
-  // Ruta protegida: sin sesión, a la pantalla de login.
+  // Ruta protegida: sin sesión, a la pantalla de login. Sólo si la cuenta no
+  // llegó a cargarse: la baja cierra la sesión apenas se confirma, y el modal
+  // de "cuenta eliminada" tiene que seguir a la vista hasta que se cierre.
+  const sinSesion = unauthenticated && !cuenta;
   useEffect(() => {
-    if (unauthenticated) router.replace("/acceso");
-  }, [unauthenticated, router]);
+    if (sinSesion) router.replace("/acceso");
+  }, [sinSesion, router]);
 
   return (
     <>
-      {unauthenticated ? (
+      {sinSesion ? (
         <div className="p-[120px_28px] text-center text-fg-3">
           <Loader size={26} className="spin mx-auto" />
           <div className="mt-3 text-sm">Redirigiendo…</div>

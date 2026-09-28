@@ -76,3 +76,19 @@ export function existeCorreo(email: string): boolean {
   const e = (email || "").trim().toLowerCase();
   return CUENTAS.some((c) => c.email.toLowerCase() === e && c.fechaBaja === null);
 }
+/** Pantalla para cargar el perfil de una cuenta de Firebase que todavía no lo tiene. */
+export const RUTA_COMPLETAR_REGISTRO = "/registro/completar";
+
+/**
+ * Códigos del backend para el alta en dos pasos (cuenta en Firebase + perfil en
+ * Postgres). Que la cuenta exista sin perfil es un estado normal: el alta pudo
+ * cortarse entre los dos pasos.
+ */
+export const CODIGO_PERFIL_INEXISTENTE = "USR.notFound";
+export const CODIGO_PERFIL_EXISTENTE = "USR.alreadyExists";
+/**
+ * Perfil dado de baja. La cuenta de Firebase la borra después una tarea del
+ * backend; mientras tanto la sesión puede seguir viva, pero no se completa ni
+ * se recrea el perfil (quedaría huérfano al borrarse la cuenta de Firebase).
+ */
+export const CODIGO_PERFIL_INACTIVO = "USR.inactivo";

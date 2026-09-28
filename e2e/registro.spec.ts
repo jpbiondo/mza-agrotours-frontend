@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { stubFirebaseAuth, stubPerfilHastaCrearlo } from "./firebase-stub";
 
 test.describe("Registro page", () => {
   // El listado de países se trae del backend (GET /pais/); lo stubbeamos.
@@ -57,16 +58,13 @@ test.describe("Registro page", () => {
     ).toBeVisible({ timeout: 8000 });
   });
 
-  test("submit válido crea la cuenta contra el backend", async ({ page }) => {
-    // El backend crea la cuenta (Firebase Admin SDK); lo stubbeamos en el e2e.
-    // El auto-login posterior usa Firebase real, así que sólo verificamos el alta.
-    await page.route("**/usuario/create", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ ok: true }),
-      })
-    );
+  test("submit válido crea la cuenta en Firebase y el perfil en el backend", async ({ page }) => {
+    // Firebase Auth stubbeado: no se crean cuentas reales. /usuario/me da 404
+    // hasta el POST del perfil: el sign-up de Firebase dispara AuthSync antes
+    // de que exista, y eso no debe desviar el alta a "completar registro".
+    const email = "ana.perez.test@example.com";
+    const idToken = await stubFirebaseAuth(page, email);
+    await stubPerfilHastaCrearlo(page, email);
 
     await page.goto("/registro");
 
@@ -101,11 +99,16 @@ test.describe("Registro page", () => {
     ]);
 
     expect(req.method()).toBe("POST");
-    const body = req.postDataJSON() as { email?: string; paisIso2?: string };
-    expect(body.email).toBe("ana.perez.test@example.com");
+    // El perfil se crea con la sesión de Firebase ya iniciada.
+    expect(req.headers()["authorization"]).toBe(`Bearer ${idToken}`);
+    const body = req.postDataJSON() as { email?: string; paisIso2?: string; password?: string };
+    expect(body.email).toBe(email);
+    // La contraseña va sólo a Firebase, nunca al backend.
+    expect(body.password).toBeUndefined();
     // Se envía el iso2 del país (Argentina → AR) en `paisIso2`, no el nombre.
     expect(body.paisIso2).toBe("AR");
-    // Tras crear la cuenta pasamos al estado de alta+login automático.
-    await expect(page.getByText("Creando tu cuenta…").first()).toBeVisible();
+    // Con el perfil creado llega al destino post-login, sin pasar por "completar".
+    await page.waitForURL("**/explorar");
   });
 });
+

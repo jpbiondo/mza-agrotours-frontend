@@ -4,17 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader } from "lucide-react";
 import RegisterView from "./components/RegisterView";
-import { useAuth } from "@/hooks/useAuth";
+import { useCuentaFirebase } from "@/hooks/useCuentaFirebase";
 import { useAuthStore } from "@/stores/authStore";
-import { DESTINO_DEFAULT } from "@/data/auth";
-import type { FormData } from "@/types/registro";
+import { DESTINO_DEFAULT, RUTA_COMPLETAR_REGISTRO } from "@/data/auth";
 
 export default function RegistroPage() {
   const router = useRouter();
-  const { login } = useAuth();
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const nombre = useAuthStore((s) => s.nombre);
   const [finishing, setFinishing] = useState(false);
+  const cuentaFirebase = useCuentaFirebase();
 
   const loggedIn = hasHydrated && !!nombre;
 
@@ -23,23 +22,24 @@ export default function RegistroPage() {
     if (loggedIn) router.replace(DESTINO_DEFAULT.href);
   }, [loggedIn, router]);
 
-  // La cuenta ya está creada (backend). Iniciamos sesión con las mismas credenciales
-  // y redirigimos al destino post-login, ya autenticados.
-  async function handleSuccess(data: FormData) {
+  // Cuenta de Firebase sin perfil (alta a medias): se completa, no se vuelve a
+  // hacer el sign-up, que crearía otra cuenta o fallaría con email-already-in-use.
+  const altaIncompleta =
+    hasHydrated && !cuentaFirebase.checking && !!cuentaFirebase.email && !nombre;
+  useEffect(() => {
+    if (altaIncompleta) router.replace(RUTA_COMPLETAR_REGISTRO);
+  }, [altaIncompleta, router]);
+
+  // Cuenta y perfil creados, y el perfil ya está en el store: navegación dura
+  // para que la navbar se hidrate en estado logueado.
+  function handleSuccess() {
     setFinishing(true);
-    try {
-      await login({ email: data.email, password: data.password });
-      // Navegación dura para que la navbar se hidrate en estado logueado.
-      window.location.href = DESTINO_DEFAULT.href;
-    } catch {
-      // La cuenta se creó pero el login automático falló: que ingrese manualmente.
-      router.replace("/acceso");
-    }
+    window.location.href = DESTINO_DEFAULT.href;
   }
 
   // Evitamos el flash del formulario mientras hidrata, si ya está logueado, o
-  // mientras completamos el alta + login automático.
-  const showLoader = !hasHydrated || loggedIn || finishing;
+  // mientras navegamos al destino tras el alta.
+  const showLoader = !hasHydrated || loggedIn || altaIncompleta || finishing;
 
   return showLoader ? (
     <div className="px-7 py-30 text-center text-fg-3">
