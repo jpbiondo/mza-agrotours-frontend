@@ -4,17 +4,16 @@ import {
   increment, limitToLast, onValue, orderByChild, push, query, ref, serverTimestamp, set, update,
 } from "firebase/database";
 import { auth, rtdb } from "../../firebase.config";
-import { useAsync } from "@/hooks/useAsync";
 import { ApiError, apiFetch } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
-import { EST_CHATS } from "@/data/chats";
-import type { ChatResumen, EstChat, MensajeChat, TipoEmisor } from "@/types/chats";
+import type { ChatEstablecimientoResumen, ChatResumen, MensajeChat, TipoEmisor } from "@/types/chats";
 
 /*
- * Chats del visitante. El alta pasa por el backend —`chats/` sólo lo escribe el
- * Admin SDK— y todo lo demás va directo contra la Realtime Database, con las
- * reglas como único control: el visitante lee su inbox y los mensajes de sus
- * chats, y agrega mensajes actualizando de paso los dos inbox.
+ * Chats entre visitantes y establecimientos. El alta pasa por el backend
+ * —`chats/` y `establecimiento_miembros/` sólo los escribe el Admin SDK— y todo
+ * lo demás va directo contra la Realtime Database, con las reglas como único
+ * control: cada lado lee su inbox y los mensajes de sus chats, y agrega
+ * mensajes actualizando de paso los dos inbox.
  *
  * El id del chat es `{uid del visitante}_{id del establecimiento}`: lo arma el
  * backend así y el front lo reconstruye, porque el alta no lo devuelve.
@@ -163,6 +162,106 @@ export async function marcarChatLeido(chatId: string): Promise<void> {
   }
 }
 
+/* ---- Inbox del establecimiento ------------------------------------------ */
+
+/** Nodo crudo de `chats_establecimiento/{establecimientoId}/{chatId}`. */
+interface ChatEstablecimientoRtdb {
+  visitanteId?: unknown;
+  titulo?: unknown;
+  ultimoMensaje?: unknown;
+  timestamp?: unknown;
+  mensajesNoLeidos?: unknown;
+}
+
+function aResumenEstablecimiento(id: string, v: ChatEstablecimientoRtdb | null): ChatEstablecimientoResumen {
+  return {
+    id,
+    visitanteId: aTexto(v?.visitanteId),
+    titulo: aTexto(v?.titulo) || "Visitante",
+    ultimoMensaje: aTexto(v?.ultimoMensaje),
+    timestamp: aNumero(v?.timestamp),
+    noLeidos: aNumero(v?.mensajesNoLeidos),
+  };
+}
+
+interface UseChatsEstablecimientoReturn {
+  /** Del más reciente al más viejo. */
+  chats: ChatEstablecimientoResumen[];
+  isLoading: boolean;
+  error: string | null;
+}
+
+/**
+ * Inbox compartido de un establecimiento, en tiempo real. Lo ve cualquier
+ * miembro: las reglas miran `establecimiento_miembros/{id}/{uid}`, no permisos.
+ * Con `establecimientoId` en `null` —el switcher todavía no resolvió— no escucha.
+ */
+export function useChatsEstablecimiento(establecimientoId: string | null): UseChatsEstablecimientoReturn {
+  // Guardado con el establecimiento que lo trajo: al cambiar en el switcher, lo
+  // que hay es de la finca anterior y la pantalla está cargando.
+  const [estado, setEstado] = useState<{
+    establecimientoId: string;
+    chats: ChatEstablecimientoResumen[];
+    error: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!establecimientoId) return;
+    let dejarDeEscuchar: (() => void) | undefined;
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      dejarDeEscuchar?.();
+      dejarDeEscuchar = undefined;
+      if (!user) {
+        setEstado({ establecimientoId, chats: [], error: "Necesitás iniciar sesión para ver los chats" });
+        return;
+      }
+      const q = query(ref(rtdb(), `chats_establecimiento/${establecimientoId}`), orderByChild("timestamp"));
+      dejarDeEscuchar = onValue(
+        q,
+        (snap) => {
+          const chats: ChatEstablecimientoResumen[] = [];
+          snap.forEach((hijo) => {
+            if (hijo.key) chats.push(aResumenEstablecimiento(hijo.key, hijo.val() as ChatEstablecimientoRtdb | null));
+          });
+          setEstado({ establecimientoId, chats: chats.reverse(), error: null });
+        },
+        // Lo típico acá es PERMISSION_DENIED: la cuenta no figura como miembro.
+        (err) => {
+          // TODO: sacar cuando ande. Diagnóstico de por qué las reglas rechazan la lectura.
+          console.error("[useChatsEstablecimiento] lectura rechazada", {
+            ruta: `chats_establecimiento/${establecimientoId}`,
+            uid: user.uid,
+            err,
+          });
+          setEstado({ establecimientoId, chats: [], error: "No pudimos cargar los chats del establecimiento" });
+        },
+      );
+    });
+
+    return () => {
+      unsubAuth();
+      dejarDeEscuchar?.();
+    };
+  }, [establecimientoId]);
+
+  const alDia = !!establecimientoId && estado?.establecimientoId === establecimientoId;
+  return {
+    chats: alDia ? estado.chats : [],
+    isLoading: !!establecimientoId && !alDia,
+    error: alDia ? estado.error : null,
+  };
+}
+
+/** Pone en cero los no leídos del establecimiento en un chat. */
+export async function marcarChatLeidoEstablecimiento(establecimientoId: string, chatId: string): Promise<void> {
+  try {
+    await set(ref(rtdb(), `chats_establecimiento/${establecimientoId}/${chatId}/mensajesNoLeidos`), 0);
+  } catch {
+    // Un contador que no bajó no justifica un cartel: se reintenta al volver a abrir.
+  }
+}
+
 /* ---- Mensajes ------------------------------------------------------------ */
 
 /** Nodo crudo de `mensajes/{chatId}/{mensajeId}`. */
@@ -247,19 +346,27 @@ export interface MensajeFallido {
   code: string;
 }
 
+/** Datos de un chat que hacen falta para escribir en él. */
+export interface ChatDestino {
+  id: string;
+  establecimientoId: string;
+  /** UID de Firebase del visitante: es la clave de su inbox. */
+  visitanteId: string;
+}
+
 /**
- * Envía como visitante. Es una sola escritura multi-ruta —el mensaje y los dos
- * inbox—, así que o entra todo o nada.
+ * Envía un mensaje como `emisor`. Es una sola escritura multi-ruta —el mensaje y
+ * los dos inbox, sumándole un no leído al que recibe—, así que o entra todo o nada.
  *
  * El SDK muestra la escritura en `useMensajes` antes de que el servidor la
  * confirme, y si la rechaza la retira. Por eso `enviando` sólo marca cuáles
  * siguen sin confirmar, y un rechazo pasa a `fallidos`: la base ya no lo tiene.
  */
-export function useEnviarMensaje() {
+export function useEnviarMensaje(emisor: TipoEmisor) {
   const [enviando, setEnviando] = useState<ReadonlySet<string>>(new Set());
   const [fallidos, setFallidos] = useState<MensajeFallido[]>([]);
 
-  const enviar = useCallback(async (chat: Pick<ChatResumen, "id" | "establecimientoId">, texto: string) => {
+  const enviar = useCallback(async (chat: ChatDestino, texto: string) => {
     const uid = auth.currentUser?.uid;
     const db = rtdb();
     const id = push(ref(db, `mensajes/${chat.id}`)).key;
@@ -273,15 +380,16 @@ export function useEnviarMensaje() {
     setEnviando((s) => new Set(s).add(id));
     const ahora = serverTimestamp();
     const inboxEst = `chats_establecimiento/${chat.establecimientoId}/${chat.id}`;
-    const inboxUsuario = `chats_usuario/${uid}/${chat.id}`;
+    const inboxUsuario = `chats_usuario/${chat.visitanteId}/${chat.id}`;
+    const inboxDestino = emisor === "VISITANTE" ? inboxEst : inboxUsuario;
     try {
       await update(ref(db), {
-        [`mensajes/${chat.id}/${id}`]: { remitenteId: uid, tipoEmisor: "VISITANTE", texto, timestamp: ahora },
+        [`mensajes/${chat.id}/${id}`]: { remitenteId: uid, tipoEmisor: emisor, texto, timestamp: ahora },
         [`${inboxUsuario}/ultimoMensaje`]: texto,
         [`${inboxUsuario}/timestamp`]: ahora,
         [`${inboxEst}/ultimoMensaje`]: texto,
         [`${inboxEst}/timestamp`]: ahora,
-        [`${inboxEst}/mensajesNoLeidos`]: increment(1),
+        [`${inboxDestino}/mensajesNoLeidos`]: increment(1),
       });
     } catch (e) {
       // Los errores del SDK traen el motivo en `code` ("PERMISSION_DENIED"…).
@@ -297,38 +405,9 @@ export function useEnviarMensaje() {
         return n;
       });
     }
-  }, []);
+  }, [emisor]);
 
   const descartar = useCallback((id: string) => setFallidos((f) => f.filter((m) => m.id !== id)), []);
 
   return { enviar, enviando, fallidos, descartar };
-}
-
-/* ---- Lado productor (todavía mock) --------------------------------------- */
-
-/** Bandeja de chats del establecimiento (lado productor). */
-export function useEstChats() {
-  return useAsync<EstChat[]>(mockEst);
-}
-
-// MOCK — reemplazar por `chats_establecimiento/{id}` en la RTDB.
-// TODO backend: nadie escribe todavía `establecimiento_miembros`, y sin eso las
-// reglas no le dejan leer nada al productor.
-async function mockEst(): Promise<EstChat[]> {
-  await new Promise<void>((res) => setTimeout(res, 500));
-  return EST_CHATS.map((c) => ({ ...c, days: c.days.map((d) => ({ ...d, messages: [...d.messages] })) }));
-}
-
-/** Respuesta del productor. Resuelve ok/err para modelar el estado de envío. */
-export function useResponderChat() {
-  const [isLoading, setIsLoading] = useState(false);
-  async function enviar(_chatId: string, _text: string): Promise<{ ok: boolean }> {
-    setIsLoading(true);
-    try {
-      await new Promise<void>((res) => setTimeout(res, 700));
-      // MOCK — reemplazar por una escritura en `mensajes/{chatId}` con tipoEmisor ESTABLECIMIENTO.
-      return { ok: true };
-    } finally { setIsLoading(false); }
-  }
-  return { enviar, isLoading };
 }
