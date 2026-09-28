@@ -1,217 +1,238 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Grape, Search, SearchX, Send, MessagesSquare, Mail, Loader } from "lucide-react";
-import AsyncBoundary from "@/components/AsyncBoundary";
-import { chatNow } from "@/data/chats";
-import { genId } from "@/lib/id";
-import { useEstChats, useResponderChat } from "@/hooks/useChats";
-import type { ChatMensaje, EstChat } from "@/types/chats";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Loader, Mail, MessagesSquare, Search, SearchX } from "lucide-react";
+import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
+import { useChatsEstablecimiento, marcarChatLeidoEstablecimiento } from "@/hooks/useChats";
+import { useEstablecimientos } from "@/hooks/useEstablecimientos";
+import { cn } from "@/lib/utils";
+import type { ChatEstablecimientoResumen } from "@/types/chats";
 
-function Avatar({ initials, size = 44, active }: { initials: string; size?: number; active?: boolean }) {
-  return <div style={{ width: size, height: size, borderRadius: "50%", flexShrink: 0, background: active ? "var(--green-800)" : "var(--brown-700)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: size * 0.36, boxShadow: active ? "inset 0 -2px 0 var(--green-900, #0d2a0b)" : "inset 0 -2px 0 var(--brown-800)" }}>{initials}</div>;
+/** Tope de caracteres por respuesta, como en el diseño. */
+const MAX = 500;
+
+type Filtro = "todos" | "no-leidos";
+
+/** Monograma del visitante: las iniciales de sus dos primeras palabras. */
+function iniciales(nombre: string): string {
+  return nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
-function DayDivider({ label }: { label: string }) {
+function Avatar({ nombre, size, activo }: { nombre: string; size: "sm" | "md"; activo?: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "10px 0 6px" }}>
-      <div style={{ flex: 1, height: 1, background: "var(--cream-tert)" }} />
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--fg-3)", padding: "4px 10px", background: "var(--cream-tert)", borderRadius: 999 }}>{label}</div>
-      <div style={{ flex: 1, height: 1, background: "var(--cream-tert)" }} />
+    <div
+      aria-hidden
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
+        size === "md" ? "size-11 text-base" : "size-10 text-sm",
+        activo
+          ? "bg-green-800 shadow-[inset_0_-2px_0_var(--green-900)]"
+          : "bg-brown-700 shadow-[inset_0_-2px_0_var(--brown-800)]",
+      )}
+    >
+      {iniciales(nombre)}
     </div>
   );
 }
 
-function Bubble({ msg }: { msg: ChatMensaje }) {
-  const mine = msg.from === "productor";
+function FilaChat({ chat, activo, onOpen }: { chat: ChatEstablecimientoResumen; activo: boolean; onOpen: (id: string) => void }) {
+  const conNuevos = chat.noLeidos > 0;
   return (
-    <div className="bubble-in" style={{ display: "flex", flexDirection: "column", alignItems: mine ? "flex-end" : "flex-start", maxWidth: "76%", alignSelf: mine ? "flex-end" : "flex-start" }}>
-      <div style={{ background: mine ? "var(--green-800)" : "var(--surface)", color: mine ? "#fff" : "var(--fg-1)", border: `1px solid ${mine ? "transparent" : "var(--outline-variant)"}`, padding: "10px 14px", borderRadius: mine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", fontSize: 13.5, lineHeight: 1.45, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.text}</div>
-      <div style={{ marginTop: 4, fontSize: 11, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>{msg.time}</div>
-    </div>
-  );
-}
-
-function Pill({ children, tone }: { children: React.ReactNode; tone: "neutral" | "success" }) {
-  const map = { neutral: { bg: "var(--cream-tert)", fg: "var(--fg-2)", bd: "var(--outline-variant)" }, success: { bg: "var(--success-fill)", fg: "var(--success-fg)", bd: "var(--success)" } }[tone];
-  return <span style={{ display: "inline-flex", alignItems: "center", fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: map.bg, color: map.fg, border: `1px solid ${map.bd}`, whiteSpace: "nowrap" }}>{children}</span>;
-}
-
-function Composer({ onSend, busy }: { onSend: (t: string) => void; busy: boolean }) {
-  const [draft, setDraft] = useState("");
-  const MAX = 500;
-  const canSend = draft.trim().length > 0 && draft.length <= MAX && !busy;
-  const submit = () => { if (!canSend) return; onSend(draft.trim()); setDraft(""); };
-  return (
-    <div style={{ borderTop: "1px solid var(--outline-variant)", background: "var(--surface)", padding: "12px 16px 14px" }}>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 10, background: "var(--cream-bg)", border: "1px solid var(--sand)", borderRadius: 14, padding: "8px 8px 8px 14px" }}>
-        <textarea value={draft} onChange={(e) => setDraft(e.target.value.slice(0, MAX))} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }} placeholder="Escribí tu respuesta…" rows={1} aria-label="Mensaje" style={{ flex: 1, resize: "none", border: "none", outline: "none", background: "transparent", fontFamily: "var(--font-sans)", fontSize: 13.5, color: "var(--fg-1)", lineHeight: 1.45, padding: "6px 0", maxHeight: 120, minHeight: 24 }} />
-        <button onClick={submit} disabled={!canSend} aria-label="Enviar mensaje" style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: canSend ? "var(--green-800)" : "var(--cream-tert)", color: canSend ? "#fff" : "var(--fg-3)", border: "none", cursor: canSend ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: canSend ? "inset 0 -2px 0 var(--green-900, #0d2a0b)" : "none" }}>{busy ? <Loader size={17} className="spin" /> : <Send size={17} />}</button>
-      </div>
-      <div style={{ marginTop: 6, fontSize: 11, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>Enter para enviar · Shift+Enter salto de línea</div>
-    </div>
-  );
-}
-
-function Thread({ chat, onSend, busy }: { chat: EstChat | null; onSend: (t: string) => void; busy: boolean }) {
-  const scroller = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight; }, [chat?.id, chat?.days]);
-
-  if (!chat) {
-    return (
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, color: "var(--fg-2)", background: "var(--cream-bg)", padding: 32, textAlign: "center" }}>
-        <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--cream-tert)", display: "flex", alignItems: "center", justifyContent: "center" }}><MessagesSquare size={28} color="var(--brown-700)" /></div>
-        <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: "var(--fg-1)" }}>Elegí una conversación</div>
-        <div style={{ fontSize: 13.5, maxWidth: 300, lineHeight: 1.5 }}>Seleccioná un mensaje de la izquierda para ver el detalle y responder a los visitantes.</div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 18px", borderBottom: "1px solid var(--outline-variant)", background: "var(--surface)", flexShrink: 0 }}>
-        <Avatar initials={chat.visitor.initials} size={40} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 700, color: "var(--fg-1)", lineHeight: 1.2 }}>{chat.visitor.name}</div>
-          <div style={{ fontSize: 12.5, color: "var(--fg-3)", marginTop: 2, display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            <Grape size={13} color="var(--brown-700)" /><span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{chat.activity.title}</span><span style={{ color: "var(--outline-variant)" }}>·</span><span style={{ fontFamily: "var(--font-mono)" }}>{chat.activity.date}</span>
+    <button
+      type="button"
+      onClick={() => onOpen(chat.id)}
+      aria-current={activo || undefined}
+      className={cn(
+        "flex w-full cursor-pointer items-start gap-3 border-b border-cream-tert px-4 py-[13px] text-left transition-colors",
+        activo ? "bg-green-050 shadow-[inset_3px_0_0_var(--green-800)]" : "hover:bg-cream-tert",
+      )}
+    >
+      <Avatar nombre={chat.titulo} size="md" activo={activo} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <div className="min-w-0 truncate text-sm font-semibold text-fg-1">{chat.titulo}</div>
+          <div className={cn("shrink-0 text-[11.5px]", conNuevos ? "font-semibold text-green-800" : "font-medium text-fg-3")}>
+            {momentoCorto(chat.timestamp)}
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <Pill tone="neutral"><span style={{ fontFamily: "var(--font-mono)" }}>{chat.reservaCode}</span></Pill>
-          <Pill tone="success">{chat.personas} {chat.personas === 1 ? "persona" : "personas"}</Pill>
-        </div>
-      </div>
-      <div ref={scroller} style={{ flex: 1, overflowY: "auto", padding: "16px 18px 10px", background: "var(--cream-bg)", display: "flex", flexDirection: "column", gap: 8 }}>
-        {chat.days.map((day) => (
-          <div key={day.date} style={{ display: "contents" }}>
-            <DayDivider label={day.label} />
-            {day.messages.map((m) => <Bubble key={m.id} msg={m} />)}
+        <div className="mt-1.5 flex items-center gap-2">
+          <div className={cn("min-w-0 flex-1 truncate text-[13px]", conNuevos ? "font-medium text-fg-1" : "text-fg-2", !chat.ultimoMensaje && "italic text-fg-3")}>
+            {chat.ultimoMensaje || "Todavía no hay mensajes"}
           </div>
-        ))}
-      </div>
-      <Composer onSend={onSend} busy={busy} />
-    </div>
-  );
-}
-
-function ConvListItem({ chat, active, onOpen }: { chat: EstChat; active: boolean; onOpen: (id: string) => void }) {
-  const [hover, setHover] = useState(false);
-  const hasUnread = chat.unread > 0;
-  const fromLabel = chat.lastFrom === "productor" ? "Vos" : chat.visitor.name.split(" ")[0];
-  return (
-    <button onClick={() => onOpen(chat.id)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{ all: "unset", cursor: "pointer", boxSizing: "border-box", width: "100%", display: "flex", gap: 12, padding: "13px 16px", alignItems: "flex-start", borderBottom: "1px solid var(--cream-tert)", background: active ? "var(--green-050)" : hover ? "var(--cream-tert)" : "transparent", boxShadow: active ? "inset 3px 0 0 var(--green-800)" : "none" }}>
-      <Avatar initials={chat.visitor.initials} size={44} active={active} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg-1)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{chat.visitor.name}</div>
-          <div style={{ fontSize: 11.5, color: hasUnread ? "var(--green-800)" : "var(--fg-3)", fontWeight: hasUnread ? 600 : 500, flexShrink: 0 }}>{chat.lastTime}</div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, color: "var(--fg-3)", fontSize: 12, minWidth: 0 }}>
-          <Grape size={13} color="var(--brown-700)" /><span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{chat.activity.title}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-          <div style={{ flex: 1, fontSize: 13, color: hasUnread ? "var(--fg-1)" : "var(--fg-2)", fontWeight: hasUnread ? 500 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}><span style={{ color: "var(--fg-3)" }}>{fromLabel}:</span> {chat.lastText}</div>
-          {hasUnread && <span style={{ minWidth: 20, height: 20, padding: "0 6px", borderRadius: 999, flexShrink: 0, background: "var(--green-800)", color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: "var(--font-mono)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{chat.unread}</span>}
+          {conNuevos && (
+            <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-pill bg-green-800 px-1.5 font-mono text-[11px] font-bold text-white">
+              {chat.noLeidos}
+            </span>
+          )}
         </div>
       </div>
     </button>
   );
 }
 
-function Inner({ initial }: { initial: EstChat[] }) {
-  const [chats, setChats] = useState<EstChat[]>(initial);
-  const [activeId, setActiveId] = useState<string | null>(initial[0]?.id ?? null);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"todos" | "no-leidos">("todos");
-  const { enviar, isLoading } = useResponderChat();
-
-  const totalUnread = useMemo(() => chats.reduce((s, c) => s + c.unread, 0), [chats]);
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return chats.filter((c) => {
-      if (filter === "no-leidos" && c.unread === 0) return false;
-      if (!q) return true;
-      return c.visitor.name.toLowerCase().includes(q) || c.activity.title.toLowerCase().includes(q);
-    });
-  }, [chats, query, filter]);
-  const active = chats.find((c) => c.id === activeId) || null;
-
-  function openChat(id: string) {
-    setActiveId(id);
-    setChats((arr) => arr.map((c) => (c.id === id ? { ...c, unread: 0 } : c)));
-  }
-
-  async function sendMessage(text: string) {
-    if (!activeId) return;
-    await enviar(activeId, text);
-    const time = chatNow();
-    const n = new Date();
-    const todayStr = `${String(n.getDate()).padStart(2, "0")}/${String(n.getMonth() + 1).padStart(2, "0")}/${n.getFullYear()}`;
-    setChats((arr) => arr.map((c) => {
-      if (c.id !== activeId) return c;
-      const days = c.days.map((d) => ({ ...d, messages: [...d.messages] }));
-      const msg: ChatMensaje = { id: genId("s"), from: "productor", text, time };
-      const last = days[days.length - 1];
-      if (last && last.label === "Hoy") last.messages.push(msg);
-      else days.push({ label: "Hoy", date: todayStr, messages: [msg] });
-      return { ...c, days, lastFrom: "productor", lastText: text, lastTime: time };
-    }));
-  }
+function Hilo({ chat, establecimientoId, onBack }: {
+  chat: ChatEstablecimientoResumen;
+  establecimientoId: string;
+  onBack: () => void;
+}) {
+  // Abrir la conversación (o recibir algo con ella abierta) la da por leída.
+  useEffect(() => {
+    if (chat.noLeidos > 0) void marcarChatLeidoEstablecimiento(establecimientoId, chat.id);
+  }, [establecimientoId, chat.id, chat.noLeidos]);
 
   return (
-    <div style={{ height: "calc(100vh - 72px)", padding: "22px 28px 28px", display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 18, flexShrink: 0 }}>
-        <div>
-          <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 30, color: "var(--fg-1)", letterSpacing: "-.01em" }}>Chats</h1>
-          <p style={{ margin: "6px 0 0", color: "var(--fg-2)", fontSize: 15 }}>Consultas de los visitantes sobre las actividades de tu establecimiento.</p>
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex shrink-0 items-center gap-3 border-b border-outline-variant bg-surface px-[18px] py-3">
+        {/* En angosto la lista y el hilo no entran juntos: se vuelve a la lista. */}
+        <button type="button" onClick={onBack} aria-label="Volver al listado" className="inline-flex cursor-pointer rounded-md p-1.5 text-fg-2 hover:bg-cream-tert md:hidden">
+          <ArrowLeft size={20} />
+        </button>
+        <Avatar nombre={chat.titulo} size="sm" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-display text-base leading-tight font-bold text-fg-1">{chat.titulo}</div>
+          <div className="mt-0.5 text-[12.5px] text-fg-3">Consulta de un visitante</div>
         </div>
-        {totalUnread > 0 && <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: "var(--radius)", background: "var(--green-050)", color: "var(--green-800)", fontSize: 13.5, fontWeight: 600, flexShrink: 0 }}><Mail size={16} color="var(--green-800)" />{totalUnread} {totalUnread === 1 ? "mensaje sin leer" : "mensajes sin leer"}</div>}
+        {/* TODO backend: el chat no guarda desde qué actividad ni reserva se inició;
+            el diseño muestra la actividad, el código de reserva y las personas. */}
+      </div>
+      <ConversacionChat
+        key={chat.id}
+        chat={{ id: chat.id, establecimientoId, visitanteId: chat.visitanteId }}
+        emisor="ESTABLECIMIENTO"
+        vacio="El visitante todavía no escribió nada."
+        placeholder="Escribí tu respuesta…"
+        max={MAX}
+      />
+    </div>
+  );
+}
+
+function Bandeja({ establecimientoId }: { establecimientoId: string }) {
+  const { chats, isLoading, error } = useChatsEstablecimiento(establecimientoId);
+  const [activoId, setActivoId] = useState<string | null>(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtro, setFiltro] = useState<Filtro>("todos");
+
+  const totalNoLeidos = chats.reduce((s, c) => s + c.noLeidos, 0);
+  const q = busqueda.trim().toLowerCase();
+  const visibles = chats.filter((c) => {
+    if (filtro === "no-leidos" && c.noLeidos === 0) return false;
+    return !q || c.titulo.toLowerCase().includes(q);
+  });
+  const activo = chats.find((c) => c.id === activoId) ?? null;
+
+  return (
+    <div className="flex h-[calc(100vh-72px)] min-h-0 flex-col px-7 pt-[22px] pb-7 max-md:px-4">
+      <div className="mb-[18px] flex shrink-0 flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="m-0 font-display text-[30px] font-bold tracking-[-.01em] text-fg-1">Chats</h1>
+          <p className="mt-1.5 mb-0 text-[15px] text-fg-2">Consultas de los visitantes a tu establecimiento.</p>
+        </div>
+        {totalNoLeidos > 0 && (
+          <div className="inline-flex shrink-0 items-center gap-2 rounded-md bg-green-050 px-3.5 py-2 text-[13.5px] font-semibold text-green-800">
+            <Mail size={16} />
+            {totalNoLeidos} {totalNoLeidos === 1 ? "mensaje sin leer" : "mensajes sin leer"}
+          </div>
+        )}
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, display: "flex", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-        <div style={{ width: 372, flexShrink: 0, borderRight: "1px solid var(--outline-variant)", display: "flex", flexDirection: "column", minHeight: 0 }} className="chat-list-col">
-          <div style={{ padding: "14px 16px 10px", flexShrink: 0 }}>
-            <div style={{ position: "relative" }}>
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", display: "inline-flex", color: "var(--fg-3)" }}><Search size={16} /></span>
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por visitante o actividad" style={{ width: "100%", paddingLeft: 36, height: 40, fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--fg-1)", borderRadius: "var(--radius)", border: "1px solid var(--sand)", background: "var(--surface)", outline: "none", boxSizing: "border-box" }} />
+      <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-outline-variant bg-surface">
+        <div className={cn("flex min-h-0 w-[372px] shrink-0 flex-col border-r border-outline-variant max-md:w-full max-md:border-r-0", activo && "max-md:hidden")}>
+          <div className="shrink-0 px-4 pt-3.5 pb-2.5">
+            <div className="relative">
+              <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-fg-3" aria-hidden />
+              <input
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar por visitante"
+                aria-label="Buscar por visitante"
+                className="h-10 w-full rounded-md border border-sand bg-surface pl-9 font-sans text-sm text-fg-1 outline-none focus:border-green-700"
+              />
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              {([{ id: "todos", label: "Todos", count: 0 }, { id: "no-leidos", label: "No leídos", count: totalUnread }] as const).map((t) => {
-                const on = filter === t.id;
+            <div className="mt-3 flex gap-2">
+              {([{ id: "todos", label: "Todos", count: 0 }, { id: "no-leidos", label: "No leídos", count: totalNoLeidos }] as const).map((t) => {
+                const on = filtro === t.id;
                 return (
-                  <button key={t.id} onClick={() => setFilter(t.id)} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 13px", borderRadius: 999, cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 600, border: `1px solid ${on ? "var(--green-800)" : "var(--outline-variant)"}`, background: on ? "var(--green-800)" : "var(--surface)", color: on ? "#fff" : "var(--fg-2)" }}>
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setFiltro(t.id)}
+                    aria-pressed={on}
+                    className={cn(
+                      "inline-flex cursor-pointer items-center gap-[7px] rounded-pill border px-[13px] py-1.5 font-sans text-[13px] font-semibold",
+                      on ? "border-green-800 bg-green-800 text-white" : "border-outline-variant bg-surface text-fg-2",
+                    )}
+                  >
                     {t.label}
-                    {t.count > 0 && <span style={{ minWidth: 18, height: 18, padding: "0 5px", borderRadius: 999, background: on ? "rgba(255,255,255,.22)" : "var(--brown-700)", color: "#fff", fontSize: 11, fontWeight: 700, lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{t.count}</span>}
+                    {t.count > 0 && (
+                      <span className={cn("inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-pill px-[5px] text-[11px] leading-none font-bold text-white", on ? "bg-white/22" : "bg-brown-700")}>
+                        {t.count}
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-            {visible.length === 0 ? (
-              <div style={{ padding: "40px 24px", textAlign: "center", color: "var(--fg-2)" }}>
-                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--cream-tert)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}><SearchX size={24} color="var(--brown-700)" /></div>
-                <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15.5, color: "var(--fg-1)", marginBottom: 4 }}>Sin resultados</div>
-                <div style={{ fontSize: 13, lineHeight: 1.5 }}>No hay conversaciones que coincidan con el filtro.</div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {isLoading ? (
+              <div className="px-6 py-10 text-center text-fg-3"><Loader size={22} className="spin inline" aria-label="Cargando chats" /></div>
+            ) : error ? (
+              <div className="px-6 py-10 text-center text-[13.5px] leading-normal text-danger">{error}</div>
+            ) : visibles.length === 0 ? (
+              <div className="px-6 py-10 text-center text-fg-2">
+                <div className="mb-3 inline-flex size-[52px] items-center justify-center rounded-full bg-cream-tert">
+                  {chats.length === 0 ? <MessagesSquare size={24} className="text-brown-700" /> : <SearchX size={24} className="text-brown-700" />}
+                </div>
+                <div className="mb-1 font-display text-[15.5px] font-semibold text-fg-1">
+                  {chats.length === 0 ? "Todavía no hay consultas" : "Sin resultados"}
+                </div>
+                <div className="text-[13px] leading-normal">
+                  {chats.length === 0
+                    ? "Cuando un visitante contacte al establecimiento, la conversación aparece acá."
+                    : "No hay conversaciones que coincidan con el filtro."}
+                </div>
               </div>
-            ) : visible.map((c) => <ConvListItem key={c.id} chat={c} active={c.id === activeId} onOpen={openChat} />)}
+            ) : (
+              visibles.map((c) => <FilaChat key={c.id} chat={c} activo={c.id === activoId} onOpen={setActivoId} />)
+            )}
           </div>
         </div>
-        <Thread chat={active} onSend={sendMessage} busy={isLoading} />
+
+        {activo ? (
+          <Hilo chat={activo} establecimientoId={establecimientoId} onBack={() => setActivoId(null)} />
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3.5 bg-cream-bg p-8 text-center text-fg-2 max-md:hidden">
+            <div className="flex size-16 items-center justify-center rounded-full bg-cream-tert">
+              <MessagesSquare size={28} className="text-brown-700" />
+            </div>
+            <div className="font-display text-lg font-bold text-fg-1">Elegí una conversación</div>
+            <div className="max-w-[300px] text-[13.5px] leading-normal">
+              Seleccioná un chat de la izquierda para ver los mensajes y responderle al visitante.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+/**
+ * Bandeja de chats del establecimiento activo. El acceso lo deciden las reglas
+ * de la RTDB (`establecimiento_miembros`), no un permiso del front: si la cuenta
+ * no figura como miembro, la lectura falla y se muestra el error.
+ */
 export default function EstChatsClient() {
-  const { data, isLoading, error, reload } = useEstChats();
-  return (
-    <>
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando chats…">
-        {data && <Inner initial={data} />}
-      </AsyncBoundary>
-      <style>{`@media (max-width: 720px){ .chat-list-col{ width: 100% !important; } }`}</style>
-    </>
-  );
+  const { activo, listo } = useEstablecimientos();
+
+  if (!listo) {
+    return <div className="p-10 text-center text-fg-3"><Loader size={22} className="spin inline" aria-label="Cargando" /></div>;
+  }
+  if (!activo) {
+    return <div className="p-10 text-center text-[15px] text-fg-2">Tu cuenta no tiene establecimientos asignados.</div>;
+  }
+  // Al cambiar de establecimiento en el switcher se arranca de cero: sin chat
+  // abierto ni búsqueda de la finca anterior.
+  return <Bandeja key={activo.id} establecimientoId={activo.id} />;
 }

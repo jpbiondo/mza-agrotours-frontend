@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import {
-  AlertCircle, ArrowLeft, Grape, Loader, MessageCircle, MessageCircleOff, RotateCcw, Send, X,
-} from "lucide-react";
-import {
-  marcarChatLeido, useEnviarMensaje, useMensajes, useMisChats, type MensajeFallido,
-} from "@/hooks/useChats";
+import { auth } from "../../../firebase.config";
+import { ArrowLeft, Grape, Loader, MessageCircle, MessageCircleOff, X } from "lucide-react";
+import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
+import { marcarChatLeido, useMisChats } from "@/hooks/useChats";
 import { useChatDrawer, type ChatAbierto } from "@/stores/chatDrawerStore";
 import { cn } from "@/lib/utils";
-import type { ChatResumen, MensajeChat } from "@/types/chats";
+import type { ChatResumen } from "@/types/chats";
 
 /** Tope de caracteres por mensaje, como en el diseño. */
 const MAX = 300;
@@ -29,43 +27,6 @@ function gradienteDe(id: string): string {
   let h = 0;
   for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return GRADIENTES[h % GRADIENTES.length];
-}
-
-/* ---- Fechas -------------------------------------------------------------- */
-
-function dosDigitos(n: number): string {
-  return String(n).padStart(2, "0");
-}
-
-function hora(ts: number): string {
-  const d = new Date(ts);
-  return `${dosDigitos(d.getHours())}:${dosDigitos(d.getMinutes())}`;
-}
-
-/** Días calendario entre `ts` y hoy, en hora local: 0 es hoy, 1 es ayer. */
-function diasAtras(ts: number): number {
-  const d = new Date(ts);
-  const hoy = new Date();
-  const inicio = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-  return Math.round((inicio(hoy) - inicio(d)) / 86_400_000);
-}
-
-/** Hora si es de hoy, "Ayer", o la fecha corta. */
-function momentoCorto(ts: number): string {
-  if (!ts) return "";
-  const dias = diasAtras(ts);
-  if (dias <= 0) return hora(ts);
-  if (dias === 1) return "Ayer";
-  const d = new Date(ts);
-  return `${dosDigitos(d.getDate())}/${dosDigitos(d.getMonth() + 1)}`;
-}
-
-function etiquetaDia(ts: number): string {
-  const dias = diasAtras(ts);
-  if (dias <= 0) return "Hoy";
-  if (dias === 1) return "Ayer";
-  const d = new Date(ts);
-  return `${dosDigitos(d.getDate())}/${dosDigitos(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
 /* ---- Piezas -------------------------------------------------------------- */
@@ -129,111 +90,16 @@ function FilaChat({ chat, onOpen }: { chat: ChatResumen; onOpen: (c: ChatResumen
   );
 }
 
-function SeparadorDia({ label }: { label: string }) {
-  return (
-    <div className="mt-2 mb-1 flex items-center gap-3">
-      <div className="h-px flex-1 bg-cream-tert" />
-      <div className="rounded-pill bg-cream-tert px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[.08em] text-fg-3">{label}</div>
-      <div className="h-px flex-1 bg-cream-tert" />
-    </div>
-  );
-}
-
-type EstadoBurbuja = "enviado" | "enviando" | "error";
-
-function Burbuja({
-  texto, mine, momento, estado, code, onReintentar, onDescartar,
-}: {
-  texto: string;
-  mine: boolean;
-  momento: string;
-  estado: EstadoBurbuja;
-  code?: string;
-  onReintentar?: () => void;
-  onDescartar?: () => void;
-}) {
-  return (
-    <div className={cn("pop flex max-w-[82%] flex-col", mine ? "items-end self-end" : "items-start self-start")}>
-      <div
-        className={cn(
-          "whitespace-pre-wrap break-words border px-3.5 py-2.5 text-[13.5px] leading-[1.45]",
-          mine
-            ? "rounded-[16px_16px_4px_16px] border-transparent bg-green-800 text-white"
-            : "rounded-[16px_16px_16px_4px] border-outline-variant bg-surface text-fg-1",
-          estado === "error" && "opacity-70",
-        )}
-      >
-        {texto}
-      </div>
-      <div className="mt-1 flex items-center gap-1.5 font-mono text-[11px] text-fg-3">
-        {estado === "enviando" ? (
-          <span className="inline-flex items-center gap-1">
-            Enviando <Loader size={11} className="spin" aria-hidden />
-          </span>
-        ) : estado === "error" ? (
-          <span className="flex flex-wrap items-center gap-2">
-            <AlertCircle size={14} className="text-danger" aria-hidden />
-            <span className="font-sans text-[11.5px] text-danger">No se pudo enviar el mensaje</span>
-            {code && <span title="Código del error">{code}</span>}
-            <button type="button" onClick={onReintentar} aria-label="Reintentar envío" className="inline-flex cursor-pointer text-fg-2 hover:text-fg-1">
-              <RotateCcw size={14} />
-            </button>
-            <button type="button" onClick={onDescartar} aria-label="Descartar mensaje" className="inline-flex cursor-pointer text-fg-3 hover:text-fg-1">
-              <X size={14} />
-            </button>
-          </span>
-        ) : (
-          <span>{momento}</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ---- Conversación -------------------------------------------------------- */
-
-/** Lo que se dibuja en el hilo: lo confirmado por la base más lo que falló acá. */
-type Item =
-  | { tipo: "mensaje"; m: MensajeChat }
-  | { tipo: "fallido"; m: MensajeFallido };
-
 function Conversacion({ chat, noLeidos, onBack, onClose }: {
   chat: ChatAbierto;
   noLeidos: number;
   onBack: () => void;
   onClose: () => void;
 }) {
-  const { mensajes, isLoading, error } = useMensajes(chat.id);
-  const { enviar, enviando, fallidos, descartar } = useEnviarMensaje();
-  const [borrador, setBorrador] = useState("");
-  const scroller = useRef<HTMLDivElement>(null);
-
   // Abrir la conversación (o recibir algo con ella abierta) la da por leída.
   useEffect(() => {
     if (noLeidos > 0) void marcarChatLeido(chat.id);
   }, [chat.id, noLeidos]);
-
-  const items: Item[] = [
-    ...mensajes.map((m) => ({ tipo: "mensaje" as const, m })),
-    ...fallidos.filter((f) => f.chatId === chat.id).map((m) => ({ tipo: "fallido" as const, m })),
-  ].sort((a, b) => a.m.timestamp - b.m.timestamp);
-
-  useEffect(() => {
-    if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
-  }, [items.length]);
-
-  const puedeEnviar = borrador.trim().length > 0 && borrador.length <= MAX;
-
-  function submit() {
-    if (!puedeEnviar) return;
-    void enviar(chat, borrador.trim());
-    setBorrador("");
-  }
-
-  function reintentar(f: MensajeFallido) {
-    descartar(f.id);
-    void enviar(chat, f.texto);
-  }
 
   return (
     <>
@@ -249,79 +115,15 @@ function Conversacion({ chat, noLeidos, onBack, onClose }: {
         <BotonCerrar onClick={onClose} />
       </div>
 
-      <div ref={scroller} className="flex flex-1 flex-col gap-2 overflow-y-auto bg-cream-bg px-4 pt-4 pb-2">
-        {isLoading ? (
-          <div className="m-auto text-fg-3"><Loader size={22} className="spin" aria-label="Cargando mensajes" /></div>
-        ) : error ? (
-          <div className="m-auto max-w-[280px] text-center text-[13.5px] text-danger">{error}</div>
-        ) : items.length === 0 ? (
-          <div className="m-auto max-w-[280px] text-center text-[13.5px] leading-normal text-fg-2">
-            Escribí tu consulta y el establecimiento te va a responder por acá.
-          </div>
-        ) : (
-          items.map((it, i) => {
-            const dia = etiquetaDia(it.m.timestamp);
-            const nuevoDia = i === 0 || etiquetaDia(items[i - 1].m.timestamp) !== dia;
-            return (
-              <div key={it.m.id} className="contents">
-                {nuevoDia && <SeparadorDia label={dia} />}
-                {it.tipo === "mensaje" ? (
-                  <Burbuja
-                    texto={it.m.texto}
-                    mine={it.m.tipoEmisor === "VISITANTE"}
-                    momento={hora(it.m.timestamp)}
-                    estado={enviando.has(it.m.id) ? "enviando" : "enviado"}
-                  />
-                ) : (
-                  <Burbuja
-                    texto={it.m.texto}
-                    mine
-                    momento={hora(it.m.timestamp)}
-                    estado="error"
-                    code={it.m.code}
-                    onReintentar={() => reintentar(it.m as MensajeFallido)}
-                    onDescartar={() => descartar(it.m.id)}
-                  />
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      <div className="border-t border-outline-variant bg-surface px-3.5 pt-3 pb-3.5">
-        <div className="flex items-end gap-2.5 rounded-[14px] border border-sand bg-cream-bg py-2 pr-2 pl-3.5 focus-within:border-green-700">
-          <textarea
-            value={borrador}
-            onChange={(e) => setBorrador(e.target.value.slice(0, MAX))}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            placeholder="Ingrese su consulta…"
-            rows={1}
-            maxLength={MAX}
-            aria-label="Mensaje"
-            autoFocus
-            className="max-h-[110px] min-h-6 flex-1 resize-none border-none bg-transparent py-1.5 font-sans text-[13.5px] leading-[1.45] text-fg-1 outline-none"
-          />
-          <button
-            type="button"
-            onClick={submit}
-            disabled={!puedeEnviar}
-            aria-label="Enviar mensaje"
-            className="flex size-[38px] shrink-0 cursor-pointer items-center justify-center rounded-[10px] bg-green-800 text-white shadow-[var(--btn-tactile-primary)] transition-colors disabled:cursor-not-allowed disabled:bg-cream-tert disabled:text-fg-3 disabled:shadow-none"
-          >
-            <Send size={17} />
-          </button>
-        </div>
-        <div className="mt-1.5 flex justify-between font-mono text-[11px] text-fg-3">
-          <span>Enter para enviar · Shift+Enter salto de línea</span>
-          <span className={cn(MAX - borrador.length < 30 && "font-semibold text-warning-fg")}>{borrador.length} / {MAX}</span>
-        </div>
-      </div>
+      <ConversacionChat
+        // Del lado del visitante, el inbox propio es el de la cuenta en sesión.
+        chat={{ ...chat, visitanteId: auth.currentUser?.uid ?? "" }}
+        emisor="VISITANTE"
+        vacio="Escribí tu consulta y el establecimiento te va a responder por acá."
+        placeholder="Ingrese su consulta…"
+        max={MAX}
+        autoFocus
+      />
     </>
   );
 }
