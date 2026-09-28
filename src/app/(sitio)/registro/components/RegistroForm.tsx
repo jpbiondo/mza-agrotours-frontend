@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/Button";
 import type { ToastData } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { TIPOS_IDENTIFICACION, EMPTY_FORM } from "@/data/registro";
+import { CODIGO_PERFIL_INACTIVO } from "@/data/auth";
 import type { FormData } from "@/types/registro";
 import { completarRegistroSchema, registroSchema } from "../schema";
 import { useRegistro } from "@/hooks/useRegistro";
@@ -95,10 +96,7 @@ export default function RegistroForm({
       return;
     }
 
-    if (
-      r.code === "auth/email-already-in-use" ||
-      r.code === "userAlreadyExists"
-    ) {
+    if (r.code === "auth/email-already-in-use") {
       form.setError(
         "email",
         { message: "Este correo ya está registrado" },
@@ -132,6 +130,16 @@ export default function RegistroForm({
         { message: "Este teléfono ya está registrado" },
         { shouldFocus: true },
       );
+      return;
+    }
+    // La cuenta de Firebase es de un perfil dado de baja que todavía no se
+    // terminó de eliminar; el hook ya cerró la sesión.
+    if (r.code === CODIGO_PERFIL_INACTIVO) {
+      setToast({
+        tone: "danger",
+        title: "Esta cuenta fue dada de baja",
+        sub: "Vas a poder registrarte de nuevo con este correo cuando se termine de eliminar.",
+      });
       return;
     }
     setToast({

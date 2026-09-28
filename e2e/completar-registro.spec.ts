@@ -51,3 +51,24 @@ test("login sin perfil lleva a completar el registro, sin pedir contraseña", as
   expect(body.password).toBeUndefined();
   await page.waitForURL("**/explorar");
 });
+
+// Perfil dado de baja, cuenta de Firebase todavía viva: no se completa nada.
+test("login con perfil dado de baja muestra el aviso y no lleva a completar", async ({ page }) => {
+  const email = "ana.perez.test@example.com";
+  await stubFirebaseAuth(page, email);
+  await page.route("**/usuario/me", (route) =>
+    route.fulfill({
+      status: 403,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: false, code: "USR.inactivo" }),
+    })
+  );
+
+  await page.goto("/acceso");
+  await page.getByPlaceholder("nombre@dominio.com").fill(email);
+  await page.getByPlaceholder("Tu contraseña").fill("Secure@1");
+  await page.getByRole("button", { name: /Iniciar sesión/ }).click();
+
+  await expect(page.getByText("Esta cuenta ha sido eliminada.")).toBeVisible();
+  await expect(page).toHaveURL(/\/acceso$/);
+});

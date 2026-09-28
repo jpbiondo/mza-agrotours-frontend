@@ -7,6 +7,7 @@ import { ApiError, apiFetch } from "@/lib/api";
 import { rolesDe } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import {
+  CODIGO_PERFIL_INACTIVO,
   CODIGO_PERFIL_INEXISTENTE,
   RUTA_COMPLETAR_REGISTRO,
 } from "@/data/auth";
@@ -81,30 +82,32 @@ export type ResultadoPerfil =
   | { estado: "ok"; cuenta: Cuenta }
   /** Autenticado en Firebase, pero sin perfil en el backend (alta a medias). */
   | { estado: "sinPerfil" }
+  /** Perfil dado de baja: no se completa ni se recrea. */
+  | { estado: "inactivo" }
   /** `code` es el de dominio si el backend lo mandó; sin él, fallo técnico. */
   | { estado: "error"; code?: string };
+
+function resultadoDeCodigo(code?: string): ResultadoPerfil {
+  if (code === CODIGO_PERFIL_INEXISTENTE) return { estado: "sinPerfil" };
+  if (code === CODIGO_PERFIL_INACTIVO) return { estado: "inactivo" };
+  return { estado: "error", code };
+}
 
 /**
  * Trae el perfil (GET /usuario/me con el ID token) y, si existe, lo guarda en
  * el store. Se llama después de cada login, al restaurar la sesión y al
- * terminar el alta. Con `sinPerfil` no toca el store: decide el llamador.
+ * terminar el alta. Con `sinPerfil` o `inactivo` no toca el store ni la
+ * sesión: decide el llamador.
  */
 export async function cargarPerfil(token: string): Promise<ResultadoPerfil> {
   let res: ProfileResponse;
   try {
     res = await apiFetch<ProfileResponse>(PROFILE_PATH, { token });
   } catch (e) {
-    if (e instanceof ApiError && e.code === CODIGO_PERFIL_INEXISTENTE) {
-      return { estado: "sinPerfil" };
-    }
-    return { estado: "error", code: e instanceof ApiError ? e.code : undefined };
+    return resultadoDeCodigo(e instanceof ApiError ? e.code : undefined);
   }
 
-  if (!res.ok || !res.data) {
-    return res.code === CODIGO_PERFIL_INEXISTENTE
-      ? { estado: "sinPerfil" }
-      : { estado: "error", code: res.code };
-  }
+  if (!res.ok || !res.data) return resultadoDeCodigo(res.code);
 
   const accesos = res.data.accesos ?? [];
   const cuenta: Cuenta = { ...res.data, roles: rolesDe(accesos) };
@@ -150,5 +153,12 @@ async function firebaseLogin({
     useAuthStore.getState().clear();
     return { ok: false, code: "sinPerfil" };
   }
-  return { ok: false, code: perfil.code === "baja" ? "baja" : "error" };
+  if (perfil.estado === "inactivo") {
+    // Firebase todavía no borró la cuenta: las credenciales valen, pero la
+    // sesión no tiene que quedar abierta.
+    await signOut(auth).catch(() => undefined);
+    useAuthStore.getState().clear();
+    return { ok: false, code: "baja" };
+  }
+  return { ok: false, code: "error" };
 }

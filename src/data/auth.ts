@@ -86,3 +86,9 @@ export const RUTA_COMPLETAR_REGISTRO = "/registro/completar";
  */
 export const CODIGO_PERFIL_INEXISTENTE = "USR.notFound";
 export const CODIGO_PERFIL_EXISTENTE = "USR.alreadyExists";
+/**
+ * Perfil dado de baja. La cuenta de Firebase la borra después una tarea del
+ * backend; mientras tanto la sesión puede seguir viva, pero no se completa ni
+ * se recrea el perfil (quedaría huérfano al borrarse la cuenta de Firebase).
+ */
+export const CODIGO_PERFIL_INACTIVO = "USR.inactivo";

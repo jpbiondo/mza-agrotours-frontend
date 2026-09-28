@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { cargarPerfil } from "@/hooks/useAuth";
 import { useAuthStore } from "@/stores/authStore";
@@ -24,6 +24,10 @@ import { RUTA_COMPLETAR_REGISTRO } from "@/data/auth";
  *   lleva a completar el registro. En `/registro*` no: ahí el alta está en curso
  *   —el sign-up de Firebase dispara este listener antes de que exista el perfil—
  *   o ya se está completando.
+ * - si el perfil está dado de baja, cierra la sesión: la cuenta de Firebase
+ *   sigue viva hasta que el backend la borre, pero no tiene que usarse. No
+ *   navega: las pantallas protegidas ya reaccionan a quedarse sin sesión, y en
+ *   `/acceso` se pisaría el aviso de cuenta eliminada del login.
  */
 export default function AuthSync() {
   const router = useRouter();
@@ -46,12 +50,18 @@ export default function AuthSync() {
       }
       try {
         const perfil = await cargarPerfil(await user.getIdToken());
-        if (!active || perfil.estado !== "sinPerfil") return;
+        if (!active) return;
+        if (perfil.estado === "inactivo") {
+          await signOut(auth);
+          return;
+        }
+        if (perfil.estado !== "sinPerfil") return;
         if (window.location.pathname.startsWith("/registro")) return;
         useAuthStore.getState().clear();
         router.replace(RUTA_COMPLETAR_REGISTRO);
       } catch {
-        // Sin red al pedir el token: se conserva el perfil cacheado.
+        // Sin red al pedir el token o al cerrar sesión: se conserva el perfil
+        // cacheado.
       }
     });
 

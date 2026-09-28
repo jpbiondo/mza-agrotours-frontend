@@ -8,7 +8,10 @@ import { FirebaseError } from "firebase/app";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { cargarPerfil } from "@/hooks/useAuth";
-import { CODIGO_PERFIL_EXISTENTE } from "@/data/auth";
+import {
+  CODIGO_PERFIL_EXISTENTE,
+  CODIGO_PERFIL_INACTIVO,
+} from "@/data/auth";
 import type { FormData } from "@/types/registro";
 
 /**
@@ -34,8 +37,9 @@ const CREATE_PATH = "/usuario/create";
 /**
  * Payload de /usuario/create. La contraseña no pasa por el backend: va directo
  * de la UI a Firebase. El backend identifica al usuario por el UID del token.
- * TODO backend: el email todavía se lee del body; va a pasar a salir del token.
- * Mientras tanto se manda el de la cuenta de Firebase.
+ * El email también sale del token (el del body se ignora), pero el DTO todavía
+ * lo exige: se manda el de la cuenta de Firebase.
+ * TODO backend: sacar `email` de `UsuarioCreateReq`.
  */
 function toPayload(email: string, d: FormData) {
   return {
@@ -65,12 +69,22 @@ async function cuentaFirebase(email: string, password: string): Promise<User> {
 }
 
 /**
+ * Rechazo de dominio del POST. Con `USR.inactivo` el UID es de un perfil dado
+ * de baja cuya cuenta de Firebase todavía no se borró: se cierra la sesión para
+ * que no quede usándose.
+ */
+async function rechazo(code?: string): Promise<RegistroResult> {
+  if (code === CODIGO_PERFIL_INACTIVO) await signOut(auth).catch(() => undefined);
+  return { ok: false, code };
+}
+
+/**
  * POST del perfil con el ID token. Que el perfil ya exista (409 o 2xx con
  * `USR.alreadyExists`) no es un error: el alta ya se había completado.
- * Después carga el perfil en el store, para llegar al destino ya logueado; si
- * eso falla, AuthSync lo vuelve a pedir al navegar.
+ * Después carga el perfil en el store, para llegar al destino ya logueado.
  */
 async function crearPerfil(user: User, d: FormData): Promise<RegistroResult> {
+  let yaExistia = false;
   try {
     const env = comoEnvelope(
       await apiFetch<unknown>(CREATE_PATH, {
@@ -79,20 +93,29 @@ async function crearPerfil(user: User, d: FormData): Promise<RegistroResult> {
         body: JSON.stringify(toPayload(user.email ?? d.email, d)),
       }),
     );
-    if (!env.ok && env.code !== CODIGO_PERFIL_EXISTENTE) {
-      return { ok: false, code: env.code };
+    if (!env.ok) {
+      if (env.code !== CODIGO_PERFIL_EXISTENTE) return rechazo(env.code);
+      yaExistia = true;
     }
   } catch (e) {
     if (e instanceof ApiError) {
-      if (e.code !== CODIGO_PERFIL_EXISTENTE) return { ok: false, code: e.code };
+      if (e.code !== CODIGO_PERFIL_EXISTENTE) return rechazo(e.code);
+      yaExistia = true;
     } else if (!(e instanceof SyntaxError)) {
       // SyntaxError = 2xx con cuerpo vacío: es un éxito.
       return { ok: false };
     }
   }
 
-  await cargarPerfil(await user.getIdToken()).catch(() => undefined);
-  return { ok: true };
+  const perfil = await user
+    .getIdToken()
+    .then(cargarPerfil)
+    .catch(() => null);
+  if (perfil?.estado === "ok") return { ok: true };
+  // Recién creado: si falla la lectura, AuthSync lo vuelve a pedir al navegar.
+  // Pero "ya existía" sólo es un éxito si el perfil se puede leer; si no, al
+  // navegar AuthSync lo mandaría de vuelta a completar, en un loop.
+  return yaExistia ? { ok: false } : { ok: true };
 }
 
 /**
