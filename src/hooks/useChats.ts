@@ -227,15 +227,7 @@ export function useChatsEstablecimiento(establecimientoId: string | null): UseCh
           setEstado({ establecimientoId, chats: chats.reverse(), error: null });
         },
         // Lo típico acá es PERMISSION_DENIED: la cuenta no figura como miembro.
-        (err) => {
-          // TODO: sacar cuando ande. Diagnóstico de por qué las reglas rechazan la lectura.
-          console.error("[useChatsEstablecimiento] lectura rechazada", {
-            ruta: `chats_establecimiento/${establecimientoId}`,
-            uid: user.uid,
-            err,
-          });
-          setEstado({ establecimientoId, chats: [], error: "No pudimos cargar los chats del establecimiento" });
-        },
+        () => setEstado({ establecimientoId, chats: [], error: "No pudimos cargar los chats del establecimiento" }),
       );
     });
 
