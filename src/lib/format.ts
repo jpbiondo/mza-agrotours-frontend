@@ -22,3 +22,21 @@ export function fmtFecha(iso: string | null): string {
   const p = (x: number) => String(x).padStart(2, "0");
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
+
+const p2 = (x: number) => String(x).padStart(2, "0");
+
+/** Día de un `Date` ya construido en hora local: → "12/10/2026". */
+export function fmtDiaLocal(d: Date): string {
+  return `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/** Hora de un `Date` ya construido en hora local: → "09:30". */
+export function fmtHoraLocal(d: Date): string {
+  return `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+}
+
+/** Franja horaria "09:30 — 12:00"; sólo el inicio si falta el fin, `undefined` sin inicio. */
+export function fmtFranja(inicio: Date | null, fin: Date | null): string | undefined {
+  if (!inicio) return undefined;
+  return fin ? `${fmtHoraLocal(inicio)} — ${fmtHoraLocal(fin)}` : fmtHoraLocal(inicio);
+}

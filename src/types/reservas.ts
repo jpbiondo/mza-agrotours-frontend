@@ -1,5 +1,3 @@
-export type EstadoReserva = "pendiente" | "finalizada" | "cancelada";
-
 /**
  * Agrupa los estados del backend para los filtros de "Mis reservas": `activa`
  * es la que todavía va a ocurrir (Pendiente, Pagada); `cancelada` incluye las
@@ -23,33 +21,18 @@ export interface ReservaResumen {
   estado: string;
 }
 
-export interface DesgloseGrupo {
-  grupo: string;
-  cantidad: number;
-  precio: number;
-}
-
-export interface Participante {
+/** Una persona de la reserva (un renglón de `detalleDTOs`). */
+export interface AsistenteReserva {
+  renglon: number;
   nombre: string;
-  categoria: string;
+  /** Nombre del rango etario tal como lo configuró la actividad ("Adulto", "Menor"…). */
+  rangoEtario: string;
+  subtotal: number;
 }
 
-export interface Reserva {
-  id: string;
-  titulo: string;
-  finca: string;
-  loc: string;
-  fecha: string;
-  fechaLabel: string;
-  horario: string;
-  personas: number;
-  precioUnit: number;
-  estado: EstadoReserva;
-  seed: number;
-  photo: string;
-  incluye: string[];
-  productor: string;
-  direccion: string;
-  desglose: DesgloseGrupo[];
-  participantes: Participante[];
+/** Detalle de una reserva (GET /reserva/get/{uuid}), ya mapeado en el hook. */
+export interface ReservaDetalle extends ReservaResumen {
+  establecimientoId: string;
+  /** Ordenados por renglón. */
+  asistentes: AsistenteReserva[];
 }
