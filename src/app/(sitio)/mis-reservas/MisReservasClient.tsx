@@ -11,7 +11,7 @@ import Photo, { seedDeId } from "@/components/landing/Photo";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { EstadoBadge, Skeleton } from "@/components/ui";
 import { metaEstadoReserva } from "@/data/reservas";
-import { moneyAr } from "@/lib/format";
+import { fmtDiaLocal, fmtFranja, moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useReservas } from "@/hooks/useReservas";
 import type { CategoriaReserva, ReservaResumen } from "@/types/reservas";
@@ -24,15 +24,6 @@ const FILTERS: { id: FilterId; label: string; icon: React.ReactNode }[] = [
   { id: "finalizada", label: "Finalizadas", icon: <CheckCircle2 size={15} /> },
   { id: "cancelada", label: "Canceladas", icon: <XCircle size={15} /> },
 ];
-
-const p2 = (n: number) => String(n).padStart(2, "0");
-const fmtDia = (d: Date) => `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()}`;
-const fmtHora = (d: Date) => `${p2(d.getHours())}:${p2(d.getMinutes())}`;
-
-function horario(r: ReservaResumen): string | undefined {
-  if (!r.inicio) return undefined;
-  return r.fin ? `${fmtHora(r.inicio)} — ${fmtHora(r.fin)}` : fmtHora(r.inicio);
-}
 
 function MetaItem({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
   return (
@@ -70,7 +61,7 @@ function ReservaCard({ r }: { r: ReservaResumen }) {
         </div>
 
         <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <MetaItem icon={<CalendarDays size={15} />} label="Fecha" value={r.inicio ? fmtDia(r.inicio) : "—"} sub={horario(r)} />
+          <MetaItem icon={<CalendarDays size={15} />} label="Fecha" value={r.inicio ? fmtDiaLocal(r.inicio) : "—"} sub={fmtFranja(r.inicio, r.fin)} />
           <MetaItem icon={<Users size={15} />} label="Personas" value={`${r.personas} ${r.personas === 1 ? "persona" : "personas"}`} />
           <MetaItem icon={<MapPin size={15} />} label="Ubicación" value={r.establecimiento || "—"} sub={r.ubicacion || undefined} />
         </div>

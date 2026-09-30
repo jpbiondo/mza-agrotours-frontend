@@ -1,21 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
-import { apiFetch, comoEnvelope } from "@/lib/api";
-import type { ReservaResumen } from "@/types/reservas";
+import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
+import type { AsistenteReserva, ReservaDetalle, ReservaResumen } from "@/types/reservas";
 
-/** Item crudo de GET /reserva/get (ListarReservaDTO). Campos opcionales: defensivo. */
+/**
+ * Item crudo de GET /reserva/get (ListarReservaDTO). Los campos nulos del DTO
+ * llegan como `null` explícito (NON_NULL sólo aplica al envelope); opcionales
+ * igual, por defensivo.
+ */
 interface ReservaBackend {
-  idReserva?: string;
+  idReserva?: string | null;
   totalReserva?: unknown;
-  estadoReserva?: string;
+  estadoReserva?: string | null;
   cantPersonas?: unknown;
   actividadFechaHoraInicio?: unknown;
   actividadFechaHoraFin?: unknown;
-  nombreActividad?: string;
-  idActividad?: string;
-  nombreEstablecimiento?: string;
-  ubicacionEstablecimiento?: string;
+  nombreActividad?: string | null;
+  idActividad?: string | null;
+  nombreEstablecimiento?: string | null;
+  ubicacionEstablecimiento?: string | null;
 }
 
 /**
@@ -142,36 +146,136 @@ export function useReservas(): UseReservasReturn {
   };
 }
 
-/* ---- Mutaciones -------------------------------------------------------- */
+/* ---- Detalle ------------------------------------------------------------ */
 
-export function useCancelarReserva() {
-  const [isLoading, setIsLoading] = useState(false);
-
-  async function cancelar(reservaId: string): Promise<void> {
-    setIsLoading(true);
-    try {
-      await mockCancelar(reservaId);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  return { cancelar, isLoading };
+/** Detalle crudo de GET /reserva/get/{uuid} (ConsultarReservaDTO). */
+interface ReservaDetalleBackend extends ReservaBackend {
+  idEstablecimiento?: string | null;
+  detalleDTOs?: unknown;
 }
 
-// MOCK — reemplazar por fetch(`/api/reservas/${id}/cancelar`, { method: "POST" })
-async function mockCancelar(_reservaId: string): Promise<void> {
-  await new Promise<void>((res) => setTimeout(res, 700));
+/** Renglón crudo de `detalleDTOs` (ConsultarReservaDetalleDTO). */
+interface AsistenteBackend {
+  renglon?: unknown;
+  nombre?: string | null;
+  tipoRangoEtario?: string | null;
+  subtotal?: unknown;
 }
 
+function aAsistentes(v: unknown): AsistenteReserva[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((a): a is AsistenteBackend => !!a && typeof a === "object")
+    .map((a, i) => ({
+      // Sin renglón se numera por posición, para que la tabla no muestre ceros.
+      renglon: aNumero(a.renglon) || i + 1,
+      nombre: a.nombre ?? "",
+      rangoEtario: a.tipoRangoEtario ?? "",
+      subtotal: aNumero(a.subtotal),
+    }))
+    .sort((a, b) => a.renglon - b.renglon);
+}
+
+function aDetalle(r: ReservaDetalleBackend): ReservaDetalle {
+  return {
+    ...aResumen(r, 0),
+    establecimientoId: r.idEstablecimiento ?? "",
+    asistentes: aAsistentes(r.detalleDTOs),
+  };
+}
+
+interface UseReservaReturn {
+  reserva: ReservaDetalle | null;
+  isLoading: boolean;
+  error: string | null;
+  /**
+   * El backend contestó 404: el uuid está mal formado, la reserva no existe o
+   * es de otro visitante. No distingue entre los tres, y la pantalla tampoco.
+   */
+  notFound: boolean;
+  /** No hay sesión de Firebase: la pantalla debe redirigir a /acceso. */
+  unauthenticated: boolean;
+  reload: () => void;
+}
+
+/** Detalle de una reserva del visitante en sesión (GET /reserva/get/{uuid}). */
+export function useReserva(id: string): UseReservaReturn {
+  const [nonce, setNonce] = useState(0);
+  const [cargado, setCargado] = useState<{
+    clave: string;
+    reserva: ReservaDetalle | null;
+    error: string | null;
+    notFound: boolean;
+    unauthenticated: boolean;
+  } | null>(null);
+
+  // Clave con el id: al navegar de una reserva a otra no se ve un frame la anterior.
+  const clave = `${nonce}|${id}`;
+  const alDia = cargado?.clave === clave;
+
+  useEffect(() => {
+    let active = true;
+
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!active) return;
+      const fin = (
+        datos: Partial<{ reserva: ReservaDetalle; error: string; notFound: boolean; unauthenticated: boolean }>,
+      ) => setCargado({ clave, reserva: null, error: null, notFound: false, unauthenticated: false, ...datos });
+
+      if (!user) {
+        fin({ unauthenticated: true });
+        return;
+      }
+      try {
+        const token = await user.getIdToken();
+        const res = await apiFetch<unknown>(`/reserva/get/${encodeURIComponent(id)}`, { token });
+        if (!active) return;
+        const env = comoEnvelope<ReservaDetalleBackend>(res);
+        if (!env.ok) {
+          fin(env.code === "notFound" ? { notFound: true } : { error: env.code ?? "No pudimos cargar la reserva" });
+          return;
+        }
+        // Un ok sin `data` no debería pasar; se trata como no encontrada.
+        fin(env.data && typeof env.data === "object" ? { reserva: aDetalle(env.data) } : { notFound: true });
+      } catch (e) {
+        if (!active) return;
+        if (e instanceof ApiError && (e.status === 404 || e.code === "notFound")) {
+          fin({ notFound: true });
+          return;
+        }
+        fin({ error: e instanceof Error ? e.message : "Error inesperado" });
+      }
+    });
+
+    return () => {
+      active = false;
+      unsub();
+    };
+  }, [clave, id]);
+
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
+
+  return {
+    reserva: alDia ? cargado.reserva : null,
+    isLoading: !alDia,
+    error: alDia ? cargado.error : null,
+    notFound: alDia ? cargado.notFound : false,
+    unauthenticated: alDia ? cargado.unauthenticated : false,
+    reload,
+  };
+}
+
+/* ---- Contrato de POST /reserva/reservar ----------------------------------- */
+
+/** ConsultarReservaDTO tal como lo devuelve el alta de la reserva (lo usa `useCheckout`). */
 export interface ConsultarReserva{
   idReserva: string;
   totalReserva: number;
   estadoReserva: string;
   cantPersonas: number;
   detalleDTOs: ConsultarReservaDetalle[];
-  fechaHoraInicio: string;
-  fechaHoraFin: string;
+  actividadFechaHoraInicio: string;
+  actividadFechaHoraFin: string;
   nombreActividad: string;
   idActividad: string;
   nombreEstablecimiento: string;
@@ -183,30 +287,4 @@ interface ConsultarReservaDetalle{
   nombre: string;
   tipoRangoEtario: string;
   subtotal: number;
-}
-
-export interface ValoracionPayload {
-  reservaId: string;
-  rating: number;
-  comentario: string;
-}
-
-export function useValorarActividad() {
-  const [isLoading, setIsLoading] = useState(false);
-
-  async function valorar(payload: ValoracionPayload): Promise<void> {
-    setIsLoading(true);
-    try {
-      await mockValorar(payload);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  return { valorar, isLoading };
-}
-
-// MOCK — reemplazar por fetch(`/api/reservas/${reservaId}/valoracion`, { method: "POST", body })
-async function mockValorar(_payload: ValoracionPayload): Promise<void> {
-  await new Promise<void>((res) => setTimeout(res, 1000));
 }

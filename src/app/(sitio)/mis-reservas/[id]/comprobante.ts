@@ -1,38 +1,35 @@
-import { ESTADO_LABEL, reservaTotal } from "@/data/reservas";
-import type { Reserva } from "@/types/reservas";
+import { fmtDiaLocal, fmtFranja, moneyAr } from "@/lib/format";
+import type { ReservaDetalle } from "@/types/reservas";
 
 function asciiSafe(s: string): string {
   return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7e]/g, " ");
 }
 
 /** Genera un PDF mínimo (Helvetica, A4) sin librerías externas. */
-function buildComprobantePDF(r: Reserva): string {
-  const total = reservaTotal(r);
+function buildComprobantePDF(r: ReservaDetalle): string {
   const L: string[] = [];
   L.push("MENDOZA AGROTOURS");
   L.push("Comprobante de reserva");
   L.push("");
   L.push("Codigo de reserva:  " + r.id);
-  L.push("Estado:             " + ESTADO_LABEL[r.estado]);
+  L.push("Estado:             " + (r.estado || "-"));
   L.push("");
-  L.push("Actividad:          " + r.titulo);
-  L.push("Establecimiento:    " + r.finca);
-  L.push("Direccion:          " + (r.direccion || r.loc));
-  L.push("Productor/a:        " + r.productor);
+  L.push("Actividad:          " + r.actividad);
+  L.push("Establecimiento:    " + r.establecimiento);
+  L.push("Ubicacion:          " + (r.ubicacion || "-"));
   L.push("");
-  L.push("Fecha:              " + r.fechaLabel);
-  L.push("Horario:            " + r.horario);
+  L.push("Fecha:              " + (r.inicio ? fmtDiaLocal(r.inicio) : "-"));
+  L.push("Horario:            " + (fmtFranja(r.inicio, r.fin) ?? "-"));
   L.push("Cantidad personas:  " + r.personas);
   L.push("");
-  L.push("DESGLOSE DE PAGO");
+  L.push("ASISTENTES");
   L.push("-----------------------------------------------");
-  r.desglose.forEach((g) => {
-    const sub = g.cantidad * g.precio;
-    const left = g.grupo + "  (" + g.cantidad + " x $ " + g.precio.toLocaleString("es-AR") + ")";
-    L.push(left.padEnd(38) + "$ " + sub.toLocaleString("es-AR"));
+  r.asistentes.forEach((a) => {
+    const left = a.renglon + ". " + a.nombre + (a.rangoEtario ? "  (" + a.rangoEtario + ")" : "");
+    L.push(left.padEnd(38) + moneyAr(a.subtotal));
   });
   L.push("-----------------------------------------------");
-  L.push("TOTAL".padEnd(38) + "$ " + total.toLocaleString("es-AR"));
+  L.push("TOTAL".padEnd(38) + moneyAr(r.total));
   L.push("");
   L.push("Emitido: " + new Date().toLocaleDateString("es-AR") + "   ·   www.mendozaagrotours.ar");
 
@@ -64,7 +61,7 @@ function buildComprobantePDF(r: Reserva): string {
   return pdf;
 }
 
-export function descargarComprobante(r: Reserva): void {
+export function descargarComprobante(r: ReservaDetalle): void {
   const blob = new Blob([buildComprobantePDF(r)], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

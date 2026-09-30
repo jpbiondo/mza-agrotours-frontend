@@ -5,7 +5,8 @@ import { ConsultarReserva } from "./useReservas";
 
 interface IniciarReserva{
   reservaDTO: ConsultarReserva;
-  preferenceId: string;
+  /** `null` cuando el pago no pasa por Mercado Pago, p. ej. el manual. */
+  preferenceId: string | null;
 }
 
 interface ReservarResponse{
