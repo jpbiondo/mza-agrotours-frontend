@@ -6,7 +6,7 @@ export interface ChatResumen {
   establecimientoId: string;
   /**
    * Nombre de la actividad tal como era al iniciar el chat (en chats viejos, el
-   * del establecimiento). El nombre al día lo da `useTitulosChatsUsuario`.
+   * del establecimiento). El nombre al día lo da `useInfoChatsUsuario`.
    */
   titulo: string;
   /** Vacío mientras nadie escribió. */

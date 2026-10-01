@@ -304,11 +304,17 @@ function useInfoPorChat<T>(
   return info;
 }
 
+/** Lo que el visitante ve de cada chat, con los nombres al día. */
+export interface InfoChatUsuario {
+  actividad?: string;
+  establecimiento?: string;
+}
+
 /**
- * Nombre al día de la actividad de cada chat del visitante, por id de chat.
- * `POST /usuario/chats`. Con `chatIds` vacío no pide nada.
+ * Nombre al día de la actividad y del establecimiento de cada chat del
+ * visitante, por id de chat. `POST /usuario/chats`. Con `chatIds` vacío no pide nada.
  */
-export function useTitulosChatsUsuario(chatIds: readonly string[]): Record<string, string> {
+export function useInfoChatsUsuario(chatIds: readonly string[]): Record<string, InfoChatUsuario> {
   const pedir = useCallback(async (ids: string[]) => {
     const cuerpo = ids.flatMap((id) => {
       const partes = partesDeChat(id);
@@ -318,13 +324,16 @@ export function useTitulosChatsUsuario(chatIds: readonly string[]): Record<strin
     const res = await conToken((token) =>
       apiFetch<unknown>("/usuario/chats", { method: "POST", token, body: JSON.stringify(cuerpo) }),
     );
-    const env = comoEnvelope<Record<string, unknown>>(res);
-    const titulos: Record<string, string> = {};
-    if (!env.ok || !env.data || typeof env.data !== "object") return titulos;
-    for (const [chatId, nombre] of Object.entries(env.data)) {
-      if (typeof nombre === "string" && nombre) titulos[chatId] = nombre;
+    const env = comoEnvelope<Record<string, { chatNombre?: unknown; establecimientoNombre?: unknown } | null>>(res);
+    const info: Record<string, InfoChatUsuario> = {};
+    if (!env.ok || !env.data || typeof env.data !== "object") return info;
+    for (const [chatId, v] of Object.entries(env.data)) {
+      info[chatId] = {
+        actividad: aTexto(v?.chatNombre) || undefined,
+        establecimiento: aTexto(v?.establecimientoNombre) || undefined,
+      };
     }
-    return titulos;
+    return info;
   }, []);
 
   return useInfoPorChat(chatIds, pedir);
