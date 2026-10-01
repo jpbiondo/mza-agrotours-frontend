@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowLeft, Grape, Loader, MessagesSquare, Search, SearchX } from "lucide-react";
+import { SkeletonFilasChat } from "@/components/chat/ChatSkeletons";
 import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
 import { useChatsEstablecimiento, useInfoChatsEstablecimiento, marcarChatLeidoEstablecimiento } from "@/hooks/useChats";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
@@ -191,7 +192,7 @@ function Bandeja({ establecimientoId }: { establecimientoId: string }) {
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="px-6 py-10 text-center text-fg-3"><Loader size={22} className="spin inline" aria-label="Cargando chats" /></div>
+            <SkeletonFilasChat avatar="circulo" conActividad className="px-4 py-[13px]" />
           ) : error ? (
             <div className="px-6 py-10 text-center text-[13.5px] leading-normal text-danger">{error}</div>
           ) : visibles.length === 0 ? (

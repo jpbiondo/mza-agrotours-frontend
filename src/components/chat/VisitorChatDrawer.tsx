@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { auth } from "../../../firebase.config";
-import { ArrowLeft, Grape, Loader, MessageCircle, MessageCircleOff, X } from "lucide-react";
+import { ArrowLeft, Grape, MessageCircle, MessageCircleOff, X } from "lucide-react";
+import { SkeletonFilasChat } from "@/components/chat/ChatSkeletons";
 import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
 import { marcarChatLeido, useMisChats, useTitulosChatsUsuario } from "@/hooks/useChats";
 import { useChatDrawer, type ChatAbierto } from "@/stores/chatDrawerStore";
@@ -205,7 +206,7 @@ export default function VisitorChatDrawer() {
                 </div>
                 <div className="flex-1 overflow-y-auto">
                   {isLoading ? (
-                    <div className="px-6 py-12 text-center text-fg-3"><Loader size={22} className="spin inline" aria-label="Cargando chats" /></div>
+                    <SkeletonFilasChat avatar="cuadrado" className="px-5 py-3.5" />
                   ) : error ? (
                     <div className="px-6 py-12 text-center text-[13.5px] text-danger">{error}</div>
                   ) : chats.length === 0 ? (
