@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Loader, RotateCcw, Send, X } from "lucide-react";
+import { SkeletonMensajes } from "@/components/chat/ChatSkeletons";
 import {
   useEnviarMensaje, useMensajes, type ChatDestino, type MensajeFallido,
 } from "@/hooks/useChats";
@@ -164,7 +165,7 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
     <>
       <div ref={scroller} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto bg-cream-bg px-4 pt-4 pb-2">
         {isLoading ? (
-          <div className="m-auto text-fg-3"><Loader size={22} className="spin" aria-label="Cargando mensajes" /></div>
+          <SkeletonMensajes />
         ) : error ? (
           <div className="m-auto max-w-[280px] text-center text-[13.5px] text-danger">{error}</div>
         ) : items.length === 0 ? (
