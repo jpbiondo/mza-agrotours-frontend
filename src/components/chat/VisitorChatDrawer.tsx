@@ -235,7 +235,7 @@ export default function VisitorChatDrawer() {
   const { chats: crudos, isLoading, error } = useMisChats();
   const { abierto, chat, abrir, volver, cerrar } = useChatDrawer();
   // Los nombres al día se piden recién al abrir: el contador del header no los usa.
-  const info = useInfoChatsUsuario(abierto ? crudos.map((c) => c.id) : []);
+  const { info, cargando: cargandoInfo } = useInfoChatsUsuario(abierto ? crudos.map((c) => c.id) : []);
   // Si el backend no trajo un chat, queda el nombre que se guardó al crearlo.
   const chats: ChatEnDrawer[] = crudos.map((c) => ({
     ...c,
@@ -309,7 +309,8 @@ export default function VisitorChatDrawer() {
                   <BotonCerrar onClick={cerrar} />
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                  {isLoading ? (
+                  {/* Se espera también a los nombres del backend: así la lista no cambia apenas aparece. */}
+                  {isLoading || cargandoInfo ? (
                     <SkeletonFilasChat avatar="cuadrado" conSubtitulo className="px-5 py-3.5" />
                   ) : error ? (
                     <div className="px-6 py-12 text-center text-[13.5px] text-danger">{error}</div>

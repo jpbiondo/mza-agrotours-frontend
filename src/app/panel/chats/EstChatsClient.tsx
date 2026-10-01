@@ -125,7 +125,7 @@ function Hilo({ chat, establecimientoId, onBack }: {
 
 function Bandeja({ establecimientoId }: { establecimientoId: string }) {
   const { chats: crudos, isLoading, error } = useChatsEstablecimiento(establecimientoId);
-  const info = useInfoChatsEstablecimiento(establecimientoId, crudos.map((c) => c.id));
+  const { info, cargando: cargandoInfo } = useInfoChatsEstablecimiento(establecimientoId, crudos.map((c) => c.id));
   // Si el backend no trajo un chat, queda el nombre que se guardó al crearlo.
   const chats: ChatEnBandeja[] = crudos.map((c) => ({
     ...c,
@@ -191,7 +191,8 @@ function Bandeja({ establecimientoId }: { establecimientoId: string }) {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {isLoading ? (
+          {/* Se espera también a los nombres del backend: así la lista no cambia apenas aparece. */}
+          {isLoading || cargandoInfo ? (
             <SkeletonFilasChat avatar="circulo" conSubtitulo className="px-4 py-[13px]" />
           ) : error ? (
             <div className="px-6 py-10 text-center text-[13.5px] leading-normal text-danger">{error}</div>
