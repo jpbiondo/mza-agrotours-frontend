@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { AlertCircle, Info, Loader, Lock, RotateCcw, Send, X } from "lucide-react";
 import { auth } from "../../../firebase.config";
 import { SkeletonMensajes } from "@/components/chat/ChatSkeletons";
@@ -226,6 +226,15 @@ export default function ConversacionChat({
     el.setSelectionRange(el.value.length, el.value.length);
   }, [autoFocus, borradorInicial]);
 
+  // El composer crece con el texto hasta el tope del CSS (7 líneas) y de ahí
+  // scrollea. Se mide antes de pintar para que no se vea el salto.
+  useLayoutEffect(() => {
+    const el = textarea.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [borrador]);
+
   const items: Item[] = [
     ...mensajes.map((m) => ({ tipo: "mensaje" as const, m })),
     ...fallidos.filter((f) => f.chatId === chat.id).map((m) => ({ tipo: "fallido" as const, m })),
@@ -323,7 +332,7 @@ export default function ConversacionChat({
           </p>
         )}
         <div className={cn(
-          "flex items-center gap-2.5 rounded-[14px] border border-sand bg-cream-bg py-2 pr-2 pl-3.5 focus-within:border-green-700",
+          "flex items-end gap-2.5 rounded-[14px] border border-sand bg-cream-bg py-2 pr-2 pl-3.5 focus-within:border-green-700",
           deBaja && "opacity-60",
         )}>
           <textarea
@@ -342,7 +351,7 @@ export default function ConversacionChat({
             aria-label="Mensaje"
             autoFocus={autoFocus}
             disabled={deBaja}
-            className="max-h-[110px] min-h-6 flex-1 resize-none border-none bg-transparent py-1.5 font-sans text-[13.5px] leading-[1.45] text-fg-1 outline-none disabled:cursor-not-allowed"
+            className="box-border max-h-[calc(7lh+0.75rem)] min-h-6 flex-1 resize-none border-none bg-transparent py-1.5 font-sans text-[13.5px] leading-[1.45] text-fg-1 outline-none disabled:cursor-not-allowed"
           />
           <button
             type="button"
