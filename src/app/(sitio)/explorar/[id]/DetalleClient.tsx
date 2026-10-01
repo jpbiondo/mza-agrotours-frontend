@@ -146,10 +146,14 @@ function FaqRow({ q, a }: { q: string; a: string }) {
 
 /**
  * "Ver detalle" lleva a la página del establecimiento; "Contactar" crea el chat
- * (o encuentra el que ya había) y lo abre en el drawer global del header. Sin
- * sesión no hay drawer, así que manda a iniciar sesión.
+ * sobre esta actividad (o encuentra el que ya había) y lo abre en el drawer
+ * global del header. Sin sesión no hay drawer, así que manda a iniciar sesión.
  */
-function AccionesEstablecimiento({ id, nombre }: { id: string; nombre: string }) {
+function AccionesEstablecimiento({ id, actividadId, actividadNombre }: {
+  id: string;
+  actividadId: string;
+  actividadNombre: string;
+}) {
   const router = useRouter();
   const { iniciar, isLoading } = useIniciarChat();
   const abrirChat = useChatDrawer((s) => s.abrir);
@@ -161,8 +165,9 @@ function AccionesEstablecimiento({ id, nombre }: { id: string; nombre: string })
       return;
     }
     setError(false);
-    const res = await iniciar(id);
-    if (res.ok) abrirChat({ id: res.chatId, establecimientoId: id, titulo: nombre });
+    const res = await iniciar(actividadId);
+    // El chat se titula con la actividad, igual que lo deja el backend en el inbox.
+    if (res.ok) abrirChat({ id: res.chatId, establecimientoId: id, titulo: actividadNombre });
     else setError(true);
   }
 
@@ -564,7 +569,7 @@ function Detalle({ a }: { a: ActividadPublica }) {
                   <p style={{ fontSize: 14, color: "var(--fg-2)", lineHeight: 1.55, margin: "10px 0 0" }}>{a.establecimiento.descripcion}</p>
                 )}
                 {a.establecimiento.id && (
-                  <AccionesEstablecimiento id={a.establecimiento.id} nombre={a.establecimiento.nombre} />
+                  <AccionesEstablecimiento id={a.establecimiento.id} actividadId={a.id} actividadNombre={a.nombre} />
                 )}
               </div>
             </div>

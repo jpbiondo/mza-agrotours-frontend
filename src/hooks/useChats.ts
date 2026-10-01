@@ -15,15 +15,16 @@ import type { ChatEstablecimientoResumen, ChatResumen, MensajeChat, TipoEmisor }
  * control: cada lado lee su inbox y los mensajes de sus chats, y agrega
  * mensajes actualizando de paso los dos inbox.
  *
- * El id del chat es `{uid del visitante}_{id del establecimiento}`: lo arma el
- * backend así y el front lo reconstruye, porque el alta no lo devuelve.
+ * Hay un chat por visitante y actividad. Su id es `{uid del visitante}_{id de
+ * la actividad}`: lo arma el backend así y el front lo reconstruye, porque el
+ * alta no lo devuelve.
  */
 
 /** Cuántos mensajes se traen por conversación. */
 const MENSAJES_POR_CHAT = 200;
 
-export function idDeChat(visitanteUid: string, establecimientoId: string): string {
-  return `${visitanteUid}_${establecimientoId}`;
+export function idDeChat(visitanteUid: string, actividadId: string): string {
+  return `${visitanteUid}_${actividadId}`;
 }
 
 /* ---- Alta ---------------------------------------------------------------- */
@@ -31,19 +32,19 @@ export function idDeChat(visitanteUid: string, establecimientoId: string): strin
 type ResultadoIniciar = { ok: true; chatId: string } | { ok: false; code?: string };
 
 /**
- * `POST /usuario/chats/iniciar/{establecimientoId}`. Que el chat ya exista no
+ * `POST /usuario/chats/iniciar/{actividadId}`. Que el chat ya exista no
  * es un error para esta pantalla: el backend lo rechaza con `validacionNegocio`
  * y acá se sigue igual, porque lo que quiere el visitante es abrirlo.
  */
 export function useIniciarChat() {
   const [isLoading, setIsLoading] = useState(false);
 
-  async function iniciar(establecimientoId: string): Promise<ResultadoIniciar> {
+  async function iniciar(actividadId: string): Promise<ResultadoIniciar> {
     setIsLoading(true);
     try {
       return await conToken(async (token) => {
         try {
-          await apiFetch<unknown>(`/usuario/chats/iniciar/${encodeURIComponent(establecimientoId)}`, {
+          await apiFetch<unknown>(`/usuario/chats/iniciar/${encodeURIComponent(actividadId)}`, {
             method: "POST",
             token,
           });
@@ -57,7 +58,7 @@ export function useIniciarChat() {
         }
         const uid = auth.currentUser?.uid;
         if (!uid) return { ok: false, code: "sinSesion" } as const;
-        return { ok: true, chatId: idDeChat(uid, establecimientoId) } as const;
+        return { ok: true, chatId: idDeChat(uid, actividadId) } as const;
       });
     } catch (e) {
       return { ok: false, code: e instanceof ApiError ? e.code : undefined };
