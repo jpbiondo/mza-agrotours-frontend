@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Loader, Mail, MessagesSquare, Search, SearchX } from "lucide-react";
+import { ArrowLeft, Loader, MessagesSquare, Search, SearchX } from "lucide-react";
 import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
 import { useChatsEstablecimiento, marcarChatLeidoEstablecimiento } from "@/hooks/useChats";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
@@ -122,98 +122,89 @@ function Bandeja({ establecimientoId }: { establecimientoId: string }) {
   const activo = chats.find((c) => c.id === activoId) ?? null;
 
   return (
-    <div className="flex h-[calc(100vh-72px)] min-h-0 flex-col px-7 pt-[22px] pb-7 max-md:px-4">
-      <div className="mb-[18px] flex shrink-0 flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="m-0 font-display text-[30px] font-bold tracking-[-.01em] text-fg-1">Chats</h1>
-          <p className="mt-1.5 mb-0 text-[15px] text-fg-2">Consultas de los visitantes a tu establecimiento.</p>
+    // A ancho y alto completos debajo de la barra de cuenta del shell (`h-16`):
+    // la lista y el hilo scrollean cada uno por su lado, no la página.
+    <div className="flex h-[calc(100dvh-4rem)] min-h-0 overflow-hidden bg-surface">
+      <div className={cn("flex min-h-0 w-[372px] shrink-0 flex-col border-r border-outline-variant max-md:w-full max-md:border-r-0", activo && "max-md:hidden")}>
+        <div className="shrink-0 px-4 pt-5 pb-2.5">
+          <h1 className="m-0 font-display text-2xl leading-[1.3] font-semibold text-fg-1">Chats</h1>
+          <p className="mt-1 mb-4 text-[13.5px] leading-[1.45] text-pretty text-fg-2">
+            Consultas de los visitantes a tu establecimiento.
+          </p>
+          <div className="relative">
+            <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-fg-3" aria-hidden />
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por visitante"
+              aria-label="Buscar por visitante"
+              className="h-10 w-full rounded-md border border-sand bg-surface pl-9 font-sans text-sm text-fg-1 outline-none focus:border-green-700"
+            />
+          </div>
+          <div className="mt-3 flex gap-2">
+            {([{ id: "todos", label: "Todos", count: 0 }, { id: "no-leidos", label: "No leídos", count: totalNoLeidos }] as const).map((t) => {
+              const on = filtro === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setFiltro(t.id)}
+                  aria-pressed={on}
+                  className={cn(
+                    "inline-flex cursor-pointer items-center gap-[7px] rounded-pill border px-[13px] py-1.5 font-sans text-[13px] font-semibold",
+                    on ? "border-green-800 bg-green-800 text-white" : "border-outline-variant bg-surface text-fg-2",
+                  )}
+                >
+                  {t.label}
+                  {t.count > 0 && (
+                    <span className={cn("inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-pill px-[5px] text-[11px] leading-none font-bold text-white", on ? "bg-white/22" : "bg-brown-700")}>
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        {totalNoLeidos > 0 && (
-          <div className="inline-flex shrink-0 items-center gap-2 rounded-md bg-green-050 px-3.5 py-2 text-[13.5px] font-semibold text-green-800">
-            <Mail size={16} />
-            {totalNoLeidos} {totalNoLeidos === 1 ? "mensaje sin leer" : "mensajes sin leer"}
-          </div>
-        )}
-      </div>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-outline-variant bg-surface">
-        <div className={cn("flex min-h-0 w-[372px] shrink-0 flex-col border-r border-outline-variant max-md:w-full max-md:border-r-0", activo && "max-md:hidden")}>
-          <div className="shrink-0 px-4 pt-3.5 pb-2.5">
-            <div className="relative">
-              <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-fg-3" aria-hidden />
-              <input
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar por visitante"
-                aria-label="Buscar por visitante"
-                className="h-10 w-full rounded-md border border-sand bg-surface pl-9 font-sans text-sm text-fg-1 outline-none focus:border-green-700"
-              />
-            </div>
-            <div className="mt-3 flex gap-2">
-              {([{ id: "todos", label: "Todos", count: 0 }, { id: "no-leidos", label: "No leídos", count: totalNoLeidos }] as const).map((t) => {
-                const on = filtro === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setFiltro(t.id)}
-                    aria-pressed={on}
-                    className={cn(
-                      "inline-flex cursor-pointer items-center gap-[7px] rounded-pill border px-[13px] py-1.5 font-sans text-[13px] font-semibold",
-                      on ? "border-green-800 bg-green-800 text-white" : "border-outline-variant bg-surface text-fg-2",
-                    )}
-                  >
-                    {t.label}
-                    {t.count > 0 && (
-                      <span className={cn("inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-pill px-[5px] text-[11px] leading-none font-bold text-white", on ? "bg-white/22" : "bg-brown-700")}>
-                        {t.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {isLoading ? (
-              <div className="px-6 py-10 text-center text-fg-3"><Loader size={22} className="spin inline" aria-label="Cargando chats" /></div>
-            ) : error ? (
-              <div className="px-6 py-10 text-center text-[13.5px] leading-normal text-danger">{error}</div>
-            ) : visibles.length === 0 ? (
-              <div className="px-6 py-10 text-center text-fg-2">
-                <div className="mb-3 inline-flex size-[52px] items-center justify-center rounded-full bg-cream-tert">
-                  {chats.length === 0 ? <MessagesSquare size={24} className="text-brown-700" /> : <SearchX size={24} className="text-brown-700" />}
-                </div>
-                <div className="mb-1 font-display text-[15.5px] font-semibold text-fg-1">
-                  {chats.length === 0 ? "Todavía no hay consultas" : "Sin resultados"}
-                </div>
-                <div className="text-[13px] leading-normal">
-                  {chats.length === 0
-                    ? "Cuando un visitante contacte al establecimiento, la conversación aparece acá."
-                    : "No hay conversaciones que coincidan con el filtro."}
-                </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {isLoading ? (
+            <div className="px-6 py-10 text-center text-fg-3"><Loader size={22} className="spin inline" aria-label="Cargando chats" /></div>
+          ) : error ? (
+            <div className="px-6 py-10 text-center text-[13.5px] leading-normal text-danger">{error}</div>
+          ) : visibles.length === 0 ? (
+            <div className="px-6 py-10 text-center text-fg-2">
+              <div className="mb-3 inline-flex size-[52px] items-center justify-center rounded-full bg-cream-tert">
+                {chats.length === 0 ? <MessagesSquare size={24} className="text-brown-700" /> : <SearchX size={24} className="text-brown-700" />}
               </div>
-            ) : (
-              visibles.map((c) => <FilaChat key={c.id} chat={c} activo={c.id === activoId} onOpen={setActivoId} />)
-            )}
+              <div className="mb-1 font-display text-[15.5px] font-semibold text-fg-1">
+                {chats.length === 0 ? "Todavía no hay consultas" : "Sin resultados"}
+              </div>
+              <div className="text-[13px] leading-normal">
+                {chats.length === 0
+                  ? "Cuando un visitante contacte al establecimiento, la conversación aparece acá."
+                  : "No hay conversaciones que coincidan con el filtro."}
+              </div>
+            </div>
+          ) : (
+            visibles.map((c) => <FilaChat key={c.id} chat={c} activo={c.id === activoId} onOpen={setActivoId} />)
+          )}
+        </div>
+      </div>
+
+      {activo ? (
+        <Hilo chat={activo} establecimientoId={establecimientoId} onBack={() => setActivoId(null)} />
+      ) : (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3.5 bg-cream-bg p-8 text-center text-fg-2 max-md:hidden">
+          <div className="flex size-16 items-center justify-center rounded-full bg-cream-tert">
+            <MessagesSquare size={28} className="text-brown-700" />
+          </div>
+          <div className="font-display text-lg font-bold text-fg-1">Elegí una conversación</div>
+          <div className="max-w-[300px] text-[13.5px] leading-normal">
+            Seleccioná un chat de la izquierda para ver los mensajes y responderle al visitante.
           </div>
         </div>
-
-        {activo ? (
-          <Hilo chat={activo} establecimientoId={establecimientoId} onBack={() => setActivoId(null)} />
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3.5 bg-cream-bg p-8 text-center text-fg-2 max-md:hidden">
-            <div className="flex size-16 items-center justify-center rounded-full bg-cream-tert">
-              <MessagesSquare size={28} className="text-brown-700" />
-            </div>
-            <div className="font-display text-lg font-bold text-fg-1">Elegí una conversación</div>
-            <div className="max-w-[300px] text-[13.5px] leading-normal">
-              Seleccioná un chat de la izquierda para ver los mensajes y responderle al visitante.
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
