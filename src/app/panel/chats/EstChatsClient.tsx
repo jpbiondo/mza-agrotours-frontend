@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Loader, MessagesSquare, Search, SearchX } from "lucide-react";
+import { ArrowLeft, Grape, Loader, MessagesSquare, Search, SearchX } from "lucide-react";
 import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
-import { useChatsEstablecimiento, marcarChatLeidoEstablecimiento } from "@/hooks/useChats";
+import { useChatsEstablecimiento, useInfoChatsEstablecimiento, marcarChatLeidoEstablecimiento } from "@/hooks/useChats";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { cn } from "@/lib/utils";
 import type { ChatEstablecimientoResumen } from "@/types/chats";
@@ -12,6 +12,18 @@ import type { ChatEstablecimientoResumen } from "@/types/chats";
 const MAX = 500;
 
 type Filtro = "todos" | "no-leidos";
+
+/** Fila del inbox con los nombres al día; `actividad` es null si el backend no la trajo. */
+type ChatEnBandeja = ChatEstablecimientoResumen & { actividad: string | null };
+
+function Actividad({ nombre, className }: { nombre: string; className?: string }) {
+  return (
+    <div className={cn("flex min-w-0 items-center gap-1.5 text-fg-3", className)}>
+      <Grape size={13} className="shrink-0 text-brown-700" aria-hidden />
+      <span className="truncate">{nombre}</span>
+    </div>
+  );
+}
 
 /** Monograma del visitante: las iniciales de sus dos primeras palabras. */
 function iniciales(nombre: string): string {
@@ -35,7 +47,7 @@ function Avatar({ nombre, size, activo }: { nombre: string; size: "sm" | "md"; a
   );
 }
 
-function FilaChat({ chat, activo, onOpen }: { chat: ChatEstablecimientoResumen; activo: boolean; onOpen: (id: string) => void }) {
+function FilaChat({ chat, activo, onOpen }: { chat: ChatEnBandeja; activo: boolean; onOpen: (id: string) => void }) {
   const conNuevos = chat.noLeidos > 0;
   return (
     <button
@@ -55,6 +67,7 @@ function FilaChat({ chat, activo, onOpen }: { chat: ChatEstablecimientoResumen; 
             {momentoCorto(chat.timestamp)}
           </div>
         </div>
+        {chat.actividad && <Actividad nombre={chat.actividad} className="mt-[3px] text-xs" />}
         <div className="mt-1.5 flex items-center gap-2">
           <div className={cn("min-w-0 flex-1 truncate text-[13px]", conNuevos ? "font-medium text-fg-1" : "text-fg-2", !chat.ultimoMensaje && "italic text-fg-3")}>
             {chat.ultimoMensaje || "Todavía no hay mensajes"}
@@ -71,7 +84,7 @@ function FilaChat({ chat, activo, onOpen }: { chat: ChatEstablecimientoResumen; 
 }
 
 function Hilo({ chat, establecimientoId, onBack }: {
-  chat: ChatEstablecimientoResumen;
+  chat: ChatEnBandeja;
   establecimientoId: string;
   onBack: () => void;
 }) {
@@ -90,10 +103,12 @@ function Hilo({ chat, establecimientoId, onBack }: {
         <Avatar nombre={chat.titulo} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-display text-base leading-tight font-bold text-fg-1">{chat.titulo}</div>
-          <div className="mt-0.5 text-[12.5px] text-fg-3">Consulta de un visitante</div>
+          {chat.actividad
+            ? <Actividad nombre={chat.actividad} className="mt-0.5 text-[12.5px]" />
+            : <div className="mt-0.5 text-[12.5px] text-fg-3">Consulta de un visitante</div>}
         </div>
-        {/* TODO backend: el chat no guarda desde qué actividad ni reserva se inició;
-            el diseño muestra la actividad, el código de reserva y las personas. */}
+        {/* TODO backend: el chat no está atado a una reserva; el diseño muestra
+            además la fecha, el código de reserva y las personas. */}
       </div>
       <ConversacionChat
         key={chat.id}
@@ -108,7 +123,14 @@ function Hilo({ chat, establecimientoId, onBack }: {
 }
 
 function Bandeja({ establecimientoId }: { establecimientoId: string }) {
-  const { chats, isLoading, error } = useChatsEstablecimiento(establecimientoId);
+  const { chats: crudos, isLoading, error } = useChatsEstablecimiento(establecimientoId);
+  const info = useInfoChatsEstablecimiento(establecimientoId, crudos.map((c) => c.id));
+  // Si el backend no trajo un chat, queda el nombre que se guardó al crearlo.
+  const chats: ChatEnBandeja[] = crudos.map((c) => ({
+    ...c,
+    titulo: info[c.id]?.visitante ?? c.titulo,
+    actividad: info[c.id]?.actividad ?? null,
+  }));
   const [activoId, setActivoId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
@@ -117,7 +139,7 @@ function Bandeja({ establecimientoId }: { establecimientoId: string }) {
   const q = busqueda.trim().toLowerCase();
   const visibles = chats.filter((c) => {
     if (filtro === "no-leidos" && c.noLeidos === 0) return false;
-    return !q || c.titulo.toLowerCase().includes(q);
+    return !q || c.titulo.toLowerCase().includes(q) || !!c.actividad?.toLowerCase().includes(q);
   });
   const activo = chats.find((c) => c.id === activoId) ?? null;
 
@@ -129,15 +151,15 @@ function Bandeja({ establecimientoId }: { establecimientoId: string }) {
         <div className="shrink-0 px-4 pt-5 pb-2.5">
           <h1 className="m-0 font-display text-2xl leading-[1.3] font-semibold text-fg-1">Chats</h1>
           <p className="mt-1 mb-4 text-[13.5px] leading-[1.45] text-pretty text-fg-2">
-            Consultas de los visitantes a tu establecimiento.
+            Consultas de los visitantes sobre las actividades de tu establecimiento.
           </p>
           <div className="relative">
             <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-fg-3" aria-hidden />
             <input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por visitante"
-              aria-label="Buscar por visitante"
+              placeholder="Buscar por visitante o actividad"
+              aria-label="Buscar por visitante o actividad"
               className="h-10 w-full rounded-md border border-sand bg-surface pl-9 font-sans text-sm text-fg-1 outline-none focus:border-green-700"
             />
           </div>
