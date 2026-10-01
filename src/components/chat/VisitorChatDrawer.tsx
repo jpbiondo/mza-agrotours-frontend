@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { auth } from "../../../firebase.config";
 import { ArrowLeft, Grape, Loader, MessageCircle, MessageCircleOff, X } from "lucide-react";
 import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
-import { marcarChatLeido, useMisChats } from "@/hooks/useChats";
+import { marcarChatLeido, useMisChats, useTitulosChatsUsuario } from "@/hooks/useChats";
 import { useChatDrawer, type ChatAbierto } from "@/stores/chatDrawerStore";
 import { cn } from "@/lib/utils";
 import type { ChatResumen } from "@/types/chats";
@@ -135,8 +135,12 @@ function Conversacion({ chat, noLeidos, onBack, onClose }: {
  * —así el contador está al día—; los mensajes, sólo con una conversación abierta.
  */
 export default function VisitorChatDrawer() {
-  const { chats, isLoading, error } = useMisChats();
+  const { chats: crudos, isLoading, error } = useMisChats();
   const { abierto, chat, abrir, volver, cerrar } = useChatDrawer();
+  // Los nombres al día se piden recién al abrir: el contador del header no los usa.
+  const titulos = useTitulosChatsUsuario(abierto ? crudos.map((c) => c.id) : []);
+  // Si el backend no trajo un chat, queda el nombre que se guardó al crearlo.
+  const chats = crudos.map((c) => ({ ...c, titulo: titulos[c.id] ?? c.titulo }));
   const totalNoLeidos = chats.reduce((s, c) => s + c.noLeidos, 0);
   // Del inbox sale lo que el store no sabe: los no leídos, y el título si ya llegó.
   const enInbox = chat ? chats.find((c) => c.id === chat.id) : undefined;
