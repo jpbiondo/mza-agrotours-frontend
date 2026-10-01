@@ -445,6 +445,44 @@ export function useMensajes(chatId: string | null): UseMensajesReturn {
   };
 }
 
+/* ---- Baja ---------------------------------------------------------------- */
+
+/**
+ * Si el chat está dado de baja (`chats/{chatId}/baja`): el backend lo marca
+ * cuando se da de baja el visitante o el establecimiento, y desde ahí el chat
+ * es sólo de lectura. Escucha en tiempo real, así que si pasa con la
+ * conversación abierta se bloquea en el momento.
+ *
+ * Si la lectura falla se asume que no: esto sólo deshabilita el composer, y
+ * quien tiene que rechazar la escritura son las reglas.
+ */
+export function useChatDeBaja(chatId: string | null): boolean {
+  const [estado, setEstado] = useState<{ chatId: string; baja: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!chatId) return;
+    let dejarDeEscuchar: (() => void) | undefined;
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      dejarDeEscuchar?.();
+      dejarDeEscuchar = undefined;
+      if (!user) return;
+      dejarDeEscuchar = onValue(
+        ref(rtdb(), `chats/${chatId}/baja`),
+        (snap) => setEstado({ chatId, baja: snap.val() === true }),
+        () => setEstado({ chatId, baja: false }),
+      );
+    });
+
+    return () => {
+      unsubAuth();
+      dejarDeEscuchar?.();
+    };
+  }, [chatId]);
+
+  return !!chatId && estado?.chatId === chatId && estado.baja;
+}
+
 /* ---- Envío --------------------------------------------------------------- */
 
 /** Mensaje que la base rechazó. Queda sólo en esta pestaña, para reintentarlo. */
