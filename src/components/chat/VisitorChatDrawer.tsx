@@ -34,18 +34,28 @@ function gradienteDe(id: string): string {
 
 /* ---- Piezas -------------------------------------------------------------- */
 
-// TODO backend: cuando el chat traiga la imagen de la actividad, va acá en vez del gradiente.
-function AvatarEstablecimiento({ id, size }: { id: string; size: "sm" | "md" | "lg" }) {
+/**
+ * Foto de la actividad del chat. Sin foto —o si no carga— queda un gradiente
+ * con una uva, del mismo color siempre para el mismo establecimiento.
+ */
+function AvatarChat({ id, foto, size }: { id: string; foto: string | null; size: "sm" | "md" | "lg" }) {
+  const [rota, setRota] = useState<string | null>(null);
+  const conFoto = !!foto && rota !== foto;
   return (
     <div
       aria-hidden
       className={cn(
-        "flex shrink-0 items-center justify-center text-white/85",
+        "flex shrink-0 items-center justify-center overflow-hidden text-white/85",
         size === "lg" ? "size-24 rounded-2xl" : size === "md" ? "size-11 rounded-[10px]" : "size-10 rounded-[10px]",
-        gradienteDe(id),
+        conFoto ? "bg-cream-tert" : gradienteDe(id),
       )}
     >
-      <Grape size={size === "lg" ? 44 : size === "md" ? 22 : 20} />
+      {conFoto ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={foto} alt="" className="size-full object-cover" onError={() => setRota(foto)} />
+      ) : (
+        <Grape size={size === "lg" ? 44 : size === "md" ? 22 : 20} />
+      )}
     </div>
   );
 }
@@ -63,8 +73,8 @@ function BotonCerrar({ onClick }: { onClick: () => void }) {
   );
 }
 
-/** Fila del inbox con los nombres al día; `establecimiento` es null si el backend no lo trajo. */
-type ChatEnDrawer = ChatResumen & { establecimiento: string | null };
+/** Fila del inbox con los datos al día; lo que el backend no trajo queda en null. */
+type ChatEnDrawer = ChatResumen & { establecimiento: string | null; foto: string | null };
 
 function FilaChat({ chat, onOpen }: { chat: ChatEnDrawer; onOpen: (c: ChatEnDrawer) => void }) {
   const conNuevos = chat.noLeidos > 0;
@@ -74,7 +84,7 @@ function FilaChat({ chat, onOpen }: { chat: ChatEnDrawer; onOpen: (c: ChatEnDraw
       onClick={() => onOpen(chat)}
       className="flex w-full cursor-pointer items-start gap-3 border-b border-cream-tert px-5 py-3.5 text-left transition-colors hover:bg-cream-tert"
     >
-      <AvatarEstablecimiento id={chat.establecimientoId} size="md" />
+      <AvatarChat id={chat.establecimientoId} foto={chat.foto} size="md" />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
           <div className="min-w-0 truncate font-display text-[14.5px] font-semibold text-fg-1">{chat.titulo}</div>
@@ -102,9 +112,10 @@ function FilaChat({ chat, onOpen }: { chat: ChatEnDrawer; onOpen: (c: ChatEnDraw
  * Info del chat, encima de la conversación: desde acá se va al detalle de la
  * actividad o del establecimiento. Ir a cualquiera de los dos cierra el drawer.
  */
-function InfoChat({ chat, establecimiento, onBack, onClose }: {
+function InfoChat({ chat, establecimiento, foto, onBack, onClose }: {
   chat: ChatAbierto;
   establecimiento: string | null;
+  foto: string | null;
   onBack: () => void;
   onClose: () => void;
 }) {
@@ -123,7 +134,7 @@ function InfoChat({ chat, establecimiento, onBack, onClose }: {
       </div>
 
       <div className="flex flex-1 flex-col items-center overflow-y-auto px-6 pt-10 pb-6 text-center">
-        <AvatarEstablecimiento id={chat.establecimientoId} size="lg" />
+        <AvatarChat id={chat.establecimientoId} foto={foto} size="lg" />
         <div className="mt-4 font-display text-lg leading-snug font-bold text-balance text-fg-1">{chat.titulo}</div>
         {establecimiento && <div className="mt-1 text-[13.5px] text-fg-2">{establecimiento}</div>}
 
@@ -147,9 +158,10 @@ function plantilla(actividad: string): string {
   return `¡Hola! Quería hacerles una consulta sobre "${actividad}". `;
 }
 
-function Conversacion({ chat, establecimiento, noLeidos, onBack, onClose, onCreado }: {
+function Conversacion({ chat, establecimiento, foto, noLeidos, onBack, onClose, onCreado }: {
   chat: ChatAbierto;
   establecimiento: string | null;
+  foto: string | null;
   noLeidos: number;
   onBack: () => void;
   onClose: () => void;
@@ -177,7 +189,7 @@ function Conversacion({ chat, establecimiento, noLeidos, onBack, onClose, onCrea
           title="Ver info del chat"
           className="-my-1 flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md py-1 pr-1 text-left hover:bg-cream-tert"
         >
-          <AvatarEstablecimiento id={chat.establecimientoId} size="sm" />
+          <AvatarChat id={chat.establecimientoId} foto={foto} size="sm" />
           <div className="min-w-0 flex-1">
             <div className="truncate font-display text-[15px] leading-tight font-semibold text-fg-1">{chat.titulo}</div>
             <div className="mt-0.5 truncate text-xs text-fg-3">
@@ -207,7 +219,7 @@ function Conversacion({ chat, establecimiento, noLeidos, onBack, onClose, onCrea
       />
 
       {verInfo && (
-        <InfoChat chat={chat} establecimiento={establecimiento} onBack={() => setVerInfo(false)} onClose={onClose} />
+        <InfoChat chat={chat} establecimiento={establecimiento} foto={foto} onBack={() => setVerInfo(false)} onClose={onClose} />
       )}
     </>
   );
@@ -229,6 +241,7 @@ export default function VisitorChatDrawer() {
     ...c,
     titulo: info[c.id]?.actividad ?? c.titulo,
     establecimiento: info[c.id]?.establecimiento ?? null,
+    foto: info[c.id]?.foto ?? null,
   }));
   const totalNoLeidos = chats.reduce((s, c) => s + c.noLeidos, 0);
   // Del inbox sale lo que el store no sabe: los no leídos, y el título si ya llegó.
@@ -280,6 +293,7 @@ export default function VisitorChatDrawer() {
                 key={chat.id}
                 chat={enInbox ? { ...chat, titulo: enInbox.titulo } : chat}
                 establecimiento={enInbox?.establecimiento ?? null}
+                foto={enInbox?.foto ?? null}
                 onCreado={() => abrir({ ...chat, nuevo: undefined })}
                 noLeidos={enInbox?.noLeidos ?? 0}
                 onBack={volver}
