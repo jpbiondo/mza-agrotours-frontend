@@ -192,7 +192,7 @@ function Bandeja({ establecimientoId }: { establecimientoId: string }) {
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading ? (
-            <SkeletonFilasChat avatar="circulo" conActividad className="px-4 py-[13px]" />
+            <SkeletonFilasChat avatar="circulo" conSubtitulo className="px-4 py-[13px]" />
           ) : error ? (
             <div className="px-6 py-10 text-center text-[13.5px] leading-normal text-danger">{error}</div>
           ) : visibles.length === 0 ? (

@@ -15,13 +15,13 @@ interface SkeletonFilasChatProps {
   filas?: number;
   /** Forma del avatar: el establecimiento es un cuadrado redondeado; el visitante, un círculo. */
   avatar: "cuadrado" | "circulo";
-  /** Línea extra con la actividad, como en la bandeja del productor. */
-  conActividad?: boolean;
+  /** Línea extra bajo el título: la actividad o el establecimiento. */
+  conSubtitulo?: boolean;
   /** Padding de la fila, que cambia entre pantallas. */
   className?: string;
 }
 
-export function SkeletonFilasChat({ filas = 5, avatar, conActividad, className }: SkeletonFilasChatProps) {
+export function SkeletonFilasChat({ filas = 5, avatar, conSubtitulo, className }: SkeletonFilasChatProps) {
   return (
     <div role="status" aria-label="Cargando chats">
       {Array.from({ length: filas }, (_, i) => (
@@ -32,7 +32,7 @@ export function SkeletonFilasChat({ filas = 5, avatar, conActividad, className }
               <Skeleton className={cn("h-3.5", ANCHOS_TITULO[i % ANCHOS_TITULO.length])} />
               <Skeleton className="h-3 w-9" />
             </div>
-            {conActividad && <Skeleton className="mt-2 h-3 w-1/3" />}
+            {conSubtitulo && <Skeleton className="mt-2 h-3 w-1/3" />}
             <Skeleton className={cn("mt-2.5 h-3", ANCHOS_MENSAJE[i % ANCHOS_MENSAJE.length])} />
           </div>
         </div>

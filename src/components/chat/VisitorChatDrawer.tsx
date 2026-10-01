@@ -6,7 +6,7 @@ import { auth } from "../../../firebase.config";
 import { ArrowLeft, Grape, MessageCircle, MessageCircleOff, X } from "lucide-react";
 import { SkeletonFilasChat } from "@/components/chat/ChatSkeletons";
 import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
-import { marcarChatLeido, useMisChats, useTitulosChatsUsuario } from "@/hooks/useChats";
+import { marcarChatLeido, useInfoChatsUsuario, useMisChats } from "@/hooks/useChats";
 import { useChatDrawer, type ChatAbierto } from "@/stores/chatDrawerStore";
 import { cn } from "@/lib/utils";
 import type { ChatResumen } from "@/types/chats";
@@ -60,7 +60,10 @@ function BotonCerrar({ onClick }: { onClick: () => void }) {
   );
 }
 
-function FilaChat({ chat, onOpen }: { chat: ChatResumen; onOpen: (c: ChatResumen) => void }) {
+/** Fila del inbox con los nombres al día; `establecimiento` es null si el backend no lo trajo. */
+type ChatEnDrawer = ChatResumen & { establecimiento: string | null };
+
+function FilaChat({ chat, onOpen }: { chat: ChatEnDrawer; onOpen: (c: ChatEnDrawer) => void }) {
   const conNuevos = chat.noLeidos > 0;
   return (
     <button
@@ -76,6 +79,7 @@ function FilaChat({ chat, onOpen }: { chat: ChatResumen; onOpen: (c: ChatResumen
             {momentoCorto(chat.timestamp)}
           </div>
         </div>
+        {chat.establecimiento && <div className="mt-0.5 truncate text-xs text-fg-3">{chat.establecimiento}</div>}
         <div className="mt-1.5 flex items-center gap-2">
           <div className={cn("flex-1 truncate text-[13px]", conNuevos ? "font-medium text-fg-1" : "text-fg-2", !chat.ultimoMensaje && "italic text-fg-3")}>
             {chat.ultimoMensaje || "Todavía no hay mensajes"}
@@ -91,8 +95,9 @@ function FilaChat({ chat, onOpen }: { chat: ChatResumen; onOpen: (c: ChatResumen
   );
 }
 
-function Conversacion({ chat, noLeidos, onBack, onClose }: {
+function Conversacion({ chat, establecimiento, noLeidos, onBack, onClose }: {
   chat: ChatAbierto;
+  establecimiento: string | null;
   noLeidos: number;
   onBack: () => void;
   onClose: () => void;
@@ -111,7 +116,11 @@ function Conversacion({ chat, noLeidos, onBack, onClose }: {
         <AvatarEstablecimiento id={chat.establecimientoId} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-display text-[15px] leading-tight font-semibold text-fg-1">{chat.titulo}</div>
-          <div className="mt-0.5 truncate text-xs text-fg-3">Consulta al establecimiento</div>
+          <div className="mt-0.5 truncate text-xs text-fg-3">
+            {establecimiento
+              ? <strong className="font-semibold text-fg-2">{establecimiento}</strong>
+              : "Consulta al establecimiento"}
+          </div>
         </div>
         <BotonCerrar onClick={onClose} />
       </div>
@@ -139,9 +148,13 @@ export default function VisitorChatDrawer() {
   const { chats: crudos, isLoading, error } = useMisChats();
   const { abierto, chat, abrir, volver, cerrar } = useChatDrawer();
   // Los nombres al día se piden recién al abrir: el contador del header no los usa.
-  const titulos = useTitulosChatsUsuario(abierto ? crudos.map((c) => c.id) : []);
+  const info = useInfoChatsUsuario(abierto ? crudos.map((c) => c.id) : []);
   // Si el backend no trajo un chat, queda el nombre que se guardó al crearlo.
-  const chats = crudos.map((c) => ({ ...c, titulo: titulos[c.id] ?? c.titulo }));
+  const chats: ChatEnDrawer[] = crudos.map((c) => ({
+    ...c,
+    titulo: info[c.id]?.actividad ?? c.titulo,
+    establecimiento: info[c.id]?.establecimiento ?? null,
+  }));
   const totalNoLeidos = chats.reduce((s, c) => s + c.noLeidos, 0);
   // Del inbox sale lo que el store no sabe: los no leídos, y el título si ya llegó.
   const enInbox = chat ? chats.find((c) => c.id === chat.id) : undefined;
@@ -191,6 +204,7 @@ export default function VisitorChatDrawer() {
               <Conversacion
                 key={chat.id}
                 chat={enInbox ? { ...chat, titulo: enInbox.titulo } : chat}
+                establecimiento={enInbox?.establecimiento ?? null}
                 noLeidos={enInbox?.noLeidos ?? 0}
                 onBack={volver}
                 onClose={cerrar}
@@ -206,7 +220,7 @@ export default function VisitorChatDrawer() {
                 </div>
                 <div className="flex-1 overflow-y-auto">
                   {isLoading ? (
-                    <SkeletonFilasChat avatar="cuadrado" className="px-5 py-3.5" />
+                    <SkeletonFilasChat avatar="cuadrado" conSubtitulo className="px-5 py-3.5" />
                   ) : error ? (
                     <div className="px-6 py-12 text-center text-[13.5px] text-danger">{error}</div>
                   ) : chats.length === 0 ? (
