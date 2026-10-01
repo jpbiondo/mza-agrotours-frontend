@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { auth } from "../../../firebase.config";
-import { ArrowLeft, Grape, MessageCircle, MessageCircleOff, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Grape, MessageCircle, MessageCircleOff, X } from "lucide-react";
 import { SkeletonFilasChat } from "@/components/chat/ChatSkeletons";
 import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
-import { marcarChatLeido, useIniciarChat, useInfoChatsUsuario, useMisChats } from "@/hooks/useChats";
+import { buttonClasses } from "@/components/ui";
+import { marcarChatLeido, partesDeChat, useIniciarChat, useInfoChatsUsuario, useMisChats } from "@/hooks/useChats";
 import { useChatDrawer, type ChatAbierto } from "@/stores/chatDrawerStore";
 import { cn } from "@/lib/utils";
 import type { ChatResumen } from "@/types/chats";
@@ -32,17 +34,18 @@ function gradienteDe(id: string): string {
 
 /* ---- Piezas -------------------------------------------------------------- */
 
-function AvatarEstablecimiento({ id, size }: { id: string; size: "sm" | "md" }) {
+// TODO backend: cuando el chat traiga la imagen de la actividad, va acá en vez del gradiente.
+function AvatarEstablecimiento({ id, size }: { id: string; size: "sm" | "md" | "lg" }) {
   return (
     <div
       aria-hidden
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-[10px] text-white/85",
-        size === "md" ? "size-11" : "size-10",
+        "flex shrink-0 items-center justify-center text-white/85",
+        size === "lg" ? "size-24 rounded-2xl" : size === "md" ? "size-11 rounded-[10px]" : "size-10 rounded-[10px]",
         gradienteDe(id),
       )}
     >
-      <Grape size={size === "md" ? 22 : 20} />
+      <Grape size={size === "lg" ? 44 : size === "md" ? 22 : 20} />
     </div>
   );
 }
@@ -95,6 +98,50 @@ function FilaChat({ chat, onOpen }: { chat: ChatEnDrawer; onOpen: (c: ChatEnDraw
   );
 }
 
+/**
+ * Info del chat, encima de la conversación: desde acá se va al detalle de la
+ * actividad o del establecimiento. Ir a cualquiera de los dos cierra el drawer.
+ */
+function InfoChat({ chat, establecimiento, onBack, onClose }: {
+  chat: ChatAbierto;
+  establecimiento: string | null;
+  onBack: () => void;
+  onClose: () => void;
+}) {
+  // Los chats viejos son `{uid}_{establecimientoId}`: ahí no hay actividad a la que ir.
+  const desdeId = partesDeChat(chat.id)?.actividadId;
+  const actividadId = chat.nuevo?.actividadId ?? (desdeId !== chat.establecimientoId ? desdeId : undefined);
+
+  return (
+    <div className="pop absolute inset-0 z-10 flex flex-col bg-surface">
+      <div className="flex items-center gap-3 border-b border-outline-variant bg-surface py-3.5 pr-4 pl-3">
+        <button type="button" onClick={onBack} aria-label="Volver a la conversación" className="inline-flex cursor-pointer rounded-md p-1.5 text-fg-2 hover:bg-cream-tert">
+          <ArrowLeft size={20} />
+        </button>
+        <div className="min-w-0 flex-1 font-display text-[15px] font-semibold text-fg-1">Info del chat</div>
+        <BotonCerrar onClick={onClose} />
+      </div>
+
+      <div className="flex flex-1 flex-col items-center overflow-y-auto px-6 pt-10 pb-6 text-center">
+        <AvatarEstablecimiento id={chat.establecimientoId} size="lg" />
+        <div className="mt-4 font-display text-lg leading-snug font-bold text-balance text-fg-1">{chat.titulo}</div>
+        {establecimiento && <div className="mt-1 text-[13.5px] text-fg-2">{establecimiento}</div>}
+
+        <div className="mt-7 flex w-full flex-col gap-2.5">
+          {actividadId && (
+            <Link href={`/explorar/${actividadId}`} onClick={onClose} className={buttonClasses({ className: "w-full" })}>
+              Ver actividad <ArrowRight size={16} />
+            </Link>
+          )}
+          <Link href={`/establecimientos/${chat.establecimientoId}`} onClick={onClose} className={buttonClasses({ variant: "neutral", className: "w-full" })}>
+            Ver establecimiento <ArrowRight size={16} />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Con qué arranca el composer de un chat nuevo. El visitante lo puede cambiar. */
 function plantilla(actividad: string): string {
   return `¡Hola! Quería hacerles una consulta sobre "${actividad}". `;
@@ -110,6 +157,7 @@ function Conversacion({ chat, establecimiento, noLeidos, onBack, onClose, onCrea
   onCreado: () => void;
 }) {
   const { iniciar } = useIniciarChat();
+  const [verInfo, setVerInfo] = useState(false);
   const nuevo = chat.nuevo;
 
   // Abrir la conversación (o recibir algo con ella abierta) la da por leída.
@@ -123,15 +171,22 @@ function Conversacion({ chat, establecimiento, noLeidos, onBack, onClose, onCrea
         <button type="button" onClick={onBack} aria-label="Volver al listado" className="inline-flex cursor-pointer rounded-md p-1.5 text-fg-2 hover:bg-cream-tert">
           <ArrowLeft size={20} />
         </button>
-        <AvatarEstablecimiento id={chat.establecimientoId} size="sm" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-display text-[15px] leading-tight font-semibold text-fg-1">{chat.titulo}</div>
-          <div className="mt-0.5 truncate text-xs text-fg-3">
-            {establecimiento
-              ? <strong className="font-semibold text-fg-2">{establecimiento}</strong>
-              : "Consulta al establecimiento"}
+        <button
+          type="button"
+          onClick={() => setVerInfo(true)}
+          title="Ver info del chat"
+          className="-my-1 flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md py-1 pr-1 text-left hover:bg-cream-tert"
+        >
+          <AvatarEstablecimiento id={chat.establecimientoId} size="sm" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-display text-[15px] leading-tight font-semibold text-fg-1">{chat.titulo}</div>
+            <div className="mt-0.5 truncate text-xs text-fg-3">
+              {establecimiento
+                ? <strong className="font-semibold text-fg-2">{establecimiento}</strong>
+                : "Consulta al establecimiento"}
+            </div>
           </div>
-        </div>
+        </button>
         <BotonCerrar onClick={onClose} />
       </div>
 
@@ -150,6 +205,10 @@ function Conversacion({ chat, establecimiento, noLeidos, onBack, onClose, onCrea
           return res.ok;
         } : undefined}
       />
+
+      {verInfo && (
+        <InfoChat chat={chat} establecimiento={establecimiento} onBack={() => setVerInfo(false)} onClose={onClose} />
+      )}
     </>
   );
 }
