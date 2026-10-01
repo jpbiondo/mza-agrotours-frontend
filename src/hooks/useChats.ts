@@ -483,6 +483,49 @@ export function useChatDeBaja(chatId: string | null): boolean {
   return !!chatId && estado?.chatId === chatId && estado.baja;
 }
 
+/* ---- Autor de un mensaje ------------------------------------------------- */
+
+/** Nombre de quien mandó un mensaje del establecimiento, a medida que se pide. */
+export type AutorMensaje =
+  | { estado: "cargando" }
+  | { estado: "listo"; nombre: string }
+  | { estado: "error" };
+
+/**
+ * Del lado del establecimiento escriben varios productores, y el mensaje sólo
+ * guarda el UID de quien lo mandó. El nombre se pide recién cuando alguien lo
+ * quiere ver —al pasar por el ícono de info—, una sola vez por remitente:
+ * `GET /establecimientos/{id}/chats/mensaje/autor/{uid}`. Si falla, el próximo
+ * intento vuelve a pedirlo.
+ */
+export function useAutoresMensajes(establecimientoId: string) {
+  const [autores, setAutores] = useState<Record<string, AutorMensaje>>({});
+  const pedidos = useRef(new Set<string>());
+
+  const pedirAutor = useCallback(async (uid: string) => {
+    if (!uid || pedidos.current.has(uid)) return;
+    pedidos.current.add(uid);
+    setAutores((a) => ({ ...a, [uid]: { estado: "cargando" } }));
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(
+          `/establecimientos/${encodeURIComponent(establecimientoId)}/chats/mensaje/autor/${encodeURIComponent(uid)}`,
+          { token },
+        ),
+      );
+      const env = comoEnvelope<unknown>(res);
+      const nombre = env.ok ? aTexto(env.data) : "";
+      if (!nombre) throw new Error("Respuesta sin nombre");
+      setAutores((a) => ({ ...a, [uid]: { estado: "listo", nombre } }));
+    } catch {
+      pedidos.current.delete(uid);
+      setAutores((a) => ({ ...a, [uid]: { estado: "error" } }));
+    }
+  }, [establecimientoId]);
+
+  return { autores, pedirAutor };
+}
+
 /* ---- Envío --------------------------------------------------------------- */
 
 /** Mensaje que la base rechazó. Queda sólo en esta pestaña, para reintentarlo. */
