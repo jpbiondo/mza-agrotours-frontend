@@ -70,6 +70,51 @@ export function useIniciarChat() {
   return { iniciar, isLoading };
 }
 
+/* ---- Chat de una actividad ---------------------------------------------- */
+
+type ChatDeActividad =
+  | { estado: "cargando" }
+  | { estado: "sin-sesion" }
+  | { estado: "listo"; chatId: string; existe: boolean };
+
+/**
+ * Si el visitante ya tiene un chat sobre la actividad. No hace falta preguntarle
+ * al backend: el id es `{uid}_{actividadId}` y alcanza con mirar el inbox propio,
+ * que las reglas dejan leer. Escucha en tiempo real, así que si el chat se crea
+ * desde otra pestaña el estado cambia solo.
+ */
+export function useChatDeActividad(actividadId: string): ChatDeActividad {
+  const [estado, setEstado] = useState<{ actividadId: string; valor: ChatDeActividad } | null>(null);
+
+  useEffect(() => {
+    let dejarDeEscuchar: (() => void) | undefined;
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      dejarDeEscuchar?.();
+      dejarDeEscuchar = undefined;
+      if (!user) {
+        setEstado({ actividadId, valor: { estado: "sin-sesion" } });
+        return;
+      }
+      const chatId = idDeChat(user.uid, actividadId);
+      dejarDeEscuchar = onValue(
+        ref(rtdb(), `chats_usuario/${user.uid}/${chatId}`),
+        (snap) => setEstado({ actividadId, valor: { estado: "listo", chatId, existe: snap.exists() } }),
+        // Sin poder leer el inbox se ofrece contactar: si el chat ya existía,
+        // el alta lo trata como el caso feliz y se abre igual.
+        () => setEstado({ actividadId, valor: { estado: "listo", chatId, existe: false } }),
+      );
+    });
+
+    return () => {
+      unsubAuth();
+      dejarDeEscuchar?.();
+    };
+  }, [actividadId]);
+
+  return estado?.actividadId === actividadId ? estado.valor : { estado: "cargando" };
+}
+
 /* ---- Inbox --------------------------------------------------------------- */
 
 /** Nodo crudo de `chats_usuario/{uid}/{chatId}`. */
