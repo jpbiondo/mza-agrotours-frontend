@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   increment, limitToLast, onValue, orderByChild, push, query, ref, serverTimestamp, set, update,
 } from "firebase/database";
 import { auth, rtdb } from "../../firebase.config";
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
 import type { ChatEstablecimientoResumen, ChatResumen, MensajeChat, TipoEmisor } from "@/types/chats";
 
@@ -253,6 +253,123 @@ export async function marcarChatLeidoEstablecimiento(establecimientoId: string, 
   } catch {
     // Un contador que no bajó no justifica un cartel: se reintenta al volver a abrir.
   }
+}
+
+/* ---- Nombres al día ------------------------------------------------------ */
+
+/*
+ * El `titulo` del inbox es una foto que saca el backend al crear el chat: si
+ * después cambia el nombre de la actividad o del visitante, queda viejo. Los
+ * nombres al día se le piden al backend por lote, y el `titulo` queda de
+ * respaldo para cuando el pedido falla o no trae ese chat.
+ */
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Parte un id de chat en `{uid del visitante}_{id de la actividad}`. Ni los UID
+ * de Firebase ni los UUID llevan `_`. Devuelve `null` si el final no es un UUID:
+ * el backend lo rechazaría y con él todo el lote.
+ */
+function partesDeChat(chatId: string): { visitanteUid: string; actividadId: string } | null {
+  const corte = chatId.lastIndexOf("_");
+  const actividadId = chatId.slice(corte + 1);
+  if (corte <= 0 || !UUID.test(actividadId)) return null;
+  return { visitanteUid: chatId.slice(0, corte), actividadId };
+}
+
+/**
+ * Pide `pedir` sólo para los chats que todavía no se pidieron, así un mensaje
+ * nuevo —que re-emite el inbox entero— no vuelve a salir al backend. Si el
+ * pedido falla, esos chats se liberan para reintentarlos cuando cambie la lista.
+ */
+function useInfoPorChat<T>(
+  chatIds: readonly string[],
+  pedir: (chatIds: string[]) => Promise<Record<string, T>>,
+): Record<string, T> {
+  const [info, setInfo] = useState<Record<string, T>>({});
+  const pedidos = useRef(new Set<string>());
+  // Clave estable: el inbox llega como un array nuevo en cada cambio.
+  const clave = [...chatIds].sort().join(",");
+
+  useEffect(() => {
+    const faltan = clave.split(",").filter((id) => id && !pedidos.current.has(id));
+    if (faltan.length === 0) return;
+    faltan.forEach((id) => pedidos.current.add(id));
+    pedir(faltan)
+      .then((nuevos) => setInfo((prev) => ({ ...prev, ...nuevos })))
+      .catch(() => faltan.forEach((id) => pedidos.current.delete(id)));
+  }, [clave, pedir]);
+
+  return info;
+}
+
+/**
+ * Nombre al día de la actividad de cada chat del visitante, por id de chat.
+ * `POST /usuario/chats`. Con `chatIds` vacío no pide nada.
+ */
+export function useTitulosChatsUsuario(chatIds: readonly string[]): Record<string, string> {
+  const pedir = useCallback(async (ids: string[]) => {
+    const cuerpo = ids.flatMap((id) => {
+      const partes = partesDeChat(id);
+      return partes ? [{ actividadId: partes.actividadId }] : [];
+    });
+    if (cuerpo.length === 0) return {};
+    const res = await conToken((token) =>
+      apiFetch<unknown>("/usuario/chats", { method: "POST", token, body: JSON.stringify(cuerpo) }),
+    );
+    const env = comoEnvelope<Record<string, unknown>>(res);
+    const titulos: Record<string, string> = {};
+    if (!env.ok || !env.data || typeof env.data !== "object") return titulos;
+    for (const [chatId, nombre] of Object.entries(env.data)) {
+      if (typeof nombre === "string" && nombre) titulos[chatId] = nombre;
+    }
+    return titulos;
+  }, []);
+
+  return useInfoPorChat(chatIds, pedir);
+}
+
+/** Lo que el establecimiento ve de cada chat, con los nombres al día. */
+export interface InfoChatEstablecimiento {
+  visitante?: string;
+  actividad?: string;
+}
+
+/**
+ * Nombre al día del visitante y de la actividad de cada chat del
+ * establecimiento, por id de chat. `POST /establecimientos/{id}/chats`.
+ */
+export function useInfoChatsEstablecimiento(
+  establecimientoId: string,
+  chatIds: readonly string[],
+): Record<string, InfoChatEstablecimiento> {
+  const pedir = useCallback(async (ids: string[]) => {
+    const cuerpo = ids.flatMap((id) => {
+      const partes = partesDeChat(id);
+      return partes ? [{ actividadId: partes.actividadId, usuarioFirebaseId: partes.visitanteUid }] : [];
+    });
+    if (cuerpo.length === 0) return {};
+    const res = await conToken((token) =>
+      apiFetch<unknown>(`/establecimientos/${encodeURIComponent(establecimientoId)}/chats`, {
+        method: "POST",
+        token,
+        body: JSON.stringify(cuerpo),
+      }),
+    );
+    const env = comoEnvelope<Record<string, { chatNombre?: unknown; actividadNombre?: unknown } | null>>(res);
+    const info: Record<string, InfoChatEstablecimiento> = {};
+    if (!env.ok || !env.data || typeof env.data !== "object") return info;
+    for (const [chatId, v] of Object.entries(env.data)) {
+      info[chatId] = {
+        visitante: aTexto(v?.chatNombre) || undefined,
+        actividad: aTexto(v?.actividadNombre) || undefined,
+      };
+    }
+    return info;
+  }, [establecimientoId]);
+
+  return useInfoPorChat(chatIds, pedir);
 }
 
 /* ---- Mensajes ------------------------------------------------------------ */

@@ -4,7 +4,10 @@
 export interface ChatResumen {
   id: string;
   establecimientoId: string;
-  /** Nombre del establecimiento; lo completa el backend al iniciar el chat. */
+  /**
+   * Nombre de la actividad tal como era al iniciar el chat (en chats viejos, el
+   * del establecimiento). El nombre al día lo da `useTitulosChatsUsuario`.
+   */
   titulo: string;
   /** Vacío mientras nadie escribió. */
   ultimoMensaje: string;
@@ -17,7 +20,7 @@ export interface ChatResumen {
 export interface ChatEstablecimientoResumen {
   id: string;
   visitanteId: string;
-  /** Nombre del visitante; lo completa el backend al iniciar el chat. */
+  /** Nombre del visitante al iniciar el chat. El nombre al día lo da `useInfoChatsEstablecimiento`. */
   titulo: string;
   /** Vacío mientras nadie escribió. */
   ultimoMensaje: string;
