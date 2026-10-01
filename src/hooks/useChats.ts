@@ -323,6 +323,15 @@ export function partesDeChat(chatId: string): { visitanteUid: string; actividadI
   return { visitanteUid: chatId.slice(0, corte), actividadId };
 }
 
+export interface InfoPorChat<T> {
+  info: Record<string, T>;
+  /**
+   * Hasta que vuelve el primer pedido (bien o mal). Los chats que llegan
+   * después no lo vuelven a true: la bandeja no salta de nuevo al esqueleto.
+   */
+  cargando: boolean;
+}
+
 /**
  * Pide `pedir` sólo para los chats que todavía no se pidieron, así un mensaje
  * nuevo —que re-emite el inbox entero— no vuelve a salir al backend. Si el
@@ -331,8 +340,9 @@ export function partesDeChat(chatId: string): { visitanteUid: string; actividadI
 function useInfoPorChat<T>(
   chatIds: readonly string[],
   pedir: (chatIds: string[]) => Promise<Record<string, T>>,
-): Record<string, T> {
+): InfoPorChat<T> {
   const [info, setInfo] = useState<Record<string, T>>({});
+  const [primeraCarga, setPrimeraCarga] = useState(false);
   const pedidos = useRef(new Set<string>());
   // Clave estable: el inbox llega como un array nuevo en cada cambio.
   const clave = [...chatIds].sort().join(",");
@@ -343,10 +353,12 @@ function useInfoPorChat<T>(
     faltan.forEach((id) => pedidos.current.add(id));
     pedir(faltan)
       .then((nuevos) => setInfo((prev) => ({ ...prev, ...nuevos })))
-      .catch(() => faltan.forEach((id) => pedidos.current.delete(id)));
+      .catch(() => faltan.forEach((id) => pedidos.current.delete(id)))
+      .finally(() => setPrimeraCarga(true));
   }, [clave, pedir]);
 
-  return info;
+  // Sin chats no hay nada que esperar.
+  return { info, cargando: !primeraCarga && clave !== "" };
 }
 
 /** Lo que el visitante ve de cada chat, con los nombres al día. */
@@ -361,7 +373,7 @@ export interface InfoChatUsuario {
  * Nombre al día de la actividad y del establecimiento de cada chat del
  * visitante, por id de chat. `POST /usuario/chats`. Con `chatIds` vacío no pide nada.
  */
-export function useInfoChatsUsuario(chatIds: readonly string[]): Record<string, InfoChatUsuario> {
+export function useInfoChatsUsuario(chatIds: readonly string[]): InfoPorChat<InfoChatUsuario> {
   const pedir = useCallback(async (ids: string[]) => {
     const cuerpo = ids.flatMap((id) => {
       const partes = partesDeChat(id);
@@ -404,7 +416,7 @@ export interface InfoChatEstablecimiento {
 export function useInfoChatsEstablecimiento(
   establecimientoId: string,
   chatIds: readonly string[],
-): Record<string, InfoChatEstablecimiento> {
+): InfoPorChat<InfoChatEstablecimiento> {
   const pedir = useCallback(async (ids: string[]) => {
     const cuerpo = ids.flatMap((id) => {
       const partes = partesDeChat(id);
