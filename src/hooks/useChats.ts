@@ -316,7 +316,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * de Firebase ni los UUID llevan `_`. Devuelve `null` si el final no es un UUID:
  * el backend lo rechazaría y con él todo el lote.
  */
-function partesDeChat(chatId: string): { visitanteUid: string; actividadId: string } | null {
+export function partesDeChat(chatId: string): { visitanteUid: string; actividadId: string } | null {
   const corte = chatId.lastIndexOf("_");
   const actividadId = chatId.slice(corte + 1);
   if (corte <= 0 || !UUID.test(actividadId)) return null;
