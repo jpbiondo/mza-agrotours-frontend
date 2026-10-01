@@ -353,6 +353,8 @@ function useInfoPorChat<T>(
 export interface InfoChatUsuario {
   actividad?: string;
   establecimiento?: string;
+  /** Foto de la actividad; no viene si no tiene. */
+  foto?: string;
 }
 
 /**
@@ -369,13 +371,18 @@ export function useInfoChatsUsuario(chatIds: readonly string[]): Record<string, 
     const res = await conToken((token) =>
       apiFetch<unknown>("/usuario/chats", { method: "POST", token, body: JSON.stringify(cuerpo) }),
     );
-    const env = comoEnvelope<Record<string, { chatNombre?: unknown; establecimientoNombre?: unknown } | null>>(res);
+    const env = comoEnvelope<Record<string, {
+      chatNombre?: unknown;
+      establecimientoNombre?: unknown;
+      urlChatFoto?: unknown;
+    } | null>>(res);
     const info: Record<string, InfoChatUsuario> = {};
     if (!env.ok || !env.data || typeof env.data !== "object") return info;
     for (const [chatId, v] of Object.entries(env.data)) {
       info[chatId] = {
         actividad: aTexto(v?.chatNombre) || undefined,
         establecimiento: aTexto(v?.establecimientoNombre) || undefined,
+        foto: aTexto(v?.urlChatFoto) || undefined,
       };
     }
     return info;
