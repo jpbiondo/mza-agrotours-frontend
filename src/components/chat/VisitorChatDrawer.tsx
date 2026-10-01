@@ -6,7 +6,7 @@ import { auth } from "../../../firebase.config";
 import { ArrowLeft, Grape, MessageCircle, MessageCircleOff, X } from "lucide-react";
 import { SkeletonFilasChat } from "@/components/chat/ChatSkeletons";
 import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
-import { marcarChatLeido, useInfoChatsUsuario, useMisChats } from "@/hooks/useChats";
+import { marcarChatLeido, useIniciarChat, useInfoChatsUsuario, useMisChats } from "@/hooks/useChats";
 import { useChatDrawer, type ChatAbierto } from "@/stores/chatDrawerStore";
 import { cn } from "@/lib/utils";
 import type { ChatResumen } from "@/types/chats";
@@ -95,13 +95,23 @@ function FilaChat({ chat, onOpen }: { chat: ChatEnDrawer; onOpen: (c: ChatEnDraw
   );
 }
 
-function Conversacion({ chat, establecimiento, noLeidos, onBack, onClose }: {
+/** Con qué arranca el composer de un chat nuevo. El visitante lo puede cambiar. */
+function plantilla(actividad: string): string {
+  return `¡Hola! Quería hacerles una consulta sobre "${actividad}". `;
+}
+
+function Conversacion({ chat, establecimiento, noLeidos, onBack, onClose, onCreado }: {
   chat: ChatAbierto;
   establecimiento: string | null;
   noLeidos: number;
   onBack: () => void;
   onClose: () => void;
+  /** El chat nuevo ya se creó: deja de ser `nuevo`. */
+  onCreado: () => void;
 }) {
+  const { iniciar } = useIniciarChat();
+  const nuevo = chat.nuevo;
+
   // Abrir la conversación (o recibir algo con ella abierta) la da por leída.
   useEffect(() => {
     if (noLeidos > 0) void marcarChatLeido(chat.id);
@@ -133,6 +143,12 @@ function Conversacion({ chat, establecimiento, noLeidos, onBack, onClose }: {
         placeholder="Ingrese su consulta…"
         max={MAX}
         autoFocus
+        borradorInicial={nuevo ? plantilla(chat.titulo) : undefined}
+        iniciar={nuevo ? async () => {
+          const res = await iniciar(nuevo.actividadId);
+          if (res.ok) onCreado();
+          return res.ok;
+        } : undefined}
       />
     </>
   );
@@ -205,6 +221,7 @@ export default function VisitorChatDrawer() {
                 key={chat.id}
                 chat={enInbox ? { ...chat, titulo: enInbox.titulo } : chat}
                 establecimiento={enInbox?.establecimiento ?? null}
+                onCreado={() => abrir({ ...chat, nuevo: undefined })}
                 noLeidos={enInbox?.noLeidos ?? 0}
                 onBack={volver}
                 onClose={cerrar}

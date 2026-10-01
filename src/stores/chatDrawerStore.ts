@@ -1,8 +1,13 @@
 import { create } from "zustand";
 import type { ChatResumen } from "@/types/chats";
 
-/** Lo mínimo para dibujar y escribir en una conversación. */
-export type ChatAbierto = Pick<ChatResumen, "id" | "establecimientoId" | "titulo">;
+/**
+ * Lo mínimo para dibujar y escribir en una conversación. Con `nuevo`, el chat
+ * todavía no existe: se crea recién cuando el visitante manda el primer mensaje.
+ */
+export type ChatAbierto = Pick<ChatResumen, "id" | "establecimientoId" | "titulo"> & {
+  nuevo?: { actividadId: string };
+};
 
 interface ChatDrawerState {
   abierto: boolean;
