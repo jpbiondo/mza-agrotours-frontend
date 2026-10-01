@@ -226,7 +226,7 @@ export default function ConversacionChat({
     el.setSelectionRange(el.value.length, el.value.length);
   }, [autoFocus, borradorInicial]);
 
-  // El composer crece con el texto hasta el tope del CSS (7 líneas) y de ahí
+  // El composer crece con el texto hasta el tope del CSS (5 líneas) y de ahí
   // scrollea. Se mide antes de pintar para que no se vea el salto.
   useLayoutEffect(() => {
     const el = textarea.current;
@@ -351,7 +351,7 @@ export default function ConversacionChat({
             aria-label="Mensaje"
             autoFocus={autoFocus}
             disabled={deBaja}
-            className="box-border max-h-[calc(7lh+0.75rem)] min-h-6 flex-1 resize-none border-none bg-transparent py-1.5 font-sans text-[13.5px] leading-[1.45] text-fg-1 outline-none disabled:cursor-not-allowed"
+            className="box-border max-h-[calc(5lh+0.75rem)] min-h-6 flex-1 resize-none border-none bg-transparent py-1.5 font-sans text-[13.5px] leading-[1.45] text-fg-1 outline-none disabled:cursor-not-allowed"
           />
           <button
             type="button"
