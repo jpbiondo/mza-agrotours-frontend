@@ -14,9 +14,8 @@ import Photo, { seedDeId } from "@/components/landing/Photo";
 import { Button, Skeleton, buttonClasses } from "@/components/ui";
 import { useActividadPublica } from "@/hooks/useCatalogoActividades";
 import { usePronosticoClima } from "@/hooks/useClima";
-import { useIniciarChat } from "@/hooks/useChats";
+import { useChatDeActividad } from "@/hooks/useChats";
 import { useChatDrawer } from "@/stores/chatDrawerStore";
-import { auth } from "../../../../../firebase.config";
 import { moneyAr } from "@/lib/format";
 import type { ActividadPublica, FotoRef, TarifaActividad } from "@/types/catalogo";
 import type { CondicionClima, DiaPronostico } from "@/types/clima";
@@ -145,9 +144,10 @@ function FaqRow({ q, a }: { q: string; a: string }) {
 /* ---- Establecimiento --------------------------------------------------- */
 
 /**
- * "Ver detalle" lleva a la página del establecimiento; "Contactar" crea el chat
- * sobre esta actividad (o encuentra el que ya había) y lo abre en el drawer
- * global del header. Sin sesión no hay drawer, así que manda a iniciar sesión.
+ * "Ver detalle" lleva a la página del establecimiento. Si el visitante ya tiene
+ * un chat sobre esta actividad, "Continuar chat" lo abre en el drawer global del
+ * header; si no, "Contactar" abre uno nuevo con un mensaje de arranque, y el chat
+ * se crea recién al enviarlo. Sin sesión no hay drawer: manda a iniciar sesión.
  */
 function AccionesEstablecimiento({ id, actividadId, actividadNombre }: {
   id: string;
@@ -155,38 +155,34 @@ function AccionesEstablecimiento({ id, actividadId, actividadNombre }: {
   actividadNombre: string;
 }) {
   const router = useRouter();
-  const { iniciar, isLoading } = useIniciarChat();
+  const chat = useChatDeActividad(actividadId);
   const abrirChat = useChatDrawer((s) => s.abrir);
-  const [error, setError] = useState(false);
 
-  async function contactar() {
-    if (!auth.currentUser) {
+  function contactar() {
+    if (chat.estado === "sin-sesion") {
       router.push("/acceso");
       return;
     }
-    setError(false);
-    const res = await iniciar(actividadId);
+    if (chat.estado !== "listo") return;
     // El chat se titula con la actividad, igual que lo deja el backend en el inbox.
-    if (res.ok) abrirChat({ id: res.chatId, establecimientoId: id, titulo: actividadNombre });
-    else setError(true);
+    abrirChat({
+      id: chat.chatId,
+      establecimientoId: id,
+      titulo: actividadNombre,
+      nuevo: chat.existe ? undefined : { actividadId },
+    });
   }
 
+  const existe = chat.estado === "listo" && chat.existe;
   return (
-    <div className="mt-3.5">
-      <div className="flex flex-wrap gap-2">
-        <Link href={`/establecimientos/${id}`} className={buttonClasses({ size: "sm" })}>
-          Ver detalle <ArrowRight size={15} />
-        </Link>
-        <Button variant="neutral" size="sm" onClick={contactar} disabled={isLoading}>
-          {isLoading ? <Loader size={15} className="spin" aria-hidden /> : <MessageCircle size={15} aria-hidden />}
-          Contactar
-        </Button>
-      </div>
-      {error && (
-        <p role="alert" className="mt-2 text-[13px] text-danger">
-          No pudimos abrir el chat con el establecimiento. Probá de nuevo en un rato.
-        </p>
-      )}
+    <div className="mt-3.5 flex flex-wrap gap-2">
+      <Link href={`/establecimientos/${id}`} className={buttonClasses({ size: "sm" })}>
+        Ver detalle <ArrowRight size={15} />
+      </Link>
+      <Button variant="neutral" size="sm" onClick={contactar} disabled={chat.estado === "cargando"}>
+        {chat.estado === "cargando" ? <Loader size={15} className="spin" aria-hidden /> : <MessageCircle size={15} aria-hidden />}
+        {existe ? "Continuar chat" : "Contactar"}
+      </Button>
     </div>
   );
 }
