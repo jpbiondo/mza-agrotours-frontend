@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Loader, Lock, RotateCcw, Send, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AlertCircle, Info, Loader, Lock, RotateCcw, Send, X } from "lucide-react";
+import { auth } from "../../../firebase.config";
 import { SkeletonMensajes } from "@/components/chat/ChatSkeletons";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/Skeleton";
 import {
-  useChatDeBaja, useEnviarMensaje, useMensajes, type ChatDestino, type MensajeFallido,
+  useAutoresMensajes, useChatDeBaja, useEnviarMensaje, useMensajes,
+  type AutorMensaje, type ChatDestino, type MensajeFallido,
 } from "@/hooks/useChats";
 import { cn } from "@/lib/utils";
 import type { MensajeChat, TipoEmisor } from "@/types/chats";
@@ -42,6 +46,12 @@ export function momentoCorto(ts: number): string {
   return `${dosDigitos(d.getDate())}/${dosDigitos(d.getMonth() + 1)}`;
 }
 
+/** Fecha y hora completas: `dd/mm/aaaa · hh:mm`. */
+function fechaYHora(ts: number): string {
+  const d = new Date(ts);
+  return `${dosDigitos(d.getDate())}/${dosDigitos(d.getMonth() + 1)}/${d.getFullYear()} · ${hora(ts)}`;
+}
+
 function etiquetaDia(ts: number): string {
   const dias = diasAtras(ts);
   if (dias <= 0) return "Hoy";
@@ -62,16 +72,62 @@ function SeparadorDia({ label }: { label: string }) {
   );
 }
 
+/**
+ * Ícono de info de un mensaje propio del establecimiento: al pasar por encima
+ * (o al tocarlo) muestra quién lo mandó y cuándo. El nombre se pide recién al
+ * abrir, con `onAbrir`.
+ */
+function InfoMensaje({ autor, propio, momento, onAbrir }: {
+  autor: AutorMensaje | undefined;
+  /** Si lo mandó la cuenta en sesión. */
+  propio: boolean;
+  momento: string;
+  onAbrir: () => void;
+}) {
+  return (
+    <Popover onOpenChange={(open) => { if (open) onAbrir(); }}>
+      <PopoverTrigger
+        openOnHover
+        delay={150}
+        aria-label="Información del mensaje"
+        className="inline-flex cursor-pointer rounded-full text-fg-3 outline-none hover:text-green-800 focus-visible:ring-2 focus-visible:ring-green-700 data-popup-open:text-green-800"
+      >
+        <Info size={14} />
+      </PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="end"
+        sideOffset={8}
+        className="w-auto gap-0 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-left whitespace-nowrap text-fg-1 shadow-[0px_8px_24px_rgba(45,90,39,0.12)] ring-0"
+      >
+        <div className="text-[10.5px] font-semibold uppercase tracking-[.08em] text-fg-3">Enviado por</div>
+        <div className="mt-0.5 text-[13px] font-semibold text-fg-1">
+          {autor?.estado === "listo" ? (
+            `${autor.nombre}${propio ? " (vos)" : ""}`
+          ) : autor?.estado === "error" ? (
+            <span className="font-normal text-danger">No pudimos obtener el autor</span>
+          ) : (
+            <Skeleton className="my-[3px] h-3.5 w-28" />
+          )}
+        </div>
+        <div className="mt-0.5 font-mono text-xs text-fg-2">{momento}</div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 type EstadoBurbuja = "enviado" | "enviando" | "error";
 
 function Burbuja({
-  texto, mine, momento, estado, code, onReintentar, onDescartar,
+  texto, mine, momento, estado, code, info, onReintentar, onDescartar,
 }: {
   texto: string;
   mine: boolean;
   momento: string;
   estado: EstadoBurbuja;
   code?: string;
+  /** Junto a la hora, con el mensaje ya enviado. */
+  info?: ReactNode;
   onReintentar?: () => void;
   onDescartar?: () => void;
 }) {
@@ -108,7 +164,10 @@ function Burbuja({
             </button>
           </span>
         ) : (
-          <span>{momento}</span>
+          <>
+            <span>{momento}</span>
+            {info}
+          </>
         )}
       </div>
     </div>
@@ -140,6 +199,9 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
   const { enviar, enviando, fallidos, descartar } = useEnviarMensaje(emisor);
   // Dado de baja, el chat queda de sólo lectura: se ve el historial, no se escribe.
   const deBaja = useChatDeBaja(chat.id);
+  // Sólo el establecimiento ve quién de su equipo mandó cada mensaje.
+  const { autores, pedirAutor } = useAutoresMensajes(chat.establecimientoId);
+  const uid = auth.currentUser?.uid;
   const [borrador, setBorrador] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -187,6 +249,14 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
                     mine={it.m.tipoEmisor === emisor}
                     momento={hora(it.m.timestamp)}
                     estado={enviando.has(it.m.id) ? "enviando" : "enviado"}
+                    info={emisor === "ESTABLECIMIENTO" && it.m.tipoEmisor === "ESTABLECIMIENTO" && (
+                      <InfoMensaje
+                        autor={autores[it.m.remitenteId]}
+                        propio={it.m.remitenteId === uid}
+                        momento={fechaYHora(it.m.timestamp)}
+                        onAbrir={() => void pedirAutor(it.m.remitenteId)}
+                      />
+                    )}
                   />
                 ) : (
                   <Burbuja
