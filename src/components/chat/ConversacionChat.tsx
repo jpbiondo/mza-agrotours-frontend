@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Loader, RotateCcw, Send, X } from "lucide-react";
+import { AlertCircle, Loader, Lock, RotateCcw, Send, X } from "lucide-react";
 import { SkeletonMensajes } from "@/components/chat/ChatSkeletons";
 import {
-  useEnviarMensaje, useMensajes, type ChatDestino, type MensajeFallido,
+  useChatDeBaja, useEnviarMensaje, useMensajes, type ChatDestino, type MensajeFallido,
 } from "@/hooks/useChats";
 import { cn } from "@/lib/utils";
 import type { MensajeChat, TipoEmisor } from "@/types/chats";
@@ -98,9 +98,11 @@ function Burbuja({
             <AlertCircle size={14} className="text-danger" aria-hidden />
             <span className="font-sans text-[11.5px] text-danger">No se pudo enviar el mensaje</span>
             {code && <span title="Código del error">{code}</span>}
-            <button type="button" onClick={onReintentar} aria-label="Reintentar envío" className="inline-flex cursor-pointer text-fg-2 hover:text-fg-1">
-              <RotateCcw size={14} />
-            </button>
+            {onReintentar && (
+              <button type="button" onClick={onReintentar} aria-label="Reintentar envío" className="inline-flex cursor-pointer text-fg-2 hover:text-fg-1">
+                <RotateCcw size={14} />
+              </button>
+            )}
             <button type="button" onClick={onDescartar} aria-label="Descartar mensaje" className="inline-flex cursor-pointer text-fg-3 hover:text-fg-1">
               <X size={14} />
             </button>
@@ -136,6 +138,8 @@ interface ConversacionChatProps {
 export default function ConversacionChat({ chat, emisor, vacio, placeholder, max, autoFocus }: ConversacionChatProps) {
   const { mensajes, isLoading, error } = useMensajes(chat.id);
   const { enviar, enviando, fallidos, descartar } = useEnviarMensaje(emisor);
+  // Dado de baja, el chat queda de sólo lectura: se ve el historial, no se escribe.
+  const deBaja = useChatDeBaja(chat.id);
   const [borrador, setBorrador] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -148,7 +152,7 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
     if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
   }, [items.length]);
 
-  const puedeEnviar = borrador.trim().length > 0 && borrador.length <= max;
+  const puedeEnviar = !deBaja && borrador.trim().length > 0 && borrador.length <= max;
 
   function submit() {
     if (!puedeEnviar) return;
@@ -191,7 +195,7 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
                     momento={hora(it.m.timestamp)}
                     estado="error"
                     code={it.m.code}
-                    onReintentar={() => reintentar(it.m as MensajeFallido)}
+                    onReintentar={deBaja ? undefined : () => reintentar(it.m as MensajeFallido)}
                     onDescartar={() => descartar(it.m.id)}
                   />
                 )}
@@ -202,7 +206,16 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
       </div>
 
       <div className="shrink-0 border-t border-outline-variant bg-surface px-3.5 pt-3 pb-3.5">
-        <div className="flex items-center gap-2.5 rounded-[14px] border border-sand bg-cream-bg py-2 pr-2 pl-3.5 focus-within:border-green-700">
+        {deBaja && (
+          <p role="status" className="mb-2.5 flex items-center gap-2 text-[12.5px] leading-snug text-fg-2">
+            <Lock size={14} className="shrink-0 text-fg-3" aria-hidden />
+            Este chat fue dado de baja. Podés leer la conversación, pero ya no se pueden enviar mensajes.
+          </p>
+        )}
+        <div className={cn(
+          "flex items-center gap-2.5 rounded-[14px] border border-sand bg-cream-bg py-2 pr-2 pl-3.5 focus-within:border-green-700",
+          deBaja && "opacity-60",
+        )}>
           <textarea
             value={borrador}
             onChange={(e) => setBorrador(e.target.value.slice(0, max))}
@@ -212,12 +225,13 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
                 submit();
               }
             }}
-            placeholder={placeholder}
+            placeholder={deBaja ? "Chat dado de baja" : placeholder}
             rows={1}
             maxLength={max}
             aria-label="Mensaje"
             autoFocus={autoFocus}
-            className="max-h-[110px] min-h-6 flex-1 resize-none border-none bg-transparent py-1.5 font-sans text-[13.5px] leading-[1.45] text-fg-1 outline-none"
+            disabled={deBaja}
+            className="max-h-[110px] min-h-6 flex-1 resize-none border-none bg-transparent py-1.5 font-sans text-[13.5px] leading-[1.45] text-fg-1 outline-none disabled:cursor-not-allowed"
           />
           <button
             type="button"
@@ -229,10 +243,12 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
             <Send size={17} />
           </button>
         </div>
-        <div className="mt-1.5 flex justify-between font-mono text-[11px] text-fg-3">
-          <span>Enter para enviar · Shift+Enter salto de línea</span>
-          <span className={cn(max - borrador.length < 30 && "font-semibold text-warning-fg")}>{borrador.length} / {max}</span>
-        </div>
+        {!deBaja && (
+          <div className="mt-1.5 flex justify-between font-mono text-[11px] text-fg-3">
+            <span>Enter para enviar · Shift+Enter salto de línea</span>
+            <span className={cn(max - borrador.length < 30 && "font-semibold text-warning-fg")}>{borrador.length} / {max}</span>
+          </div>
+        )}
       </div>
     </>
   );
