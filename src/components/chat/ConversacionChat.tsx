@@ -192,18 +192,39 @@ interface ConversacionChatProps {
   max: number;
   /** Foco en el composer al montar: en el drawer sí, en una bandeja con lista no. */
   autoFocus?: boolean;
+  /** Texto con el que arranca el composer, con el cursor al final. */
+  borradorInicial?: string;
+  /**
+   * Con el chat todavía sin crear: se llama antes del primer envío y el mensaje
+   * sale sólo si devuelve true. Mientras tanto no se escucha nada del chat.
+   */
+  iniciar?: () => Promise<boolean>;
 }
 
-export default function ConversacionChat({ chat, emisor, vacio, placeholder, max, autoFocus }: ConversacionChatProps) {
-  const { mensajes, isLoading, error } = useMensajes(chat.id);
+export default function ConversacionChat({
+  chat, emisor, vacio, placeholder, max, autoFocus, borradorInicial, iniciar,
+}: ConversacionChatProps) {
+  // Un chat sin crear no tiene mensajes ni baja, y las reglas rechazarían leerlos.
+  const existe = !iniciar;
+  const { mensajes, isLoading, error } = useMensajes(existe ? chat.id : null);
   const { enviar, enviando, fallidos, descartar } = useEnviarMensaje(emisor);
   // Dado de baja, el chat queda de sólo lectura: se ve el historial, no se escribe.
-  const deBaja = useChatDeBaja(chat.id);
+  const deBaja = useChatDeBaja(existe ? chat.id : null);
   // Sólo el establecimiento ve quién de su equipo mandó cada mensaje.
   const { autores, pedirAutor } = useAutoresMensajes(chat.establecimientoId);
   const uid = auth.currentUser?.uid;
-  const [borrador, setBorrador] = useState("");
+  const [borrador, setBorrador] = useState(borradorInicial ?? "");
+  const [iniciando, setIniciando] = useState(false);
+  const [falloInicio, setFalloInicio] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
+  const textarea = useRef<HTMLTextAreaElement>(null);
+
+  // Con un borrador precargado, el cursor va al final para seguir escribiendo.
+  useEffect(() => {
+    const el = textarea.current;
+    if (!autoFocus || !el || !borradorInicial) return;
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, [autoFocus, borradorInicial]);
 
   const items: Item[] = [
     ...mensajes.map((m) => ({ tipo: "mensaje" as const, m })),
@@ -214,12 +235,25 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
     if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
   }, [items.length]);
 
-  const puedeEnviar = !deBaja && borrador.trim().length > 0 && borrador.length <= max;
+  const puedeEnviar = !deBaja && !iniciando && borrador.trim().length > 0 && borrador.length <= max;
 
-  function submit() {
+  async function submit() {
     if (!puedeEnviar) return;
-    void enviar(chat, borrador.trim());
+    const texto = borrador.trim();
+    if (iniciar) {
+      // Si el alta falla, el borrador queda para reintentar. Si anda pero el
+      // mensaje no, el chat ya existe y el mensaje queda como fallido.
+      setIniciando(true);
+      setFalloInicio(false);
+      const ok = await iniciar();
+      setIniciando(false);
+      if (!ok) {
+        setFalloInicio(true);
+        return;
+      }
+    }
     setBorrador("");
+    void enviar(chat, texto);
   }
 
   function reintentar(f: MensajeFallido) {
@@ -276,6 +310,12 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
       </div>
 
       <div className="shrink-0 border-t border-outline-variant bg-surface px-3.5 pt-3 pb-3.5">
+        {falloInicio && (
+          <p role="alert" className="mb-2.5 flex items-center gap-2 text-[12.5px] leading-snug text-danger">
+            <AlertCircle size={14} className="shrink-0" aria-hidden />
+            No pudimos iniciar el chat. Probá de nuevo en un rato.
+          </p>
+        )}
         {deBaja && (
           <p role="status" className="mb-2.5 flex items-center gap-2 text-[12.5px] leading-snug text-fg-2">
             <Lock size={14} className="shrink-0 text-fg-3" aria-hidden />
@@ -292,10 +332,11 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                submit();
+                void submit();
               }
             }}
             placeholder={deBaja ? "Chat dado de baja" : placeholder}
+            ref={textarea}
             rows={1}
             maxLength={max}
             aria-label="Mensaje"
@@ -305,12 +346,12 @@ export default function ConversacionChat({ chat, emisor, vacio, placeholder, max
           />
           <button
             type="button"
-            onClick={submit}
+            onClick={() => void submit()}
             disabled={!puedeEnviar}
             aria-label="Enviar mensaje"
             className="flex size-[38px] shrink-0 cursor-pointer items-center justify-center rounded-[10px] bg-green-800 text-white shadow-[var(--btn-tactile-primary)] transition-colors disabled:cursor-not-allowed disabled:bg-cream-tert disabled:text-fg-3 disabled:shadow-none"
           >
-            <Send size={17} />
+            {iniciando ? <Loader size={17} className="spin" aria-hidden /> : <Send size={17} />}
           </button>
         </div>
         {!deBaja && (
