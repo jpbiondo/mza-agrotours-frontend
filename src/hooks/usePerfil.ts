@@ -4,6 +4,7 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,
+  signOut,
 } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import { auth } from "../../firebase.config";
@@ -306,6 +307,10 @@ interface DeleteCuentaResponse {
  * Da de baja la cuenta (DELETE /usuario/me con el ID token). Si el backend
  * responde !ok devuelve las condiciones incumplidas, pero acá se ignoran (sólo
  * debug: ya se verifican al abrir el modal). Un fallo técnico → { ok:false }.
+ *
+ * La cuenta de Firebase la da de baja el backend, de forma asíncrona: acá no se
+ * llama a `user.delete()`. Sí se cierra la sesión enseguida, porque una sesión
+ * viva sin perfil se leería como un alta a medias y llevaría a completarla.
  */
 export function useEliminarCuenta() {
   const [isLoading, setIsLoading] = useState(false);
@@ -319,7 +324,9 @@ export function useEliminarCuenta() {
         method: "DELETE",
         token,
       });
-      return res.ok ? { ok: true, ts: fechaHoraBaja() } : { ok: false, ts: null };
+      if (!res.ok) return { ok: false, ts: null };
+      await signOut(auth).catch(() => undefined);
+      return { ok: true, ts: fechaHoraBaja() };
     } catch {
       return { ok: false, ts: null };
     } finally {

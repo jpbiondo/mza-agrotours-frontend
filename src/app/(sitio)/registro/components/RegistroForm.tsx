@@ -11,6 +11,7 @@ import {
   BadgeCheck,
   Fingerprint,
   UserPlus,
+  UserCheck,
 } from "lucide-react";
 import { TextField, EyeToggle } from "@/components/ui/text-field";
 import { SimpleSelect } from "@/components/ui/simple-select";
@@ -31,14 +32,26 @@ import { Button } from "@/components/ui/Button";
 import type { ToastData } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { TIPOS_IDENTIFICACION, EMPTY_FORM } from "@/data/registro";
+import { CODIGO_PERFIL_INACTIVO } from "@/data/auth";
 import type { FormData } from "@/types/registro";
-import { registroSchema } from "../schema";
+import { completarRegistroSchema, registroSchema } from "../schema";
 import { useRegistro } from "@/hooks/useRegistro";
+import { cerrarSesion } from "@/hooks/useAuth";
 import { usePaises } from "@/hooks/usePaises";
+
+/**
+ * - `alta`: crea la cuenta de Firebase y el perfil.
+ * - `completar`: la cuenta de Firebase ya existe (alta a medias); sólo se piden
+ *   los datos del perfil. El email es el de la cuenta y no se edita.
+ */
+export type ModoRegistro = "alta" | "completar";
 
 interface RegistroFormProps {
   onSuccess: (data: FormData) => void;
   setToast: (t: ToastData | null) => void;
+  modo?: ModoRegistro;
+  /** Email de la cuenta de Firebase; sólo en modo `completar`. */
+  emailCuenta?: string;
 }
 
 const SECTION_LABEL =
@@ -47,15 +60,18 @@ const SECTION_LABEL =
 export default function RegistroForm({
   onSuccess,
   setToast,
+  modo = "alta",
+  emailCuenta = "",
 }: RegistroFormProps) {
+  const alta = modo === "alta";
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const { register: registrar } = useRegistro();
+  const { register: registrar, completar } = useRegistro();
   const { paises, isLoading: paisesLoading, error: paisesError } = usePaises();
 
   const form = useForm<FormData>({
-    resolver: zodResolver(registroSchema),
-    defaultValues: EMPTY_FORM,
+    resolver: zodResolver(alta ? registroSchema : completarRegistroSchema),
+    defaultValues: alta ? EMPTY_FORM : { ...EMPTY_FORM, email: emailCuenta },
     mode: "onTouched",
   });
 
@@ -73,17 +89,37 @@ export default function RegistroForm({
       telefono: data.telefono.trim(),
     };
 
-    const r = await registrar(payload);
+    const r = alta ? await registrar(payload) : await completar(payload);
 
     if (r.ok) {
       onSuccess(data);
       return;
     }
 
-    if (r.code === "userAlreadyExists") {
+    if (r.code === "auth/email-already-in-use") {
       form.setError(
         "email",
         { message: "Este correo ya está registrado" },
+        { shouldFocus: true },
+      );
+      return;
+    }
+    if (r.code === "auth/invalid-email") {
+      form.setError(
+        "email",
+        { message: "Correo electrónico inválido" },
+        { shouldFocus: true },
+      );
+      return;
+    }
+    // La password policy de Firebase puede ser más estricta que el esquema.
+    if (
+      r.code === "auth/weak-password" ||
+      r.code === "auth/password-does-not-meet-requirements"
+    ) {
+      form.setError(
+        "password",
+        { message: "La contraseña no cumple los requisitos de seguridad" },
         { shouldFocus: true },
       );
       return;
@@ -94,6 +130,16 @@ export default function RegistroForm({
         { message: "Este teléfono ya está registrado" },
         { shouldFocus: true },
       );
+      return;
+    }
+    // La cuenta de Firebase es de un perfil dado de baja que todavía no se
+    // terminó de eliminar; el hook ya cerró la sesión.
+    if (r.code === CODIGO_PERFIL_INACTIVO) {
+      setToast({
+        tone: "danger",
+        title: "Esta cuenta fue dada de baja",
+        sub: "Vas a poder registrarte de nuevo con este correo cuando se termine de eliminar.",
+      });
       return;
     }
     setToast({
@@ -151,8 +197,12 @@ export default function RegistroForm({
                   placeholder="nombre@dominio.com"
                   inputMode="email"
                   autoComplete="email"
+                  disabled={!alta}
                 />
               </FormControl>
+              {!alta && (
+                <FormDescription>Es el correo de tu cuenta.</FormDescription>
+              )}
               <FormMessage />
             </FormItem>
           )}
@@ -271,61 +321,65 @@ export default function RegistroForm({
           )}
         />
 
-        {/* ---- Seguridad ---- */}
-        <div className={cn(SECTION_LABEL, "mt-2")}>Seguridad</div>
+        {/* ---- Seguridad (sólo en el alta: la cuenta de Firebase ya tiene contraseña) ---- */}
+        {alta && (
+          <>
+            <div className={cn(SECTION_LABEL, "mt-2")}>Seguridad</div>
 
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel required>Contraseña</FormLabel>
-              <FormControl>
-                <TextField
-                  {...field}
-                  icon={<Lock />}
-                  type={showPw ? "text" : "password"}
-                  placeholder="Mínimo 8 caracteres"
-                  autoComplete="new-password"
-                  rightSlot={
-                    <EyeToggle
-                      shown={showPw}
-                      onToggle={() => setShowPw((s) => !s)}
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Contraseña</FormLabel>
+                  <FormControl>
+                    <TextField
+                      {...field}
+                      icon={<Lock />}
+                      type={showPw ? "text" : "password"}
+                      placeholder="Mínimo 8 caracteres"
+                      autoComplete="new-password"
+                      rightSlot={
+                        <EyeToggle
+                          shown={showPw}
+                          onToggle={() => setShowPw((s) => !s)}
+                        />
+                      }
                     />
-                  }
-                />
-              </FormControl>
-              {field.value && <PasswordMeter value={field.value} />}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                  </FormControl>
+                  {field.value && <PasswordMeter value={field.value} />}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="confirm"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel required>Confirmar contraseña</FormLabel>
-              <FormControl>
-                <TextField
-                  {...field}
-                  icon={<Lock />}
-                  type={showConfirm ? "text" : "password"}
-                  placeholder="Repetí la contraseña"
-                  autoComplete="new-password"
-                  rightSlot={
-                    <EyeToggle
-                      shown={showConfirm}
-                      onToggle={() => setShowConfirm((s) => !s)}
+            <FormField
+              control={form.control}
+              name="confirm"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Confirmar contraseña</FormLabel>
+                  <FormControl>
+                    <TextField
+                      {...field}
+                      icon={<Lock />}
+                      type={showConfirm ? "text" : "password"}
+                      placeholder="Repetí la contraseña"
+                      autoComplete="new-password"
+                      rightSlot={
+                        <EyeToggle
+                          shown={showConfirm}
+                          onToggle={() => setShowConfirm((s) => !s)}
+                        />
+                      }
                     />
-                  }
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
 
         {/* ---- Términos y condiciones ---- */}
         <FormField
@@ -389,19 +443,40 @@ export default function RegistroForm({
             className="w-full"
           >
             {form.formState.isSubmitting ? (
-              "Creando tu cuenta…"
-            ) : (
+              alta ? (
+                "Creando tu cuenta…"
+              ) : (
+                "Guardando tus datos…"
+              )
+            ) : alta ? (
               <>
                 <UserPlus className="size-[18px]" /> Registrarse
               </>
+            ) : (
+              <>
+                <UserCheck className="size-[18px]" /> Completar registro
+              </>
             )}
           </Button>
-          <div className="mt-3.5 text-center text-[13.5px] text-fg-2">
-            ¿Ya tenés cuenta?{" "}
-            <a href="/acceso" className="font-semibold text-green-800">
-              Iniciá sesión
-            </a>
-          </div>
+          {alta ? (
+            <div className="mt-3.5 text-center text-[13.5px] text-fg-2">
+              ¿Ya tenés cuenta?{" "}
+              <a href="/acceso" className="font-semibold text-green-800">
+                Iniciá sesión
+              </a>
+            </div>
+          ) : (
+            <div className="mt-3.5 text-center text-[13.5px] text-fg-2">
+              ¿No es tu cuenta?{" "}
+              <button
+                type="button"
+                onClick={() => cerrarSesion()}
+                className="cursor-pointer font-semibold text-green-800"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          )}
         </div>
       </form>
     </Form>

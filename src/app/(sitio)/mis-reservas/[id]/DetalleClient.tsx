@@ -1,35 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  ChevronRight, ArrowLeft, MapPin, Download, MessageCircle, XCircle, ReceiptText,
-  Map as MapIcon, CalendarDays, Clock, Users, Star,
+  ChevronRight, ArrowLeft, MapPin, Download, ReceiptText, CalendarDays, Clock, Users,
+  SearchX, Loader,
 } from "lucide-react";
-import Photo from "@/components/landing/Photo";
-import { ESTADO_TONE, ESTADO_LABEL, reservaTotal } from "@/data/reservas";
-import type { EstadoReserva, Reserva } from "@/types/reservas";
+import Photo, { seedDeId } from "@/components/landing/Photo";
+import AsyncBoundary from "@/components/AsyncBoundary";
+import { EstadoBadge, Skeleton } from "@/components/ui";
+import { metaEstadoReserva } from "@/data/reservas";
+import { fmtDiaLocal, fmtFranja, moneyAr } from "@/lib/format";
+import { useReserva } from "@/hooks/useReservas";
+import type { ReservaDetalle } from "@/types/reservas";
 import { descargarComprobante } from "./comprobante";
-import { LocationMap, Toast, CancelarReservaModal, ValorarModal, ContactPanel, type ToastData } from "./DetalleParts";
-
-const TONE_VARS: Record<string, { bg: string; fg: string }> = {
-  warning: { bg: "var(--warning-fill)", fg: "var(--warning-fg)" },
-  success: { bg: "var(--success-fill)", fg: "var(--success-fg)" },
-  danger: { bg: "var(--danger-fill)", fg: "var(--danger-fg)" },
-};
-
-function Pill({ estado }: { estado: EstadoReserva }) {
-  const t = TONE_VARS[ESTADO_TONE[estado]];
-  return <span style={{ display: "inline-flex", alignItems: "center", borderRadius: "var(--radius-pill)", padding: "4px 12px", fontSize: 12, fontWeight: 700, background: t.bg, color: t.fg }}>{ESTADO_LABEL[estado]}</span>;
-}
 
 function MetaItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 9, minWidth: 0 }}>
-      <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--cream-tert)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
-      <div style={{ minWidth: 0, lineHeight: 1.2 }}>
-        <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--fg-3)", fontWeight: 600 }}>{label}</div>
-        <div style={{ fontSize: 13.5, color: "var(--fg-1)", fontWeight: 500, marginTop: 3 }}>{value}</div>
+    <div className="flex min-w-0 items-start gap-[9px]">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-cream-tert text-green-800">{icon}</div>
+      <div className="min-w-0 leading-[1.2]">
+        <div className="text-[10.5px] font-semibold tracking-[.08em] text-fg-3 uppercase">{label}</div>
+        <div className="mt-[3px] text-[13.5px] font-medium text-fg-1">{value}</div>
       </div>
     </div>
   );
@@ -37,159 +30,192 @@ function MetaItem({ icon, label, value }: { icon: React.ReactNode; label: string
 
 function Bloque({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <section className="card" style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 22px", borderBottom: "1px solid var(--cream-tert)" }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--green-050)", display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
-        <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 17, color: "var(--fg-1)", margin: 0 }}>{title}</h2>
+    <section className="overflow-hidden rounded-lg border border-outline-variant bg-surface">
+      <div className="flex items-center gap-2.5 border-b border-cream-tert px-[22px] py-4">
+        <div className="flex size-8 items-center justify-center rounded-lg bg-green-050 text-green-800">{icon}</div>
+        <h2 className="font-display text-[17px] font-semibold text-fg-1">{title}</h2>
       </div>
-      <div style={{ padding: 22 }}>{children}</div>
+      <div className="p-[22px]">{children}</div>
     </section>
   );
 }
 
-export default function DetalleClient({ reserva }: { reserva: Reserva }) {
-  const [chat, setChat] = useState(false);
-  const [valorando, setValorando] = useState(false);
-  const [cancelando, setCancelando] = useState(false);
-  const [estado, setEstado] = useState<EstadoReserva>(reserva.estado);
-  const [toast, setToast] = useState<ToastData | null>(null);
+function Cabecera({ r }: { r: ReservaDetalle }) {
+  const meta = metaEstadoReserva(r.estado);
+  return (
+    <div className="mb-6 overflow-hidden rounded-lg border border-outline-variant bg-surface">
+      <div className="relative">
+        {/* TODO backend: ConsultarReservaDTO todavía no trae fotos; mientras, el degradado por actividad. */}
+        <Photo seed={seedDeId(r.actividadId || r.id)} height={150} radius={0} />
+        <span className="absolute top-3.5 left-4 max-w-[calc(100%-32px)] truncate rounded-full bg-black/35 px-2.5 py-1 font-mono text-xs tracking-[.04em] text-white">
+          {r.id}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-start justify-between gap-6 px-6 pt-5 pb-[22px]">
+        <div className="min-w-[240px] flex-1">
+          <div className="mb-2.5">
+            <EstadoBadge tone={meta.tone}>{r.estado || "Sin estado"}</EstadoBadge>
+          </div>
+          {r.actividadId ? (
+            <Link href={`/explorar/${r.actividadId}`} className="font-display text-[25px] leading-[1.2] font-bold text-green-800 no-underline hover:underline">
+              {r.actividad || "Actividad sin nombre"}
+            </Link>
+          ) : (
+            <span className="font-display text-[25px] leading-[1.2] font-bold text-fg-1">{r.actividad || "Actividad sin nombre"}</span>
+          )}
+          <div className="mt-2.5 flex flex-wrap items-center gap-[7px] text-[14.5px] text-fg-2">
+            <MapPin size={16} className="text-brown-700" />
+            {r.establecimientoId ? (
+              <Link href={`/establecimientos/${r.establecimientoId}`} className="font-semibold text-green-800 no-underline hover:underline">
+                {r.establecimiento || "Establecimiento"}
+              </Link>
+            ) : (
+              <span className="font-semibold text-fg-1">{r.establecimiento || "—"}</span>
+            )}
+            {r.ubicacion && <span className="text-fg-3">· {r.ubicacion}</span>}
+          </div>
+        </div>
+        <button type="button" className="btn btn-neutral" onClick={() => descargarComprobante(r)}>
+          <Download size={17} /> Descargar comprobante
+        </button>
+      </div>
+    </div>
+  );
+}
 
-  const finalizada = estado === "finalizada";
-  const cancelable = estado === "pendiente";
-  const total = reservaTotal(reserva);
-  const r = reserva;
+function Asistentes({ r }: { r: ReservaDetalle }) {
+  return (
+    <Bloque icon={<ReceiptText size={17} />} title="Información principal">
+      <div className="grid grid-cols-1 gap-3.5 border-b border-cream-tert pb-5 sm:grid-cols-3">
+        <MetaItem icon={<CalendarDays size={15} />} label="Fecha" value={r.inicio ? fmtDiaLocal(r.inicio) : "—"} />
+        <MetaItem icon={<Clock size={15} />} label="Horario" value={fmtFranja(r.inicio, r.fin) ?? "—"} />
+        <MetaItem icon={<Users size={15} />} label="Personas" value={`${r.personas} ${r.personas === 1 ? "persona" : "personas"}`} />
+      </div>
+
+      <div className="t-label mt-5 mb-3">ASISTENTES Y DESGLOSE</div>
+      {r.asistentes.length === 0 ? (
+        <p className="text-sm text-fg-3">La reserva no trae el detalle de asistentes.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[420px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-cream-tert text-left text-[11px] tracking-[.06em] text-fg-3 uppercase">
+                <th scope="col" className="w-10 py-2 pr-3 font-semibold">#</th>
+                <th scope="col" className="py-2 pr-3 font-semibold">Nombre</th>
+                <th scope="col" className="py-2 pr-3 font-semibold">Rango etario</th>
+                <th scope="col" className="py-2 text-right font-semibold">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.asistentes.map((a) => (
+                <tr key={a.renglon} className="border-b border-cream-tert">
+                  <td className="py-2.5 pr-3 font-mono text-[13px] text-fg-3">{a.renglon}</td>
+                  <td className="py-2.5 pr-3 font-medium text-fg-1">{a.nombre || "—"}</td>
+                  <td className="py-2.5 pr-3 text-fg-2">{a.rangoEtario || "—"}</td>
+                  <td className="py-2.5 text-right font-mono font-semibold text-fg-1">{moneyAr(a.subtotal)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center justify-between rounded-[var(--radius)] bg-green-050 px-[18px] py-3.5">
+        <div>
+          <div className="text-sm font-semibold text-fg-1">Total</div>
+          <div className="mt-0.5 text-xs text-fg-3">{r.personas} {r.personas === 1 ? "persona" : "personas"}</div>
+        </div>
+        <div className="font-mono text-[22px] font-bold text-green-800">{moneyAr(r.total)}</div>
+      </div>
+    </Bloque>
+  );
+}
+
+function DetalleSkeleton() {
+  return (
+    <>
+      <div className="mb-6 overflow-hidden rounded-lg border border-outline-variant bg-surface">
+        <Skeleton className="h-[150px] rounded-none" />
+        <div className="px-6 pt-5 pb-[22px]">
+          <Skeleton className="h-6 w-24 rounded-pill" />
+          <Skeleton className="mt-3 h-7 w-[55%]" />
+          <Skeleton className="mt-3 h-4 w-[40%]" />
+        </div>
+      </div>
+      <div className="rounded-lg border border-outline-variant bg-surface p-[22px]">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+          {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-8" />)}
+        </div>
+        <div className="mt-6 flex flex-col gap-3">
+          {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-5" />)}
+        </div>
+        <Skeleton className="mt-4 h-14" />
+      </div>
+    </>
+  );
+}
+
+function NoEncontrada() {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-sand bg-surface px-6 py-16 text-center">
+      <div className="flex size-16 items-center justify-center rounded-full bg-cream-tert text-brown-700">
+        <SearchX size={28} />
+      </div>
+      <div className="font-display text-xl font-semibold text-fg-1">Reserva no encontrada</div>
+      <div className="max-w-[440px] text-[14.5px] leading-normal text-fg-2">
+        No encontramos esta reserva entre las tuyas. Puede que el enlace esté incompleto.
+      </div>
+      <Link href="/mis-reservas" className="btn btn-primary mt-2">
+        <ArrowLeft size={17} /> Volver a Mis reservas
+      </Link>
+    </div>
+  );
+}
+
+export default function DetalleClient({ id }: { id: string }) {
+  const router = useRouter();
+  const { reserva, isLoading, error, notFound, unauthenticated, reload } = useReserva(id);
+
+  // Ruta protegida: sin sesión, a la pantalla de login.
+  useEffect(() => {
+    if (unauthenticated) router.replace("/acceso");
+  }, [unauthenticated, router]);
+
+  if (unauthenticated) {
+    return (
+      <div className="px-7 py-[120px] text-center text-fg-3">
+        <Loader size={26} className="spin mx-auto" />
+        <div className="mt-3 text-sm">Redirigiendo…</div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ maxWidth: 1160, margin: "0 auto", padding: "32px 28px 80px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--fg-3)", fontSize: 13, marginBottom: 14 }}>
-        <Link href="/" style={{ color: "var(--fg-3)", textDecoration: "none" }}>Inicio</Link>
+    <div className="mx-auto max-w-[1160px] px-7 pt-8 pb-20">
+      <div className="mb-3.5 flex items-center gap-2.5 text-[13px] text-fg-3">
+        <Link href="/" className="text-fg-3 no-underline">Inicio</Link>
         <ChevronRight size={14} />
-        <Link href="/mis-reservas" style={{ color: "var(--fg-2)", textDecoration: "none" }}>Mis reservas</Link>
+        <Link href="/mis-reservas" className="text-fg-2 no-underline">Mis reservas</Link>
         <ChevronRight size={14} />
-        <span style={{ color: "var(--fg-2)", fontWeight: 500 }}>Detalle de la reserva</span>
+        <span className="font-medium text-fg-2">Detalle de la reserva</span>
       </div>
 
-      <Link href="/mis-reservas" className="btn btn-neutral btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 16 }}>
-        <ArrowLeft size={16} /> Volver a mis reservas
+      <Link href="/mis-reservas" className="btn btn-neutral btn-sm mb-4 inline-flex items-center gap-[7px]">
+        <ArrowLeft size={16} /> Volver a Mis reservas
       </Link>
 
-      <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 34, color: "var(--fg-1)", margin: "0 0 24px", letterSpacing: "-.01em" }}>Detalle de la reserva</h1>
+      <h1 className="mb-6 font-display text-[34px] font-bold tracking-[-.01em] text-fg-1">Detalle de la reserva</h1>
 
-      {/* Bloque superior */}
-      <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 24 }}>
-        <div style={{ position: "relative" }}>
-          <Photo seed={r.seed} height={150} radius={0} caption={r.photo} />
-          <span style={{ position: "absolute", top: 14, left: 16, fontFamily: "var(--font-mono)", fontSize: 12, color: "#fff", background: "rgba(0,0,0,.35)", padding: "4px 10px", borderRadius: 999, letterSpacing: ".04em" }}>{r.id}</span>
-        </div>
-        <div style={{ padding: "20px 24px 22px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, flexWrap: "wrap" }}>
-          <div style={{ minWidth: 240, flex: 1 }}>
-            <div style={{ marginBottom: 10 }}><Pill estado={estado} /></div>
-            <Link href="/explorar" style={{ display: "inline-block", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 25, lineHeight: 1.2, color: "var(--green-800)", textDecoration: "none", borderBottom: "2px solid transparent" }}>{r.titulo}</Link>
-            <div style={{ marginTop: 10, fontSize: 14.5, color: "var(--fg-2)", display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-              <MapPin size={16} color="var(--brown-700)" />
-              <Link href="/establecimientos" style={{ color: "var(--green-800)", fontWeight: 600, textDecoration: "none" }}>{r.finca}</Link>
-              <span style={{ color: "var(--fg-3)" }}>· {r.loc}</span>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
-            <button type="button" className="btn btn-neutral" onClick={() => descargarComprobante(r)}><Download size={17} /> Descargar comprobante</button>
-            <button type="button" className="btn btn-neutral" onClick={() => setChat(true)} style={{ borderColor: "var(--brown-500)", color: "var(--brown-800)" }}><MessageCircle size={17} /> Contactar establecimiento</button>
-            {cancelable && (
-              <button type="button" className="btn" onClick={() => setCancelando(true)} style={{ background: "var(--surface)", color: "var(--danger)", border: "1px solid var(--danger)", boxShadow: "inset 0 -2px 0 rgba(168,46,46,.18)", cursor: "pointer" }}>
-                <XCircle size={17} color="var(--danger)" /> Cancelar reserva
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Info principal + Mapa */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 24, alignItems: "start" }} className="det-grid">
-        <Bloque icon={<ReceiptText size={17} color="var(--green-800)" />} title="Información principal">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 14, paddingBottom: 20, borderBottom: "1px solid var(--cream-tert)" }}>
-            <MetaItem icon={<CalendarDays size={15} color="var(--green-800)" />} label="Fecha" value={r.fechaLabel} />
-            <MetaItem icon={<Clock size={15} color="var(--green-800)" />} label="Horario" value={r.horario} />
-            <MetaItem icon={<Users size={15} color="var(--green-800)" />} label="Personas" value={`${r.personas} ${r.personas === 1 ? "persona" : "personas"}`} />
-          </div>
-
-          {r.participantes.length > 0 && (
-            <div style={{ paddingTop: 20, borderBottom: "1px solid var(--cream-tert)", paddingBottom: 4 }}>
-              <div className="t-label" style={{ marginBottom: 12 }}>PARTICIPANTES</div>
-              <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-                {r.participantes.map((p, i) => (
-                  <li key={i} style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 8, borderBottom: i < r.participantes.length - 1 ? "1px solid var(--cream-tert)" : "none" }}>
-                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--green-050)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 13, color: "var(--green-800)" }}>
-                      {p.nombre.split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase()}
-                    </div>
-                    <div style={{ fontSize: 14, color: "var(--fg-1)" }}>
-                      <span style={{ fontWeight: 500 }}>{p.nombre}</span>
-                      <span style={{ color: "var(--fg-3)" }}> ({p.categoria})</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="t-label" style={{ margin: "20px 0 12px" }}>DESGLOSE DE PAGO</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {r.desglose.map((g, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--cream-tert)" }}>
-                <div>
-                  <div style={{ fontSize: 14, color: "var(--fg-1)", fontWeight: 500 }}>{g.grupo}</div>
-                  <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 2, fontFamily: "var(--font-mono)" }}>{g.cantidad} × $ {g.precio.toLocaleString("es-AR")}</div>
-                </div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 14.5, fontWeight: 600, color: "var(--fg-1)" }}>$ {(g.cantidad * g.precio).toLocaleString("es-AR")}</div>
-              </div>
-            ))}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12, padding: "14px 18px", background: "var(--green-050)", borderRadius: "var(--radius)" }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg-1)" }}>Total</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 22, color: "var(--green-800)" }}>$ {total.toLocaleString("es-AR")}</div>
-            </div>
-          </div>
-        </Bloque>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <Bloque icon={<MapIcon size={17} color="var(--green-800)" />} title="Mapa y ubicación">
-            <LocationMap />
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 16 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--cream-tert)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MapPin size={16} color="var(--green-800)" /></div>
-              <div style={{ lineHeight: 1.4 }}>
-                <div style={{ fontSize: 14.5, color: "var(--fg-1)", fontWeight: 600 }}>{r.finca}</div>
-                <div style={{ fontSize: 13.5, color: "var(--fg-2)", marginTop: 2 }}>{r.direccion}</div>
-              </div>
-            </div>
-          </Bloque>
-
-          <section className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Star size={18} color="var(--brown-700)" />
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16, color: "var(--fg-1)" }}>Valorar actividad</div>
-            </div>
-            <p style={{ margin: 0, fontSize: 13.5, color: "var(--fg-2)", lineHeight: 1.5 }}>
-              {finalizada ? "Contanos cómo fue tu experiencia. Tu valoración ayuda a otros visitantes y al establecimiento." : "Vas a poder valorar la actividad una vez que esté finalizada."}
-            </p>
-            <button type="button" className="btn btn-primary" disabled={!finalizada} onClick={() => finalizada && setValorando(true)} style={{ width: "100%", justifyContent: "center" }}>
-              <Star size={18} /> Valorar actividad
-            </button>
-          </section>
-        </div>
-      </div>
-
-      {chat && <ContactPanel r={r} onClose={() => setChat(false)} />}
-      {cancelando && (
-        <CancelarReservaModal
-          r={r}
-          onClose={() => setCancelando(false)}
-          onConfirm={() => { setCancelando(false); setEstado("cancelada"); setToast({ tone: "success", title: "Reserva cancelada", msg: "Reserva cancelada exitosamente. Hemos devuelto tu dinero." }); }}
-        />
-      )}
-      {valorando && (
-        <ValorarModal r={r} onCancel={() => setValorando(false)} onResult={(t) => { setValorando(false); setToast(t); }} />
-      )}
-      <Toast toast={toast} onClose={() => setToast(null)} />
-
-      <style>{`@media (max-width: 880px) { .det-grid { grid-template-columns: 1fr !important; } }`}</style>
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<DetalleSkeleton />} pad={72}>
+        {notFound || !reserva ? (
+          <NoEncontrada />
+        ) : (
+          <>
+            <Cabecera r={reserva} />
+            <Asistentes r={reserva} />
+          </>
+        )}
+      </AsyncBoundary>
     </div>
   );
 }

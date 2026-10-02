@@ -58,9 +58,11 @@ export interface Credenciales {
 /**
  * Resultado de la autenticación.
  * - `badCreds` / `baja`: resultados de dominio (Firebase o backend).
+ * - `sinPerfil`: credenciales válidas pero sin perfil en el backend (alta a
+ *   medias) → se lo lleva a completar el registro.
  * - `error`: fallo técnico (red, backend caído) — mensaje genérico en la UI.
  */
-export type AuthCode = "ok" | "badCreds" | "baja" | "error";
+export type AuthCode = "ok" | "badCreds" | "baja" | "sinPerfil" | "error";
 
 export interface AuthResult {
   ok: boolean;
