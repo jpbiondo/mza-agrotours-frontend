@@ -336,7 +336,7 @@ export default function ConversacionChat({
           </p>
         )}
         <div className={cn(
-          "flex items-end gap-2.5 rounded-[14px] border border-sand bg-cream-bg py-2 pr-2 pl-3.5 focus-within:border-green-700",
+          "flex items-center gap-2.5 rounded-[14px] border border-sand bg-cream-bg py-2 pr-2 pl-3.5 focus-within:border-green-700",
           deBaja && "opacity-60",
         )}>
           <textarea
