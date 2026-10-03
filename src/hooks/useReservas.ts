@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
-import type { AsistenteReserva, ReservaDetalle, ReservaResumen } from "@/types/reservas";
+import { conToken } from "@/lib/sesion";
+import type {
+  AsistenteReserva, CondicionCancelacion, ErrorCancelacion, ReservaDetalle, ReservaResumen,
+  ResultadoCancelacion,
+} from "@/types/reservas";
 
 /**
  * Item crudo de GET /reserva/get (ListarReservaDTO). Los campos nulos del DTO
@@ -184,8 +188,20 @@ function aDetalle(r: ReservaDetalleBackend): ReservaDetalle {
   };
 }
 
+/**
+ * Sólo se cancela una reserva Pagada cuya actividad todavía no terminó. Es la
+ * misma regla que aplica el backend (que igual la valida): acá sólo decide si
+ * se muestra el botón. Sin fecha de fin se usa la de inicio; sin ninguna, no.
+ */
+function esCancelable(r: ReservaDetalle, ahora: number): boolean {
+  const limite = r.fin ?? r.inicio;
+  return r.estado === "Pagada" && !!limite && limite.getTime() > ahora;
+}
+
 interface UseReservaReturn {
   reserva: ReservaDetalle | null;
+  /** Se calcula al llegar la reserva: `Date.now()` no puede ir en el render. */
+  cancelable: boolean;
   isLoading: boolean;
   error: string | null;
   /**
@@ -204,6 +220,7 @@ export function useReserva(id: string): UseReservaReturn {
   const [cargado, setCargado] = useState<{
     clave: string;
     reserva: ReservaDetalle | null;
+    cancelable: boolean;
     error: string | null;
     notFound: boolean;
     unauthenticated: boolean;
@@ -219,8 +236,12 @@ export function useReserva(id: string): UseReservaReturn {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!active) return;
       const fin = (
-        datos: Partial<{ reserva: ReservaDetalle; error: string; notFound: boolean; unauthenticated: boolean }>,
-      ) => setCargado({ clave, reserva: null, error: null, notFound: false, unauthenticated: false, ...datos });
+        datos: Partial<{
+          reserva: ReservaDetalle; cancelable: boolean; error: string; notFound: boolean; unauthenticated: boolean;
+        }>,
+      ) => setCargado({
+        clave, reserva: null, cancelable: false, error: null, notFound: false, unauthenticated: false, ...datos,
+      });
 
       if (!user) {
         fin({ unauthenticated: true });
@@ -236,7 +257,12 @@ export function useReserva(id: string): UseReservaReturn {
           return;
         }
         // Un ok sin `data` no debería pasar; se trata como no encontrada.
-        fin(env.data && typeof env.data === "object" ? { reserva: aDetalle(env.data) } : { notFound: true });
+        if (!env.data || typeof env.data !== "object") {
+          fin({ notFound: true });
+          return;
+        }
+        const reserva = aDetalle(env.data);
+        fin({ reserva, cancelable: esCancelable(reserva, Date.now()) });
       } catch (e) {
         if (!active) return;
         if (e instanceof ApiError && (e.status === 404 || e.code === "notFound")) {
@@ -257,12 +283,93 @@ export function useReserva(id: string): UseReservaReturn {
 
   return {
     reserva: alDia ? cargado.reserva : null,
+    cancelable: alDia ? cargado.cancelable : false,
     isLoading: !alDia,
     error: alDia ? cargado.error : null,
     notFound: alDia ? cargado.notFound : false,
     unauthenticated: alDia ? cargado.unauthenticated : false,
     reload,
   };
+}
+
+/* ---- Cancelación --------------------------------------------------------- */
+
+const CONDICIONES: Record<string, CondicionCancelacion> = {
+  CancelacionConReembolso: "conReembolso",
+  CancelacionSinReembolso: "sinReembolso",
+};
+
+const RESULTADOS: Record<string, ResultadoCancelacion> = {
+  CanceladaSinReembolso: "sinReembolso",
+  ReembolsoRealizado: "reembolsado",
+  ReembolsoEnProceso: "reembolsoEnProceso",
+  ReembolsoManualProductor: "reembolsoManual",
+};
+
+const ERRORES: Record<string, ErrorCancelacion> = {
+  notFound: "noEncontrada",
+  forbiddenState: "estadoInvalido",
+  forbiddenDate: "yaTermino",
+};
+
+/** Error de cualquiera de los dos pedidos, ya en nuestro vocabulario. Sin code conocido, técnico. */
+function aErrorCancelacion(code: string | undefined): ErrorCancelacion {
+  return (code && ERRORES[code]) || "tecnico";
+}
+
+type RespuestaCancelacion<T> = { ok: true; valor: T } | { ok: false; error: ErrorCancelacion };
+
+/**
+ * Los dos endpoints contestan igual: `{ resultado }` en el envelope, o un 403/404
+ * con code. Un `resultado` que no conocemos no es error: se mapea a "desconocido".
+ */
+async function pedirCancelacion<T>(
+  path: string,
+  method: "GET" | "POST",
+  mapa: Record<string, T>,
+  desconocido: T,
+): Promise<RespuestaCancelacion<T>> {
+  try {
+    const res = await conToken((token) => apiFetch<unknown>(path, { method, token }));
+    const env = comoEnvelope<{ resultado?: string | null } | null>(res);
+    if (!env.ok) return { ok: false, error: aErrorCancelacion(env.code) };
+    const resultado = env.data?.resultado ?? "";
+    return { ok: true, valor: mapa[resultado] ?? desconocido };
+  } catch (e) {
+    if (e instanceof ApiError) return { ok: false, error: aErrorCancelacion(e.code) };
+    return { ok: false, error: "tecnico" };
+  }
+}
+
+/**
+ * Cancelación de una reserva del visitante: primero se consulta qué pasaría
+ * (GET, no cambia nada) y, si confirma, se cancela (POST). Las dos las dispara
+ * el usuario, así que van con `conToken`.
+ */
+export function useCancelarReserva(idReserva: string) {
+  const [cancelando, setCancelando] = useState(false);
+  const id = encodeURIComponent(idReserva);
+
+  // Estable por id: el modal la usa como dependencia del efecto que consulta al abrir.
+  const consultarCondicion = useCallback(
+    () => pedirCancelacion<CondicionCancelacion>(
+      `/reserva/cancelarReservaCondicion/${id}`, "GET", CONDICIONES, "desconocida",
+    ),
+    [id],
+  );
+
+  async function cancelar() {
+    setCancelando(true);
+    try {
+      return await pedirCancelacion<ResultadoCancelacion>(
+        `/reserva/cancelarReserva/${id}`, "POST", RESULTADOS, "desconocido",
+      );
+    } finally {
+      setCancelando(false);
+    }
+  }
+
+  return { consultarCondicion, cancelar, cancelando };
 }
 
 /* ---- Contrato de POST /reserva/reservar ----------------------------------- */

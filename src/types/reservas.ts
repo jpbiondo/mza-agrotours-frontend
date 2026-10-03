@@ -36,3 +36,20 @@ export interface ReservaDetalle extends ReservaResumen {
   /** Ordenados por renglón. */
   asistentes: AsistenteReserva[];
 }
+
+/** Qué pasaría si se cancela ahora (GET /reserva/cancelarReservaCondicion). */
+export type CondicionCancelacion = "conReembolso" | "sinReembolso" | "desconocida";
+
+/** Qué pasó al cancelar (POST /reserva/cancelarReserva). */
+export type ResultadoCancelacion =
+  | "sinReembolso"
+  /** Pago manual: se devolvió en el acto. */
+  | "reembolsado"
+  /** Se pidió a Mercado Pago; se confirma más tarde. */
+  | "reembolsoEnProceso"
+  /** Mercado Pago lo rechazó: lo devuelve el establecimiento a mano. */
+  | "reembolsoManual"
+  | "desconocido";
+
+/** Por qué no se pudo consultar o cancelar. `tecnico` = red, 5xx o un code que no conocemos. */
+export type ErrorCancelacion = "noEncontrada" | "estadoInvalido" | "yaTermino" | "tecnico";
