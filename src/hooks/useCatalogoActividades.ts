@@ -283,39 +283,47 @@ export function useActividadPublica(id: string): AsyncState<ActividadPublica | n
 }
 
 /**
- * Faceta de cultivos: el `count` es cuántas actividades publicadas trabaja cada
- * uno. El backend sólo cuenta las publicadas, así que toda opción da resultados.
- */
-export function useFiltroCultivosActividad(): AsyncState<FilterOption[]> {
-  return useAsync<FilterOption[]>(() =>
-    listarFiltro(FILTRO_CULTIVOS, "No pudimos cargar los cultivos"),
-  );
-}
-
-/**
- * Query de la faceta de departamentos: mismos criterios que el listado salvo el
- * propio departamento, para que el conteo diga cuántas quedarían al elegirlo.
+ * Query de una faceta: los mismos criterios que el listado salvo la propia
+ * faceta, para que el conteo diga cuántas quedarían al elegir cada opción.
  * Sin parámetros el backend cuenta sobre todo el catálogo.
  */
-function queryDepartamentos({ busqueda, cultivosIds }: FiltrosDepartamentos): string {
+function queryFaceta({ busqueda, cultivosIds = [], departamentoId = null }: FiltrosFaceta): string {
   const qs = new URLSearchParams();
   const texto = busqueda.trim();
   if (texto) qs.set("busqueda", texto);
   for (const id of cultivosIds) qs.append("cultivosIds", id);
+  if (departamentoId) qs.set("departamentoId", departamentoId);
   const s = qs.toString();
   return s ? `?${s}` : "";
 }
 
-type FiltrosDepartamentos = Pick<ConsultaActividades, "busqueda" | "cultivosIds">;
+type FiltrosFaceta = Pick<ConsultaActividades, "busqueda"> &
+  Partial<Pick<ConsultaActividades, "cultivosIds" | "departamentoId">>;
+
+/**
+ * Faceta de cultivos: el `count` es cuántas actividades publicadas trabaja cada
+ * uno. Depende de la búsqueda y del departamento elegido, así que se vuelve a
+ * pedir cuando cambian.
+ */
+export function useFiltroCultivosActividad(
+  filtros: Pick<ConsultaActividades, "busqueda" | "departamentoId">,
+): AsyncState<FilterOption[]> {
+  return useAsync<FilterOption[]>(
+    () => listarFiltro(`${FILTRO_CULTIVOS}${queryFaceta(filtros)}`, "No pudimos cargar los cultivos"),
+    [filtros.busqueda, filtros.departamentoId],
+  );
+}
 
 /**
  * Faceta de departamentos, con la misma forma que la de cultivos. El `count`
  * depende de la búsqueda y los cultivos elegidos, así que se vuelve a pedir
  * cuando cambian.
  */
-export function useFiltroDepartamentosActividad(filtros: FiltrosDepartamentos): AsyncState<FilterOption[]> {
+export function useFiltroDepartamentosActividad(
+  filtros: Pick<ConsultaActividades, "busqueda" | "cultivosIds">,
+): AsyncState<FilterOption[]> {
   return useAsync<FilterOption[]>(
-    () => listarFiltro(`${FILTRO_DEPARTAMENTOS}${queryDepartamentos(filtros)}`, "No pudimos cargar los departamentos"),
+    () => listarFiltro(`${FILTRO_DEPARTAMENTOS}${queryFaceta(filtros)}`, "No pudimos cargar los departamentos"),
     [filtros.busqueda, filtros.cultivosIds],
   );
 }

@@ -115,8 +115,8 @@ export default function CatalogClient() {
   // Búsqueda, filtros y paginado los resuelve el backend, así que cualquier
   // cambio vuelve a pedir el listado.
   const { data, isLoading, error, reload } = useCatalogoActividades({ busqueda, cultivosIds, departamentoId, page, size: PAGE_SIZE });
-  const cultivos = useFiltroCultivosActividad();
-  // El conteo por departamento depende de la búsqueda y los cultivos elegidos.
+  // El conteo de cada faceta depende de la búsqueda y de lo elegido en la otra.
+  const cultivos = useFiltroCultivosActividad({ busqueda, departamentoId });
   const departamentos = useFiltroDepartamentosActividad({ busqueda, cultivosIds });
 
   const total = data?.totalElements ?? 0;
