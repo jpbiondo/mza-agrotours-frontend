@@ -292,9 +292,30 @@ export function useFiltroCultivosActividad(): AsyncState<FilterOption[]> {
   );
 }
 
-/** Faceta de departamentos, con la misma forma que la de cultivos. */
-export function useFiltroDepartamentosActividad(): AsyncState<FilterOption[]> {
-  return useAsync<FilterOption[]>(() =>
-    listarFiltro(FILTRO_DEPARTAMENTOS, "No pudimos cargar los departamentos"),
+/**
+ * Query de la faceta de departamentos: mismos criterios que el listado salvo el
+ * propio departamento, para que el conteo diga cuántas quedarían al elegirlo.
+ * Sin parámetros el backend cuenta sobre todo el catálogo.
+ */
+function queryDepartamentos({ busqueda, cultivosIds }: FiltrosDepartamentos): string {
+  const qs = new URLSearchParams();
+  const texto = busqueda.trim();
+  if (texto) qs.set("busqueda", texto);
+  for (const id of cultivosIds) qs.append("cultivosIds", id);
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
+type FiltrosDepartamentos = Pick<ConsultaActividades, "busqueda" | "cultivosIds">;
+
+/**
+ * Faceta de departamentos, con la misma forma que la de cultivos. El `count`
+ * depende de la búsqueda y los cultivos elegidos, así que se vuelve a pedir
+ * cuando cambian.
+ */
+export function useFiltroDepartamentosActividad(filtros: FiltrosDepartamentos): AsyncState<FilterOption[]> {
+  return useAsync<FilterOption[]>(
+    () => listarFiltro(`${FILTRO_DEPARTAMENTOS}${queryDepartamentos(filtros)}`, "No pudimos cargar los departamentos"),
+    [filtros.busqueda, filtros.cultivosIds],
   );
 }

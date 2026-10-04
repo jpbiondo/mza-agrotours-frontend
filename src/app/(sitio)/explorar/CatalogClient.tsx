@@ -116,7 +116,8 @@ export default function CatalogClient() {
   // cambio vuelve a pedir el listado.
   const { data, isLoading, error, reload } = useCatalogoActividades({ busqueda, cultivosIds, departamentoId, page, size: PAGE_SIZE });
   const cultivos = useFiltroCultivosActividad();
-  const departamentos = useFiltroDepartamentosActividad();
+  // El conteo por departamento depende de la búsqueda y los cultivos elegidos.
+  const departamentos = useFiltroDepartamentosActividad({ busqueda, cultivosIds });
 
   const total = data?.totalElements ?? 0;
   const hayFiltros = busqueda !== "" || cultivosIds.length > 0 || departamentoId !== null;
