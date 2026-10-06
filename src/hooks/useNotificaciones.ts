@@ -3,6 +3,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
+import { useNotificacionesStore } from "@/stores/notificacionesStore";
 import { NOTIF_PRESENTACION, NOTIF_PRESENTACION_DEFAULT } from "@/data/notificaciones";
 import { etiquetaFecha, rutaDeNotificacion } from "@/lib/notificaciones";
 import type { Notificacion } from "@/types/notificaciones";
@@ -97,6 +98,18 @@ function comoCantidad(res: unknown): number | null {
   return env.ok && typeof env.data === "number" && Number.isFinite(env.data) ? env.data : null;
 }
 
+/** Lo que trajo un refresco y todavía no se muestra. */
+interface Pendientes {
+  nuevas: Notificacion[];
+  /**
+   * Ninguna de la primera página estaba en la lista: entró más de una página
+   * de nuevas y no hay con qué empalmarlas. Al mostrarlas, la lista arranca de
+   * cero desde esa página.
+   */
+  corte: boolean;
+  hayMas: boolean;
+}
+
 interface Cargado {
   clave: string;
   notificaciones: Notificacion[];
@@ -105,6 +118,55 @@ interface Cargado {
   hayMas: boolean;
   noLeidas: number;
   error: string | null;
+  pendientes: Pendientes | null;
+}
+
+/** Pasa las pendientes a la lista: arriba de todo o, si hubo corte, en su lugar. */
+function incorporar(c: Cargado): Cargado {
+  const p = c.pendientes;
+  if (!p) return c;
+  if (p.corte) return { ...c, notificaciones: p.nuevas, pagina: 0, hayMas: p.hayMas, pendientes: null };
+  return { ...c, notificaciones: [...p.nuevas, ...c.notificaciones], pendientes: null };
+}
+
+/**
+ * Cruza una primera página recién pedida con lo que ya está en la lista. Las
+ * que ya estaban se reemplazan por la versión del servidor —trae la etiqueta
+ * de fecha al día y el `leida` que pudo poner otro dispositivo—, pero nunca
+ * vuelven a no leída: una marca optimista en vuelo todavía no llegó al
+ * servidor. Las nuevas quedan pendientes y, si no hay que retenerlas, entran.
+ */
+function fusionar(
+  c: Cargado,
+  pagina: { items: Notificacion[]; hayMas: boolean },
+  cantidad: number | null,
+  retener: boolean,
+): Cargado {
+  const delServidor = new Map(pagina.items.map((n) => [n.id, n]));
+  const notificaciones = c.notificaciones.map((n) => {
+    const s = delServidor.get(n.id);
+    return s ? { ...s, leida: n.leida || s.leida } : n;
+  });
+  const vistas = new Set(c.notificaciones.map((n) => n.id));
+  const nuevas = pagina.items.filter((n) => !vistas.has(n.id));
+  const fusionado: Cargado = {
+    ...c,
+    notificaciones,
+    noLeidas: cantidad ?? c.noLeidas + nuevas.filter((n) => !n.leida).length,
+    pendientes: nuevas.length
+      ? { nuevas, corte: nuevas.length === pagina.items.length, hayMas: pagina.hayMas }
+      : null,
+  };
+  return retener ? fusionado : incorporar(fusionado);
+}
+
+interface OpcionesNotificaciones {
+  /**
+   * Se consulta cuando llega un refresco: `true` deja las nuevas en espera en
+   * vez de meterlas arriba. La campana lo usa mientras el usuario está
+   * leyendo más abajo, para no correrle la lista.
+   */
+  retenerNuevas?: () => boolean;
 }
 
 type Resultado = { ok: boolean; code?: string };
@@ -127,6 +189,12 @@ interface UseNotificacionesReturn {
   marcarLeida: (id: string) => Promise<Resultado>;
   /** Marca como leídas todas las no leídas hasta la más nueva cargada. */
   marcarTodas: () => Promise<Resultado>;
+  /** Cuántas llegaron y quedaron en espera por `retenerNuevas`. */
+  nuevasPendientes: number;
+  /** Hubo más de una página de nuevas: la cuenta exacta no se sabe. */
+  nuevasDesbordan: boolean;
+  /** Pasa las que estaban en espera a la lista. */
+  mostrarNuevas: () => void;
 }
 
 /**
@@ -138,10 +206,14 @@ interface UseNotificacionesReturn {
  * La primera página sale al montar, así que va por `onAuthStateChanged`; las
  * siguientes y las marcas las dispara el usuario y van con `conToken`.
  *
- * TODO backend: no hay tiempo real todavía. La lista se refresca al montar y
- * con `reload`; cuando exista el push habrá que enganchar la invalidación acá.
+ * Cuando `<PushSync>` avisa que puede haber novedades (un push, la vuelta a la
+ * pestaña), se vuelven a pedir el contador y la primera página sin pasar por
+ * el skeleton, y se cruzan con lo cargado: ver `fusionar`.
  */
-export function useNotificaciones(establecimientoId?: string | null): UseNotificacionesReturn {
+export function useNotificaciones(
+  establecimientoId?: string | null,
+  opciones: OpcionesNotificaciones = {},
+): UseNotificacionesReturn {
   const path = basePath(establecimientoId);
   const [nonce, setNonce] = useState(0);
   /**
@@ -167,7 +239,10 @@ export function useNotificaciones(establecimientoId?: string | null): UseNotific
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!active) return;
       const fin = (datos: Partial<Omit<Cargado, "clave">>) =>
-        setCargado({ clave, notificaciones: [], pagina: 0, hayMas: false, noLeidas: 0, error: null, ...datos });
+        setCargado({
+          clave, notificaciones: [], pagina: 0, hayMas: false, noLeidas: 0, error: null, pendientes: null,
+          ...datos,
+        });
 
       if (!user) {
         fin({ error: "Necesitás iniciar sesión para ver tus notificaciones" });
@@ -215,6 +290,55 @@ export function useNotificaciones(establecimientoId?: string | null): UseNotific
     setErrorMas(false);
     setNonce((n) => n + 1);
   }, []);
+
+  /** Contador y primera página de nuevo, sin skeleton. Ver `fusionar`. */
+  async function refrescar() {
+    // Sin datos al día no hay qué refrescar: la carga en curso ya trae lo
+    // último. Con error, el aviso sirve de reintento.
+    if (!alDia) return;
+    if (cargado.error) {
+      reload();
+      return;
+    }
+    const de = clave;
+    try {
+      const [resLista, resCantidad] = await conToken((token) =>
+        Promise.all([
+          apiFetch<unknown>(urlPagina(path, 0), { token }),
+          apiFetch<unknown>(`${path}/no-leidas/cantidad`, { token }).catch(() => null),
+        ]),
+      );
+      const pagina = aPagina(resLista, 0);
+      if (!("items" in pagina)) return;
+      // Se pregunta al llegar la respuesta, no al pedirla: lo que importa es
+      // dónde está el usuario cuando las nuevas aparecerían.
+      const retener = retenerRef.current?.() ?? false;
+      actualizar(de, (c) => fusionar(c, pagina, comoCantidad(resCantidad), retener));
+    } catch {
+      // En silencio: lo que hay en pantalla sigue valiendo y el próximo aviso
+      // vuelve a intentar.
+    }
+  }
+
+  // Siempre la última versión, sin re-disparar el efecto por su identidad.
+  const refrescarRef = useRef(refrescar);
+  const retenerRef = useRef(opciones.retenerNuevas);
+  useEffect(() => {
+    refrescarRef.current = refrescar;
+    retenerRef.current = opciones.retenerNuevas;
+  });
+
+  // El primer valor es el de montar: ese no avisa nada, la carga inicial ya
+  // sale sola. Cada cambio después, sí.
+  const version = useNotificacionesStore((st) => st.version);
+  const versionVista = useRef(version);
+  useEffect(() => {
+    if (version === versionVista.current) return;
+    versionVista.current = version;
+    refrescarRef.current();
+  }, [version]);
+
+  const mostrarNuevas = useCallback(() => actualizar(clave, incorporar), [actualizar, clave]);
 
   async function cargarMas() {
     if (!alDia || !cargado.hayMas || cargado.error || pidiendoMas.current) return;
@@ -328,6 +452,9 @@ export function useNotificaciones(establecimientoId?: string | null): UseNotific
     cargarMas,
     marcarLeida,
     marcarTodas,
+    nuevasPendientes: alDia ? (cargado.pendientes?.nuevas.length ?? 0) : 0,
+    nuevasDesbordan: alDia ? (cargado.pendientes?.corte ?? false) : false,
+    mostrarNuevas,
   };
 }
 

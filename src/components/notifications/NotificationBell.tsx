@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle, Bell, CalendarX, Check, CheckCheck, FileCheck, FileClock, FileX, Loader, RotateCcw, Users,
+  AlertTriangle, ArrowUp, Bell, BellRing, CalendarX, Check, CheckCheck, FileCheck, FileClock, FileX, Loader, RotateCcw, Users,
   type LucideIcon,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { NOTIF_TONE } from "@/data/notificaciones";
 import { useNotificaciones } from "@/hooks/useNotificaciones";
+import { usePermisoPush } from "@/hooks/usePush";
 import { cn } from "@/lib/utils";
 import type { Notificacion } from "@/types/notificaciones";
 
@@ -18,13 +19,23 @@ const ICON: Record<string, LucideIcon> = {
 };
 
 export default function NotificationBell() {
+  const [open, setOpen] = useState(false);
+  /**
+   * Si la lista está scrolleada hasta arriba. Abierta y más abajo, las
+   * notificaciones que llegan por push quedan en espera detrás de un aviso:
+   * meterlas arriba correría lo que el usuario está leyendo (Chrome y Firefox
+   * lo compensan solos, Safari no).
+   */
+  const enTope = useRef(true);
   const {
     notificaciones, noLeidas, isLoading, error, reload,
     hayMas, cargandoMas, errorMas, cargarMas, marcarLeida, marcarTodas,
-  } = useNotificaciones();
+    nuevasPendientes, nuevasDesbordan, mostrarNuevas,
+  } = useNotificaciones(null, { retenerNuevas: () => open && !enTope.current });
+  const push = usePermisoPush();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
+  const lista = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -42,9 +53,27 @@ export default function NotificationBell() {
    */
   function onScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
+    enTope.current = el.scrollTop <= 0;
+    // Volvió arriba por su cuenta: ya no hay nada que correr.
+    if (enTope.current && nuevasPendientes > 0) mostrarNuevas();
     // Unos píxeles de tolerancia: con zoom el scroll queda en fracciones y
     // nunca llega a igualar el alto exacto.
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 4) cargarMas();
+  }
+
+  function toggle() {
+    // Al abrir, la lista arranca arriba de todo, así que lo que haya quedado
+    // en espera de la vez anterior entra directo.
+    if (!open) {
+      enTope.current = true;
+      mostrarNuevas();
+    }
+    setOpen((o) => !o);
+  }
+
+  function verNuevas() {
+    mostrarNuevas();
+    lista.current?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function openNotif(n: Notificacion) {
@@ -66,7 +95,7 @@ export default function NotificationBell() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={listo && noLeidas > 0 ? `Notificaciones, ${noLeidas} sin leer` : "Notificaciones"}
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggle}
         className={cn(
           "relative inline-flex size-9.5 cursor-pointer items-center justify-center rounded-md border border-outline-variant",
           open ? "bg-cream-tert" : "bg-surface",
@@ -110,7 +139,47 @@ export default function NotificationBell() {
             )}
           </div>
 
-          <div onScroll={onScroll} className="max-h-80 overflow-x-hidden overflow-y-auto">
+          {/* Pedido de permiso desde un click: Firefox rechaza el diálogo si
+              no. Sólo mientras el usuario no contestó; si lo negó, el
+              navegador ya no deja volver a preguntar. */}
+          {listo && push.estado === "default" && (
+            <div className="flex items-center gap-2.5 border-b border-outline-variant px-4 py-2.5">
+              <BellRing className="size-4 shrink-0 text-green-800" />
+              <span className="min-w-0 flex-1 text-[12.5px] leading-snug text-fg-2">
+                Activá los avisos del navegador para enterarte al momento.
+              </span>
+              <button
+                type="button"
+                onClick={() => push.activar()}
+                disabled={push.activando}
+                className="shrink-0 cursor-pointer rounded-pill border border-green-300 bg-surface px-3 py-1 text-xs font-semibold text-green-800 transition-colors hover:bg-green-050 disabled:cursor-default disabled:opacity-60"
+              >
+                Activar
+              </button>
+            </div>
+          )}
+
+          <div ref={lista} onScroll={onScroll} className="max-h-80 overflow-x-hidden overflow-y-auto">
+            {/* Alto cero a propósito: aparecer no puede empujar la lista, que
+                es justo lo que se quiere evitar al retener las nuevas. */}
+            {nuevasPendientes > 0 && (
+              <div className="sticky top-0 z-10 h-0">
+                <div className="flex justify-center pt-2">
+                  <button
+                    type="button"
+                    onClick={verNuevas}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-pill bg-green-800 px-3 py-1.5 text-xs font-semibold text-white shadow-pop"
+                  >
+                    <ArrowUp className="size-3.5" />
+                    {nuevasDesbordan
+                      ? "Hay notificaciones nuevas"
+                      : nuevasPendientes === 1
+                        ? "1 notificación nueva"
+                        : `${nuevasPendientes} notificaciones nuevas`}
+                  </button>
+                </div>
+              </div>
+            )}
             {isLoading ? (
               <div className="px-2.5 pt-2.5 pb-2">
                 <BellSkeleton filas={4} />

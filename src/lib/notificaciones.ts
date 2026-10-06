@@ -1,15 +1,16 @@
 /** Enlace y etiqueta de fecha de una notificación. Lógica pura, sin fetch. */
 
 /**
- * El `urlLink` del backend sale de su `RutasNotificacionesFront` y todavía usa
- * sus propias rutas, no las del front (`/reserva/get/{id}` acá es
- * `/mis-reservas/{id}`). Se traduce en el borde, tabla de por medio.
+ * Las rutas que se aceptan del `urlLink`. Hoy el backend ya las arma con las
+ * del front (`RutasNotificacionesFront`), pero las notificaciones creadas
+ * antes de ese cambio quedaron guardadas con rutas suyas, que se traducen.
+ * Esas dos filas se pueden borrar cuando no queden notificaciones viejas.
  *
- * TODO backend: si algún día `urlLink` trae la ruta del front ya armada, esta
- * tabla queda como pasamanos y se puede borrar.
+ * Lo que no esté acá no se navega: el push del service worker abre el
+ * `urlLink` tal cual, pero la campana sólo va a rutas conocidas.
  */
 const RUTAS: Array<[RegExp, string]> = [
-  // Rutas del backend.
+  // Rutas viejas del backend.
   [/^\/solicitudes-establecimiento\/me\/([^/?#]+)$/, "/mis-solicitudes/$1"],
   [/^\/reserva\/get\/([^/?#]+)$/, "/mis-reservas/$1"],
   // Rutas que ya son del front y coinciden tal cual.
