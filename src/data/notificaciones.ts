@@ -19,9 +19,10 @@ export const NOTIF_PRESENTACION_DEFAULT: { icon: string; tone: NotifTone } = {
   tone: "info",
 };
 
+/** Clases de fondo (cuadrado del ícono) y de color (el ícono) por tono. */
 export const NOTIF_TONE: Record<NotifTone, { bg: string; fg: string }> = {
-  success: { bg: "var(--green-050)", fg: "var(--green-800)" },
-  info: { bg: "var(--info-fill)", fg: "var(--info-fg)" },
-  warning: { bg: "var(--warning-fill)", fg: "var(--warning-fg)" },
-  danger: { bg: "var(--danger-fill)", fg: "var(--danger-fg)" },
+  success: { bg: "bg-green-050", fg: "text-green-800" },
+  info: { bg: "bg-info-fill", fg: "text-info-fg" },
+  warning: { bg: "bg-warning-fill", fg: "text-warning-fg" },
+  danger: { bg: "bg-danger-fill", fg: "text-danger-fg" },
 };

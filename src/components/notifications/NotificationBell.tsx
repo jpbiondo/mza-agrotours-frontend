@@ -1,61 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Bell, CheckCheck, Check, FileClock, FileCheck, FileX, CalendarX, Users, Loader, RotateCcw,
-  AlertTriangle,
+  AlertTriangle, Bell, CalendarX, Check, CheckCheck, FileCheck, FileClock, FileX, Loader, RotateCcw, Users,
+  type LucideIcon,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { NOTIF_TONE } from "@/data/notificaciones";
-import { useNotificaciones, useMarcarLeidas } from "@/hooks/useNotificaciones";
+import { useNotificaciones } from "@/hooks/useNotificaciones";
+import { cn } from "@/lib/utils";
 import type { Notificacion } from "@/types/notificaciones";
 
-const ICON: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
+const ICON: Record<string, LucideIcon> = {
   "file-clock": FileClock, "file-check": FileCheck, "file-x": FileX,
   "calendar-x": CalendarX, users: Users, bell: Bell,
 };
 
-const PAGE = 6;
-
-const iconBtn: React.CSSProperties = { width: 38, height: 38, borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", background: "var(--surface)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative" };
-const badgeStyle: React.CSSProperties = { position: "absolute", top: -5, right: -5, minWidth: 18, height: 18, padding: "0 5px", background: "var(--green-800)", color: "#fff", borderRadius: 9, fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--cream-bg)", boxSizing: "content-box", lineHeight: 1 };
-
 export default function NotificationBell() {
-  const { notificaciones, noLeidas, isLoading, error, reload } = useNotificaciones();
-  // El `key` remonta la isla cuando llegan los datos: así el set de leídas se
-  // vuelve a sembrar con lo que dice el backend en vez de quedar en el vacío
-  // con el que arrancó mientras cargaba.
-  return (
-    <BellIsland
-      key={isLoading ? "loading" : "ready"}
-      initial={notificaciones}
-      noLeidas={noLeidas}
-      loading={isLoading}
-      error={error}
-      onRetry={reload}
-    />
-  );
-}
-
-interface BellIslandProps {
-  initial: Notificacion[];
-  noLeidas: number;
-  loading: boolean;
-  error: string | null;
-  onRetry: () => void;
-}
-
-function BellIsland({ initial, noLeidas, loading, error, onRetry }: BellIslandProps) {
+  const {
+    notificaciones, noLeidas, isLoading, error, reload,
+    hayMas, cargandoMas, errorMas, cargarMas, marcarLeida, marcarTodas,
+  } = useNotificaciones();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  // Se siembra con lo que ya venía leído del backend; lo que el usuario marque
-  // acá se suma de forma optimista y se revierte si el PATCH falla.
-  const [read, setRead] = useState<Set<string>>(
-    () => new Set(initial.filter((n) => n.leida).map((n) => n.id)),
-  );
-  const [count, setCount] = useState(PAGE);
   const wrap = useRef<HTMLDivElement>(null);
-  const { marcar } = useMarcarLeidas();
 
   useEffect(() => {
     if (!open) return;
@@ -67,106 +36,190 @@ function BellIsland({ initial, noLeidas, loading, error, onRetry }: BellIslandPr
   }, [open]);
 
   /**
-   * El contador lo manda el backend —puede haber notificaciones más viejas que
-   * las de esta lista—, así que en vez de recalcularlo sobre `initial` se le
-   * descuentan las que el usuario marcó recién.
+   * Scroll infinito: al tocar el fondo se pide la página siguiente. Se puede
+   * llamar en cada evento sin miedo: `cargarMas` ignora los pedidos mientras
+   * hay uno en curso o si ya no quedan páginas.
    */
-  const marcadasAca = useMemo(
-    () => initial.filter((n) => !n.leida && read.has(n.id)).length,
-    [initial, read],
-  );
-  const unreadCount = Math.max(0, noLeidas - marcadasAca);
-
-  async function markMany(ids: string[]) {
-    if (ids.length === 0) return;
-    setRead((s) => { const next = new Set(s); ids.forEach((id) => next.add(id)); return next; });
-    const r = await marcar(ids);
-    // Falló: se vuelven a mostrar sin leer. No se avisa con un toast porque la
-    // campana puede estar cerrada para cuando responde el backend.
-    if (!r.ok) setRead((s) => { const next = new Set(s); ids.forEach((id) => next.delete(id)); return next; });
+  function onScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    // Unos píxeles de tolerancia: con zoom el scroll queda en fracciones y
+    // nunca llega a igualar el alto exacto.
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 4) cargarMas();
   }
 
-  function markAll() { markMany(initial.filter((n) => !read.has(n.id)).map((n) => n.id)); }
-
   function openNotif(n: Notificacion) {
-    markMany([n.id]);
+    if (!n.leida) marcarLeida(n.id);
     setOpen(false);
     // Sin destino conocido la notificación sólo se marca como leída: el
     // `urlLink` del backend no siempre mapea a una ruta del front.
     if (n.href) router.push(n.href);
   }
 
-  function onScroll(e: React.UIEvent<HTMLDivElement>) {
-    const el = e.currentTarget;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 40) setCount((c) => Math.min(initial.length, c + PAGE));
-  }
-
-  const visible = initial.slice(0, count);
+  const listo = !isLoading && !error;
+  // `marcarTodas` necesita la fecha de alguna notificación cargada.
+  const puedeMarcarTodas = listo && noLeidas > 0 && notificaciones.length > 0;
 
   return (
-    <div ref={wrap} style={{ position: "relative" }}>
-      <button type="button" aria-haspopup="menu" aria-expanded={open} aria-label="Notificaciones" onClick={() => { setOpen((o) => !o); setCount(PAGE); }} style={{ ...iconBtn, background: open ? "var(--cream-tert)" : "var(--surface)" }}>
-        <Bell size={18} color="var(--fg-2)" />
-        {!loading && !error && unreadCount > 0 && <span style={badgeStyle}>{unreadCount > 9 ? "9+" : unreadCount}</span>}
+    <div ref={wrap} className="relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={listo && noLeidas > 0 ? `Notificaciones, ${noLeidas} sin leer` : "Notificaciones"}
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "relative inline-flex size-9.5 cursor-pointer items-center justify-center rounded-md border border-outline-variant",
+          open ? "bg-cream-tert" : "bg-surface",
+        )}
+      >
+        <Bell className="size-4.5 text-fg-2" />
+        {listo && noLeidas > 0 && (
+          <span className="absolute -top-1.25 -right-1.25 box-content flex h-4.5 min-w-4.5 items-center justify-center rounded-[9px] border-2 border-cream-bg bg-green-800 px-1.25 text-[11px] leading-none font-bold text-white">
+            {noLeidas > 9 ? "9+" : noLeidas}
+          </span>
+        )}
       </button>
 
       {open && (
-        <div className="pop" role="menu" style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: "min(360px, calc(100vw - 32px))", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: 14, boxShadow: "var(--shadow-pop)", overflow: "hidden", zIndex: 60 }}>
-          <div style={{ padding: "13px 14px 13px 16px", borderBottom: "1px solid var(--outline-variant)", background: "var(--cream-tert)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15.5, color: "var(--fg-1)" }}>Notificaciones</span>
-              {unreadCount > 0 && <span style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", background: "var(--brown-700)", borderRadius: 999, padding: "2px 8px", lineHeight: 1.4 }}>{unreadCount} sin leer</span>}
-            </div>
-            <button type="button" onClick={markAll} disabled={unreadCount === 0} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: "none", background: "transparent", cursor: unreadCount === 0 ? "default" : "pointer", padding: "4px 6px", borderRadius: 8, fontFamily: "var(--font-sans)", fontSize: 12.5, fontWeight: 600, color: unreadCount === 0 ? "var(--fg-3)" : "var(--green-800)", whiteSpace: "nowrap" }}>
-              <CheckCheck size={15} /> Marcar como leídas
-            </button>
+        <div
+          role="menu"
+          aria-label="Notificaciones"
+          className="pop absolute top-[calc(100%+10px)] right-0 z-60 w-[min(360px,calc(100vw-32px))] overflow-hidden rounded-[14px] border border-outline-variant bg-surface shadow-pop"
+        >
+          {/* Una sola fila que no puede partirse: el título trunca antes que
+              nada, el pill y la acción no se encogen. La acción va como ícono
+              —igual que el check de cada fila— porque con texto no entraba al
+              lado del pill en el ancho del popover. */}
+          <div className="flex items-center gap-2.5 border-b border-outline-variant bg-cream-tert py-3 pr-3 pl-4">
+            <span className="min-w-0 truncate font-display text-[15.5px] font-bold text-fg-1">Notificaciones</span>
+            {listo && noLeidas > 0 && (
+              <span className="shrink-0 rounded-pill bg-brown-700 px-2 py-0.5 text-[11.5px] leading-[1.4] font-bold whitespace-nowrap text-white">
+                {noLeidas} sin leer
+              </span>
+            )}
+            {puedeMarcarTodas && (
+              <button
+                type="button"
+                onClick={() => marcarTodas()}
+                title="Marcar todas como leídas"
+                aria-label="Marcar todas como leídas"
+                className="ml-auto inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-green-300 bg-surface text-green-800 transition-colors hover:bg-green-050"
+              >
+                <CheckCheck className="size-4" />
+              </button>
+            )}
           </div>
 
-          <div style={{ maxHeight: 460, overflowY: "auto", overflowX: "hidden" }} onScroll={onScroll}>
-            {loading ? (
-              <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--fg-3)" }}><Loader size={22} className="spin" /></div>
-            ) : error ? (
-              <div style={{ padding: "40px 24px", textAlign: "center", color: "var(--fg-2)" }}>
-                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--danger-fill)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}><AlertTriangle size={24} color="var(--danger-fg)" /></div>
-                <div style={{ fontSize: 14, lineHeight: 1.5, marginBottom: 14 }}>No pudimos cargar tus notificaciones.</div>
-                <button type="button" className="btn btn-neutral btn-sm" onClick={onRetry}><RotateCcw size={15} /> Reintentar</button>
+          <div onScroll={onScroll} className="max-h-80 overflow-x-hidden overflow-y-auto">
+            {isLoading ? (
+              <div className="px-2.5 pt-2.5 pb-2">
+                <BellSkeleton filas={4} />
               </div>
-            ) : initial.length === 0 ? (
-              <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--fg-2)" }}>
-                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--cream-tert)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}><Bell size={24} color="var(--brown-700)" /></div>
-                <div style={{ fontSize: 14, lineHeight: 1.5 }}>No tenés notificaciones por ahora.</div>
+            ) : error ? (
+              <div className="px-6 py-10 text-center text-fg-2">
+                <div className="mb-3 inline-flex size-13 items-center justify-center rounded-full bg-danger-fill">
+                  <AlertTriangle className="size-6 text-danger-fg" />
+                </div>
+                <div className="mb-3.5 text-sm leading-normal">No pudimos cargar tus notificaciones.</div>
+                <button type="button" className="btn btn-neutral btn-sm" onClick={reload}>
+                  <RotateCcw size={15} /> Reintentar
+                </button>
+              </div>
+            ) : notificaciones.length === 0 ? (
+              <div className="px-6 py-12 text-center text-fg-2">
+                <div className="mb-3 inline-flex size-13 items-center justify-center rounded-full bg-cream-tert">
+                  <Bell className="size-6 text-brown-700" />
+                </div>
+                <div className="text-sm leading-normal">No tenés notificaciones por ahora.</div>
               </div>
             ) : (
-              <div style={{ padding: "10px 10px 8px" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  {visible.map((n) => {
-                    const unread = !read.has(n.id);
-                    const tone = NOTIF_TONE[n.tone] ?? { bg: "var(--cream-tert)", fg: "var(--fg-2)" };
+              <div className="px-2.5 pt-2.5 pb-2">
+                <div className="flex flex-col gap-0.75">
+                  {notificaciones.map((n) => {
+                    const unread = !n.leida;
+                    const tone = NOTIF_TONE[n.tone] ?? { bg: "bg-cream-tert", fg: "text-fg-2" };
                     const NIcon = ICON[n.icon] ?? Bell;
                     return (
-                      <div key={n.id} role="menuitem" tabIndex={0} onClick={() => openNotif(n)} style={{ display: "flex", gap: 11, padding: "10px 10px", borderRadius: 10, cursor: "pointer", alignItems: "flex-start", background: unread ? "var(--cream-tert)" : "transparent" }}>
-                        <span style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: tone.bg }}><NIcon size={16} color={tone.fg} /></span>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                            {unread && <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green-800)", flexShrink: 0 }} />}
-                            <div style={{ fontSize: 13.5, fontWeight: unread ? 700 : 500, color: "var(--fg-1)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{n.title}</div>
+                      <div
+                        key={n.id}
+                        role="menuitem"
+                        tabIndex={0}
+                        onClick={() => openNotif(n)}
+                        className={cn(
+                          "flex cursor-pointer items-start gap-2.75 rounded-[10px] p-2.5",
+                          unread && "bg-cream-tert",
+                        )}
+                      >
+                        <span className={cn("flex size-8.5 shrink-0 items-center justify-center rounded-[9px]", tone.bg)}>
+                          <NIcon className={cn("size-4", tone.fg)} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.75">
+                            {unread && <span className="size-1.75 shrink-0 rounded-full bg-green-800" />}
+                            <div className={cn("truncate text-[13.5px] text-fg-1", unread ? "font-bold" : "font-medium")}>{n.title}</div>
                           </div>
-                          <div style={{ fontSize: 12.5, color: "var(--fg-2)", marginTop: 2, lineHeight: 1.4 }}>{n.body}</div>
-                          <div style={{ fontSize: 11.5, color: "var(--fg-3)", marginTop: 4 }}>{n.time}</div>
+                          <div className="mt-0.5 text-[12.5px] leading-[1.4] text-fg-2">{n.body}</div>
+                          <div className="mt-1 text-[11.5px] text-fg-3">{n.time}</div>
                         </div>
-                        <button type="button" title={unread ? "Marcar como leída" : "Leída"} aria-label={unread ? "Marcar como leída" : "Leída"} disabled={!unread} onClick={(e) => { e.stopPropagation(); if (unread) markMany([n.id]); }} style={{ flexShrink: 0, alignSelf: "center", width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: unread ? "pointer" : "default", border: "1px solid " + (unread ? "var(--green-300)" : "var(--outline-variant)"), background: unread ? "var(--surface)" : "var(--green-050)" }}>
-                          <Check size={15} color="var(--green-800)" />
+                        <button
+                          type="button"
+                          title={unread ? "Marcar como leída" : "Leída"}
+                          aria-label={unread ? "Marcar como leída" : "Leída"}
+                          disabled={!unread}
+                          onClick={(e) => { e.stopPropagation(); if (unread) marcarLeida(n.id); }}
+                          className={cn(
+                            "inline-flex size-7.5 shrink-0 items-center justify-center self-center rounded-full border text-green-800",
+                            unread ? "cursor-pointer border-green-300 bg-surface" : "cursor-default border-outline-variant bg-green-050",
+                          )}
+                        >
+                          <Check className="size-3.75" />
                         </button>
                       </div>
                     );
                   })}
                 </div>
-                <div style={{ textAlign: "center", padding: "10px 0 4px", fontSize: 12, color: "var(--fg-3)" }}>{count < initial.length ? "Deslizá para ver más antiguas" : "No hay más notificaciones"}</div>
+
+                {cargandoMas ? (
+                  <div aria-busy="true" className="flex justify-center pt-2.5 pb-1 text-fg-3">
+                    <Loader className="spin size-5" />
+                    <span className="sr-only">Cargando más notificaciones…</span>
+                  </div>
+                ) : errorMas ? (
+                  <div className="flex items-center justify-center gap-2 pt-2.5 pb-1 text-xs text-fg-2">
+                    No pudimos cargar más.
+                    <button type="button" onClick={cargarMas} className="cursor-pointer font-semibold text-green-800 hover:underline">
+                      Reintentar
+                    </button>
+                  </div>
+                ) : hayMas ? null : (
+                  <div className="pt-2.5 pb-1 text-center text-xs text-fg-3">No hay más notificaciones</div>
+                )}
               </div>
             )}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Misma forma que una fila: ícono, título, dos líneas de cuerpo, hora y el check. */
+function BellSkeleton({ filas }: { filas: number }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-0.75">
+      <span className="sr-only">Cargando notificaciones…</span>
+      {Array.from({ length: filas }, (_, i) => (
+        <div key={i} className="flex items-start gap-2.75 p-2.5">
+          <Skeleton className="size-8.5 shrink-0 rounded-[9px]" />
+          <div className="min-w-0 flex-1 space-y-1.75 pt-0.5">
+            <Skeleton className={cn("h-3.5", i % 2 ? "w-1/2" : "w-3/5")} />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className={cn("h-3", i % 2 ? "w-2/3" : "w-4/5")} />
+            <Skeleton className="h-2.5 w-16" />
+          </div>
+          <Skeleton className="size-7.5 shrink-0 self-center rounded-full" />
+        </div>
+      ))}
     </div>
   );
 }
