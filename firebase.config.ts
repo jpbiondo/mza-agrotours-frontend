@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getDatabase, type Database } from "firebase/database";
+import { getMessaging, isSupported, type Messaging } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -25,3 +26,21 @@ export const auth = getAuth(app);
 export function rtdb(): Database {
   return getDatabase(app);
 }
+
+/**
+ * Cloud Messaging, o `null` si el navegador no soporta push (Safari sin PWA,
+ * modo privado de Firefox, SSR). También se pide recién al usarla: `getMessaging`
+ * tira en un navegador sin soporte.
+ */
+export async function mensajeria(): Promise<Messaging | null> {
+  if (typeof window === "undefined" || !(await isSupported())) return null;
+  return getMessaging(app);
+}
+
+/** La config que necesita el service worker de FCM, que no puede leer el `.env`. */
+export const configSw = {
+  apiKey: firebaseConfig.apiKey ?? "",
+  projectId: firebaseConfig.projectId ?? "",
+  messagingSenderId: firebaseConfig.messagingSenderId ?? "",
+  appId: firebaseConfig.appId ?? "",
+};
