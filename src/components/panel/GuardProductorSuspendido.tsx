@@ -85,8 +85,8 @@ function AccesoSuspendido({
  * activo en otra— y el switcher del shell, que queda vivo detrás de este cartel,
  * es la salida.
  *
- * Se espera a `listo` antes de decidir: hasta que rehidratan los stores, `activo`
- * es el primero de la lista y no el que eligió el productor.
+ * Se espera a `listo` antes de decidir: hasta que rehidrata la sesión no hay
+ * accesos con qué saber si la cuenta está suspendida en el de la URL.
  *
  * Es control de navegación, no de seguridad: los accesos salen de un store que
  * se puede editar desde el navegador. La barrera real es el backend.

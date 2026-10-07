@@ -14,7 +14,7 @@ import { buttonClasses } from "@/components/ui/Button";
 import type { ToastData } from "@/components/ui";
 import { iconoDeCultivos } from "@/data/actividades-prod";
 import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
-import { useEstablecimientos } from "@/hooks/useEstablecimientos";
+import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useActividades, useActividadAcciones, useEstadosActividad } from "@/hooks/useActividades";
 import { moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -106,6 +106,7 @@ function ActivityCard({
   suspendido: boolean;
   onEliminar: () => void;
 }) {
+  const ruta = useRutaPanel();
   const IconC = ICONS[iconoDeCultivos(act.cultivos)] ?? Grape;
   // Una actividad dada de baja no se vuelve a tocar: queda de consulta, sin el
   // toggle de publicación ni las acciones que la modifican.
@@ -189,20 +190,20 @@ function ActivityCard({
             <CardAction
               icon={<Settings2 className="size-[15px] text-fg-2" />}
               label="Modificar"
-              href={`/panel/actividades/${act.id}/editar`}
+              href={ruta("actividades", act.id, "editar")}
               disabled={suspendido}
               title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
             />
             <CardAction
               icon={<CalendarPlus className="size-[15px] text-fg-2" />}
               label="Agregar día"
-              href={`/panel/actividades/${act.id}/editar`}
+              href={ruta("actividades", act.id, "editar")}
               disabled={suspendido}
               title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
             />
           </>
         )}
-        <CardAction icon={<CalendarDays className="size-[15px] text-fg-2" />} label="Ver calendario" href={`/panel/actividades/${act.id}/calendario`} />
+        <CardAction icon={<CalendarDays className="size-[15px] text-fg-2" />} label="Ver calendario" href={ruta("actividades", act.id, "calendario")} />
         {!deBaja && <CardAction icon={<Trash2 className="size-[15px] text-danger" />} label="Eliminar" danger onClick={onEliminar} />}
       </div>
     </Card>
@@ -292,8 +293,9 @@ function ListadoSkeleton() {
 
 /* ---- Cliente ------------------------------------------------------------ */
 export default function ActividadesClient() {
-  // El establecimiento activo lo elige el switcher del shell.
+  // El establecimiento activo es el de la URL.
   const { activo } = useEstablecimientos();
+  const ruta = useRutaPanel();
   const establecimientoId = activo?.id ?? "";
   const suspendido = !!activo?.establecimientoSuspendido;
   const { texto, setTexto, busqueda, aplicarYa, limpiar } = useBusquedaDiferida();
@@ -389,7 +391,7 @@ export default function ActividadesClient() {
               <Plus className="size-[17px]" /> Crear actividad
             </Button>
           ) : (
-            <Link href="/panel/actividades/crear" className={buttonClasses()}>
+            <Link href={ruta("actividades", "crear")} className={buttonClasses()}>
               <Plus className="size-[17px]" /> Crear actividad
             </Link>
           )}
@@ -438,7 +440,7 @@ export default function ActividadesClient() {
                   <Plus className="size-[18px]" /> Crear actividad
                 </Button>
               ) : (
-                <Link href="/panel/actividades/crear" className={buttonClasses()}>
+                <Link href={ruta("actividades", "crear")} className={buttonClasses()}>
                   <Plus className="size-[18px]" /> Crear actividad
                 </Link>
               )}
@@ -572,7 +574,7 @@ export default function ActividadesClient() {
           </div>
           <div className="mt-6 flex justify-end gap-3">
             <Button variant="neutral" onClick={() => setBlocked(null)}>Cerrar</Button>
-            <Link href="/panel/reservas" className={buttonClasses()}>
+            <Link href={ruta("reservas")} className={buttonClasses()}>
               <CalendarDays className="size-[17px]" /> Ver reservas
             </Link>
           </div>
