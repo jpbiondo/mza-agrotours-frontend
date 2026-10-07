@@ -25,6 +25,13 @@ const PAGE_SIZE = 10;
 const SUSPENDIDO_CREAR = "El establecimiento está suspendido: no podés crear actividades.";
 const SUSPENDIDO_MODIFICAR = "El establecimiento está suspendido: no podés modificar actividades.";
 
+/** Códigos de dominio de PATCH .../estado. `validacionNegocio` cubre dada de baja o ya en ese estado. */
+const MENSAJE_ERROR_ESTADO: Record<string, string> = {
+  "A.conReservasActivas": "Tiene reservas pendientes o pagadas. Cancelalas antes de ocultarla.",
+  "E.suspendido": SUSPENDIDO_MODIFICAR,
+  validacionNegocio: "La actividad cambió desde que cargaste la página. Actualizamos el listado.",
+};
+
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   grape: Grape, scissors: Scissors, wine: Wine, leaf: Leaf, cherry: Cherry,
   sprout: Sprout, nut: Nut, "map-pin": MapPin,
@@ -69,42 +76,77 @@ function CardAction({
   );
 }
 
-/* ---- Estado de publicación (solo lectura) -------------------------------
-   TODO - esto solía ser un toggle para cambiar el modo en Publicado/Borrador 
-   pero no hay endpoint en el back así que ahora es solo lectura.
-*/
-function PublishToggle({ act }: { act: ActividadProd }) {
+/* ---- Toggle Borrador / Público ------------------------------------------ */
+function PublishToggle({
+  act, busy, disabled, title, onCambiar,
+}: {
+  act: ActividadProd;
+  busy: boolean;
+  /** Establecimiento suspendido: se ve el estado pero no se puede cambiar. */
+  disabled: boolean;
+  title?: string;
+  onCambiar: (nuevo: "publicado" | "borrador") => void;
+}) {
   const publicada = act.estado === "publicado";
+  const bloqueado = busy || disabled;
+  // El backend ya avisa si se puede: sólo puede fallar al pasar a borrador.
+  const sinBorrador = publicada && !act.puedeCambiarEstado;
+  const reservas = act.reservasAsociadas;
 
-  const seg = (activo: boolean) =>
+  const seg = (activo: boolean, deshabilitado: boolean) =>
     cn(
-      "inline-flex cursor-default items-center gap-1.5 rounded-pill border-none px-[13px] py-1.5 text-[13px] font-semibold whitespace-nowrap transition-colors",
-      activo ? "bg-green-800 text-fg-on-dark" : "text-fg-2",
+      "inline-flex items-center gap-1.5 rounded-pill border-none px-[13px] py-1.5 text-[13px] font-semibold whitespace-nowrap transition-colors",
+      activo ? "cursor-default bg-green-800 text-fg-on-dark" : "text-fg-2",
+      !activo && (deshabilitado ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:bg-surface"),
     );
 
   return (
-    <div
-      role="group"
-      aria-label="Estado de publicación"
-      className="inline-flex gap-[3px] rounded-pill border border-outline-variant bg-cream-tert p-[3px]"
-    >
-      <span className={seg(!publicada)}>
-        <EyeOff className="size-[13px]" /> Borrador
-      </span>
-      <span className={seg(publicada)}>
-        <Eye className="size-[13px]" /> Público
-      </span>
+    <div className="flex flex-col items-end gap-1">
+      <div
+        role="group"
+        aria-label="Estado de publicación"
+        aria-busy={busy}
+        title={title}
+        className="inline-flex gap-[3px] rounded-pill border border-outline-variant bg-cream-tert p-[3px]"
+      >
+        <button
+          type="button"
+          aria-pressed={!publicada}
+          disabled={bloqueado || sinBorrador}
+          title={sinBorrador ? "No se puede pasar a borrador: tiene reservas pendientes o pagadas" : undefined}
+          className={seg(!publicada, bloqueado || sinBorrador)}
+          onClick={() => { if (publicada) onCambiar("borrador"); }}
+        >
+          {busy && publicada ? <Loader className="spin size-[13px]" /> : <EyeOff className="size-[13px]" />} Borrador
+        </button>
+        <button
+          type="button"
+          aria-pressed={publicada}
+          disabled={bloqueado}
+          className={seg(publicada, bloqueado)}
+          onClick={() => { if (!publicada) onCambiar("publicado"); }}
+        >
+          {busy && !publicada ? <Loader className="spin size-[13px]" /> : <Eye className="size-[13px]" />} Público
+        </button>
+      </div>
+      {reservas > 0 && (
+        <span className="text-[11.5px] text-fg-3">
+          {reservas} {reservas === 1 ? "reserva asociada" : "reservas asociadas"}
+        </span>
+      )}
     </div>
   );
 }
 
 /* ---- Tarjeta de actividad ----------------------------------------------- */
 function ActivityCard({
-  act, suspendido, onEliminar,
+  act, busy, suspendido, onEliminar, onCambiarEstado,
 }: {
   act: ActividadProd;
+  busy: boolean;
   suspendido: boolean;
   onEliminar: () => void;
+  onCambiarEstado: (nuevo: "publicado" | "borrador") => void;
 }) {
   const ruta = useRutaPanel();
   const IconC = ICONS[iconoDeCultivos(act.cultivos)] ?? Grape;
@@ -150,7 +192,13 @@ function ActivityCard({
                 <Ban className="mr-1.5 size-[13px]" /> Dada de baja
               </EstadoBadge>
             ) : (
-              <PublishToggle act={act} />
+              <PublishToggle
+                act={act}
+                busy={busy}
+                disabled={suspendido}
+                title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
+                onCambiar={onCambiarEstado}
+              />
             )}
           </div>
 
@@ -313,11 +361,11 @@ export default function ActividadesClient() {
     size: PAGE_SIZE,
   });
   const estados = useEstadosActividad(establecimientoId);
-  const { darDeBaja, pendingId } = useActividadAcciones();
+  const { darDeBaja, cambiarEstado, pendingId } = useActividadAcciones(establecimientoId);
 
-  // Las acciones todavía no persisten: el override deja ver el resultado en la
-  // tarjeta sin volver a pedir el listado. Se descarta al recargar, y no mueve
-  // los contadores del selector, que ahora los cuenta el backend.
+  // El override deja ver el resultado de una acción en la tarjeta sin volver a
+  // pedir el listado (que la sacaría de la vista si hay un filtro por estado).
+  // Se descarta al recargar.
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
   const [toDelete, setToDelete] = useState<ActividadProd | null>(null);
   const [blocked, setBlocked] = useState<ActividadProd | null>(null);
@@ -354,18 +402,48 @@ export default function ActividadesClient() {
   const limpiarBusqueda = () => { limpiar(); setPage(0); };
   const limpiarTodo = () => { limpiar(); setEstadoF("todas"); setPage(0); };
 
-  const pedirBaja = (act: ActividadProd) => {
-    if ((act.reservasPagadas ?? 0) > 0) setBlocked(act);
-    else setToDelete(act);
-  };
-
   async function confirmDelete(act: ActividadProd) {
-    await darDeBaja(act.id);
+    const r = await darDeBaja(act.id);
+    setToDelete(null);
+    if (!r.ok) {
+      // El listado no distingue las reservas pagadas, así que el bloqueo recién
+      // se sabe acá: se cambia la confirmación por el aviso de qué hacer.
+      if (r.code === "A.reservasPagadas") setBlocked(act);
+      else setToast({
+        tone: "danger",
+        title: "No pudimos dar de baja la actividad.",
+        sub: r.code === "E.suspendido" ? SUSPENDIDO_MODIFICAR : "Probá de nuevo en un momento.",
+      });
+      return;
+    }
     // La fila no desaparece del listado: el backend la devuelve como dada de
     // baja y la ordena al final. El override refleja eso hasta la próxima carga.
     setOverrides((o) => ({ ...o, [act.id]: { ...o[act.id], estado: "dado_de_baja" } }));
-    setToDelete(null);
+    estados.reload();
     setToast({ tone: "success", title: "La actividad se dio de baja correctamente.", sub: `«${act.nombre}»` });
+  }
+
+  async function setEstado(act: ActividadProd, nuevo: "publicado" | "borrador") {
+    const r = await cambiarEstado(act.id, nuevo);
+    if (!r.ok) {
+      setToast({
+        tone: "danger",
+        title: nuevo === "publicado" ? "No pudimos publicar la actividad." : "No pudimos pasar la actividad a borrador.",
+        sub: MENSAJE_ERROR_ESTADO[r.code ?? ""] ?? "Probá de nuevo en un momento.",
+      });
+      // Si el listado quedó viejo (alguien reservó, o la actividad cambió en otro
+      // lado), se vuelve a pedir para que el toggle refleje lo que vale ahora.
+      if (r.code) { setOverrides({}); reload(); estados.reload(); }
+      return;
+    }
+    setOverrides((o) => ({ ...o, [act.id]: { ...o[act.id], estado: nuevo } }));
+    // Los contadores del selector los cuenta el backend: se vuelven a pedir.
+    estados.reload();
+    setToast({
+      tone: "success",
+      title: nuevo === "publicado" ? "La actividad se publicó correctamente." : "La actividad pasó a borrador.",
+      sub: `«${act.nombre}»`,
+    });
   }
 
   return (
@@ -509,8 +587,10 @@ export default function ActividadesClient() {
                     <ActivityCard
                       key={act.id}
                       act={act}
+                      busy={pendingId === act.id}
                       suspendido={suspendido}
-                      onEliminar={() => pedirBaja(act)}
+                      onEliminar={() => setToDelete(act)}
+                      onCambiarEstado={(nuevo) => setEstado(act, nuevo)}
                     />
                   ))}
                 </div>
