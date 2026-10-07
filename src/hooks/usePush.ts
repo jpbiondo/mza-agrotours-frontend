@@ -84,7 +84,17 @@ async function tokenDelDispositivo(): Promise<string | null> {
  * llamarlo en cada inicio de sesión: es un upsert, y si otra cuenta usó antes
  * este navegador, el token pasa a la actual.
  */
+/**
+ * Si esta pestaña quedó registrada para recibir push. Sin eso, la campana no
+ * tiene quién le avise y `usePushSync` pasa a consultar cada tanto.
+ */
+let pushActivo = false;
+
+/** Cada cuánto se consulta la campana cuando no hay push. */
+const INTERVALO_SIN_PUSH = 60_000;
+
 async function registrarDispositivo(): Promise<{ ok: boolean }> {
+  pushActivo = false;
   try {
     const token = await tokenDelDispositivo();
     if (!token) return { ok: false };
@@ -95,10 +105,11 @@ async function registrarDispositivo(): Promise<{ ok: boolean }> {
         body: JSON.stringify({ token }),
       }),
     );
+    pushActivo = true;
     return { ok: true };
   } catch (e) {
-    // Sin push la app sigue andando: la campana se refresca igual al volver a
-    // la pestaña. No vale la pena interrumpir al usuario por esto.
+    // Sin push la app sigue andando: la campana se consulta cada tanto y al
+    // volver a la pestaña. No vale la pena interrumpir al usuario por esto.
     avisarFallo("No se pudo registrar el dispositivo", e);
     return { ok: false };
   }
@@ -114,6 +125,7 @@ async function registrarDispositivo(): Promise<{ ok: boolean }> {
  * cuenta inicie sesión en este navegador.
  */
 export async function darDeBajaDispositivo(): Promise<void> {
+  pushActivo = false;
   const baja = (async () => {
     const token = await tokenDelDispositivo();
     if (!token) return;
@@ -147,14 +159,19 @@ function esMensajeSw(d: unknown): d is MensajeSw {
  * - el click en una notificación del sistema llega del SW con la ruta, y se
  *   navega con el router para no recargar;
  * - al volver a la pestaña también se avisa, por si se perdió algún push (sin
- *   permiso, o con el SW dormido).
+ *   permiso, o con el SW dormido);
+ * - sin push, con la pestaña a la vista, se avisa cada 60 segundos.
  */
 export function usePushSync(): void {
   const router = useRouter();
   const avisar = useNotificacionesStore((s) => s.avisar);
 
   useEffect(
-    () => onAuthStateChanged(auth, (user) => { if (user) void registrarDispositivo(); }),
+    () =>
+      onAuthStateChanged(auth, (user) => {
+        if (user) void registrarDispositivo();
+        else pushActivo = false;
+      }),
     [],
   );
 
@@ -188,6 +205,21 @@ export function usePushSync(): void {
     const onVisible = () => { if (document.visibilityState === "visible") avisar(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [avisar]);
+
+  /**
+   * Respaldo para cuando no hay push: sin permiso, con el registro fallido o
+   * con el permiso revocado desde la configuración del navegador después de
+   * registrarse. Las condiciones se leen en cada vuelta y no al montar, así que
+   * activar las notificaciones corta el polling sin rearmar nada. Con la
+   * pestaña oculta no se consulta: al volver ya avisa `visibilitychange`.
+   */
+  useEffect(() => {
+    const id = setInterval(() => {
+      const sinPush = !pushActivo || leerPermiso() !== "granted";
+      if (sinPush && auth.currentUser) avisar();
+    }, INTERVALO_SIN_PUSH);
+    return () => clearInterval(id);
   }, [avisar]);
 }
 
