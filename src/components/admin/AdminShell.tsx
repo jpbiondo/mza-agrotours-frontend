@@ -145,6 +145,7 @@ const NAV: NavEntry[] = [
     iconC: HelpCircle,
     label: "Preguntas frecuentes",
     href: "/admin/faq",
+    permiso: PermisoAdmin.GESTIONAR_FAQ,
   },
 ];
 

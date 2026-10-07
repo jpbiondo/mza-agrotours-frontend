@@ -7,6 +7,9 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+/** Una opción: un string hace de valor y etiqueta a la vez. */
+export type OpcionSelect = string | { value: string; label: string };
+
 interface SimpleSelectProps {
   id?: string;
   name?: string;
@@ -14,7 +17,7 @@ interface SimpleSelectProps {
   onChange: (val: string) => void;
   onBlur?: () => void;
   ref?: React.Ref<HTMLButtonElement>;
-  options: readonly string[];
+  options: readonly OpcionSelect[];
   placeholder?: string;
   icon?: React.ReactNode;
   className?: string;
@@ -37,8 +40,11 @@ export function SimpleSelect({
   "aria-describedby": describedBy,
 }: SimpleSelectProps) {
   const errored = ariaInvalid === true;
+  const items = options.map((o) => (typeof o === "string" ? { value: o, label: o } : o));
   return (
     <Select
+      // `items` le dice a <SelectValue> qué etiqueta pintar para el valor elegido.
+      items={items}
       value={value || null}
       onValueChange={(v) => onChange((v as string) ?? "")}
     >
@@ -71,9 +77,9 @@ export function SimpleSelect({
         </span>
       </SelectTrigger>
       <SelectContent className="rounded-lg">
-        {options.map((o) => (
-          <SelectItem key={o} value={o}>
-            {o}
+        {items.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
           </SelectItem>
         ))}
       </SelectContent>

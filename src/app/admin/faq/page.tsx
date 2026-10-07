@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import GuardRol from "@/components/GuardRol";
+import { PermisoAdmin } from "@/lib/permisos";
 import FaqAdminClient from "./FaqAdminClient";
 
 export const metadata: Metadata = {
@@ -7,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function FaqAdminPage() {
-  return <FaqAdminClient />;
+  return (
+    <GuardRol rol="admin" permiso={PermisoAdmin.GESTIONAR_FAQ}>
+      <FaqAdminClient />
+    </GuardRol>
+  );
 }
