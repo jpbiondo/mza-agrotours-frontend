@@ -5,6 +5,7 @@ import { FirebaseError } from "firebase/app";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch } from "@/lib/api";
 import { rolesDe } from "@/lib/roles";
+import { darDeBajaDispositivo } from "@/hooks/usePush";
 import { useAuthStore } from "@/stores/authStore";
 import {
   CODIGO_PERFIL_INACTIVO,
@@ -71,6 +72,8 @@ export function useAuth(): UseAuthReturn {
  */
 export async function cerrarSesion(destino = "/acceso"): Promise<void> {
   try {
+    // Antes del signOut: la baja del dispositivo necesita el ID token.
+    await darDeBajaDispositivo();
     await signOut(auth);
   } finally {
     useAuthStore.getState().clear();

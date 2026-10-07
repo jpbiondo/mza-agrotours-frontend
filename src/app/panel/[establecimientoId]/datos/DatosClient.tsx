@@ -38,7 +38,7 @@ import { TipoPermiso } from "@/lib/permisos";
 import { ROL_PRODUCTOR_LIDER, tieneRol } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
-import { useEstablecimientos } from "@/hooks/useEstablecimientos";
+import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import {
   useEstablecimientoDatos,
   useGuardarEstablecimiento,
@@ -285,6 +285,7 @@ function Inner({
   datos: EstablecimientoDatos;
   onGuardado: (cambios: Partial<EstablecimientoDatos>) => void;
 }) {
+  const ruta = useRutaPanel();
   const { guardar, isLoading: saving } = useGuardarEstablecimiento();
   const fotoPortada = useFotoPortada(datos.id, datos.foto);
   const [bajaAbierta, setBajaAbierta] = useState(false);
@@ -633,7 +634,7 @@ function Inner({
         )}
 
         <Link
-          href="/panel/actividades"
+          href={ruta("actividades")}
           className={buttonClasses({
             variant: "ghost",
             size: "sm",

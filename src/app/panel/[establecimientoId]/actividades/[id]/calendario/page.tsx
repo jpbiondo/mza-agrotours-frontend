@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ACTIVIDADES_PROD, getActividad } from "@/data/actividades-prod";
+import { getActividad } from "@/data/actividades-prod";
 import CalendarioClient from "./CalendarioClient";
 
-export function generateStaticParams() {
-  return ACTIVIDADES_PROD.map((a) => ({ id: a.id }));
-}
-
+// Sin `generateStaticParams`: cuelga de `[establecimientoId]`, que no tiene
+// ids conocidos en build, así que se renderiza a pedido.
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const act = getActividad(id);

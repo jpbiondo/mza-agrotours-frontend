@@ -12,9 +12,11 @@ import {
 import type { LucideIcon } from "lucide-react";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { EstadoBadge } from "@/components/ui/EstadoBadge";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { admInitials } from "@/data/admin";
 import { cn } from "@/lib/utils";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
+import { RAIZ_PANEL, rutaPanel } from "@/lib/rutasPanel";
 import type { EstablecimientoAcceso } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import { useEstablecimientoStore } from "@/stores/establecimientoStore";
@@ -23,7 +25,12 @@ interface NavItem {
   id: string;
   icon: LucideIcon;
   label: string;
-  href: string;
+  /**
+   * Sección del panel, que se arma sobre el establecimiento activo (`""` es
+   * su raíz). Con `href` en cambio es un link fijo fuera del panel.
+   */
+  seccion?: string;
+  href?: string;
   badge?: number;
 }
 type Row = { section: string } | NavItem;
@@ -31,20 +38,26 @@ type Row = { section: string } | NavItem;
 /** Navegación del panel del productor, mapeada a las rutas reales del repo. */
 const SIDEBAR: Row[] = [
   { section: "Análisis" },
-  { id: "panel", icon: LayoutDashboard, label: "Panel", href: "/panel" },
-  { id: "estadisticas", icon: BarChart3, label: "Estadísticas", href: "/panel/estadisticas" },
+  { id: "panel", icon: LayoutDashboard, label: "Panel", seccion: "" },
+  { id: "estadisticas", icon: BarChart3, label: "Estadísticas", seccion: "estadisticas" },
   { section: "Operación" },
-  { id: "actividades", icon: Grape, label: "Experiencias", href: "/panel/actividades" },
-  { id: "reservas", icon: CalendarCheck, label: "Reservas", href: "/panel/reservas" },
+  { id: "actividades", icon: Grape, label: "Experiencias", seccion: "actividades" },
+  { id: "reservas", icon: CalendarCheck, label: "Reservas", seccion: "reservas" },
   { section: "Mensajes" },
-  { id: "chats", icon: MessageSquare, label: "Chats", href: "/panel/chats", badge: 3 },
+  { id: "chats", icon: MessageSquare, label: "Chats", seccion: "chats", badge: 3 },
   { section: "Establecimiento" },
-  { id: "datos", icon: Home, label: "Datos del establecimiento", href: "/panel/datos" },
-  { id: "productores", icon: Users, label: "Productores", href: "/panel/productores" },
+  { id: "datos", icon: Home, label: "Datos del establecimiento", seccion: "datos" },
+  { id: "productores", icon: Users, label: "Productores", seccion: "productores" },
   { id: "cultivos", icon: Sprout, label: "Cultivos", href: "/cultivos" },
   { section: "Configuración" },
-  { id: "roles", icon: ShieldCheck, label: "Roles y permisos", href: "/panel/roles" },
+  { id: "roles", icon: ShieldCheck, label: "Roles y permisos", seccion: "roles" },
 ];
+
+/** A dónde lleva un ítem estando en `establecimientoId`. */
+function hrefDe(row: NavItem, establecimientoId: string): string {
+  if (row.href) return row.href;
+  return row.seccion ? rutaPanel(establecimientoId, row.seccion) : rutaPanel(establecimientoId);
+}
 
 // El alta de establecimiento vive en el espacio de visitante: el panel es sólo
 // para establecimientos ya existentes.
@@ -58,16 +71,18 @@ const UBICACION_MOCK = "Mendoza, Argentina";
 
 /**
  * Ítem activo según la URL: el href más específico que sea prefijo del path,
- * para que `/panel/actividades` no marque también `/panel`.
+ * para que `/panel/{id}/actividades` no marque también `/panel/{id}`.
  */
-function idActivo(pathname: string): string {
+function idActivo(pathname: string, establecimientoId: string | null): string {
+  if (!establecimientoId) return "";
   let largo = 0;
   let id = "";
   for (const row of SIDEBAR) {
     if ("section" in row) continue;
-    const calza = pathname === row.href || pathname.startsWith(row.href + "/");
-    if (calza && row.href.length > largo) {
-      largo = row.href.length;
+    const href = hrefDe(row, establecimientoId);
+    const calza = pathname === href || pathname.startsWith(href + "/");
+    if (calza && href.length > largo) {
+      largo = href.length;
       id = row.id;
     }
   }
@@ -155,6 +170,16 @@ function EstablishmentSwitcher({
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  // Hay establecimientos pero ninguno en la URL: `/panel` está redirigiendo
+  // (o la sesión rehidratando). Un lugar del mismo alto, para que nada salte.
+  if (!activo && lista.length > 0) {
+    return (
+      <div className="px-3 pb-2.5">
+        <Skeleton className="h-[52px] w-full" />
+      </div>
+    );
+  }
 
   // Sin establecimientos el camino es pedir el alta, no elegir nada.
   if (!activo) {
@@ -254,7 +279,7 @@ function EstablishmentSwitcher({
           </div>
           <div className="mx-3 my-1.5 h-px bg-outline-variant" />
           <Link
-            href="/panel/datos"
+            href={rutaPanel(activo.id, "datos")}
             className="mx-1.5 flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-[13px] font-semibold text-brown-700 no-underline hover:bg-cream-tert"
           >
             <Settings2 className="size-4" /> Gestionar establecimiento
@@ -276,10 +301,12 @@ const BLOQUEADO_TITULO = "Tu acceso a este establecimiento está suspendido";
 
 function NavRow({
   row,
+  href,
   activo,
   bloqueado,
 }: {
   row: NavItem;
+  href: string;
   activo: boolean;
   bloqueado: boolean;
 }) {
@@ -318,14 +345,23 @@ function NavRow({
   }
 
   return (
-    <Link href={row.href} aria-current={activo ? "page" : undefined} className={clase}>
+    <Link href={href} aria-current={activo ? "page" : undefined} className={clase}>
       {contenido}
     </Link>
   );
 }
 
 /* ---- Barra de cuenta --------------------------------------------------- */
-function AccountBar({ onMenu, rol }: { onMenu: () => void; rol: string }) {
+function AccountBar({
+  onMenu,
+  rol,
+  establecimientoId,
+}: {
+  onMenu: () => void;
+  rol: string;
+  /** El de la URL; `null` en `/panel` a secas, mientras redirige. */
+  establecimientoId: string | null;
+}) {
   const nombre = useAuthStore((s) => s.nombre);
   const iniciales = admInitials(nombre ?? "");
 
@@ -357,7 +393,9 @@ function AccountBar({ onMenu, rol }: { onMenu: () => void; rol: string }) {
         </Link>
       </div>
 
-      <NotificationBell />
+      {/* Las del establecimiento que se está mirando, no las personales: esas
+          quedan en la campana del sitio. */}
+      <NotificationBell ambito={{ establecimientoId }} />
 
       <div className="hidden h-7 w-px bg-outline-variant shell:block" />
 
@@ -387,13 +425,13 @@ function AccountBar({ onMenu, rol }: { onMenu: () => void; rol: string }) {
 export default function PanelShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const compacto = useCompacto();
-  const active = idActivo(pathname);
   const [pedido, setPedido] = useState(false);
   const { lista, activo, elegir, listo } = useEstablecimientos();
+  const active = idActivo(pathname, activo?.id ?? null);
 
   const bloqueado = listo && !!activo?.suspension;
 
-  // El store del establecimiento elegido usa skipHydration para que el primer
+  // El store del último establecimiento usa skipHydration para que el primer
   // render del cliente coincida con el del servidor; se rehidrata acá, que es
   // el único punto por el que pasan todas las pantallas del panel.
   useEffect(() => {
@@ -442,7 +480,7 @@ export default function PanelShell({ children }: { children: ReactNode }) {
       >
         <div className="flex items-center">
           <Link
-            href="/panel"
+            href={activo ? rutaPanel(activo.id) : RAIZ_PANEL}
             className="flex min-w-0 flex-1 items-center gap-2.5 px-5 pt-5 pb-4 no-underline"
           >
             <Image src="/logo-pano.svg" width={45} height={30} alt="" />
@@ -485,6 +523,7 @@ export default function PanelShell({ children }: { children: ReactNode }) {
                 <NavRow
                   key={row.id}
                   row={row}
+                  href={hrefDe(row, activo.id)}
                   activo={active === row.id}
                   bloqueado={bloqueado}
                 />
@@ -495,7 +534,11 @@ export default function PanelShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="shell:pl-[264px]">
-        <AccountBar onMenu={() => setPedido(true)} rol={activo?.rolNombre ?? ""} />
+        <AccountBar
+          onMenu={() => setPedido(true)}
+          rol={activo?.rolNombre ?? ""}
+          establecimientoId={activo?.id ?? null}
+        />
         <main>{children}</main>
       </div>
     </div>

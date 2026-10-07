@@ -65,7 +65,7 @@ import {
 import { useUsuarioCard } from "@/hooks/useUsuarioCard";
 import { useAuthStore } from "@/stores/authStore";
 import type { Productor, RolProductor } from "@/types/productores";
-import EmptyEstablecimiento from "../EmptyEstablecimiento";
+import EmptyEstablecimiento from "../../EmptyEstablecimiento";
 import {
   levantarSchema,
   nuevoProductorSchema,

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bitter, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import AuthSync from "@/components/AuthSync";
+import PushSync from "@/components/PushSync";
 import { cn } from "@/lib/utils";
 
 // next/font inyecta estas variables "crudas"; globals.css (@theme) las expone
@@ -45,6 +46,7 @@ export default function RootLayout({
     >
       <body>
         <AuthSync />
+        <PushSync />
         {children}
       </body>
     </html>

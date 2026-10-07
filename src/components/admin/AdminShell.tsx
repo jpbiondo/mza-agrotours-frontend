@@ -26,13 +26,13 @@ import {
   LifeBuoy,
   HelpCircle,
   Compass,
-  Bell,
   LogOut,
   Lock,
   Menu,
   X,
   UserRound,
 } from "lucide-react";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import { admInitials } from "@/data/admin";
 import { PermisoAdmin, TipoPermiso } from "@/lib/permisos";
 import { nombreRol, tienePermiso } from "@/lib/roles";
@@ -316,16 +316,9 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
           <ShieldCheck className="size-[15px]" /> Modo administrador
         </span>
 
-        <button
-          type="button"
-          aria-label="Notificaciones"
-          className={cn(BTN_SHELL, "relative shell:size-10")}
-        >
-          <Bell className="size-5 text-fg-2" />
-          <span className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border-2 border-surface bg-danger text-[11px] font-bold text-white">
-            3
-          </span>
-        </button>
+        {/* La bandeja de administración, no la personal: esa queda en la
+            campana del sitio. Mismo tamaño que el resto de la barra. */}
+        <NotificationBell ambito="admin" className="size-11 shell:size-10" />
 
         <div className="hidden h-7 w-px bg-outline-variant shell:block" />
 

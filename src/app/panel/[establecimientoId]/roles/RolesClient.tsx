@@ -11,7 +11,7 @@ import type { AmbitoRol } from "@/lib/roles";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { rolesDeEstablecimiento, useRolesCrud, useRolesProductor } from "@/hooks/useRoles";
 import { useAuthStore } from "@/stores/authStore";
-import EmptyEstablecimiento from "../EmptyEstablecimiento";
+import EmptyEstablecimiento from "../../EmptyEstablecimiento";
 
 /** Un rol de productor se asigna al personal de la finca. */
 const TEXTOS: TextosRoles = {

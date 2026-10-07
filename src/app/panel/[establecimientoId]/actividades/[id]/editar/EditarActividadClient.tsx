@@ -22,14 +22,13 @@ import { UPLOAD_FOTOS } from "@/data/actividad-form";
 import { aErroresPlanosDeForm, bloqueoDeTarifas, huecosDeEdad } from "@/lib/actividad-form";
 import { cn } from "@/lib/utils";
 import { useActividadEdicion, useGuardarEdicion } from "@/hooks/useActividadEdicion";
-import { useEstablecimientos } from "@/hooks/useEstablecimientos";
+import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useFotosActividad } from "@/hooks/useFotosActividad";
 import { useTiposCultivo } from "@/hooks/useTiposCultivo";
 import type { EstadoActividad } from "@/types/actividad-prod";
 import type { FotoActividad } from "@/types/actividad-foto";
 import { actividadEditarSchema, type ActividadEditarForm } from "./schema";
 
-const LISTADO = "/panel/actividades";
 const LABEL = "font-semibold";
 
 /** Errores de dominio de la edición. El resto cae en el genérico. */
@@ -149,7 +148,8 @@ function Formulario({
   const cantidadErrores = Object.keys(errs).length;
 
   const arriba = () => window.scrollTo({ top: 0, behavior: "smooth" });
-  const salir = () => router.push(LISTADO);
+  const listado = useRutaPanel()("actividades");
+  const salir = () => router.push(listado);
 
   async function onValid(data: ActividadEditarForm, estado: EstadoActividad) {
     setErrorGuardado(null);
@@ -499,15 +499,16 @@ function FormularioSkeleton() {
 /* ---- Pantalla ------------------------------------------------------------ */
 export default function EditarActividadClient({ actividadId }: { actividadId: string }) {
   const router = useRouter();
-  // El establecimiento activo lo elige el switcher del shell.
+  // El establecimiento activo es el de la URL.
   const { activo } = useEstablecimientos();
+  const listado = useRutaPanel()("actividades");
   const establecimientoId = activo?.id ?? "";
   const { data, fotos, isLoading, error, reload } = useActividadEdicion(establecimientoId, actividadId);
 
   return (
     <div className="min-h-screen bg-cream-bg">
       <div className="mx-auto max-w-[1180px] px-7 pt-7 pb-16">
-        <Button variant="neutral" size="sm" className="mb-4 text-sm" onClick={() => router.push(LISTADO)}>
+        <Button variant="neutral" size="sm" className="mb-4 text-sm" onClick={() => router.push(listado)}>
           <ArrowLeft className="size-4" /> Volver al listado
         </Button>
 

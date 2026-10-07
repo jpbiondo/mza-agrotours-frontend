@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useRutaPanel } from "@/hooks/useEstablecimientos";
 import {
   ArrowLeft, MapPin, Sprout, CreditCard, Hourglass, CheckCircle2, CalendarDays,
   CalendarCheck, ChevronLeft, ChevronRight, Info, ListChecks, ArrowRight, FilePenLine, Clock,
@@ -230,6 +231,7 @@ function DaySummaryCard({ mes, day, onVerReservas }: { mes: MesCal; day: number 
 
 export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id" | "nombre" | "estado" | "cultivos"> }) {
   const router = useRouter();
+  const ruta = useRutaPanel();
   const { data, isLoading, error, reload } = useCalendarioActividad(act.id);
   const [mesIdx, setMesIdx] = useState(0);
   const [selDay, setSelDay] = useState<number | null>(null);
@@ -243,7 +245,7 @@ export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
 
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "24px 28px 80px" }}>
-        <Link href="/panel/actividades" style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none", color: "var(--fg-2)", fontSize: 13.5, fontWeight: 600, marginBottom: 18 }}>
+        <Link href={ruta("actividades")} style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none", color: "var(--fg-2)", fontSize: 13.5, fontWeight: 600, marginBottom: 18 }}>
           <ArrowLeft size={16} /> Volver a actividades
         </Link>
 
@@ -310,7 +312,7 @@ export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id
                     canNext={mesIdx < data.meses.length - 1}
                   />
                 </div>
-                <DaySummaryCard mes={data.meses[mesIdx]} day={selDay} onVerReservas={() => router.push("/panel/reservas")} />
+                <DaySummaryCard mes={data.meses[mesIdx]} day={selDay} onVerReservas={() => router.push(ruta("reservas"))} />
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
