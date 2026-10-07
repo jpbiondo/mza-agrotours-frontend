@@ -17,6 +17,7 @@ const RUTAS: Array<[RegExp, string]> = [
   [/^\/establecimientos\/([^/?#]+)$/, "/establecimientos/$1"],
   [/^\/mis-solicitudes\/([^/?#]+)$/, "/mis-solicitudes/$1"],
   [/^\/mis-reservas\/([^/?#]+)$/, "/mis-reservas/$1"],
+  [/^\/admin\/solicitudes\/([^/?#]+)$/, "/admin/solicitudes/$1"],
 ];
 
 /**

@@ -3,22 +3,29 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle, ArrowUp, Bell, BellRing, CalendarX, Check, CheckCheck, FileCheck, FileClock, FileX, Loader, RotateCcw, Users,
+  AlertTriangle, ArrowUp, Bell, BellRing, CalendarX, Check, CheckCheck, FileCheck, FileSearch, FileClock, FileX, Loader, RotateCcw, Users,
   type LucideIcon,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { NOTIF_TONE } from "@/data/notificaciones";
-import { useNotificaciones } from "@/hooks/useNotificaciones";
+import { useNotificaciones, type AmbitoNotificaciones } from "@/hooks/useNotificaciones";
 import { usePermisoPush } from "@/hooks/usePush";
 import { cn } from "@/lib/utils";
 import type { Notificacion } from "@/types/notificaciones";
 
 const ICON: Record<string, LucideIcon> = {
-  "file-clock": FileClock, "file-check": FileCheck, "file-x": FileX,
+  "file-clock": FileClock, "file-check": FileCheck, "file-x": FileX, "file-search": FileSearch,
   "calendar-x": CalendarX, users: Users, bell: Bell,
 };
 
-export default function NotificationBell() {
+interface NotificationBellProps {
+  /** Personal por defecto; el panel de productor pasa el establecimiento activo. */
+  ambito?: AmbitoNotificaciones;
+  /** Pisa el tamaño del botón para emparejarlo con los demás de cada barra. */
+  className?: string;
+}
+
+export default function NotificationBell({ ambito = "personal", className }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   /**
    * Si la lista está scrolleada hasta arriba. Abierta y más abajo, las
@@ -31,7 +38,7 @@ export default function NotificationBell() {
     notificaciones, noLeidas, isLoading, error, reload,
     hayMas, cargandoMas, errorMas, cargarMas, marcarLeida, marcarTodas,
     nuevasPendientes, nuevasDesbordan, mostrarNuevas,
-  } = useNotificaciones(null, { retenerNuevas: () => open && !enTope.current });
+  } = useNotificaciones(ambito, { retenerNuevas: () => open && !enTope.current });
   const push = usePermisoPush();
   const router = useRouter();
   const wrap = useRef<HTMLDivElement>(null);
@@ -99,6 +106,7 @@ export default function NotificationBell() {
         className={cn(
           "relative inline-flex size-9.5 cursor-pointer items-center justify-center rounded-md border border-outline-variant",
           open ? "bg-cream-tert" : "bg-surface",
+          className,
         )}
       >
         <Bell className="size-4.5 text-fg-2" />

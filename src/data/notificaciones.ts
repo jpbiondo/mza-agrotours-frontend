@@ -9,6 +9,8 @@ export const NOTIF_PRESENTACION: Record<string, { icon: string; tone: NotifTone 
   SOLICITUD_ESTABLECIMIENTO_CREADA: { icon: "file-clock", tone: "info" },
   SOLICITUD_ESTABLECIMIENTO_APROBADA: { icon: "file-check", tone: "success" },
   SOLICITUD_ESTABLECIMIENTO_RECHAZADA: { icon: "file-x", tone: "danger" },
+  // Para la administración: hay algo esperando una revisión.
+  SOLICITUD_ESTABLECIMIENTO_POR_REVISAR: { icon: "file-search", tone: "warning" },
   PRODUCTOR_AGREGADO: { icon: "users", tone: "success" },
   RESERVA_CANCELADA_POR_BAJA_ACTIVIDAD: { icon: "calendar-x", tone: "danger" },
 };

@@ -325,7 +325,16 @@ function NavRow({
 }
 
 /* ---- Barra de cuenta --------------------------------------------------- */
-function AccountBar({ onMenu, rol }: { onMenu: () => void; rol: string }) {
+function AccountBar({
+  onMenu,
+  rol,
+  establecimientoId,
+}: {
+  onMenu: () => void;
+  rol: string;
+  /** El activo del switcher; `null` mientras no se sabe o si no hay ninguno. */
+  establecimientoId: string | null;
+}) {
   const nombre = useAuthStore((s) => s.nombre);
   const iniciales = admInitials(nombre ?? "");
 
@@ -357,7 +366,9 @@ function AccountBar({ onMenu, rol }: { onMenu: () => void; rol: string }) {
         </Link>
       </div>
 
-      <NotificationBell />
+      {/* Las del establecimiento que se está mirando, no las personales: esas
+          quedan en la campana del sitio. */}
+      <NotificationBell ambito={{ establecimientoId }} />
 
       <div className="hidden h-7 w-px bg-outline-variant shell:block" />
 
@@ -495,7 +506,13 @@ export default function PanelShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="shell:pl-[264px]">
-        <AccountBar onMenu={() => setPedido(true)} rol={activo?.rolNombre ?? ""} />
+        <AccountBar
+          onMenu={() => setPedido(true)}
+          rol={activo?.rolNombre ?? ""}
+          // Hasta que el switcher rehidrata, `activo` puede ser el primero de la
+          // lista y no el elegido: sin esperar, se pedirían las de otro.
+          establecimientoId={listo ? (activo?.id ?? null) : null}
+        />
         <main>{children}</main>
       </div>
     </div>

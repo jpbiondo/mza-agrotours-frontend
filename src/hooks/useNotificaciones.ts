@@ -12,17 +12,27 @@ import type { Notificacion } from "@/types/notificaciones";
 const TAMANIO_PAGINA = 10;
 
 /**
- * Las notificaciones personales cuelgan de `/notificacion`; las de un
- * establecimiento, de `/establecimientos/{id}/notificacion`. Es el mismo
- * handler del backend con distinta base, y la consulta las separa: la personal
- * trae sólo las que **no** tienen establecimiento, así que una lista nunca
- * incluye a la otra.
+ * Las tres bandejas exponen los mismos endpoints bajo distinta base:
+ * `/notificacion`, `/admin/notificacion` y `/establecimientos/{id}/notificacion`.
+ *
+ * `null` es un establecimiento que todavía no se sabe —el switcher no
+ * rehidrató— o que no hay: no se pide nada.
  */
-function basePath(establecimientoId?: string | null): string {
-  return establecimientoId
-    ? `/establecimientos/${encodeURIComponent(establecimientoId)}/notificacion`
-    : "/notificacion";
+function basePath(ambito: AmbitoNotificaciones): string | null {
+  if (ambito === "personal") return "/notificacion";
+  if (ambito === "admin") return "/admin/notificacion";
+  return ambito.establecimientoId
+    ? `/establecimientos/${encodeURIComponent(ambito.establecimientoId)}/notificacion`
+    : null;
 }
+
+/**
+ * La bandeja de la que salen (`ScopeNotificacionNombre` del backend): la
+ * personal del visitante, la de administración o la de un establecimiento (la
+ * del que el productor eligió en el switcher). Una bandeja nunca trae las de
+ * otra.
+ */
+export type AmbitoNotificaciones = "personal" | "admin" | { establecimientoId: string | null };
 
 const urlPagina = (path: string, page: number) => `${path}?page=${page}&size=${TAMANIO_PAGINA}`;
 
@@ -211,10 +221,10 @@ interface UseNotificacionesReturn {
  * el skeleton, y se cruzan con lo cargado: ver `fusionar`.
  */
 export function useNotificaciones(
-  establecimientoId?: string | null,
+  ambito: AmbitoNotificaciones = "personal",
   opciones: OpcionesNotificaciones = {},
 ): UseNotificacionesReturn {
-  const path = basePath(establecimientoId);
+  const path = basePath(ambito);
   const [nonce, setNonce] = useState(0);
   /**
    * Lo cargado, con la clave de la petición que lo trajo. Guardar la clave
@@ -225,15 +235,18 @@ export function useNotificaciones(
    */
   const [cargado, setCargado] = useState<Cargado | null>(null);
   const [cargandoMas, setCargandoMas] = useState(false);
-  const [errorMas, setErrorMas] = useState(false);
+  /** Clave de la petición cuya página siguiente falló: al cambiar de ámbito, el error no se arrastra. */
+  const [errorMasDe, setErrorMasDe] = useState<string | null>(null);
   // El estado llega un render tarde: dos avisos seguidos del scroll pedirían
   // la misma página dos veces. La ref corta el segundo en el acto.
   const pidiendoMas = useRef(false);
 
-  const clave = `${nonce}|${path}`;
-  const alDia = cargado?.clave === clave;
+  // Sin ruta no hay clave: nada que pedir ni que esperar.
+  const clave = path ? `${nonce}|${path}` : "";
+  const alDia = !!clave && cargado?.clave === clave;
 
   useEffect(() => {
+    if (!path) return;
     let active = true;
 
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -287,7 +300,7 @@ export function useNotificaciones(
   }, []);
 
   const reload = useCallback(() => {
-    setErrorMas(false);
+    setErrorMasDe(null);
     setNonce((n) => n + 1);
   }, []);
 
@@ -295,7 +308,7 @@ export function useNotificaciones(
   async function refrescar() {
     // Sin datos al día no hay qué refrescar: la carga en curso ya trae lo
     // último. Con error, el aviso sirve de reintento.
-    if (!alDia) return;
+    if (!alDia || !path) return;
     if (cargado.error) {
       reload();
       return;
@@ -341,18 +354,18 @@ export function useNotificaciones(
   const mostrarNuevas = useCallback(() => actualizar(clave, incorporar), [actualizar, clave]);
 
   async function cargarMas() {
-    if (!alDia || !cargado.hayMas || cargado.error || pidiendoMas.current) return;
+    if (!alDia || !path || !cargado.hayMas || cargado.error || pidiendoMas.current) return;
     const de = clave;
     const siguiente = cargado.pagina + 1;
 
     pidiendoMas.current = true;
     setCargandoMas(true);
-    setErrorMas(false);
+    setErrorMasDe(null);
     try {
       const res = await conToken((token) => apiFetch<unknown>(urlPagina(path, siguiente), { token }));
       const pagina = aPagina(res, siguiente);
       if (!("items" in pagina)) {
-        setErrorMas(true);
+        setErrorMasDe(de);
         return;
       }
       actualizar(de, (c) => ({
@@ -362,7 +375,7 @@ export function useNotificaciones(
         hayMas: pagina.hayMas,
       }));
     } catch {
-      setErrorMas(true);
+      setErrorMasDe(de);
     } finally {
       pidiendoMas.current = false;
       setCargandoMas(false);
@@ -388,7 +401,7 @@ export function useNotificaciones(
   }
 
   async function marcarLeida(id: string): Promise<Resultado> {
-    if (!alDia) return { ok: false };
+    if (!alDia || !path) return { ok: false };
     const n = cargado.notificaciones.find((x) => x.id === id);
     if (!n || n.leida) return { ok: true };
 
@@ -400,7 +413,7 @@ export function useNotificaciones(
   }
 
   async function marcarTodas(): Promise<Resultado> {
-    if (!alDia) return { ok: false };
+    if (!alDia || !path) return { ok: false };
     const noLeidas = cargado.notificaciones.filter((n) => !n.leida);
     // La lista viene desc, así que la primera no leída es la más nueva. Se
     // marca hasta su fecha y no hasta "ahora": una notificación que llegue
@@ -443,12 +456,13 @@ export function useNotificaciones(
   return {
     notificaciones: alDia ? cargado.notificaciones : [],
     noLeidas: alDia ? cargado.noLeidas : 0,
-    isLoading: !alDia,
+    // Sin ruta no hay nada que esperar: la campana muestra su vacío.
+    isLoading: !!path && !alDia,
     error: alDia ? cargado.error : null,
     reload,
     hayMas: alDia ? cargado.hayMas : false,
     cargandoMas,
-    errorMas,
+    errorMas: !!clave && errorMasDe === clave,
     cargarMas,
     marcarLeida,
     marcarTodas,
