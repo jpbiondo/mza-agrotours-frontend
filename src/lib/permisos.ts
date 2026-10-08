@@ -47,9 +47,8 @@ export const PermisoAdmin = {
 export type PermisoAdmin = (typeof PermisoAdmin)[keyof typeof PermisoAdmin];
 
 /**
- * Permisos del ámbito PRODUCTOR. Todavía no se chequea ninguno en el front
- * —/panel entra por tipo de acceso—, pero están para que el catálogo sea el
- * enum completo del backend y no la mitad que hoy se usa.
+ * Permisos del ámbito PRODUCTOR. /panel entra por tipo de acceso; cada pantalla
+ * chequea el suyo contra el establecimiento activo (ver `tienePermiso`).
  */
 export const PermisoProductor = {
   LEER_PRODUCTOR: "LEER_PRODUCTOR",

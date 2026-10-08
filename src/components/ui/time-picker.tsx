@@ -10,24 +10,33 @@ const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTOS = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
 
 interface TimePickerProps {
+  id?: string;
   value: string;
   onChange: (hhmm: string) => void;
+  onBlur?: () => void;
+  ref?: React.Ref<HTMLButtonElement>;
   disabled?: boolean;
+  /** Fuera de un formulario de RHF; adentro lo marca `aria-invalid` vía `<FormControl>`. */
   error?: boolean;
   placeholder?: string;
   "aria-label"?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
 /**
  * Hora en formato "HH:MM" con dos columnas en un popover. Reemplaza al
  * `<input type="time">` nativo, que en Windows abre un desplegable propio del
  * navegador y rompe el aspecto de la pantalla.
+ * Reenvía ref/onBlur/id/aria-* al trigger para integrarse con `<FormControl>`.
  */
 export function TimePicker({
-  value, onChange, disabled, error, placeholder = "--:--", "aria-label": ariaLabel,
+  id, value, onChange, onBlur, ref, disabled, error: errorProp, placeholder = "--:--",
+  "aria-label": ariaLabel, "aria-invalid": ariaInvalid, "aria-describedby": describedBy,
 }: TimePickerProps) {
   const [open, setOpen] = useState(false);
   const [h, m] = value ? value.split(":") : ["", ""];
+  const error = errorProp || ariaInvalid === true;
 
   const opcion = (activa: boolean) =>
     cn(
@@ -38,9 +47,13 @@ export function TimePicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        ref={ref}
+        id={id}
+        onBlur={onBlur}
         disabled={disabled}
         aria-label={ariaLabel}
         aria-invalid={error || undefined}
+        aria-describedby={describedBy}
         className={cn(
           "flex h-11 w-full min-w-0 items-center justify-between gap-1.5 rounded-md border border-input bg-surface px-3 text-left font-mono text-sm outline-none transition-colors",
           "focus-visible:border-green-800 focus-visible:ring-3 focus-visible:ring-green-800/20",

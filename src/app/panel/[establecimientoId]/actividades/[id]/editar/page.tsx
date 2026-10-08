@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GuardGestionarActividad } from "@/components/panel/GuardPermisoProductor";
 import GuardEstablecimientoSuspendido from "@/components/panel/GuardEstablecimientoSuspendido";
 import EditarActividadClient from "./EditarActividadClient";
 
@@ -11,8 +12,10 @@ export const metadata: Metadata = {
 export default async function EditarActividadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return (
-    <GuardEstablecimientoSuspendido>
-      <EditarActividadClient actividadId={id} />
-    </GuardEstablecimientoSuspendido>
+    <GuardGestionarActividad>
+      <GuardEstablecimientoSuspendido>
+        <EditarActividadClient actividadId={id} />
+      </GuardEstablecimientoSuspendido>
+    </GuardGestionarActividad>
   );
 }
