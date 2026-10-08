@@ -39,7 +39,7 @@ Firebase Auth es el dueño del ID token; nunca se persiste a mano. El perfil (`n
 
 `accesos` es la lista de permisos por ámbito que devuelve `GET /usuario/me`. Los helpers para leerla están en `src/lib/roles.ts` (`rolesDe`, `tienePermiso`, `tieneRol`, `nombreRol`, `establecimientosDe`) y los códigos en `src/lib/permisos.ts` (`TipoPermiso`, `PermisoAdmin`, `PermisoProductor`).
 
-**Los permisos de productor valen por establecimiento.** Cuál está activo lo elige el switcher del shell y lo sabe recién el cliente, así que esas pantallas chequean el permiso en el cliente (con `<SinPermiso>`), no en el layout.
+**Los permisos de productor valen por establecimiento.** Cuál está activo lo elige el switcher del shell y lo sabe recién el cliente, así que esas pantallas chequean el permiso en el cliente (con `<SinPermiso>`), no en el layout. Si la pantalla entera depende de un permiso, envolvé el cliente en el `page.tsx` con `GuardPermisoProductor` (o `GuardGestionarActividad`) de `src/components/panel/GuardPermisoProductor.tsx`.
 
 ### Backend
 

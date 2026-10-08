@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GuardGestionarActividad } from "@/components/panel/GuardPermisoProductor";
 import ActividadesClient from "./ActividadesClient";
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function ActividadesPanelPage() {
-  return <ActividadesClient />;
+  return (
+    <GuardGestionarActividad>
+      <ActividadesClient />
+    </GuardGestionarActividad>
+  );
 }

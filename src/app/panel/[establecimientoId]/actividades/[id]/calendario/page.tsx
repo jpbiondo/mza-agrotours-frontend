@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GuardGestionarActividad } from "@/components/panel/GuardPermisoProductor";
 import CalendarioClient from "./CalendarioClient";
 
 export const metadata: Metadata = {
@@ -12,5 +13,9 @@ export const metadata: Metadata = {
 // y la pantalla bloquea sólo las escrituras.
 export default async function CalendarioActividadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <CalendarioClient actividadId={id} />;
+  return (
+    <GuardGestionarActividad>
+      <CalendarioClient actividadId={id} />
+    </GuardGestionarActividad>
+  );
 }
