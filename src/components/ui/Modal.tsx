@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 /**
  * Diálogo modal centrado con scrim. `onClose` se dispara al hacer click fuera de
@@ -29,7 +30,7 @@ export function Modal({
         onMouseDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        className={`pop relative w-[468px] max-w-full rounded-lg border border-outline-variant bg-surface shadow-pop ${padding} ${className}`}
+        className={cn("pop relative w-[468px] max-w-full rounded-lg border border-outline-variant bg-surface shadow-pop", padding, className)}
       >
         {children}
       </div>

@@ -1,346 +1,432 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useRutaPanel } from "@/hooks/useEstablecimientos";
 import {
-  ArrowLeft, MapPin, Sprout, CreditCard, Hourglass, CheckCircle2, CalendarDays,
-  CalendarCheck, ChevronLeft, ChevronRight, Info, ListChecks, ArrowRight, FilePenLine, Clock,
-  Grape, Scissors, Wine, Leaf, Cherry, Nut,
+  ArrowLeft, Ban, CalendarDays, CalendarPlus, ChevronLeft, DollarSign, FilePenLine, Grape, MapPin, Users,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { useCalendarioActividad } from "@/hooks/useCalendarioActividad";
-import { MESES_LABEL, NOMBRES_DIA, fechaLarga } from "@/data/calendario";
-import { iconoDeCultivos } from "@/data/actividades-prod";
-import type { DiaCelda, MesCal } from "@/types/calendario";
-import type { ActividadProd } from "@/types/actividad-prod";
+import { Alert, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
+import { buttonClasses } from "@/components/ui/Button";
+import type { ToastData } from "@/components/ui";
+import { aISO, hoyISO, sumarDiasISO } from "@/components/ui/date-picker";
+import { AbrirDiaModal } from "@/components/panel/gestion-dias/AbrirDiaModal";
+import { CalendarioMensual, type Celda } from "@/components/panel/gestion-dias/CalendarioMensual";
+import { EditarCupoModal } from "@/components/panel/gestion-dias/EditarCupoModal";
+import { LoteDrawer } from "@/components/panel/gestion-dias/LoteDrawer";
+import { VigenciasMes } from "@/components/panel/gestion-dias/piezas";
+import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
+import { useCalendarioGestion, useConfiguracionDias, useGestionDiasAcciones } from "@/hooks/useGestionDias";
+import { moneyAr } from "@/lib/format";
+import { ORDEN_DIAS, SUSPENDIDO_DIAS, diaSemanaDe, fechaCorta, mensajeErrorDias } from "@/lib/gestion-dias";
+import type { EstadoActividad } from "@/types/actividad-prod";
+import type { AltaDia, AltaLote, CalendarioGestion, DiaProgramado, DiaSemana, FechaISO } from "@/types/gestion-dias";
 
-const ICONS: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
-  grape: Grape, scissors: Scissors, wine: Wine, leaf: Leaf, cherry: Cherry, sprout: Sprout, nut: Nut, "map-pin": MapPin,
+/** Si el backend no manda la ventana, es la misma que usa él. */
+const VENTANA_POR_DEFECTO = 120;
+
+const DE_BAJA = "La actividad está dada de baja: su calendario queda de consulta.";
+
+const ESTADO_BADGE: Record<EstadoActividad, { tone: "success" | "neutral" | "danger"; label: string }> = {
+  publicado: { tone: "success", label: "Publicada" },
+  borrador: { tone: "neutral", label: "Borrador" },
+  dado_de_baja: { tone: "danger", label: "Dada de baja" },
 };
 
-const TONES: Record<string, { bg: string; fg: string }> = {
-  success: { bg: "var(--success-fill)", fg: "var(--success-fg)" },
-  neutral: { bg: "var(--cream-tert)", fg: "var(--fg-2)" },
-  info: { bg: "var(--info-fill)", fg: "var(--info-fg)" },
-};
+/** Códigos que significan que el calendario que ve el productor quedó viejo. */
+const CALENDARIO_VIEJO = new Set(["A.diaFechaOcupada", "A.diaNoModificable", "A.diaYaComenzo", "A.cupoMenorAReservados"]);
 
-function Pill({ tone, children }: { tone: keyof typeof TONES; children: React.ReactNode }) {
-  const t = TONES[tone];
-  return <span style={{ display: "inline-flex", alignItems: "center", borderRadius: "var(--radius-pill)", padding: "4px 12px", fontSize: 12.5, fontWeight: 700, background: t.bg, color: t.fg }}>{children}</span>;
+type Mes = { anio: number; mes0: number };
+
+/** "YYYY-MM" del mes de una fecha: compara bien como texto. */
+const mesDe = (iso: FechaISO) => iso.slice(0, 7);
+const claveMes = ({ anio, mes0 }: Mes) => `${anio}-${String(mes0 + 1).padStart(2, "0")}`;
+
+function moverMes({ anio, mes0 }: Mes, delta: number): Mes {
+  const d = new Date(anio, mes0 + delta, 1);
+  return { anio: d.getFullYear(), mes0: d.getMonth() };
 }
 
-function MetricCard({ icon, label, value, sub, tone }: { icon: React.ReactNode; label: string; value: number; sub: string; tone: "green" | "warning" | "neutral" }) {
-  const tones = {
-    green: { bg: "var(--green-050)", brd: "var(--green-100)" },
-    warning: { bg: "#FBEDE3", brd: "#EBD3BF" },
-    neutral: { bg: "var(--cream-tert)", brd: "var(--outline-variant)" },
-  }[tone];
-  return (
-    <div style={{ flex: "1 1 180px", minWidth: 160, background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", padding: 20, display: "flex", alignItems: "center", gap: 16 }}>
-      <div style={{ width: 46, height: 46, borderRadius: 12, flexShrink: 0, background: tones.bg, border: `1px solid ${tones.brd}`, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 26, fontWeight: 600, color: "var(--fg-1)", lineHeight: 1 }}>{value}</div>
-        <div className="t-label" style={{ marginTop: 6 }}>{label}</div>
-        <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 3 }}>{sub}</div>
-      </div>
-    </div>
-  );
+/** Un día activo o reprogramado que todavía no empezó: es el único al que se le cambia el cupo. */
+function esModificable(d: DiaProgramado, ahora: string): boolean {
+  return (d.estado === "activa" || d.estado === "reprogramada") && `${d.fecha}T${d.horaInicio}` > ahora;
 }
 
-function OccupancyBar({ pagadas, pendientes, cupoMax, height = 8 }: { pagadas: number; pendientes: number; cupoMax: number; height?: number }) {
-  const max = cupoMax > 0 ? cupoMax : 1;
-  const libres = Math.max(0, max - pagadas - pendientes);
-  return (
-    <div style={{ width: "100%", height, borderRadius: 999, overflow: "hidden", display: "flex", background: "var(--cream-tert)" }}>
-      <div style={{ width: `${(pagadas / max) * 100}%`, background: "var(--green-700)" }} />
-      <div style={{ width: `${(pendientes / max) * 100}%`, background: "var(--warning)" }} />
-      <div style={{ width: `${(libres / max) * 100}%`, background: "var(--sand)" }} />
-    </div>
-  );
-}
-
-function LegendCupo({ color, label, n }: { color: string; label: string; n: number }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--fg-2)" }}>
-      <span style={{ width: 9, height: 9, borderRadius: 3, background: color, flexShrink: 0 }} />
-      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--fg-1)" }}>{n}</span> {label}
-    </span>
-  );
-}
-
-function DayCell({ cell, selected, onSelect }: { cell: DiaCelda | null; selected: boolean; onSelect: (d: number) => void }) {
-  if (!cell) return <div />;
-  if (!cell.disponible) {
-    return <div style={{ minHeight: 62, borderRadius: 10, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "8px 0", color: "var(--fg-3)", opacity: 0.5, fontSize: 14 }}>{cell.dia}</div>;
+/**
+ * Las celdas del mes. Un día cancelado no ocupa la fecha —el backend deja abrir
+ * otro ahí—, así que se lo trata como libre.
+ */
+function armarCeldas(
+  { anio, mes0 }: Mes,
+  dias: DiaProgramado[],
+  { hoy, ahora, fechaMaxima, soloLectura }: { hoy: FechaISO; ahora: string; fechaMaxima: FechaISO; soloLectura: string | null },
+): Celda[] {
+  const porFecha = new Map<FechaISO, DiaProgramado>();
+  for (const d of dias) {
+    if (d.estado === "cancelada") continue;
+    const previo = porFecha.get(d.fecha);
+    // Si hay dos en la misma fecha, gana el que todavía se puede tocar.
+    if (!previo || esModificable(d, ahora)) porFecha.set(d.fecha, d);
   }
-  const numColor = selected ? "#fff" : "var(--fg-1)";
-  const subColor = selected ? "rgba(255,255,255,.82)" : "var(--fg-2)";
-  const barTrack = selected ? "rgba(255,255,255,.28)" : "var(--cream-tert)";
-  const pagFill = selected ? "#fff" : "var(--green-700)";
-  const penFill = selected ? "rgba(255,255,255,.5)" : "var(--warning)";
-  const pPag = cell.cupoMax > 0 ? Math.min(100, (cell.pagadas / cell.cupoMax) * 100) : 0;
-  const pPen = cell.cupoMax > 0 ? Math.min(100 - pPag, (cell.pendientes / cell.cupoMax) * 100) : 0;
-  const total = pPag + pPen;
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(cell.dia)}
-      aria-label={`${cell.dia}: ${cell.pagadas} pagadas, ${cell.pendientes} en espera, cupo ${cell.cupoMax}`}
-      style={{
-        position: "relative", minHeight: 62, width: "100%", padding: "8px 7px 9px", borderRadius: 10, cursor: "pointer", textAlign: "left",
-        display: "flex", flexDirection: "column", justifyContent: "space-between",
-        background: selected ? "var(--green-800)" : "var(--green-050)",
-        border: "1px solid " + (selected ? "var(--green-800)" : "var(--green-300)"),
-        color: numColor, boxShadow: selected ? "inset 0 -2px 0 var(--green-900)" : "none",
-      }}
-    >
-      <span style={{ fontSize: 15, fontWeight: selected ? 700 : 600, color: numColor, lineHeight: 1 }}>{cell.dia}</span>
-      <div>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: subColor, marginBottom: 4 }}>{cell.pagadas}/{cell.cupoMax}</div>
-        <div style={{ width: "100%", height: 4, borderRadius: 999, background: barTrack, overflow: "hidden" }}>
-          <div style={{ width: `${total}%`, height: "100%", display: "flex" }}>
-            <div style={{ width: `${total > 0 ? (pPag / total) * 100 : 0}%`, background: pagFill }} />
-            <div style={{ width: `${total > 0 ? (pPen / total) * 100 : 0}%`, background: penFill }} />
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
 
-function Legend({ sw, label }: { sw: React.CSSProperties; label: string }) {
-  return <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "var(--fg-2)" }}><span style={{ width: 14, height: 14, borderRadius: 4, ...sw }} /> {label}</div>;
-}
-
-function MonthCalendar({ mes, selectedDay, onSelect, onPrev, onNext, canPrev, canNext }: { mes: MesCal; selectedDay: number | null; onSelect: (d: number) => void; onPrev: () => void; onNext: () => void; canPrev: boolean; canNext: boolean }) {
-  const firstDow = new Date(mes.year, mes.month, 1).getDay();
-  const leading = (firstDow + 6) % 7;
-  const cells: (DiaCelda | null)[] = [];
-  for (let i = 0; i < leading; i++) cells.push(null);
-  for (let d = 1; d <= mes.daysInMonth; d++) cells.push(mes.days[d]);
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const navBtn = (disabled: boolean): React.CSSProperties => ({ width: 36, height: 36, borderRadius: 8, border: "1px solid " + (disabled ? "var(--cream-tert)" : "var(--outline-variant)"), background: disabled ? "var(--cream-tert)" : "var(--surface)", cursor: disabled ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" });
-
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <button type="button" onClick={onPrev} disabled={!canPrev} aria-label="Mes anterior" style={navBtn(!canPrev)}><ChevronLeft size={17} color={!canPrev ? "var(--fg-3)" : "var(--fg-1)"} /></button>
-        <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: "var(--fg-1)" }}>{MESES_LABEL[mes.month]} {mes.year}</div>
-        <button type="button" onClick={onNext} disabled={!canNext} aria-label="Mes siguiente" style={navBtn(!canNext)}><ChevronRight size={17} color={!canNext ? "var(--fg-3)" : "var(--fg-1)"} /></button>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 8 }}>
-        {NOMBRES_DIA.map((n) => <div key={n} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "2px 0" }}>{n}</div>)}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
-        {cells.map((c, i) => <DayCell key={i} cell={c} selected={!!c && c.disponible && selectedDay === c.dia} onSelect={onSelect} />)}
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--outline-variant)" }}>
-        <Legend sw={{ background: "var(--green-050)", border: "1px solid var(--green-300)" }} label="Disponible" />
-        <Legend sw={{ background: "var(--green-800)" }} label="Seleccionado" />
-        <Legend sw={{ background: "var(--green-700)" }} label="Cupos pagados" />
-        <Legend sw={{ background: "var(--warning)" }} label="En espera de pago" />
-        <Legend sw={{ background: "transparent", border: "1px dashed var(--outline-variant)" }} label="No se dicta" />
-      </div>
-    </div>
-  );
-}
-
-function DaySummaryCard({ mes, day, onVerReservas }: { mes: MesCal; day: number | null; onVerReservas: () => void }) {
-  if (!day) {
-    return (
-      <div className="card" style={{ padding: 22, borderStyle: "dashed", borderColor: "var(--sand)", textAlign: "center" }}>
-        <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--green-050)", border: "1px solid var(--green-100)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}><CalendarDays size={24} color="var(--green-700)" /></div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "var(--fg-1)" }}>Seleccioná una fecha</div>
-        <p style={{ margin: "6px auto 0", color: "var(--fg-2)", fontSize: 13.5, maxWidth: 280, lineHeight: 1.5 }}>Tocá un día disponible del calendario para ver sus cupos y las reservas pendientes.</p>
-      </div>
-    );
+  const celdas: Celda[] = [];
+  const total = new Date(anio, mes0 + 1, 0).getDate();
+  for (let n = 1; n <= total; n++) {
+    const fecha = aISO(new Date(anio, mes0, n));
+    const d = porFecha.get(fecha);
+    if (d) {
+      celdas.push(esModificable(d, ahora)
+        ? { tipo: "programado", dia: n, ref: d, hoy: fecha === hoy, editable: !soloLectura }
+        : { tipo: "finalizado", dia: n, pagadas: d.pagadas, cupoMax: d.cupoMax });
+    } else if (fecha < hoy) {
+      celdas.push({ tipo: "off", dia: n, titulo: "Día pasado" });
+    } else if (fecha > fechaMaxima) {
+      celdas.push({ tipo: "off", dia: n, titulo: "Fuera de la ventana de apertura" });
+    } else if (soloLectura) {
+      celdas.push({ tipo: "off", dia: n, titulo: soloLectura });
+    } else {
+      celdas.push({ tipo: "abrible", dia: n, fecha });
+    }
   }
-  const cell = mes.days[day];
-  const { pagadas, pendientes, cupoMax, lleno, pasado } = cell;
-  const ocupados = pagadas + pendientes;
-  const libres = Math.max(0, cupoMax - ocupados);
+  return celdas;
+}
 
+/**
+ * Horario con el que arranca un día nuevo: el que la actividad ya usa ese día
+ * de la semana dentro de una vigencia que cubre la fecha; si no, cualquiera de
+ * ese día de la semana; si no, el primero que haya.
+ */
+function horarioSugerido(cal: CalendarioGestion, fecha: FechaISO) {
+  const dia = diaSemanaDe(fecha);
+  const delDia = (desdeVigencias: CalendarioGestion["vigencias"]) =>
+    desdeVigencias.flatMap((v) => v.horarios).find((h) => h.dias.includes(dia));
+  const h =
+    delDia(cal.vigencias.filter((v) => v.desde <= fecha && fecha <= v.hasta)) ??
+    delDia(cal.vigencias) ??
+    cal.vigencias[0]?.horarios[0];
+  return h ? { horaInicio: h.horaInicio, horaFin: h.horaFin } : null;
+}
+
+/** Los días de la semana que la actividad ya usa en el mes, para arrancar el lote. */
+function diasDelMes(cal: CalendarioGestion): DiaSemana[] {
+  const usados = new Set(cal.vigencias.flatMap((v) => v.horarios.flatMap((h) => h.dias)));
+  return ORDEN_DIAS.filter((d) => usados.has(d));
+}
+
+function Stat({ icon, label, value, mono }: { icon: React.ReactNode; label: string; value: string; mono?: boolean }) {
   return (
-    <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{ padding: "18px 22px", background: "var(--green-050)", borderBottom: "1px solid var(--green-100)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 10, background: "var(--green-800)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "inset 0 -2px 0 var(--green-900)" }}><CalendarCheck size={21} color="#fff" /></div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 15.5, fontWeight: 700, color: "var(--fg-1)", lineHeight: 1.2 }}>{fechaLarga(mes.year, mes.month, day)}</div>
-            <div style={{ fontSize: 12.5, color: "var(--fg-2)", marginTop: 3, fontFamily: "var(--font-mono)" }}>{cell.horario ? `${cell.horario.desde} – ${cell.horario.hasta} h` : ""}</div>
-          </div>
-        </div>
-        <Pill tone={pasado ? "neutral" : "info"}>{pasado ? "Finalizado" : "Próximo"}</Pill>
-      </div>
-
-      <div style={{ padding: 22, display: "flex", flexDirection: "column", gap: 18 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: pagadas > 0 ? "var(--green-050)" : "var(--cream-tert)", border: `1px solid ${pagadas > 0 ? "var(--green-100)" : "var(--outline-variant)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {pasado ? <CheckCircle2 size={22} color={pagadas > 0 ? "var(--green-700)" : "var(--fg-3)"} /> : <CreditCard size={22} color={pagadas > 0 ? "var(--green-700)" : "var(--fg-3)"} />}
-          </div>
-          <div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 24, fontWeight: 700, color: "var(--fg-1)", lineHeight: 1 }}>{pagadas}</span>
-              <span style={{ fontSize: 14, color: "var(--fg-2)" }}>{pasado ? (pagadas === 1 ? "reserva finalizada" : "reservas finalizadas") : (pagadas === 1 ? "reserva pagada" : "reservas pagadas")}</span>
-            </div>
-            <div style={{ fontSize: 12.5, color: "var(--fg-3)", marginTop: 4, lineHeight: 1.4 }}>
-              {pasado ? "Jornada realizada y cobrada" : pagadas > 0 ? "Confirmadas — si cancelás o reprogramás el día, gestionás sus reembolsos" : "Todavía sin reservas pagadas para este día"}
-            </div>
-          </div>
-        </div>
-
-        {!pasado && (
-          <div style={{ display: "flex", alignItems: "center", gap: 13, background: pendientes > 0 ? "#FBEDE3" : "var(--cream-tert)", border: `1px solid ${pendientes > 0 ? "#EBD3BF" : "var(--outline-variant)"}`, borderRadius: 12, padding: "12px 14px" }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: "var(--surface)", border: `1px solid ${pendientes > 0 ? "#EBD3BF" : "var(--outline-variant)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}><Hourglass size={19} color={pendientes > 0 ? "var(--warning)" : "var(--fg-3)"} /></div>
-            <div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 18, fontWeight: 700, color: "var(--fg-1)", lineHeight: 1 }}>{pendientes}</span>
-                <span style={{ fontSize: 13.5, color: "var(--fg-2)" }}>{pendientes === 1 ? "cupo en espera de pago" : "cupos en espera de pago"}</span>
-              </div>
-              <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 3, lineHeight: 1.4 }}>Retienen el cupo hasta confirmar el pago. Si no se paga, se libera.</div>
-            </div>
-          </div>
-        )}
-
-        <div style={{ background: "var(--cream-tert)", borderRadius: 12, padding: "14px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <span className="t-label">Reparto de cupos</span>
-            <span style={{ display: "inline-flex", alignItems: "baseline", gap: 2, fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 18, color: lleno ? "var(--warning)" : "var(--green-800)" }}>
-              {ocupados}<span style={{ color: "var(--fg-3)", fontWeight: 600, fontSize: 14 }}>/{cupoMax}</span>
-            </span>
-          </div>
-          <OccupancyBar pagadas={pagadas} pendientes={pendientes} cupoMax={cupoMax} height={9} />
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 14px", marginTop: 11 }}>
-            <LegendCupo color="var(--green-700)" label={pasado ? "finalizados" : "pagados"} n={pagadas} />
-            {!pasado && <LegendCupo color="var(--warning)" label="en espera" n={pendientes} />}
-            <LegendCupo color="var(--sand)" label="libres" n={libres} />
-          </div>
-          {lleno && <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 11, fontSize: 12.5, color: "var(--warning)" }}><CheckCircle2 size={14} color="var(--warning)" /> Cupos completos para este día</div>}
-        </div>
-
-        <button type="button" className="btn btn-primary" onClick={onVerReservas} style={{ width: "100%", justifyContent: "center" }}>
-          <ListChecks size={18} /> Ver detalle de reservas <ArrowRight size={18} />
-        </button>
+    <div className="flex min-w-0 items-center gap-3 px-[22px] py-1">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-green-050 text-green-800">{icon}</div>
+      <div className="min-w-0">
+        <div className="text-[11px] font-semibold tracking-[.06em] text-fg-3 uppercase">{label}</div>
+        <div className={`mt-0.5 text-lg leading-tight font-semibold text-fg-1 ${mono ? "font-mono" : ""}`}>{value}</div>
       </div>
     </div>
   );
 }
 
-export default function CalendarioClient({ act }: { act: Pick<ActividadProd, "id" | "nombre" | "estado" | "cultivos"> }) {
-  const router = useRouter();
+function CalendarioSkeleton() {
+  return (
+    <div aria-busy>
+      <Skeleton className="mb-3.5 h-4 w-56" />
+      <div className="flex items-center gap-4">
+        <Skeleton className="size-16 rounded-[14px]" />
+        <div className="flex-1">
+          <Skeleton className="h-8 w-80 max-w-full" />
+          <Skeleton className="mt-2.5 h-4 w-64" />
+        </div>
+      </div>
+      <Skeleton className="mt-[22px] h-[76px] rounded-lg" />
+      <Card className="mt-[22px] p-6">
+        <Skeleton className="h-6 w-64" />
+        <Skeleton className="mt-5 h-[76px]" />
+        <div className="mt-5 grid grid-cols-7 gap-1.5">
+          {Array.from({ length: 35 }, (_, i) => <Skeleton key={i} className="min-h-24 rounded-[10px]" />)}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+export default function CalendarioClient({ actividadId }: { actividadId: string }) {
+  const { activo } = useEstablecimientos();
   const ruta = useRutaPanel();
-  const { data, isLoading, error, reload } = useCalendarioActividad(act.id);
-  const [mesIdx, setMesIdx] = useState(0);
-  const [selDay, setSelDay] = useState<number | null>(null);
+  const establecimientoId = activo?.id ?? "";
+  const suspendido = !!activo?.establecimientoSuspendido;
 
-  const IconC = ICONS[iconoDeCultivos(act.cultivos)] ?? Grape;
-  // Ya no existe el estado "dada de baja": una actividad eliminada no vuelve.
-  // Lo que queda por distinguir es si está publicada o todavía en borrador.
-  const activo = act.estado === "publicado";
+  const [mes, setMes] = useState<Mes>(() => {
+    const d = new Date();
+    return { anio: d.getFullYear(), mes0: d.getMonth() };
+  });
+  const cal = useCalendarioGestion(establecimientoId, actividadId, mes.anio, mes.mes0 + 1);
+  const conf = useConfiguracionDias(establecimientoId, actividadId);
+  const acciones = useGestionDiasAcciones(establecimientoId, actividadId);
+
+  // La cabecera no cambia entre meses: mientras se pide otro, se sigue mostrando
+  // la última que llegó en vez de vaciar la pantalla.
+  const base = cal.data ?? cal.ultimo;
+
+  const [editando, setEditando] = useState<DiaProgramado | null>(null);
+  const [abriendo, setAbriendo] = useState<FechaISO | null>(null);
+  const [loteAbierto, setLoteAbierto] = useState(false);
+  const [toast, setToast] = useState<ToastData | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5200);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const hoy = hoyISO();
+  // Si la configuración no llegó se usa la misma ventana que aplica el backend:
+  // es sólo referencia, y el backend valida igual al guardar.
+  const ventanaDias = conf.data?.ventanaDias ?? VENTANA_POR_DEFECTO;
+  const fechaMaxima = conf.data?.fechaMaxima ?? sumarDiasISO(hoy, ventanaDias);
+  const tarifas = conf.data?.tarifas ?? [];
+
+  const soloLectura = suspendido ? SUSPENDIDO_DIAS : base?.estado === "dado_de_baja" ? DE_BAJA : null;
+
+  const celdas = useMemo(() => {
+    if (!cal.data) return [];
+    const ahora = new Date();
+    const hhmm = `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
+    return armarCeldas(mes, cal.data.dias, { hoy, ahora: `${hoy}T${hhmm}`, fechaMaxima, soloLectura });
+  }, [cal.data, mes, hoy, fechaMaxima, soloLectura]);
+
+  // Hacia atrás, hasta donde empieza la vigencia o el mes actual, pero nunca
+  // antes de enero de este año: el backend no consulta años anteriores. Hacia
+  // adelante, hasta la última vigencia o el tope de la ventana, lo que esté más lejos.
+  const piso = [base?.vigenciaDesde ?? hoy, hoy].map(mesDe).sort()[0];
+  const minimo = piso < `${hoy.slice(0, 4)}-01` ? `${hoy.slice(0, 4)}-01` : piso;
+  const maximo = [base?.vigenciaHasta ?? hoy, fechaMaxima].map(mesDe).sort()[1];
+  const puedePrev = claveMes(mes) > minimo;
+  const puedeNext = claveMes(mes) < maximo;
+  const irA = (delta: number) => setMes((m) => moverMes(m, delta));
+
+  function onElegir(c: Celda) {
+    if (c.tipo === "programado" && c.editable) setEditando(c.ref);
+    else if (c.tipo === "abrible") setAbriendo(c.fecha);
+  }
+
+  async function guardarCupo(dia: DiaProgramado, cupo: number): Promise<string | null> {
+    const r = await acciones.cambiarCupo(dia.id, cupo);
+    if (!r.ok) {
+      if (r.code && CALENDARIO_VIEJO.has(r.code)) cal.reload();
+      return mensajeErrorDias(r.code);
+    }
+    setEditando(null);
+    cal.reload();
+    setToast({ tone: "success", title: "Día actualizado", sub: `${fechaCorta(dia.fecha)} · ${cupo} cupos` });
+    return null;
+  }
+
+  async function abrirDia(d: AltaDia): Promise<string | null> {
+    const r = await acciones.abrirDia(d);
+    if (!r.ok) {
+      if (r.code && CALENDARIO_VIEJO.has(r.code)) cal.reload();
+      return mensajeErrorDias(r.code);
+    }
+    setAbriendo(null);
+    cal.reload();
+    setToast({ tone: "success", title: "Día abierto para reservas", sub: `${fechaCorta(d.fecha)} · ${d.cupoMax} cupos` });
+    return null;
+  }
+
+  async function abrirLote(l: AltaLote): Promise<string | null> {
+    const r = await acciones.abrirLote(l);
+    if (!r.ok) return mensajeErrorDias(r.code);
+    setLoteAbierto(false);
+    cal.reload();
+    const creados = r.plan?.aCrear.length;
+    const descartados = r.plan?.descartadas.length ?? 0;
+    const partes = [creados === undefined ? "Se abrieron los días nuevos" : `Se ${creados === 1 ? "abrió 1 día nuevo" : `abrieron ${creados} días nuevos`}`];
+    if (descartados > 0) partes.push(`${descartados} ${descartados === 1 ? "fecha se descartó" : "fechas se descartaron"}`);
+    if (!base?.vigenciaHasta || l.hasta > base.vigenciaHasta) partes.push(`la vigencia llega hasta el ${fechaCorta(l.hasta)}`);
+    setToast({ tone: descartados > 0 ? "info" : "success", title: "Días creados en lote", sub: partes.join(". ") + "." });
+    return null;
+  }
+
+  const badge = base ? ESTADO_BADGE[base.estado] : null;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
-
-      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "24px 28px 80px" }}>
-        <Link href={ruta("actividades")} style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none", color: "var(--fg-2)", fontSize: 13.5, fontWeight: 600, marginBottom: 18 }}>
-          <ArrowLeft size={16} /> Volver a actividades
-        </Link>
-
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 18, flexWrap: "wrap", marginBottom: 8 }}>
-          <div style={{ width: 60, height: 60, borderRadius: 16, flexShrink: 0, background: activo ? "var(--green-050)" : "var(--cream-tert)", border: `1px solid ${activo ? "var(--green-100)" : "var(--outline-variant)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <IconC size={30} color={activo ? "var(--green-700)" : "var(--fg-3)"} />
-          </div>
-          <div style={{ flex: "1 1 320px", minWidth: 260 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--fg-3)", fontSize: 13, marginBottom: 6 }}>
-              <MapPin size={14} color="var(--brown-700)" /> <span>Finca La Escondida · Luján de Cuyo, Mendoza</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 30, color: "var(--fg-1)", margin: 0, letterSpacing: "-.01em" }}>{act.nombre}</h1>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-3)" }}>{act.id}</span>
-              <Pill tone={activo ? "success" : "neutral"}>{activo ? "Publicado" : "Borrador"}</Pill>
-            </div>
-            <div style={{ marginTop: 14 }}>
-              <div className="t-label" style={{ marginBottom: 7 }}>Cultivos asociados</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                {act.cultivos.map((c) => (
-                  <span key={c.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--green-100)", color: "var(--green-800)", borderRadius: "var(--radius-pill)", padding: "4px 11px", fontSize: 12.5, fontWeight: 600 }}><Sprout size={12} color="var(--green-700)" /> {c.nombre}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {!activo && (
-          <div style={{ display: "flex", gap: 13, alignItems: "flex-start", background: "var(--cream-tert)", border: "1px solid var(--outline)", borderRadius: "var(--radius-lg)", padding: "14px 18px", margin: "20px 0 4px" }}>
-            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--surface)", border: "1px solid var(--outline)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><FilePenLine size={19} color="var(--fg-2)" /></div>
-            <div>
-              <strong style={{ fontSize: 14.5, color: "var(--fg-1)" }}>Actividad en borrador</strong>
-              <p style={{ margin: "3px 0 0", fontSize: 13.5, color: "var(--fg-2)", lineHeight: 1.5 }}>Todavía no es visible para los visitantes y no puede recibir reservas. Publicala desde el listado de actividades para que aparezca en el catálogo.</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-cream-bg">
+      <div className="mx-auto max-w-[1240px] px-7 pt-6 pb-16">
+        {!establecimientoId && (
+          <Alert className="mb-5">
+            No hay un establecimiento seleccionado. Elegí uno en el menú lateral para ver el calendario.
+          </Alert>
         )}
 
-        <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando calendario…" pad={72}>
-          {data && (
-          <>
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", margin: "26px 0" }}>
-              <MetricCard icon={<CreditCard size={22} color="var(--green-700)" />} label="Reservas pagadas" value={data.metricas.pagadas} sub="Confirmadas en días próximos" tone="green" />
-              <MetricCard icon={<Hourglass size={22} color="var(--warning)" />} label="En espera de pago" value={data.metricas.pendientes} sub="Cupos retenidos hasta el pago" tone="warning" />
-              <MetricCard icon={<CheckCircle2 size={22} color="var(--fg-2)" />} label="Finalizadas" value={data.metricas.finalizadas} sub="Jornadas ya realizadas" tone="neutral" />
-            </div>
+        <AsyncBoundary
+          loading={!!establecimientoId && !base && cal.isLoading}
+          error={cal.error}
+          onRetry={cal.reload}
+          loadingLabel="Cargando calendario…"
+          skeleton={<CalendarioSkeleton />}
+          pad={72}
+        >
+          {base && badge && (
+            <>
+              <nav className="mb-3.5 flex items-center gap-2 text-[13px] text-fg-2" aria-label="Migas de pan">
+                <Link href={ruta("actividades")} className="inline-flex items-center gap-1 font-medium text-fg-2 no-underline hover:text-fg-1">
+                  <ChevronLeft className="size-3.5" /> Actividades
+                </Link>
+                <span className="text-fg-3">/</span>
+                <span className="font-semibold text-fg-1">{base.nombre}</span>
+              </nav>
 
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 320px", gap: 24, alignItems: "start" }} className="cal-grid">
-              <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
-                <div className="card" style={{ padding: 24 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 18 }}>
-                    <CalendarDays size={19} color="var(--green-800)" />
-                    <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)", margin: 0 }}>Calendario de disponibilidad</h2>
+              <div className="flex flex-wrap items-start justify-between gap-6">
+                <div className="flex min-w-0 flex-1 items-center gap-4">
+                  <div className="flex size-16 shrink-0 items-center justify-center rounded-[14px] border border-green-300 bg-green-050">
+                    <Grape className="size-7 text-green-800" />
                   </div>
-                  <p style={{ margin: "0 0 20px", color: "var(--fg-2)", fontSize: 14, lineHeight: 1.5 }}>
-                    Sólo los días resaltados están disponibles al público. El número de cada día son las <strong style={{ color: "var(--fg-1)" }}>reservas pagadas</strong>; seleccioná uno para ver el reparto de cupos.
-                  </p>
-                  <MonthCalendar
-                    mes={data.meses[mesIdx]}
-                    selectedDay={selDay}
-                    onSelect={setSelDay}
-                    onPrev={() => { if (mesIdx > 0) { setMesIdx(mesIdx - 1); setSelDay(null); } }}
-                    onNext={() => { if (mesIdx < data.meses.length - 1) { setMesIdx(mesIdx + 1); setSelDay(null); } }}
-                    canPrev={mesIdx > 0}
-                    canNext={mesIdx < data.meses.length - 1}
-                  />
-                </div>
-                <DaySummaryCard mes={data.meses[mesIdx]} day={selDay} onVerReservas={() => router.push(ruta("reservas"))} />
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
-                <div className="card" style={{ padding: 20 }}>
-                  <div className="t-label" style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 7 }}><Clock size={14} color="var(--fg-2)" /> Días y horas disponibles</div>
-                  <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
-                    {data.dias.map((d, i) => (
-                      <li key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, fontSize: 14.5, color: "var(--fg-1)", padding: "11px 0", borderBottom: i < data.dias.length - 1 ? "1px solid var(--cream-tert)" : "none" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 9, fontWeight: 600 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green-700)" }} /> {d.dia}</span>
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 13.5, color: "var(--fg-2)" }}>{d.desde} – {d.hasta}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="card" style={{ padding: 18, background: "var(--cream-tert)" }}>
-                  <div style={{ display: "flex", gap: 11, alignItems: "flex-start" }}>
-                    <Info size={18} color="var(--brown-700)" style={{ marginTop: 1, flexShrink: 0 }} />
-                    <p style={{ margin: 0, fontSize: 13, color: "var(--fg-2)", lineHeight: 1.5 }}>Los números muestran la cantidad de reservas pagadas sobre los cupos máximos de ese día.</p>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <h1 className="font-display text-[30px] leading-tight font-bold text-fg-1">{base.nombre}</h1>
+                      <EstadoBadge tone={badge.tone}>{badge.label}</EstadoBadge>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-4">
+                      {base.establecimiento && (
+                        <span className="inline-flex items-center gap-[5px] text-[13px] text-fg-2">
+                          <MapPin className="size-3.5 text-fg-3" /> {base.establecimiento}
+                        </span>
+                      )}
+                      <span
+                        className="inline-flex items-center gap-[5px] text-[13px] text-fg-2"
+                        title="Desde la primera hasta la última vigencia cargada"
+                      >
+                        <CalendarDays className="size-3.5 text-fg-3" />
+                        {base.vigenciaDesde && base.vigenciaHasta
+                          ? `Vigencia general ${fechaCorta(base.vigenciaDesde)} → ${fechaCorta(base.vigenciaHasta)}`
+                          : "Sin vigencia cargada"}
+                      </span>
+                    </div>
                   </div>
                 </div>
+                <Link href={ruta("actividades")} className={buttonClasses({ variant: "neutral" })}>
+                  <ArrowLeft className="size-4" /> Volver
+                </Link>
               </div>
-            </div>
-          </>
-        )}
+
+              <div className="mt-[22px] flex flex-wrap items-center overflow-hidden rounded-lg border border-outline-variant bg-surface px-1.5 py-4">
+                {base.precioBase !== null && (
+                  <>
+                    <Stat icon={<DollarSign className="size-4" />} label="Precio base" value={moneyAr(base.precioBase)} mono />
+                    <div aria-hidden className="my-1.5 w-px self-stretch bg-outline-variant" />
+                  </>
+                )}
+                <Stat icon={<Users className="size-4" />} label="Cupo base por día" value={String(base.cupoBase)} />
+              </div>
+
+              {suspendido && (
+                <Alert tone="danger" icon={<Ban className="size-[18px]" />} className="mt-5">
+                  <strong className="font-bold">Este establecimiento está suspendido.</strong> Podés consultar el
+                  calendario, pero no abrir días ni cambiar cupos hasta que un administrador lo reactive.
+                </Alert>
+              )}
+              {!suspendido && base.estado === "dado_de_baja" && (
+                <Alert tone="danger" icon={<Ban className="size-[18px]" />} className="mt-5">{DE_BAJA}</Alert>
+              )}
+              {base.estado === "borrador" && (
+                <Alert tone="warning" icon={<FilePenLine className="size-[18px]" />} className="mt-5">
+                  <strong className="font-bold">Actividad en borrador.</strong> Los días que abras no se verán en el
+                  catálogo hasta que la publiques desde el listado de actividades.
+                </Alert>
+              )}
+
+              <Card className="mt-[22px] p-6">
+                <div className="mb-[18px] flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-[9px]">
+                    <CalendarDays className="size-[19px] text-green-800" />
+                    <h2 className="font-display text-xl font-bold text-fg-1">Calendario de disponibilidad</h2>
+                  </div>
+                  <Button
+                    variant="neutral"
+                    size="sm"
+                    onClick={() => setLoteAbierto(true)}
+                    disabled={!!soloLectura}
+                    title={soloLectura ?? undefined}
+                    className="shrink-0 whitespace-nowrap"
+                  >
+                    <CalendarPlus className="size-[15px]" /> Agregar días
+                  </Button>
+                </div>
+                <p className="mb-5 text-sm leading-normal text-fg-2">
+                  {soloLectura ? (
+                    "Los días se muestran de consulta: no se pueden abrir ni modificar."
+                  ) : (
+                    <>
+                      Tocá un <strong className="text-fg-1">día programado</strong> para modificar su cupo, o un{" "}
+                      <strong className="text-fg-1">día libre</strong> para abrirlo a reservas.
+                    </>
+                  )}
+                </p>
+
+                {cal.data ? (
+                  <VigenciasMes vigencias={cal.data.vigencias} mes0={mes.mes0} />
+                ) : (
+                  <Skeleton className="mb-5 h-[76px]" />
+                )}
+
+                <CalendarioMensual
+                  anio={mes.anio}
+                  mes0={mes.mes0}
+                  celdas={celdas}
+                  cargando={!cal.data}
+                  onElegir={onElegir}
+                  onPrev={() => irA(-1)}
+                  onNext={() => irA(1)}
+                  puedePrev={puedePrev}
+                  puedeNext={puedeNext}
+                />
+              </Card>
+            </>
+          )}
         </AsyncBoundary>
       </div>
 
-      <style>{`@media (max-width: 900px) { .cal-grid { grid-template-columns: 1fr !important; } }`}</style>
+      {editando && base && (
+        <EditarCupoModal
+          dia={editando}
+          actividad={base.nombre}
+          cupoBase={base.cupoBase}
+          tarifas={tarifas}
+          guardando={acciones.guardando}
+          onGuardar={(cupo) => guardarCupo(editando, cupo)}
+          onCerrar={() => setEditando(null)}
+        />
+      )}
+
+      {abriendo && base && (
+        <AbrirDiaModal
+          fecha={abriendo}
+          cupoBase={base.cupoBase}
+          horario={horarioSugerido(base, abriendo)}
+          tarifas={tarifas}
+          guardando={acciones.guardando}
+          onAbrir={abrirDia}
+          onCerrar={() => setAbriendo(null)}
+        />
+      )}
+
+      {loteAbierto && base && (
+        <LoteDrawer
+          establecimientoId={establecimientoId}
+          actividadId={actividadId}
+          actividad={base.nombre}
+          cupoBase={base.cupoBase}
+          diasSugeridos={diasDelMes(base)}
+          horario={base.vigencias.at(-1)?.horarios[0] ?? null}
+          fechaMaxima={fechaMaxima}
+          ventanaDias={ventanaDias}
+          tarifas={tarifas}
+          guardando={acciones.guardando}
+          onCrear={abrirLote}
+          onCerrar={() => setLoteAbierto(false)}
+        />
+      )}
+
+      {toast && <Toast {...toast} />}
     </div>
   );
 }

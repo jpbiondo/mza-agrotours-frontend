@@ -32,7 +32,9 @@ function PopoverContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
-        className="isolate z-50"
+        // Va al body por portal: tiene que quedar sobre <Modal>/<Panel> (z-140)
+        // y el <Toast> (z-150), o un picker dentro de un diálogo se abre tapado.
+        className="isolate z-[160]"
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"

@@ -79,7 +79,7 @@ Todo control de formulario tiene que reenviar `ref`, `onBlur`, `id`, `aria-inval
 
 Ejemplos: `text-field.tsx`, `date-field.tsx`, `searchable-select.tsx`.
 
-Deuda conocida: `Modal.tsx` está escrito a mano y no tiene trampa de foco, ni Escape, ni bloqueo de scroll — lo usan 10 pantallas y debería pasar al `Dialog` de shadcn. `date-picker.tsx`, `time-picker.tsx` y `multi-select.tsx` no reenvían el contrato de arriba.
+Deuda conocida: `Modal.tsx` está escrito a mano y no tiene trampa de foco, ni Escape, ni bloqueo de scroll — lo usan 10 pantallas y debería pasar al `Dialog` de shadcn. `multi-select.tsx` no reenvía el contrato de arriba.
 
 ### Cuando wirees un endpoint
 

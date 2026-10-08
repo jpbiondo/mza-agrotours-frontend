@@ -57,15 +57,21 @@ function grillaDelMes(y: number, m: number): (Date | null)[] {
 }
 
 interface DatePickerProps {
+  id?: string;
   value: string;
   onChange: (iso: string) => void;
+  onBlur?: () => void;
+  ref?: React.Ref<HTMLButtonElement>;
   /** Ambos inclusive, en formato ISO. */
   min?: string;
   max?: string;
   disabled?: boolean;
+  /** Fuera de un formulario de RHF; adentro lo marca `aria-invalid` vía `<FormControl>`. */
   error?: boolean;
   placeholder?: string;
   "aria-label"?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
 /**
@@ -73,11 +79,13 @@ interface DatePickerProps {
  * `<DateField>` —pensado para fechas de nacimiento, con el futuro cerrado—
  * este acepta cualquier ventana vía `min`/`max`, que es lo que necesita la
  * vigencia de una actividad.
+ * Reenvía ref/onBlur/id/aria-* al trigger para integrarse con `<FormControl>`.
  */
 export function DatePicker({
-  value, onChange, min, max, disabled, error, placeholder = "dd/mm/aaaa",
-  "aria-label": ariaLabel,
+  id, value, onChange, onBlur, ref, min, max, disabled, error: errorProp, placeholder = "dd/mm/aaaa",
+  "aria-label": ariaLabel, "aria-invalid": ariaInvalid, "aria-describedby": describedBy,
 }: DatePickerProps) {
+  const error = errorProp || ariaInvalid === true;
   const [open, setOpen] = useState(false);
   const [vista, setVista] = useState(() => {
     const base = deISO(value) ?? deISO(min ?? "") ?? new Date();
@@ -102,9 +110,13 @@ export function DatePicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        ref={ref}
+        id={id}
+        onBlur={onBlur}
         disabled={disabled}
         aria-label={ariaLabel}
         aria-invalid={error || undefined}
+        aria-describedby={describedBy}
         className={cn(
           "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-surface px-3.5 text-left text-base outline-none transition-colors",
           "focus-visible:border-green-800 focus-visible:ring-3 focus-visible:ring-green-800/20",
