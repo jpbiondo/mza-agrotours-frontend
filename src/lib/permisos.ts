@@ -37,6 +37,8 @@ export const PermisoAdmin = {
   GESTIONAR_CULTIVOS: "GESTIONAR_CULTIVOS",
   LEER_RECETAS: "LEER_RECETAS",
   GESTIONAR_RECETAS: "GESTIONAR_RECETAS",
+  /** Cubre lectura y gestión de la base de conocimiento: no hay uno de sólo lectura. */
+  GESTIONAR_FAQ: "GESTIONAR_FAQ",
 } as const;
 
 export type PermisoAdmin = (typeof PermisoAdmin)[keyof typeof PermisoAdmin];

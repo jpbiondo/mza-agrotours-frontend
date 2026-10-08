@@ -145,6 +145,7 @@ const NAV: NavEntry[] = [
     iconC: HelpCircle,
     label: "Preguntas frecuentes",
     href: "/admin/faq",
+    permiso: PermisoAdmin.GESTIONAR_FAQ,
   },
 ];
 
@@ -269,7 +270,7 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
     {
       icon: <HelpCircle className="size-[18px] text-fg-2" />,
       label: "Ayuda",
-      href: "/#faq",
+      href: "/ayuda",
     },
     {
       icon: <Lock className="size-[18px] text-fg-2" />,

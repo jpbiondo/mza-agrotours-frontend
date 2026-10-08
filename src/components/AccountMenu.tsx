@@ -217,7 +217,7 @@ export default function AccountMenu() {
             {ready &&
               roles.includes("admin") &&
               item(LayoutDashboard, "Panel de administrador", "/admin")}
-            {item(LifeBuoy, "Ayuda", "/#faq")}
+            {item(LifeBuoy, "Ayuda", "/ayuda")}
             {item(ShieldCheck, "Acceso y seguridad", "/cuenta?tab=seguridad")}
             <div
               style={{
