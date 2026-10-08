@@ -187,9 +187,7 @@ export default function AyudaClient() {
             <p className="text-sm text-fg-2">Nuestro equipo te responde dentro de las 24 horas hábiles.</p>
           </div>
         </div>
-        {/* TODO: el diseño lleva a la carga de incidencias, que todavía no existe
-            del lado del visitante; mientras tanto, al formulario de contacto. */}
-        <Link href="/#contacto" className={buttonClasses()}>
+        <Link href="/incidencias" className={buttonClasses()}>
           <Headset className="size-[17px]" /> Contactar soporte
         </Link>
       </div>

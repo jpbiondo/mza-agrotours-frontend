@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import GuardRol from "@/components/GuardRol";
+import { PermisoAdmin } from "@/lib/permisos";
 import IncidenciasClient from "./IncidenciasClient";
 
 export const metadata: Metadata = {
@@ -7,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function IncidenciasPage() {
-  return <IncidenciasClient />;
+  return (
+    <GuardRol rol="admin" permiso={PermisoAdmin.LEER_INCIDENCIAS}>
+      <IncidenciasClient />
+    </GuardRol>
+  );
 }

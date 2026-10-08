@@ -39,6 +39,9 @@ export const PermisoAdmin = {
   GESTIONAR_RECETAS: "GESTIONAR_RECETAS",
   /** Cubre lectura y gestión de la base de conocimiento: no hay uno de sólo lectura. */
   GESTIONAR_FAQ: "GESTIONAR_FAQ",
+  LEER_INCIDENCIAS: "LEER_INCIDENCIAS",
+  /** Cambiar el estado de una incidencia (y cerrarla con motivo). */
+  GESTIONAR_INCIDENCIAS: "GESTIONAR_INCIDENCIAS",
 } as const;
 
 export type PermisoAdmin = (typeof PermisoAdmin)[keyof typeof PermisoAdmin];
