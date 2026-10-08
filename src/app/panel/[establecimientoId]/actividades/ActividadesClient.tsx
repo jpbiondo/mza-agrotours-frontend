@@ -244,7 +244,7 @@ function ActivityCard({
             />
             <CardAction
               icon={<CalendarPlus className="size-[15px] text-fg-2" />}
-              label="Agregar día"
+              label="Agregar días"
               href={ruta("actividades", act.id, "dias")}
               disabled={suspendido}
               title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
@@ -252,7 +252,7 @@ function ActivityCard({
           </>
         )}
         {/* TODO: la vista de consulta del calendario (US-ACT-07) todavía no está; va a vivir en .../calendario. */}
-        <CardAction icon={<CalendarDays className="size-[15px] text-fg-2" />} label="Ver calendario" disabled title="Próximamente" />
+        <CardAction icon={<CalendarDays className="size-[15px] text-fg-2" />} label="Ver reservas" disabled title="Próximamente" />
         {!deBaja && <CardAction icon={<Trash2 className="size-[15px] text-danger" />} label="Eliminar" danger onClick={onEliminar} />}
       </div>
     </Card>
