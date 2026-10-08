@@ -8,12 +8,13 @@ import type { DatosFaq, FaqItem, ResultadoFaq } from "@/types/catalogo";
 const BASE = "/admin/faq";
 
 /**
- * La pantalla filtra y cuenta por categoría sobre el resultado de la búsqueda,
- * así que trae la base entera de una vez: son decenas de entradas, no miles.
+ * Las pantallas filtran y cuentan por categoría en el cliente (la de admin,
+ * sobre el resultado de la búsqueda), así que traen la base entera de una vez: son decenas de entradas, no miles.
  * TODO backend: un listado sin paginar, o `/admin/faq/categorias` con conteos
  * que respeten la búsqueda, para no depender de un tamaño de página grande.
  */
 const LISTADO = `${BASE}?size=1000`;
+const LISTADO_PUBLICO = "/faq?size=1000";
 
 /**
  * El enum `CategoriaFAQNombre` viaja por su `@JsonValue` ("General", "Reservas"…)
@@ -66,8 +67,11 @@ interface UseFaqReturn {
   reload: () => void;
 }
 
-/** La base de conocimiento completa, para la pantalla de administración. */
-export function useFaq(): UseFaqReturn {
+/**
+ * Lee un listado de FAQ entero. `exigeSesion` distingue el de administración,
+ * que sin sesión ni se intenta, del público, que sale con token si lo hay.
+ */
+function useListadoFaq(path: string, exigeSesion: boolean): UseFaqReturn {
   const [nonce, setNonce] = useState(0);
   // Lo cargado junto a la clave que lo trajo: mientras no coincida con la
   // actual, la pantalla está cargando (ver `useRoles`).
@@ -85,13 +89,13 @@ export function useFaq(): UseFaqReturn {
 
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!active) return;
-      if (!user) {
+      if (!user && exigeSesion) {
         fin({ error: "Necesitás iniciar sesión para ver las preguntas frecuentes" });
         return;
       }
       try {
-        const token = await user.getIdToken();
-        const res = await apiFetch<unknown>(LISTADO, { token });
+        const token = user ? await user.getIdToken() : undefined;
+        const res = await apiFetch<unknown>(path, { token });
         if (!active) return;
         const env = comoEnvelope<unknown>(res);
         if (!env.ok) {
@@ -108,7 +112,7 @@ export function useFaq(): UseFaqReturn {
       active = false;
       unsub();
     };
-  }, [nonce]);
+  }, [nonce, path, exigeSesion]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
@@ -118,6 +122,21 @@ export function useFaq(): UseFaqReturn {
     error: alDia ? cargado.error : null,
     reload,
   };
+}
+
+/** La base de conocimiento completa, para la pantalla de administración. */
+export function useFaq(): UseFaqReturn {
+  return useListadoFaq(LISTADO, true);
+}
+
+/**
+ * La base de conocimiento tal como la consultan los usuarios.
+ * TODO backend: `GET /faq/**` no está en los `permitAll` de `SecurityConfig`,
+ * así que hoy sólo responde con sesión. Hasta que se abra, un visitante
+ * anónimo ve el error de carga.
+ */
+export function useFaqPublica(): UseFaqReturn {
+  return useListadoFaq(LISTADO_PUBLICO, false);
 }
 
 /** Corre una escritura y la reduce a `{ ok, code?, id? }`. */

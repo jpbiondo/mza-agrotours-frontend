@@ -5,8 +5,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ChevronRight, MessagesSquare, Plus, Search, X, HelpCircle, Pencil, Trash2, ChevronDown,
-  SearchX, RotateCcw, Check, Loader, LayoutGrid, Info, CalendarCheck, UserRound,
-  Tractor, Wallet, type LucideIcon,
+  SearchX, RotateCcw, Check, Loader,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Alert, Button, Modal, Skeleton, Toast } from "@/components/ui";
@@ -17,25 +16,17 @@ import {
   Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { GcrFormFooter, GcrFormShell } from "@/components/admin/gcr/shared";
+import {
+  CatIcono, FaqChips, FaqDesplegable, contarPorCategoria, etiquetaCat, resaltar,
+} from "@/components/faq/piezas";
 import { FAQ_CATEGORIAS } from "@/data/faq";
 import { useFaq, useFaqCrud } from "@/hooks/useFaq";
 import { cn } from "@/lib/utils";
 import type { FaqItem } from "@/types/catalogo";
 import { FAQ_INICIAL, PREGUNTA_MAX, RESPUESTA_MAX, faqSchema, type FaqForm } from "./schema";
 
-const CAT_ICON: Record<string, LucideIcon> = {
-  "layout-grid": LayoutGrid, info: Info, "calendar-check": CalendarCheck,
-  "user-round": UserRound, tractor: Tractor, wallet: Wallet,
-};
-const CAT_BY_ID = Object.fromEntries(FAQ_CATEGORIAS.map((c) => [c.id, c]));
 /** Las que se pueden asignar: "todas" es sólo un filtro. */
 const CATEGORIAS_ASIGNABLES = FAQ_CATEGORIAS.filter((c) => c.id !== "todas");
-
-/** Ícono de una categoría por su id; una desconocida cae en el de "General". */
-function CatIcono({ catId, className }: { catId: string; className?: string }) {
-  const Icon = CAT_ICON[CAT_BY_ID[catId]?.icon ?? "info"] ?? Info;
-  return <Icon className={className} />;
-}
 
 /** Mensaje para un rechazo del backend: con `code` es de dominio; sin él, técnico. */
 function mensajeError(code: string | undefined, accion: "guardar" | "eliminar"): string {
@@ -44,21 +35,6 @@ function mensajeError(code: string | undefined, accion: "guardar" | "eliminar"):
   return accion === "guardar"
     ? "No pudimos guardar la pregunta. Probá de nuevo en unos minutos."
     : "No pudimos eliminar la pregunta. Probá de nuevo en unos minutos.";
-}
-
-/* ---- Resalta el término buscado dentro de un texto --------------------- */
-function resaltar(text: string, term: string): React.ReactNode {
-  const t = term.trim();
-  if (!t) return text;
-  const idx = text.toLowerCase().indexOf(t.toLowerCase());
-  if (idx === -1) return text;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <mark className="rounded-[3px] bg-green-100 px-0.5 text-green-900">{text.slice(idx, idx + t.length)}</mark>
-      {text.slice(idx + t.length)}
-    </>
-  );
 }
 
 /* ---- Una entrada del acordeón (con acciones de gestión) ---------------- */
@@ -72,7 +48,6 @@ function FaqFila({ item, term, open, onToggle, onEdit, onDelete }: {
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const cat = CAT_BY_ID[item.cat] ?? { label: "General" };
   return (
     <div
       className={cn(
@@ -101,7 +76,7 @@ function FaqFila({ item, term, open, onToggle, onEdit, onDelete }: {
               {resaltar(item.q, term)}
             </span>
             <span className="t-label mt-1.5 inline-flex items-center gap-[5px] text-[11px]">
-              <CatIcono catId={item.cat} className="size-3 text-fg-3" /> {cat.label}
+              <CatIcono catId={item.cat} className="size-3 text-fg-3" /> {etiquetaCat(item.cat)}
             </span>
           </span>
         </button>
@@ -142,20 +117,9 @@ function FaqFila({ item, term, open, onToggle, onEdit, onDelete }: {
         </div>
       </div>
 
-      {/* Respuesta, justo debajo. La grilla 0fr → 1fr anima la altura sin medirla. */}
-      <div
-        className={cn(
-          "grid transition-[grid-template-rows,opacity] duration-200 ease-[cubic-bezier(.2,0,0,1)]",
-          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
-        )}
-      >
-        <div className="overflow-hidden">
-          <div className="pr-4 pb-[18px] pl-[68px]">
-            <div className="mb-3.5 h-px bg-outline-variant" />
-            <p className="text-[15px] leading-relaxed text-pretty text-fg-2">{resaltar(item.a, term)}</p>
-          </div>
-        </div>
-      </div>
+      <FaqDesplegable open={open} className="pr-4 pb-[18px] pl-[68px]">
+        <p className="text-[15px] leading-relaxed text-pretty text-fg-2">{resaltar(item.a, term)}</p>
+      </FaqDesplegable>
     </div>
   );
 }
@@ -439,11 +403,7 @@ function FaqGestion({ initial, editor, setEditor }: {
     return q ? items.filter((i) => `${i.q} ${i.a}`.toLowerCase().includes(q)) : items;
   }, [items, term]);
   // 2) Conteos por categoría, sobre el resultado de la búsqueda
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { todas: afterSearch.length };
-    afterSearch.forEach((i) => { c[i.cat] = (c[i.cat] ?? 0) + 1; });
-    return c;
-  }, [afterSearch]);
+  const counts = useMemo(() => contarPorCategoria(afterSearch), [afterSearch]);
   // 3) Filtro por categoría
   const visible = useMemo(
     () => (cat === "todas" ? afterSearch : afterSearch.filter((i) => i.cat === cat)),
@@ -517,38 +477,7 @@ function FaqGestion({ initial, editor, setEditor }: {
               ) : undefined}
             />
           </div>
-          <div role="tablist" aria-label="Filtrar por categoría" className="flex flex-wrap gap-2">
-            {FAQ_CATEGORIAS.map((c) => {
-              const on = cat === c.id;
-              const Icon = CAT_ICON[c.icon] ?? Info;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => setCat(c.id)}
-                  className={cn(
-                    "inline-flex cursor-pointer items-center gap-2 rounded-pill border px-[13px] py-2 text-[13.5px] font-semibold whitespace-nowrap transition-colors",
-                    on
-                      ? "border-green-800 bg-green-800 text-white shadow-[inset_0_-2px_0_var(--green-900)]"
-                      : "border-sand bg-surface text-fg-2 hover:bg-cream-tert",
-                  )}
-                >
-                  <Icon className={cn("size-[15px]", on ? "text-white" : "text-fg-3")} />
-                  {c.label}
-                  <span
-                    className={cn(
-                      "inline-flex h-[19px] min-w-5 items-center justify-center rounded-[10px] px-1.5 font-mono text-[11.5px] font-bold",
-                      on ? "bg-white/20 text-white" : "bg-cream-tert text-fg-2",
-                    )}
-                  >
-                    {counts[c.id] ?? 0}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <FaqChips value={cat} onChange={setCat} counts={counts} />
         </div>
       )}
 
@@ -556,7 +485,7 @@ function FaqGestion({ initial, editor, setEditor }: {
       {!sinDatos && !noResults && (
         <div className="mb-3.5 text-[13.5px] text-fg-3">
           {visible.length} {visible.length === 1 ? "pregunta" : "preguntas"}
-          {cat !== "todas" && <> · {CAT_BY_ID[cat]?.label.toLowerCase()}</>}
+          {cat !== "todas" && <> · {etiquetaCat(cat).toLowerCase()}</>}
           {term.trim() && <> · resultados para «{term.trim()}»</>}
         </div>
       )}
