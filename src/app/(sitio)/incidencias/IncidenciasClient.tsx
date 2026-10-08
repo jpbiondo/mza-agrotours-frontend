@@ -16,7 +16,7 @@ import { TextArea } from "@/components/ui/text-area";
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
-import { GI_ESTADOS } from "@/data/incidencias";
+import { GI_ESTADOS, giCodigo } from "@/data/incidencias";
 import { useMisIncidencias, useReportarIncidencia } from "@/hooks/useMisIncidencias";
 import { fmtFechaHora } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -31,12 +31,6 @@ const ESTADO_ICONO: Record<EstadoIncidencia, LucideIcon> = {
   resuelta: CheckCircle2,
   desestimada: XCircle,
 };
-
-/**
- * Referencia corta para citar el caso con soporte. Sale del UUID, así que es
- * estable; no es un código del backend.
- */
-const codigo = (id: string) => `INC-${id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 
 /** "hoy", "ayer", "hace 3 días": la antigüedad la calcula el backend en días. */
 function antiguedad(dias: number | null): string | null {
@@ -74,7 +68,7 @@ function IncidenciaFila({ inc }: { inc: IncidenciaPropia }) {
 
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2.5 text-[12.5px] text-fg-3">
-          <span className="font-mono">{codigo(inc.id)}</span>
+          <span className="font-mono">{giCodigo(inc.id)}</span>
           <span aria-hidden className="size-[3px] rounded-full bg-outline" />
           <span>{fmtFechaHora(inc.fechaInicio)}</span>
         </div>

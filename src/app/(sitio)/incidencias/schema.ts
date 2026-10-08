@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /** Topes del backend (`IncidenciaCreateRequest` y las columnas de `Incidencia`). */
 export const TITULO_MAX = 50;
-export const DESC_MAX = 300;
+export const DESC_MAX = 1000;
 
 const OBLIGATORIO = "Este campo es obligatorio";
 

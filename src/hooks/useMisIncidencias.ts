@@ -3,7 +3,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
-import type { EstadoIncidencia, IncidenciaPropia, NuevaIncidencia } from "@/types/incidencias";
+import { giEstadoDesde } from "@/data/incidencias";
+import type { IncidenciaPropia, NuevaIncidencia } from "@/types/incidencias";
 
 /**
  * El backend ordena por defecto de la más vieja a la más nueva, y la pantalla
@@ -11,14 +12,6 @@ import type { EstadoIncidencia, IncidenciaPropia, NuevaIncidencia } from "@/type
  * persona; si algún día no, hay que paginar.
  */
 const LISTADO = "/incidencias?size=100&sort=fechaHoraInicio,desc";
-
-/** `EstadoIncidenciaNombre` viaja por su `name()`: no tiene `@JsonValue`. */
-const ESTADO: Record<string, EstadoIncidencia> = {
-  REPORTADA: "reportada",
-  EN_REVISION: "revision",
-  RESUELTA: "resuelta",
-  DESESTIMADA: "desestimada",
-};
 
 /** Ítem crudo de `GET /incidencias`. Campos opcionales: defensivo. */
 interface IncidenciaBackend {
@@ -37,7 +30,7 @@ function aIncidencia(i: IncidenciaBackend, n: number): IncidenciaPropia {
     id: i.id ?? `sin-id-${n}`,
     titulo: i.titulo ?? "",
     desc: i.descripcion ?? "",
-    estado: (i.estado && ESTADO[i.estado]) || null,
+    estado: giEstadoDesde(i.estado),
     fechaInicio:
       typeof i.fechaHoraInicio === "string" && i.fechaHoraInicio.trim() ? i.fechaHoraInicio : null,
     dias: typeof i.diasTranscurridos === "number" ? i.diasTranscurridos : null,

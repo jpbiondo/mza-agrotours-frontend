@@ -139,6 +139,7 @@ const NAV: NavEntry[] = [
     iconC: LifeBuoy,
     label: "Gestionar incidencias",
     href: "/admin/incidencias",
+    permiso: PermisoAdmin.LEER_INCIDENCIAS,
   },
   {
     id: "faq",
