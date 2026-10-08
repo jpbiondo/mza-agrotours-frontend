@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { NumberField } from "@/components/ui/number-field";
 import { TimePicker } from "@/components/ui/time-picker";
 import { fechaLarga } from "@/lib/gestion-dias";
-import { abrirDiaSchema, type AbrirDiaForm } from "@/app/panel/[establecimientoId]/actividades/[id]/calendario/schema";
+import { abrirDiaSchema, type AbrirDiaForm } from "@/app/panel/[establecimientoId]/actividades/[id]/dias/schema";
 import type { AltaDia, FechaISO, Tarifa } from "@/types/gestion-dias";
 import { CabeceraDia, NotaInfo, PieDialogo, PrecioContexto } from "./piezas";
 

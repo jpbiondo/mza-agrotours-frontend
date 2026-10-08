@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { NumberField } from "@/components/ui/number-field";
 import { fechaLarga } from "@/lib/gestion-dias";
 import { cn } from "@/lib/utils";
-import { cupoDiaSchema, type CupoDiaForm } from "@/app/panel/[establecimientoId]/actividades/[id]/calendario/schema";
+import { cupoDiaSchema, type CupoDiaForm } from "@/app/panel/[establecimientoId]/actividades/[id]/dias/schema";
 import type { DiaProgramado, Tarifa } from "@/types/gestion-dias";
 import { BarraCupos } from "./CalendarioMensual";
 import { CabeceraDia, PieDialogo, PrecioContexto } from "./piezas";

@@ -12,7 +12,7 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { usePrevisualizacionLote } from "@/hooks/useGestionDias";
 import { DIA_CORTO, ORDEN_DIAS, diaSemanaDe, fechaCorta, mensajeErrorDias } from "@/lib/gestion-dias";
 import { cn } from "@/lib/utils";
-import { loteSchema, type LoteForm } from "@/app/panel/[establecimientoId]/actividades/[id]/calendario/schema";
+import { loteSchema, type LoteForm } from "@/app/panel/[establecimientoId]/actividades/[id]/dias/schema";
 import type { AltaLote, DiaSemana, FechaISO, PlanLote, Tarifa } from "@/types/gestion-dias";
 import { BotonCerrar, PieDialogo, PrecioContexto } from "./piezas";
 
