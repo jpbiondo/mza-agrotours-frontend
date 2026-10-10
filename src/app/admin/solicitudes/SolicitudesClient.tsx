@@ -1124,14 +1124,17 @@ function DetalleCargado({
   );
 }
 
-function Inner() {
+/** El listado. `/admin/solicitudes/{id}` monta esta misma pantalla. */
+const RUTA_LISTADO = "/admin/solicitudes";
+
+function Inner({ abiertaInicial }: { abiertaInicial?: string }) {
   const { solicitudes, isLoading, error, reload } = useSolicitudes();
   const accesos = useAuthStore((s) => s.accesos);
   const gestionar = tienePermiso(
     accesos,
     PermisoAdmin.GESTIONAR_SOLICITUD_ESTABLECIMIENTO,
   );
-  const [abierta, setAbierta] = useState<string | null>(null);
+  const [abierta, setAbierta] = useState<string | null>(abiertaInicial ?? null);
   const [flash, setFlash] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1143,8 +1146,17 @@ function Inner() {
     setTimeout(() => setFlash((f) => (f === msg ? null : f)), 3800);
   }
 
-  function onResuelta(estado: Resolucion) {
+  /**
+   * Vuelve al listado. Si se entró por `/admin/solicitudes/{id}`, la URL
+   * también: si no, al recargar se reabriría el detalle que se acaba de cerrar.
+   */
+  function cerrar() {
     setAbierta(null);
+    if (window.location.pathname !== RUTA_LISTADO) window.history.replaceState(null, "", RUTA_LISTADO);
+  }
+
+  function onResuelta(estado: Resolucion) {
+    cerrar();
     // La lista trae el estado nuevo; se recarga en vez de parchearla a mano.
     reload();
     notify(
@@ -1160,7 +1172,7 @@ function Inner() {
         <DetalleCargado
           id={abierta}
           gestionar={gestionar}
-          onBack={() => setAbierta(null)}
+          onBack={cerrar}
           onResuelta={onResuelta}
         />
       ) : (
@@ -1183,6 +1195,6 @@ function Inner() {
   );
 }
 
-export default function SolicitudesClient() {
-  return <Inner />;
+export default function SolicitudesClient({ abiertaInicial }: { abiertaInicial?: string } = {}) {
+  return <Inner abiertaInicial={abiertaInicial} />;
 }

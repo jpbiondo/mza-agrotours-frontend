@@ -219,6 +219,16 @@ export interface FaqItem {
   a: string;
 }
 
+/** Lo que se edita de una entrada de la base de conocimiento. */
+export type DatosFaq = Omit<FaqItem, "id">;
+
+/** Resultado de una escritura sobre la base de conocimiento. `id` sólo en el alta. */
+export interface ResultadoFaq {
+  ok: boolean;
+  code?: string;
+  id?: string;
+}
+
 export interface FaqCategoria {
   id: string;
   label: string;

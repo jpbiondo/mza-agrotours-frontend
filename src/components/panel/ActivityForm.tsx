@@ -14,7 +14,7 @@ import {
   PASOS, bloqueoDeTarifas, erroresDeActividad, huecosDeEdad, pasoDelError, soloDigitos,
 } from "@/lib/actividad-form";
 import { UPLOAD_FOTOS } from "@/data/actividad-form";
-import { useEstablecimientos } from "@/hooks/useEstablecimientos";
+import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useFotosActividad } from "@/hooks/useFotosActividad";
 import { useTiposCultivo } from "@/hooks/useTiposCultivo";
 import { useGuardarActividad, type EstadoGuardado } from "@/hooks/useGuardarActividad";
@@ -47,6 +47,7 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
   const router = useRouter();
   const { activo } = useEstablecimientos();
   const establecimientoId = activo?.id ?? "";
+  const listado = useRutaPanel()("actividades");
 
   const [v, setV] = useState<ActividadFormData>(initial);
   const [paso, setPaso] = useState(1);
@@ -101,7 +102,7 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
       return;
     }
     setDone(estado);
-    setTimeout(() => router.push("/panel/actividades"), 1400);
+    setTimeout(() => router.push(listado), 1400);
   }
 
   const IconoPaso = ICONO_PASO[paso - 1];
@@ -130,7 +131,7 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
           variant="neutral"
           size="sm"
           className="mb-4 text-sm"
-          onClick={() => router.push("/panel/actividades")}
+          onClick={() => router.push(listado)}
         >
           <ArrowLeft className="size-4" /> Volver al listado
         </Button>
@@ -376,7 +377,7 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
 
             <div className="flex flex-col items-end gap-2">
               <div className="flex flex-wrap justify-end gap-3">
-                <Button variant="neutral" onClick={() => router.push("/panel/actividades")}>
+                <Button variant="neutral" onClick={() => router.push(listado)}>
                   <X className="size-4" /> Cancelar
                 </Button>
                 {paso > 1 && (

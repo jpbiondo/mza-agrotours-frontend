@@ -3,20 +3,21 @@ import { persist, createJSONStorage } from "zustand/middleware";
 
 interface EstablecimientoState {
   /**
-   * Establecimiento que el usuario eligió en el switcher. Puede quedar viejo
-   * —que le saquen el acceso, por ejemplo—, así que quien lo lee tiene que
-   * validarlo contra los accesos vigentes; de eso se ocupa `useEstablecimientos`.
+   * Último establecimiento que se miró en el panel. Puede quedar viejo —que le
+   * saquen el acceso, por ejemplo—, así que quien lo lee tiene que validarlo
+   * contra los accesos vigentes; de eso se ocupa `useEstablecimientoPorDefecto`.
    */
   elegido: string | null;
   elegir: (id: string) => void;
-  /** true una vez rehidratado desde localStorage. Ver `useEstablecimientos`. */
+  /** true una vez rehidratado desde localStorage. Ver `useEstablecimientoPorDefecto`. */
   hasHydrated: boolean;
 }
 
 /**
- * Cuál de los establecimientos del productor está mirando. Vive fuera de las
- * pantallas porque el switcher está en el shell y todas las pantallas del panel
- * dependen de él; se persiste para no volver siempre al primero al recargar.
+ * El último establecimiento que miró el productor. En cuál está parado lo dice
+ * la URL (`/panel/{id}/...`); esto sólo decide a dónde ir cuando entra por
+ * `/panel` a secas, para no mandarlo siempre al primero. Lo actualiza
+ * `GuardEstablecimientoUrl` cada vez que se entra a uno.
  *
  * `skipHydration` + rehidratación manual desde el shell, igual que el store de
  * sesión: sin eso el primer render del cliente no coincidiría con el del

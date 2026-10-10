@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../firebase.config";
-import { apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
+import { useState } from "react";
+import { ApiError, apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
+import { conToken } from "@/lib/sesion";
 import type { Pagina } from "@/lib/api";
+import { useLecturaConToken, type UseAsyncConToken } from "@/hooks/useLecturaConToken";
 import { aCultivos } from "@/hooks/useTiposCultivo";
 import type { ActividadProd, ConsultaActividadesProd, DiaHorario, EstadoActividad } from "@/types/actividad-prod";
 
@@ -22,6 +22,8 @@ interface ActividadBackend {
   precioRegular?: unknown;
   diasYHorasDisponibles?: unknown;
   cultivos?: unknown;
+  cantidadReservasAsociadas?: unknown;
+  puedeCambiarEstado?: unknown;
 }
 
 /** Contador por estado de `GET .../actividades/estados`. */
@@ -78,6 +80,9 @@ function aActividad(a: ActividadBackend): ActividadProd {
     precio: Number(a.precioRegular) || 0,
     estado: aEstado(a.estado),
     dias: aDias(a.diasYHorasDisponibles),
+    reservasAsociadas: Number(a.cantidadReservasAsociadas) || 0,
+    // Si no viene se deja intentar: el backend valida igual y rechaza con código.
+    puedeCambiarEstado: typeof a.puedeCambiarEstado === "boolean" ? a.puedeCambiarEstado : true,
   };
 }
 
@@ -93,74 +98,6 @@ function queryListado({ busqueda, estado, page, size }: ConsultaActividadesProd)
   qs.set("page", String(page));
   qs.set("size", String(size));
   return `?${qs.toString()}`;
-}
-
-interface UseAsyncConToken<T> {
-  data: T | null;
-  isLoading: boolean;
-  error: string | null;
-  reload: () => void;
-}
-
-/**
- * Lectura con token que arranca al montar la pantalla. Se espera a que Firebase
- * restaure la sesión (`onAuthStateChanged`): al montar, `auth.currentUser`
- * todavía está vacío y el pedido saldría sin token.
- *
- * La carga se deriva de si el resultado guardado corresponde a la clave actual,
- * en vez de prenderla con un setState adentro del efecto —que dispara un render
- * de más y lo prohíbe la regla de hooks—. Una `clave` vacía significa que no hay
- * nada que pedir, y entonces no queda girando.
- */
-function useLecturaConToken<T>(
-  clave: string,
-  pedir: (token: string) => Promise<T>,
-  mensajeSinSesion: string,
-): UseAsyncConToken<T> {
-  const [nonce, setNonce] = useState(0);
-  const claveConNonce = clave ? `${nonce}|${clave}` : "";
-  const [res, setRes] = useState<{ clave: string; data: T | null; error: string | null }>(
-    { clave: "", data: null, error: null },
-  );
-
-  // Siempre invocar la última versión del fetcher sin re-disparar por su identidad.
-  const pedirRef = useRef(pedir);
-  useEffect(() => { pedirRef.current = pedir; });
-
-  useEffect(() => {
-    if (!claveConNonce) return;
-    let active = true;
-
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!active) return;
-      if (!user) {
-        setRes({ clave: claveConNonce, data: null, error: mensajeSinSesion });
-        return;
-      }
-      try {
-        const token = await user.getIdToken();
-        const data = await pedirRef.current(token);
-        if (active) setRes({ clave: claveConNonce, data, error: null });
-      } catch (e) {
-        if (active) setRes({ clave: claveConNonce, data: null, error: e instanceof Error ? e.message : "Error inesperado" });
-      }
-    });
-
-    return () => {
-      active = false;
-      unsub();
-    };
-  }, [claveConNonce, mensajeSinSesion]);
-
-  const reload = useCallback(() => setNonce((n) => n + 1), []);
-  const isLoading = claveConNonce !== "" && res.clave !== claveConNonce;
-
-  return {
-    data: isLoading ? null : res.data,
-    error: isLoading ? null : res.error,
-    isLoading,
-    reload,
-  };
 }
 
 const SIN_SESION = "Necesitás iniciar sesión para ver las actividades";
@@ -218,34 +155,58 @@ export function useEstadosActividad(establecimientoId: string): UseAsyncConToken
   );
 }
 
-/* ---- Acciones sobre una actividad ----------------------------------------
-   TODO backend: no hay endpoints todavía para la baja ni para el cambio de
-   estado de publicación, así que siguen simuladas. La pantalla ya está armada
-   para wirearlas: cada una devuelve una promesa y expone el id en curso. */
+/* ---- Acciones sobre una actividad ---------------------------------------- */
+
+/** Resultado de una escritura: `code` es el código de dominio si vino. */
+export interface ResultadoAccion {
+  ok: boolean;
+  code?: string;
+}
 
 /** Mutaciones sobre una actividad: dar de baja y cambiar estado de publicación. */
-export function useActividadAcciones() {
+export function useActividadAcciones(establecimientoId: string) {
   const [pendingId, setPendingId] = useState<string | null>(null);
 
-  async function darDeBaja(id: string): Promise<void> {
-    setPendingId(id);
-    try { await mockDarDeBaja(id); } finally { setPendingId(null); }
+  /**
+   * DELETE /establecimientos/{estId}/actividades/{actividadId}. El backend
+   * cancela los días futuros y las reservas; con reservas pagadas la rechaza
+   * (`A.reservasPagadas`), que el listado no deja anticipar.
+   */
+  async function darDeBaja(id: string): Promise<ResultadoAccion> {
+    return escribir(id, "DELETE");
   }
 
-  async function cambiarEstado(id: string, nuevo: EstadoActividad): Promise<void> {
+  /**
+   * PATCH /establecimientos/{estId}/actividades/{actividadId}/estado. Sólo se
+   * alterna entre publicado y borrador: la baja va por su propio camino.
+   */
+  async function cambiarEstado(
+    id: string,
+    nuevo: Exclude<EstadoActividad, "dado_de_baja">,
+  ): Promise<ResultadoAccion> {
+    return escribir(id, "PATCH", "/estado", { estado: ESTADO_BACKEND[nuevo] });
+  }
+
+  async function escribir(id: string, method: string, sufijo = "", body?: unknown): Promise<ResultadoAccion> {
     setPendingId(id);
-    try { await mockCambiarEstado(id, nuevo); } finally { setPendingId(null); }
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(
+          `/establecimientos/${encodeURIComponent(establecimientoId)}/actividades/${encodeURIComponent(id)}${sufijo}`,
+          { method, token, body: body === undefined ? undefined : JSON.stringify(body) },
+        ),
+      );
+      const env = comoEnvelope<unknown>(res);
+      return env.ok ? { ok: true } : { ok: false, code: env.code };
+    } catch (e) {
+      if (e instanceof ApiError) return { ok: false, code: e.code };
+      // 2xx sin cuerpo: el cambio se hizo.
+      if (e instanceof SyntaxError) return { ok: true };
+      return { ok: false };
+    } finally {
+      setPendingId(null);
+    }
   }
 
   return { darDeBaja, cambiarEstado, pendingId };
-}
-
-// MOCK — reemplazar por DELETE /establecimientos/{id}/actividades/{actividadId}
-async function mockDarDeBaja(_id: string): Promise<void> {
-  await new Promise<void>((res) => setTimeout(res, 700));
-}
-
-// MOCK — reemplazar por el endpoint de cambio de estado
-async function mockCambiarEstado(_id: string, _nuevo: EstadoActividad): Promise<void> {
-  await new Promise<void>((res) => setTimeout(res, 500));
 }

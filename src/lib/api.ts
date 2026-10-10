@@ -90,7 +90,12 @@ export function comoPagina<T>(data: unknown): Pagina<T> {
       ? ((data as { content: T[] }).content)
       : [];
 
-  const p = (data ?? {}) as { number?: unknown; size?: unknown; totalElements?: unknown; totalPages?: unknown };
+  // Con `PageSerializationMode.VIA_DTO` los contadores vienen anidados en
+  // `page`; con la serialización directa (la default), sueltos en la raíz.
+  const raiz = (data ?? {}) as { page?: unknown };
+  const p = (raiz.page && typeof raiz.page === "object" ? raiz.page : raiz) as {
+    number?: unknown; size?: unknown; totalElements?: unknown; totalPages?: unknown;
+  };
   const numero = (v: unknown, porDefecto: number) =>
     typeof v === "number" && Number.isFinite(v) ? v : porDefecto;
 

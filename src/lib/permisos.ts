@@ -37,14 +37,18 @@ export const PermisoAdmin = {
   GESTIONAR_CULTIVOS: "GESTIONAR_CULTIVOS",
   LEER_RECETAS: "LEER_RECETAS",
   GESTIONAR_RECETAS: "GESTIONAR_RECETAS",
+  /** Cubre lectura y gestión de la base de conocimiento: no hay uno de sólo lectura. */
+  GESTIONAR_FAQ: "GESTIONAR_FAQ",
+  LEER_INCIDENCIAS: "LEER_INCIDENCIAS",
+  /** Cambiar el estado de una incidencia (y cerrarla con motivo). */
+  GESTIONAR_INCIDENCIAS: "GESTIONAR_INCIDENCIAS",
 } as const;
 
 export type PermisoAdmin = (typeof PermisoAdmin)[keyof typeof PermisoAdmin];
 
 /**
- * Permisos del ámbito PRODUCTOR. Todavía no se chequea ninguno en el front
- * —/panel entra por tipo de acceso—, pero están para que el catálogo sea el
- * enum completo del backend y no la mitad que hoy se usa.
+ * Permisos del ámbito PRODUCTOR. /panel entra por tipo de acceso; cada pantalla
+ * chequea el suyo contra el establecimiento activo (ver `tienePermiso`).
  */
 export const PermisoProductor = {
   LEER_PRODUCTOR: "LEER_PRODUCTOR",

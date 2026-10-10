@@ -38,12 +38,11 @@ export interface ActividadProd {
   precio: number;
   estado: EstadoActividad;
   dias: DiaHorario[];
+  /** `cantidadReservasAsociadas`: reservas futuras pendientes o pagadas. */
+  reservasAsociadas: number;
   /**
-   * TODO backend: el listado todavía no manda las reservas. Sin ellas la
-   * pantalla no puede bloquear el pasaje a borrador ni la baja de una actividad
-   * con reservas pagadas, así que quedan opcionales y quien las lea tiene que
-   * contemplar el `undefined`.
+   * Si se puede alternar entre publicado y borrador. Lo decide el backend: no
+   * se puede si está dada de baja, ni pasarla a borrador si tiene reservas.
    */
-  reservas?: number;
-  reservasPagadas?: number;
+  puedeCambiarEstado: boolean;
 }
