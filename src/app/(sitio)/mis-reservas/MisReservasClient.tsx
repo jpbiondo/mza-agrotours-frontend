@@ -11,7 +11,7 @@ import Photo, { seedDeId } from "@/components/landing/Photo";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { EstadoBadge, Skeleton } from "@/components/ui";
 import { metaEstadoReserva } from "@/data/reservas";
-import { fmtDiaLocal, fmtFranja, moneyAr } from "@/lib/format";
+import { fmtDiaLocal, fmtFranja, fmtHoraLocal, moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useReservas } from "@/hooks/useReservas";
 import type { CategoriaReserva, ReservaResumen } from "@/types/reservas";
@@ -67,8 +67,15 @@ function ReservaCard({ r }: { r: ReservaResumen }) {
         </div>
 
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-cream-tert pt-3">
-          <div className="text-[12.5px] text-fg-3">
-            Total <span className="ml-1 font-mono text-sm font-semibold text-green-800">{moneyAr(r.total)}</span>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[12.5px] text-fg-3">
+            <span>
+              Total <span className="ml-1 font-mono text-sm font-semibold text-green-800">{moneyAr(r.total)}</span>
+            </span>
+            {r.creada && (
+              <span>
+                Reservada el <span className="text-fg-2">{fmtDiaLocal(r.creada)} · {fmtHoraLocal(r.creada)}</span>
+              </span>
+            )}
           </div>
           <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-fg-1">
             Ver detalle <ArrowRight size={15} />
@@ -258,7 +265,7 @@ export default function MisReservasClient() {
             <div className="mb-3.5 text-[13.5px] text-fg-3">
               Mostrando <strong className="text-fg-2">{visible.length}</strong> {visible.length === 1 ? "reserva" : "reservas"}
             </div>
-            {/* Ordenadas en el hook: próximas primero, después las pasadas. */}
+            {/* Ordenadas en el hook: las hechas más recientemente primero. */}
             <div className="grid grid-cols-1 gap-[18px]">
               {visible.map((r) => <ReservaCard key={r.id} r={r} />)}
             </div>

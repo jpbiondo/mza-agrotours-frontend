@@ -79,7 +79,6 @@ export interface SolicitudDetalle {
   domicilioLegal: string;
   email: string;
   telefono: string;
-  cvu: string;
   estado: EstadoSolicitud;
   /** ISO-8601. `null` si el backend no la mandó. */
   fechaHoraAlta: string | null;

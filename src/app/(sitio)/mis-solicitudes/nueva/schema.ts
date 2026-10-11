@@ -52,11 +52,6 @@ export const solicitarAltaSchema = z.object({
     .trim()
     .min(1, "El teléfono es obligatorio.")
     .regex(TELEFONO_RE, TELEFONO_MSG),
-  cvu: z
-    .string()
-    .trim()
-    .min(1, "El CVU es obligatorio.")
-    .regex(/^\d{22}$/, "El CVU debe tener exactamente 22 dígitos numéricos."),
 });
 
 export type SolicitarAltaForm = z.infer<typeof solicitarAltaSchema>;
@@ -70,5 +65,4 @@ export const SOLICITAR_ALTA_INICIAL: SolicitarAltaForm = {
   domicilio: "",
   email: "",
   telefono: "",
-  cvu: "",
 };

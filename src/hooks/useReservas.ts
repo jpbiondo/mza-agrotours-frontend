@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
+import { leerFechaLocal } from "@/lib/format";
 import { conToken } from "@/lib/sesion";
 import type {
-  AsistenteReserva, CondicionCancelacion, ErrorCancelacion, ReservaDetalle, ReservaResumen,
-  ResultadoCancelacion,
+  AsistenteReserva, CondicionCancelacion, ErrorCancelacion, ErrorValoracion, ReservaDetalle,
+  ReservaResumen, ResultadoCancelacion,
 } from "@/types/reservas";
 
 /**
@@ -16,6 +17,8 @@ import type {
 interface ReservaBackend {
   idReserva?: string | null;
   totalReserva?: unknown;
+  /** Cuándo se empezó la reserva. Sólo lo trae el listado. */
+  fechaHoraInicioReserva?: unknown;
   estadoReserva?: string | null;
   cantPersonas?: unknown;
   actividadFechaHoraInicio?: unknown;
@@ -24,19 +27,6 @@ interface ReservaBackend {
   idActividad?: string | null;
   nombreEstablecimiento?: string | null;
   ubicacionEstablecimiento?: string | null;
-}
-
-/**
- * `LocalDateTime` del backend ("2026-10-12T09:30:00", sin offset) como hora
- * local. Se arma a mano en vez de confiar en `Date.parse`, que según el formato
- * exacto puede interpretarlo como UTC y correr la hora.
- */
-function aFechaLocal(v: unknown): Date | null {
-  if (typeof v !== "string") return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(v.trim());
-  if (!m) return null;
-  const [, y, mo, d, h, mi, s] = m;
-  return new Date(+y, +mo - 1, +d, +h, +mi, s ? +s : 0);
 }
 
 function aNumero(v: unknown): number {
@@ -52,34 +42,29 @@ function aResumen(r: ReservaBackend, i: number): ReservaResumen {
     actividad: r.nombreActividad ?? "",
     establecimiento: r.nombreEstablecimiento ?? "",
     ubicacion: r.ubicacionEstablecimiento ?? "",
-    inicio: aFechaLocal(r.actividadFechaHoraInicio),
-    fin: aFechaLocal(r.actividadFechaHoraFin),
+    inicio: leerFechaLocal(r.actividadFechaHoraInicio),
+    fin: leerFechaLocal(r.actividadFechaHoraFin),
+    creada: leerFechaLocal(r.fechaHoraInicioReserva),
     personas: aNumero(r.cantPersonas),
     total: aNumero(r.totalReserva),
     estado: (r.estadoReserva ?? "").trim(),
   };
 }
 
-/**
- * Primero las que todavía no ocurrieron, de la más cercana a la más lejana;
- * después las pasadas, de la más reciente a la más vieja. Sin fecha, al final.
- */
-function ordenar(reservas: ReservaResumen[], ahora: number): ReservaResumen[] {
-  const t = (r: ReservaResumen) => r.inicio?.getTime() ?? NaN;
+/** De la reserva hecha más recientemente a la más vieja. Sin fecha, al final. */
+function ordenar(reservas: ReservaResumen[]): ReservaResumen[] {
+  const t = (r: ReservaResumen) => r.creada?.getTime() ?? NaN;
   return [...reservas].sort((a, b) => {
     const ta = t(a);
     const tb = t(b);
     if (Number.isNaN(ta)) return Number.isNaN(tb) ? 0 : 1;
     if (Number.isNaN(tb)) return -1;
-    const fa = ta >= ahora;
-    const fb = tb >= ahora;
-    if (fa !== fb) return fa ? -1 : 1;
-    return fa ? ta - tb : tb - ta;
+    return tb - ta;
   });
 }
 
 interface UseReservasReturn {
-  /** Siempre definido: `[]` significa "cargó y no hay ninguna". Próximas primero (ver `ordenar`). */
+  /** Siempre definido: `[]` significa "cargó y no hay ninguna". Las hechas más recientemente primero (ver `ordenar`). */
   reservas: ReservaResumen[];
   isLoading: boolean;
   error: string | null;
@@ -125,9 +110,9 @@ export function useReservas(): UseReservasReturn {
           fin({ error: env.code ?? "No pudimos cargar tus reservas" });
           return;
         }
-        // Envelope ok sin `data` es lista vacía, no error. El corte entre
-        // próximas y pasadas se toma al llegar los datos.
-        fin({ reservas: Array.isArray(env.data) ? ordenar(env.data.map(aResumen), Date.now()) : [] });
+        // Envelope ok sin `data` es lista vacía, no error. Las expiradas ya
+        // vienen filtradas por el backend.
+        fin({ reservas: Array.isArray(env.data) ? ordenar(env.data.map(aResumen)) : [] });
       } catch (e) {
         if (active) fin({ error: e instanceof Error ? e.message : "Error inesperado" });
       }
@@ -156,6 +141,7 @@ export function useReservas(): UseReservasReturn {
 interface ReservaDetalleBackend extends ReservaBackend {
   idEstablecimiento?: string | null;
   detalleDTOs?: unknown;
+  calificada?: boolean | null;
 }
 
 /** Renglón crudo de `detalleDTOs` (ConsultarReservaDetalleDTO). */
@@ -185,6 +171,7 @@ function aDetalle(r: ReservaDetalleBackend): ReservaDetalle {
     ...aResumen(r, 0),
     establecimientoId: r.idEstablecimiento ?? "",
     asistentes: aAsistentes(r.detalleDTOs),
+    calificada: r.calificada === true,
   };
 }
 
@@ -370,6 +357,56 @@ export function useCancelarReserva(idReserva: string) {
   }
 
   return { consultarCondicion, cancelar, cancelando };
+}
+
+/* ---- Valoración ---------------------------------------------------------- */
+
+const ERRORES_VALORACION: Record<string, ErrorValoracion> = {
+  "CAL.reservaNoFinalizada": "noFinalizada",
+  "CAL.yaCalificada": "yaValorada",
+  notFound: "noEncontrada",
+  validationError: "invalida",
+};
+
+function aErrorValoracion(code: string | undefined): ErrorValoracion {
+  return (code && ERRORES_VALORACION[code]) || "tecnico";
+}
+
+/**
+ * Valoración de una reserva Finalizada del visitante (POST
+ * /calificaciones/reserva/{uuid}). Se valora una sola vez: después el detalle
+ * llega con `calificada`. La reseña es opcional; vacía no se manda, porque el
+ * backend exige entre 20 y 2000 caracteres si viene.
+ */
+export function useValorarReserva(idReserva: string) {
+  const [enviando, setEnviando] = useState(false);
+
+  async function valorar(
+    puntaje: number,
+    resenia: string,
+  ): Promise<{ ok: true } | { ok: false; error: ErrorValoracion }> {
+    setEnviando(true);
+    try {
+      const body = resenia ? { puntaje, resenia } : { puntaje };
+      const res = await conToken((token) => apiFetch<unknown>(
+        `/calificaciones/reserva/${encodeURIComponent(idReserva)}`,
+        { method: "POST", token, body: JSON.stringify(body) },
+      ));
+      const env = comoEnvelope<unknown>(res);
+      return env.ok ? { ok: true } : { ok: false, error: aErrorValoracion(env.code) };
+    } catch (e) {
+      // 2xx con cuerpo vacío: se registró igual.
+      if (e instanceof SyntaxError) return { ok: true };
+      if (e instanceof ApiError) {
+        return { ok: false, error: e.status === 404 ? "noEncontrada" : aErrorValoracion(e.code) };
+      }
+      return { ok: false, error: "tecnico" };
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return { valorar, enviando };
 }
 
 /* ---- Contrato de POST /reserva/reservar ----------------------------------- */

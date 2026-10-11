@@ -33,7 +33,6 @@ export interface EstablecimientoDatos {
   localidad: string;
   telefono: string;
   email: string;
-  cvu: string;
   cultivos: CultivoRef[];
   /** `null` cuando la finca todavía no tiene portada. */
   foto: FotoPortada | null;
@@ -62,6 +61,25 @@ export interface EstablecimientoEditable {
   descripcion: string;
   telefono: string;
   email: string;
-  cvu: string;
   foto: FotoClaim | null;
+}
+
+/**
+ * Si el establecimiento puede cobrar y, por lo tanto, recibir reservas:
+ * - `HABILITADO`: cuenta de Mercado Pago vinculada y con acceso vigente.
+ * - `SIN_CUENTA`: nunca se vinculó una cuenta.
+ * - `TOKEN_VENCIDO`: se vinculó, pero el acceso venció y hay que volver a autorizar.
+ *
+ * No es un estado del establecimiento —sigue ACTIVO y se muestra igual—: el
+ * backend lo calcula a partir de la cuenta vinculada.
+ */
+export type EstadoCobro = "HABILITADO" | "SIN_CUENTA" | "TOKEN_VENCIDO";
+
+/** GET /establecimientos/{id}/mercadopago (DTOCuentaMercadoPagoEstado). */
+export interface CuentaMercadoPago {
+  vinculada: boolean;
+  estadoCobro: EstadoCobro;
+  /** ISO local sin zona (hora de Argentina). `null` sin cuenta. */
+  fechaHoraVinculacion: string | null;
+  fechaHoraExpiracionToken: string | null;
 }

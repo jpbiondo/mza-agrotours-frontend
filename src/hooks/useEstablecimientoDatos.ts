@@ -24,7 +24,6 @@ interface DatosBackend {
   localidad?: string;
   telefono?: string;
   email?: string;
-  cvu?: string;
   cultivos?: unknown;
   foto?: unknown;
 }
@@ -52,7 +51,6 @@ function aDatos(d: DatosBackend): EstablecimientoDatos {
     localidad: d.localidad ?? "",
     telefono: d.telefono ?? "",
     email: d.email ?? "",
-    cvu: d.cvu ?? "",
     cultivos: aCultivos(d.cultivos),
     foto: aFoto(d.foto),
   };

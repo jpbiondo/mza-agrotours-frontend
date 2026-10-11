@@ -41,19 +41,6 @@ export function validarEmail(v: string): string | null {
   return null;
 }
 
-/**
- * El CVU argentino son 22 dígitos. TODO backend: confirmar que sea la misma
- * regla del lado del servidor; si allá se acepta algo más flojo, esto bloquea
- * de más.
- */
-export function validarCvu(v: string): string | null {
-  const t = v.trim();
-  if (!t) return "El CVU no puede estar vacío.";
-  if (!/^\d+$/.test(t)) return "El CVU sólo puede tener números.";
-  if (t.length !== 22) return "El CVU debe tener 22 dígitos.";
-  return null;
-}
-
 /* ---- Portada del establecimiento -----------------------------------------
    Una sola imagen, la primera que ven los visitantes en el perfil público y en
    las tarjetas de búsqueda, que la muestran en 16:9. */
