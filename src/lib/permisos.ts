@@ -42,6 +42,8 @@ export const PermisoAdmin = {
   LEER_INCIDENCIAS: "LEER_INCIDENCIAS",
   /** Cambiar el estado de una incidencia (y cerrarla con motivo). */
   GESTIONAR_INCIDENCIAS: "GESTIONAR_INCIDENCIAS",
+  /** Ver los reembolsos impagos y los que cubrió el sistema. */
+  LEER_REEMBOLSOS: "LEER_REEMBOLSOS",
 } as const;
 
 export type PermisoAdmin = (typeof PermisoAdmin)[keyof typeof PermisoAdmin];

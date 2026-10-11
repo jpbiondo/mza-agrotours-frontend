@@ -126,6 +126,7 @@ const NAV: NavEntry[] = [
     iconC: HandCoins,
     label: "Reservas impagas",
     href: "/admin/impagas",
+    permiso: PermisoAdmin.LEER_REEMBOLSOS,
   },
   {
     id: "deudas",
