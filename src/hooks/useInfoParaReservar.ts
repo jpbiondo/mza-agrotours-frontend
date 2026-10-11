@@ -2,20 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { apiFetch, comoEnvelope } from "@/lib/api";
-import { MESES_LABEL } from "@/data/calendario";
+import { aCalendario } from "@/lib/calendarioReserva";
 import type { AsyncState } from "@/hooks/useAsync";
-import type { MesCalendario } from "@/types/catalogo";
 import type { InfoParaReservar, Precios, Rango, Viajero } from "@/data/reserva";
 
 const BASE = "/actividades";
-
-interface DiaActividadBackend {
-  id: string;
-  cuposMax: number;
-  cuposOcupados: number;
-  fechaHoraInicio: string;
-  fechaHoraFin: string;
-}
 
 interface RangoEtarioBackend {
   precio: number;
@@ -32,7 +23,7 @@ interface UsuarioParaReservar {
 }
 
 interface InfoParaReservarBackend {
-  diasActividad: DiaActividadBackend[];
+  diasActividad: unknown;
   rangosEtarios: RangoEtarioBackend[];
   usuario: UsuarioParaReservar;
   nombre: string;
@@ -143,38 +134,4 @@ function aPrecios(rangos: Rango[], v: RangoEtarioBackend[] | undefined): Precios
   const precios: Precios = {};
   rangos.forEach((r, i) => { precios[r.id] = v?.[i]?.precio ?? 0; });
   return precios;
-}
-
-/** Agrupa los días de actividad por mes y completa los días sin cupo como "off". */
-function aCalendario(dias: DiaActividadBackend[] | undefined): MesCalendario[] {
-  const porMes = new Map<string, MesCalendario>();
-
-  (dias ?? []).forEach((d) => {
-    if (!d.id || !d.fechaHoraInicio) return;
-    const fecha = new Date(d.fechaHoraInicio);
-    const year = fecha.getFullYear();
-    const month = fecha.getMonth();
-    const day = fecha.getDate();
-    const key = `${year}-${month}`;
-
-    let mes = porMes.get(key);
-    if (!mes) {
-      mes = { year, month, label: `${MESES_LABEL[month]} ${year}`, days: {} };
-      porMes.set(key, mes);
-    }
-
-    const cupos = Math.max(0, (d.cuposMax ?? 0) - (d.cuposOcupados ?? 0));
-    mes.days[day] = { id: d.id, state: cupos > 0 ? "disponible" : "off", cupos, cupoMaximo: d.cuposMax ?? 0, dow: fecha.getDay() };
-  });
-
-  const meses = Array.from(porMes.values()).sort((a, b) => a.year - b.year || a.month - b.month);
-  meses.forEach((mes) => {
-    const daysInMonth = new Date(mes.year, mes.month + 1, 0).getDate();
-    for (let day = 1; day <= daysInMonth; day++) {
-      if (!mes.days[day]) {
-        mes.days[day] = { id: "", state: "off", cupos: 0, cupoMaximo: 0, dow: new Date(mes.year, mes.month, day).getDay() };
-      }
-    }
-  });
-  return meses;
 }

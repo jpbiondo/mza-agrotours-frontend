@@ -4,10 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   MapPin, Star, Users, ShieldCheck, AlertTriangle, CalendarCheck,
-  ChevronLeft, ChevronRight, ChevronRight as Crumb,
+  ChevronRight as Crumb,
 } from "lucide-react";
 import { moneyAr } from "@/lib/format";
-import { NOMBRES_DIA } from "@/data/calendario";
 import {
   precioRango, evalViajero, fechaLabel,
   type Viajero, type InfoParaReservar,
@@ -17,7 +16,8 @@ import { useReserva , type RealizarReservaRequest } from "@/hooks/useCheckout";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import TravelersList from "./Travelers";
 import { PaymentSheet, SuccessModal, FailModal, CancelToast } from "./PaymentSheet";
-import type { MesCalendario } from "@/types/catalogo";
+import { CalendarioReserva, type DiaSeleccionado } from "@/components/reserva/CalendarioReserva";
+import { buscarDia, primerMesDisponible } from "@/lib/calendarioReserva";
 
 function SectionHead({ n, title, sub }: { n: string; title: string; sub: string }) {
   return (
@@ -29,63 +29,6 @@ function SectionHead({ n, title, sub }: { n: string; title: string; sub: string 
       </div>
     </div>
   );
-}
-
-function MonthCalendar({
-  meses, monthIdx, selDay, selMonthIdx, onMonth, onSelect,
-}: {
-  meses: MesCalendario[]; monthIdx: number; selDay: number | null; selMonthIdx: number | null;
-  onMonth: (i: number) => void; onSelect: (day: number, mi: number) => void;
-}) {
-  const mes = meses[monthIdx];
-  const firstDow = useMemo(() => (new Date(mes.year, mes.month, 1).getDay() + 6) % 7, [mes]);
-  const daysInMonth = new Date(mes.year, mes.month + 1, 0).getDate();
-  const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
-
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <button type="button" onClick={() => onMonth(Math.max(0, monthIdx - 1))} disabled={monthIdx === 0} style={navBtn(monthIdx === 0)}><ChevronLeft size={17} /></button>
-        <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15.5, color: "var(--fg-1)" }}>{mes.label}</span>
-        <button type="button" onClick={() => onMonth(Math.min(meses.length - 1, monthIdx + 1))} disabled={monthIdx === meses.length - 1} style={navBtn(monthIdx === meses.length - 1)}><ChevronRight size={17} /></button>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 6 }}>
-        {NOMBRES_DIA.map((d) => (
-          <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: ".03em" }}>{d}</div>
-        ))}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
-        {cells.map((d, idx) => {
-          if (d === null) return <div key={idx} />;
-          const info = mes.days[d];
-          const disponible = info.state === "disponible";
-          const sel = selMonthIdx === monthIdx && selDay === d;
-          return (
-            <button
-              key={idx}
-              type="button"
-              disabled={!disponible}
-              onClick={() => onSelect(d, monthIdx)}
-              style={{
-                aspectRatio: "1", borderRadius: 9, cursor: disponible ? "pointer" : "default",
-                fontFamily: "var(--font-sans)", fontSize: 13.5, fontWeight: sel ? 700 : 500,
-                background: sel ? "var(--green-800)" : disponible ? "var(--surface)" : "transparent",
-                color: sel ? "#fff" : disponible ? "var(--fg-1)" : "var(--fg-3)",
-                border: disponible && !sel ? "1px solid var(--outline-variant)" : "1px solid transparent",
-                opacity: disponible ? 1 : 0.4,
-              }}
-            >
-              {d}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function navBtn(disabled: boolean): React.CSSProperties {
-  return { width: 32, height: 32, borderRadius: 8, border: "1px solid var(--outline-variant)", background: "var(--surface)", cursor: disabled ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--fg-2)", opacity: disabled ? 0.4 : 1 };
 }
 
 function CuposPanel({ selLabel, cupos, reservados, totalRows, insuf, cupoMaximo }: { selLabel: string | null; cupos: number; reservados: number; totalRows: number; insuf: boolean; cupoMaximo: number }) {
@@ -176,22 +119,50 @@ function Meta({ icon, label, value }: { icon: React.ReactNode; label: string; va
   );
 }
 
-export default function ReservaClient({ id }: { id: string }) {
+/** Tope de filas que se arman desde la query: un link editado a mano no debería colgar la pantalla. */
+const MAX_VISITANTES_QUERY = 50;
+
+/**
+ * `diaInicial` y `visitantesIniciales` vienen de la query que arma el widget del
+ * detalle (`?dia=…&visitantes=…`). Son una sugerencia: si el día ya no está o se
+ * quedó sin cupo, la pantalla arranca sin fecha elegida como si no vinieran.
+ */
+export default function ReservaClient({ id, diaInicial = "", visitantesIniciales = 1 }: {
+  id: string;
+  diaInicial?: string;
+  visitantesIniciales?: number;
+}) {
   const { data: info, isLoading, error, reload } = useInfoParaReservar(id);
   return (
     <AsyncBoundary loading={isLoading} error={error} onRetry={reload} pad={160}>
-      {info && <ReservaForm id={id} info={info} />}
+      {info && <ReservaForm id={id} info={info} diaInicial={diaInicial} visitantesIniciales={visitantesIniciales} />}
     </AsyncBoundary>
   );
 }
 
-function ReservaForm({ id, info }: { id: string; info: InfoParaReservar }) {
+/** El primero es el titular, autocompletado; el resto arranca vacío. */
+function viajerosIniciales(titular: Viajero, cantidad: number): Viajero[] {
+  const n = Math.min(MAX_VISITANTES_QUERY, Math.max(1, Math.floor(cantidad) || 1));
+  const vacio: Viajero = { nombre: "", fechaNac: "", tipoDoc: "DNI", numDoc: "" };
+  return [{ ...titular }, ...Array.from({ length: n - 1 }, () => ({ ...vacio }))];
+}
+
+function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
+  id: string;
+  info: InfoParaReservar;
+  diaInicial: string;
+  visitantesIniciales: number;
+}) {
   const { calendario, rangos, precios } = info;
 
-  const [monthIdx, setMonthIdx] = useState(0);
-  const [selDay, setSelDay] = useState<number | null>(null);
-  const [selMonthIdx, setSelMonthIdx] = useState<number | null>(null);
-  const [viajeros, setViajeros] = useState<Viajero[]>([{ ...info.titular }]);
+  const [sel, setSel] = useState<DiaSeleccionado | null>(() => {
+    const d = buscarDia(calendario, diaInicial);
+    return d && calendario[d.monthIdx].days[d.day].state === "disponible" ? d : null;
+  });
+  const [monthIdx, setMonthIdx] = useState(() => sel?.monthIdx ?? primerMesDisponible(calendario));
+  const [viajeros, setViajeros] = useState<Viajero[]>(() => viajerosIniciales(info.titular, visitantesIniciales));
+  const selDay = sel?.day ?? null;
+  const selMonthIdx = sel?.monthIdx ?? null;
 
   const [codigo, setCodigo] = useState<string | null>(null);
   const [payOpen, setPayOpen] = useState(false);
@@ -281,13 +252,13 @@ function ReservaForm({ id, info }: { id: string; info: InfoParaReservar }) {
             <div className="card" style={{ padding: 22, display: "grid", gridTemplateColumns: "minmax(0,1fr) 250px", gap: 24, alignItems: "start" }}>
               <div style={{ background: "var(--cream-tert)", border: "1px solid var(--outline-variant)", borderRadius: 12, padding: 16 }} className="cal-wrap">
                 {calendario.length > 0 ? (
-                  <MonthCalendar
+                  <CalendarioReserva
                     meses={calendario}
                     monthIdx={monthIdx}
-                    selDay={selDay}
-                    selMonthIdx={selMonthIdx}
                     onMonth={setMonthIdx}
-                    onSelect={(d, mi) => { setSelDay(d); setSelMonthIdx(mi); }}
+                    seleccionado={sel}
+                    onSelect={setSel}
+                    leyenda={false}
                   />
                 ) : (
                   <div style={{ padding: "16px 4px", fontSize: 13.5, color: "var(--fg-3)", textAlign: "center" }}>

@@ -202,6 +202,8 @@ export interface ActividadPublica {
   preguntasFrecuentes: FaqActividad[];
   tarifas: TarifaActividad[];
   precioRegular: number | null;
+  /** Días futuros con su disponibilidad, agrupados por mes. Vacío si no hay fechas. */
+  calendario: MesCalendario[];
 }
 
 /** Opción de un filtro de catálogo (valor + etiqueta + cantidad). */
