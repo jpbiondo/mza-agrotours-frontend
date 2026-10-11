@@ -7,7 +7,8 @@ import {
   ListChecks, MapPin, X,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { Alert, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { buttonClasses } from "@/components/ui/Button";
 import { hoyISO, sumarDiasISO, aISO } from "@/components/ui/date-picker";
 import { CropChip, EstadoActividadBadge, IconoActividad } from "@/components/panel/actividad/identidad";
 import { BarraCupos, CalendarioMensual, type Celda, type ItemLeyenda } from "@/components/panel/gestion-dias/CalendarioMensual";
@@ -151,7 +152,9 @@ function SinSeleccion() {
 }
 
 /** Resumen del día elegido. En pantallas chicas se muestra dentro de una hoja inferior. */
-function ResumenDia({ dia, hoy, onCerrar, enHoja }: { dia: DiaProgramado; hoy: FechaISO; onCerrar: () => void; enHoja?: boolean }) {
+function ResumenDia({
+  dia, hoy, href, onCerrar, enHoja,
+}: { dia: DiaProgramado; hoy: FechaISO; href: string; onCerrar: () => void; enHoja?: boolean }) {
   const { pagadas, pendientes, cupoMax } = dia;
   const pasado = esPasado(dia, hoy);
   const ocupados = pagadas + pendientes;
@@ -266,10 +269,9 @@ function ResumenDia({ dia, hoy, onCerrar, enHoja }: { dia: DiaProgramado; hoy: F
           )}
         </div>
 
-        {/* TODO: lleva al listado de reservas del día (US-ACT-08), que todavía no está. */}
-        <Button className="w-full" disabled title="Próximamente">
+        <Link href={href} className={buttonClasses({ className: "w-full" })}>
           <ListChecks className="size-4" /> Ver detalle de reservas <ArrowRight className="size-4" />
-        </Button>
+        </Link>
       </div>
     </>
   );
@@ -315,15 +317,21 @@ function CalendarioSkeleton() {
 
 /* ---- Pantalla ----------------------------------------------------------- */
 
-export default function CalendarioActividadClient({ actividadId }: { actividadId: string }) {
+/** "YYYY-MM" → mes; cualquier otra cosa cae en el mes actual. */
+function mesDesde(clave: string | undefined): Mes {
+  const m = clave && /^(\d{4})-(\d{2})$/.exec(clave);
+  if (m && Number(m[2]) >= 1 && Number(m[2]) <= 12) return { anio: Number(m[1]), mes0: Number(m[2]) - 1 };
+  const d = new Date();
+  return { anio: d.getFullYear(), mes0: d.getMonth() };
+}
+
+export default function CalendarioActividadClient({ actividadId, mesInicial }: { actividadId: string; mesInicial?: string }) {
   const { activo } = useEstablecimientos();
   const ruta = useRutaPanel();
   const establecimientoId = activo?.id ?? "";
 
-  const [mes, setMes] = useState<Mes>(() => {
-    const d = new Date();
-    return { anio: d.getFullYear(), mes0: d.getMonth() };
-  });
+  // Al volver desde las reservas de un día se vuelve a abrir el mes de ese día.
+  const [mes, setMes] = useState<Mes>(() => mesDesde(mesInicial));
   const cal = useCalendarioActividad(establecimientoId, actividadId, mes.anio, mes.mes0 + 1);
   // La cabecera y las métricas no dependen del mes: mientras se pide otro, se
   // sigue mostrando lo último que llegó en vez de vaciar la pantalla.
@@ -354,6 +362,7 @@ export default function CalendarioActividadClient({ actividadId }: { actividadId
     setSeleccionado(null);
   };
   const cerrar = () => setSeleccionado(null);
+  const hrefReservas = (d: DiaProgramado) => ruta("actividades", actividadId, "calendario", d.id);
 
   return (
     <div className="min-h-screen bg-cream-bg">
@@ -476,7 +485,7 @@ export default function CalendarioActividadClient({ actividadId }: { actividadId
 
                 <div className="flex min-w-0 flex-col gap-4">
                   <div className="hidden xl:block">
-                    {dia ? <ResumenDia key={dia.id} dia={dia} hoy={hoy} onCerrar={cerrar} /> : <SinSeleccion />}
+                    {dia ? <ResumenDia key={dia.id} dia={dia} hoy={hoy} href={hrefReservas(dia)} onCerrar={cerrar} /> : <SinSeleccion />}
                   </div>
                   <DiasHorarios dias={base.dias} />
                   <Card className="border-outline-variant bg-cream-tert p-[18px]">
@@ -508,7 +517,7 @@ export default function CalendarioActividadClient({ actividadId }: { actividadId
             className="fixed inset-x-0 bottom-0 z-[121] max-h-[88vh] overflow-y-auto rounded-t-[16px] border-t border-outline-variant bg-surface shadow-pop motion-safe:animate-[sheetIn_.22s_cubic-bezier(.2,0,0,1)]"
           >
             <div className="absolute inset-x-0 top-2 mx-auto h-1 w-10 rounded-pill bg-sand" />
-            <ResumenDia dia={dia} hoy={hoy} onCerrar={cerrar} enHoja />
+            <ResumenDia dia={dia} hoy={hoy} href={hrefReservas(dia)} onCerrar={cerrar} enHoja />
           </div>
         </div>
       )}

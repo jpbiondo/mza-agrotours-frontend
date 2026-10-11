@@ -9,11 +9,17 @@ export const metadata: Metadata = {
 
 // Sin `generateStaticParams` ni `GuardEstablecimientoSuspendido`, como la
 // gestión de días: es de consulta, así que suspendido también se puede ver.
-export default async function CalendarioActividadPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CalendarioActividadPage({
+  params, searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ mes?: string | string[] }>;
+}) {
   const { id } = await params;
+  const { mes } = await searchParams;
   return (
     <GuardGestionarActividad>
-      <CalendarioActividadClient actividadId={id} />
+      <CalendarioActividadClient actividadId={id} mesInicial={typeof mes === "string" ? mes : undefined} />
     </GuardGestionarActividad>
   );
 }
