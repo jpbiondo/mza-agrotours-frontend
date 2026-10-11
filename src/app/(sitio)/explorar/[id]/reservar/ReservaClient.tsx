@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  MapPin, Star, Users, ShieldCheck, AlertTriangle, CalendarCheck,
+  MapPin, Star, Users, ShieldCheck, AlertTriangle, CalendarCheck, Lock,
   ChevronRight as Crumb,
 } from "lucide-react";
 import { moneyAr } from "@/lib/format";
@@ -15,7 +15,10 @@ import { useInfoParaReservar } from "@/hooks/useInfoParaReservar";
 import { useReserva , type RealizarReservaRequest } from "@/hooks/useCheckout";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import TravelersList from "./Travelers";
-import { PaymentSheet, SuccessModal, FailModal, CancelToast } from "./PaymentSheet";
+import { SuccessModal, CancelToast } from "./Resultados";
+import { AvisoBloqueado, BloqueoCupos, type EstadoBloqueo } from "./Bloqueo";
+import { Alert, EstadoBadge } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { CalendarioReserva, type DiaSeleccionado } from "@/components/reserva/CalendarioReserva";
 import { buscarDia, primerMesDisponible } from "@/lib/calendarioReserva";
 
@@ -31,7 +34,8 @@ function SectionHead({ n, title, sub }: { n: string; title: string; sub: string 
   );
 }
 
-function CuposPanel({ selLabel, cupos, reservados, totalRows, insuf, cupoMaximo }: { selLabel: string | null; cupos: number; reservados: number; totalRows: number; insuf: boolean; cupoMaximo: number }) {
+/** `mios`: los cupos ya están retenidos para esta reserva. */
+function CuposPanel({ selLabel, cupos, reservados, totalRows, insuf, cupoMaximo, mios }: { selLabel: string | null; cupos: number; reservados: number; totalRows: number; insuf: boolean; cupoMaximo: number; mios: boolean }) {
   if (!selLabel) {
     return (
       <div style={{ padding: "16px 14px", background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: 10, fontSize: 13, color: "var(--green-800)", height: "100%" }}>
@@ -59,9 +63,14 @@ function CuposPanel({ selLabel, cupos, reservados, totalRows, insuf, cupoMaximo 
       <div style={{ height: 7, borderRadius: 4, background: "var(--cream-tert)", overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${(cupos / cupoMaximo) * 100}%`, background: barColor, borderRadius: 4 }} />
       </div>
-      <div style={{ marginTop: 12, padding: "8px 10px", borderRadius: 8, background: insuf ? "var(--danger-fill)" : "var(--cream-tert)", fontSize: 12, fontWeight: 600, color: insuf ? "var(--danger-fg)" : "var(--fg-2)", display: "flex", alignItems: "center", gap: 7 }}>
-        <Users size={14} color={insuf ? "var(--danger)" : "var(--fg-2)"} />
-        {totalRows} {totalRows === 1 ? "visitante" : "visitantes"} en la reserva
+      <div className={cn(
+        "mt-3 flex items-center gap-[7px] rounded-md px-2.5 py-2 text-xs font-semibold",
+        insuf ? "bg-danger-fill text-danger-fg" : mios ? "border border-green-300 bg-green-050 text-green-800" : "bg-cream-tert text-fg-2",
+      )}>
+        {mios ? <Lock size={14} aria-hidden /> : <Users size={14} aria-hidden />}
+        {mios
+          ? `Reservados por vos: ${totalRows}`
+          : `${totalRows} ${totalRows === 1 ? "visitante" : "visitantes"} en la reserva`}
       </div>
     </div>
   );
@@ -164,13 +173,22 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
   const selDay = sel?.day ?? null;
   const selMonthIdx = sel?.monthIdx ?? null;
 
-  const [codigo, setCodigo] = useState<string | null>(null);
-  const [payOpen, setPayOpen] = useState(false);
+  const [bloqueo, setBloqueo] = useState<EstadoBloqueo>({ estado: "libre" });
+  const [errorReserva, setErrorReserva] = useState<string | null>(null);
   const [okOpen, setOkOpen] = useState(false);
-  const [failOpen, setFailOpen] = useState(false);
-  const [toast, setToast] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [cancelando, setCancelando] = useState(false);
 
-  const [preferenceId, setPreferenceId] = useState<string>("");
+  // El conflicto de cupos es de esa fecha y esos visitantes: cambiar cualquiera
+  // de los dos lo limpia y vuelve a habilitar "Confirmar".
+  const elegirDia = (d: DiaSeleccionado) => {
+    setSel(d);
+    setBloqueo((b) => (b.estado === "conflicto" ? { estado: "libre" } : b));
+  };
+  const cambiarViajeros = (v: Viajero[]) => {
+    setViajeros(v);
+    setBloqueo((b) => (b.estado === "conflicto" ? { estado: "libre" } : b));
+  };
 
   const selCal = selMonthIdx != null ? calendario[selMonthIdx] : null;
   const selData = selCal && selDay ? selCal.days[selDay] : null;
@@ -200,9 +218,19 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
 
   const { crear, cancelarPago, isLoading: creando } = useReserva();
   const confirmable = haySeleccion && !cuposInsuficientes && todosCompletos && evals.some((e) => e.completo);
+  // Con los cupos retenidos (o ya pagados) la fecha y los visitantes no se tocan.
+  const bloqueado = bloqueo.estado === "retenida" || bloqueo.estado === "pagada" || creando;
+  const mios = bloqueo.estado === "retenida" || bloqueo.estado === "pagada";
 
+  const estadoPill =
+    bloqueo.estado === "retenida" ? { tone: "warning" as const, texto: "Pendiente de pago" } :
+    bloqueo.estado === "pagada" ? { tone: "success" as const, texto: "Pagada" } :
+    null;
+
+  /** Crea la reserva en "Pendiente": eso es lo que retiene los cupos. */
   const onConfirm = async () => {
     if (!selData) return;
+    setErrorReserva(null);
     const request: RealizarReservaRequest = {
       diaActividadId: selData.id,
       reservaDetalleList: viajeros.map((v) => ({
@@ -212,23 +240,41 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
         fechaNacimiento: v.fechaNac,
       })),
     };
-    const res = await crear(request);
-    setPreferenceId(res.data?.preferenceId ?? "");
-    if (!res.ok || !res.data) return;
-    setCodigo(res.data.reservaDTO.idReserva);
-    setPayOpen(true);
+    try {
+      const res = await crear(request);
+      if (!res.ok || !res.data) {
+        if (res.code === "activityFull") setBloqueo({ estado: "conflicto" });
+        else setErrorReserva("No pudimos reservar tus cupos. Probá de nuevo en un rato.");
+        return;
+      }
+      const codigo = res.data.reservaDTO.idReserva;
+      // Sin preferencia el pago no pasa por Mercado Pago y ya quedó aprobado.
+      setBloqueo(res.data.preferenceId
+        ? { estado: "retenida", codigo, preferenceId: res.data.preferenceId }
+        : { estado: "pagada", codigo });
+    } catch {
+      setErrorReserva("No pudimos reservar tus cupos. Probá de nuevo en un rato.");
+    }
   };
-  const onResolve = (prefId: String) => {
-    if(prefId==""){
-      setPayOpen(false);
-      setOkOpen(true);
-      return;
-    };
-    cancelarPago(prefId);
-    setPayOpen(false);
+
+  /** Pasa la reserva a "Expirada" en el backend, que libera los cupos. */
+  const liberar = async (mensaje: string) => {
+    if (bloqueo.estado !== "retenida") return;
+    setCancelando(true);
+    try {
+      const res = await cancelarPago(bloqueo.preferenceId);
+      if (!res.ok) {
+        setToast("No pudimos liberar los cupos. Probá de nuevo.");
+        return;
+      }
+      setBloqueo({ estado: "libre" });
+      setToast(mensaje);
+    } catch {
+      setToast("No pudimos liberar los cupos. Probá de nuevo.");
+    } finally {
+      setCancelando(false);
+    }
   };
-  
-  const onRetry = () => { setFailOpen(false); setPayOpen(true); };
 
   return (
     <div style={{ maxWidth: 1180, margin: "0 auto", padding: "22px 28px 90px" }}>
@@ -245,43 +291,53 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
         <p style={{ margin: "6px 0 0", color: "var(--fg-2)", fontSize: 15 }}>Revisá la fecha, cargá a los visitantes y confirmá para asegurar tu lugar.</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 392px", gap: 40, alignItems: "start" }} className="reserva-grid">
-        <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 36 }}>
-          <section>
-            <SectionHead n="1" title="Elegí el día" sub="Seleccioná una fecha disponible para la actividad." />
-            <div className="card" style={{ padding: 22, display: "grid", gridTemplateColumns: "minmax(0,1fr) 250px", gap: 24, alignItems: "start" }}>
-              <div style={{ background: "var(--cream-tert)", border: "1px solid var(--outline-variant)", borderRadius: 12, padding: 16 }} className="cal-wrap">
-                {calendario.length > 0 ? (
-                  <CalendarioReserva
-                    meses={calendario}
-                    monthIdx={monthIdx}
-                    onMonth={setMonthIdx}
-                    seleccionado={sel}
-                    onSelect={setSel}
-                    leyenda={false}
-                  />
-                ) : (
-                  <div style={{ padding: "16px 4px", fontSize: 13.5, color: "var(--fg-3)", textAlign: "center" }}>
-                    Todavía no hay fechas disponibles para esta actividad.
-                  </div>
-                )}
+      <div className="grid grid-cols-1 items-start gap-7 shell:grid-cols-[minmax(0,1fr)_392px] shell:gap-10">
+        <div className="flex min-w-0 flex-col gap-9">
+          {bloqueo.estado === "retenida" && (
+            <AvisoBloqueado
+              cancelando={cancelando}
+              onEditar={() => liberar("Liberaste los cupos. Ya podés editar la reserva.")}
+            />
+          )}
+          {/* `inert` saca la columna del foco y de los clicks mientras está bloqueada. */}
+          <div inert={bloqueado} className={cn("flex flex-col gap-9 transition-opacity duration-200", bloqueado && "opacity-55")}>
+            <section>
+              <SectionHead n="1" title="Elegí el día" sub="Seleccioná una fecha disponible para la actividad." />
+              <div className="card grid grid-cols-1 items-start gap-6 p-[22px] sm:grid-cols-[minmax(0,1fr)_250px]">
+                <div className="rounded-xl border border-outline-variant bg-cream-tert p-4">
+                  {calendario.length > 0 ? (
+                    <CalendarioReserva
+                      meses={calendario}
+                      monthIdx={monthIdx}
+                      onMonth={setMonthIdx}
+                      seleccionado={sel}
+                      onSelect={elegirDia}
+                      leyenda={false}
+                    />
+                  ) : (
+                    <div className="px-1 py-4 text-center text-[13.5px] text-fg-3">
+                      Todavía no hay fechas disponibles para esta actividad.
+                    </div>
+                  )}
+                </div>
+                <CuposPanel selLabel={selLabel} cupos={cupos} reservados={reservados} totalRows={totalRows} insuf={cuposInsuficientes} cupoMaximo={cupoMaximoDia} mios={mios} />
               </div>
-              <CuposPanel selLabel={selLabel} cupos={cupos} reservados={reservados} totalRows={totalRows} insuf={cuposInsuficientes} cupoMaximo={cupoMaximoDia} />
-            </div>
-          </section>
+            </section>
 
-          <section>
-            <SectionHead n="2" title="Visitantes" sub="El primer visitante viene autocompletado con tus datos. Editá lo que necesites y agregá más visitantes." />
-            <TravelersList viajeros={viajeros} precios={precios} rangos={rangos} onChange={setViajeros} />
-          </section>
+            <section>
+              <SectionHead n="2" title="Visitantes" sub="El primer visitante viene autocompletado con tus datos. Editá lo que necesites y agregá más visitantes." />
+              <TravelersList viajeros={viajeros} precios={precios} rangos={rangos} onChange={cambiarViajeros} />
+            </section>
+          </div>
         </div>
 
-        <div style={{ position: "sticky", top: 88, display: "flex", flexDirection: "column", gap: 18 }} className="reserva-side">
+        <div className="flex flex-col gap-[18px]">
           <InfoReserva info={info} />
 
           <div className="card" style={{ padding: 22 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div className="mb-3 flex items-center justify-between gap-2">
               <div className="t-label">Total de reserva</div>
+              {estadoPill && <EstadoBadge tone={estadoPill.tone} className="text-[11.5px]">{estadoPill.texto}</EstadoBadge>}
             </div>
 
             {desglose.length > 0 ? (
@@ -303,7 +359,7 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
               </div>
             )}
 
-            {cuposInsuficientes && (
+            {cuposInsuficientes && !mios && (
               <div style={{ marginTop: 14, padding: "12px 14px", background: "var(--warning-fill)", border: "1px solid var(--warning)", borderRadius: 10, display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <AlertTriangle size={18} color="var(--warning-fg)" style={{ marginTop: 1, flexShrink: 0 }} />
                 <div style={{ fontSize: 12.5, lineHeight: 1.45, color: "var(--fg-2)" }}>
@@ -319,38 +375,25 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
               </div>
             </div>
 
-            <button type="button" className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center", marginTop: 16 }} disabled={!confirmable || creando} onClick={onConfirm}>
-              {creando ? "Procesando…" : (<><CalendarCheck size={20} /> Confirmar reserva</>)}
-            </button>
-            <p style={{ fontSize: 11.5, color: "var(--fg-3)", textAlign: "center", margin: "10px 0 0", lineHeight: 1.45 }}>
-              Para pagar la reserva serás dirigido al servicio de pagos para realizar la transacción de manera segura.
-            </p>
+            {errorReserva && <Alert className="mt-3.5">{errorReserva}</Alert>}
+
+            <BloqueoCupos
+              bloqueo={bloqueo}
+              confirmando={creando}
+              cancelando={cancelando}
+              confirmable={confirmable}
+              fecha={selLabel}
+              visitantes={totalRows}
+              onConfirmar={onConfirm}
+              onPagar={() => setOkOpen(true)}
+              onCancelar={() => liberar("Cancelaste la reserva. Los cupos se liberaron.")}
+            />
           </div>
         </div>
       </div>
 
-      {payOpen && (
-        <PaymentSheet
-          monto={total}
-          actividad={{ titulo: info.nombre, finca: info.nombreEstablecimiento, loc: info.ubicacion }}
-          fecha={selLabel}
-          viajeros={totalRows}
-          codigo={codigo}
-          onResolve={onResolve}
-          preferenceId={preferenceId}
-        />
-      )}
-      <SuccessModal open={okOpen} codigo={codigo} />
-      <FailModal open={failOpen} onRetry={onRetry} onClose={() => setFailOpen(false)} />
-      <CancelToast open={toast} onClose={() => setToast(false)} />
-
-      <style>{`
-        @media (max-width: 920px) {
-          .reserva-grid { grid-template-columns: 1fr !important; }
-          .reserva-side { position: static !important; }
-        }
-        @media (max-width: 560px) { .cal-wrap + div, .card .cal-wrap { } }
-      `}</style>
+      <SuccessModal open={okOpen} onClose={() => setOkOpen(false)} />
+      <CancelToast open={toast !== null} message={toast ?? ""} onClose={() => setToast(null)} />
     </div>
   );
 }
