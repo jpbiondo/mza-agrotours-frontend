@@ -17,6 +17,8 @@ import type {
 interface ReservaBackend {
   idReserva?: string | null;
   totalReserva?: unknown;
+  /** Cuándo se empezó la reserva. Sólo lo trae el listado. */
+  fechaHoraInicioReserva?: unknown;
   estadoReserva?: string | null;
   cantPersonas?: unknown;
   actividadFechaHoraInicio?: unknown;
@@ -42,32 +44,27 @@ function aResumen(r: ReservaBackend, i: number): ReservaResumen {
     ubicacion: r.ubicacionEstablecimiento ?? "",
     inicio: leerFechaLocal(r.actividadFechaHoraInicio),
     fin: leerFechaLocal(r.actividadFechaHoraFin),
+    creada: leerFechaLocal(r.fechaHoraInicioReserva),
     personas: aNumero(r.cantPersonas),
     total: aNumero(r.totalReserva),
     estado: (r.estadoReserva ?? "").trim(),
   };
 }
 
-/**
- * Primero las que todavía no ocurrieron, de la más cercana a la más lejana;
- * después las pasadas, de la más reciente a la más vieja. Sin fecha, al final.
- */
-function ordenar(reservas: ReservaResumen[], ahora: number): ReservaResumen[] {
-  const t = (r: ReservaResumen) => r.inicio?.getTime() ?? NaN;
+/** De la reserva hecha más recientemente a la más vieja. Sin fecha, al final. */
+function ordenar(reservas: ReservaResumen[]): ReservaResumen[] {
+  const t = (r: ReservaResumen) => r.creada?.getTime() ?? NaN;
   return [...reservas].sort((a, b) => {
     const ta = t(a);
     const tb = t(b);
     if (Number.isNaN(ta)) return Number.isNaN(tb) ? 0 : 1;
     if (Number.isNaN(tb)) return -1;
-    const fa = ta >= ahora;
-    const fb = tb >= ahora;
-    if (fa !== fb) return fa ? -1 : 1;
-    return fa ? ta - tb : tb - ta;
+    return tb - ta;
   });
 }
 
 interface UseReservasReturn {
-  /** Siempre definido: `[]` significa "cargó y no hay ninguna". Próximas primero (ver `ordenar`). */
+  /** Siempre definido: `[]` significa "cargó y no hay ninguna". Las hechas más recientemente primero (ver `ordenar`). */
   reservas: ReservaResumen[];
   isLoading: boolean;
   error: string | null;
@@ -113,9 +110,9 @@ export function useReservas(): UseReservasReturn {
           fin({ error: env.code ?? "No pudimos cargar tus reservas" });
           return;
         }
-        // Envelope ok sin `data` es lista vacía, no error. El corte entre
-        // próximas y pasadas se toma al llegar los datos.
-        fin({ reservas: Array.isArray(env.data) ? ordenar(env.data.map(aResumen), Date.now()) : [] });
+        // Envelope ok sin `data` es lista vacía, no error. Las expiradas ya
+        // vienen filtradas por el backend.
+        fin({ reservas: Array.isArray(env.data) ? ordenar(env.data.map(aResumen)) : [] });
       } catch (e) {
         if (active) fin({ error: e instanceof Error ? e.message : "Error inesperado" });
       }
