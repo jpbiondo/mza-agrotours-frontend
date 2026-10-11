@@ -16,8 +16,8 @@ import { useActividadPublica } from "@/hooks/useCatalogoActividades";
 import { usePronosticoClima } from "@/hooks/useClima";
 import { useChatDeActividad } from "@/hooks/useChats";
 import { useChatDrawer } from "@/stores/chatDrawerStore";
-import { moneyAr } from "@/lib/format";
-import type { ActividadPublica, FotoRef, TarifaActividad } from "@/types/catalogo";
+import BookingWidget from "./BookingWidget";
+import type { ActividadPublica, FotoRef } from "@/types/catalogo";
 import type { CondicionClima, DiaPronostico } from "@/types/clima";
 
 /* ---- Botón compartir (copia link) -------------------------------------- */
@@ -124,7 +124,8 @@ function SectionTitle({ children, sub }: { children: React.ReactNode; sub?: stri
 }
 
 function Block({ children }: { children: React.ReactNode }) {
-  return <section style={{ marginTop: 40 }}>{children}</section>;
+  // `first:mt-0`: la primera sección ya queda separada del título por el gap de la grilla.
+  return <section className="mt-10 first:mt-0">{children}</section>;
 }
 
 /* ---- FAQ acordeón ------------------------------------------------------ */
@@ -376,71 +377,6 @@ function Pronostico({ departamento }: { departamento: string }) {
   );
 }
 
-/* ---- Widget de reserva ------------------------------------------------- */
-
-/** El rango abierto por arriba se lee mejor como "18 años o más". */
-function rangoEtario(t: TarifaActividad): string {
-  return t.edadMaxima >= 120 ? `${t.edadMinima} años o más` : `${t.edadMinima} a ${t.edadMaxima} años`;
-}
-
-/**
- * Precio y tarifas, y de ahí a `/reservar`. La fecha y la cantidad de personas
- * se eligen allá, contra la disponibilidad real de `GET /actividades/{id}/reservar`.
- */
-function BookingWidget({ a }: { a: ActividadPublica }) {
-  return (
-    <aside className="card" style={{ padding: 0, overflow: "hidden", position: "sticky", top: 88 }}>
-      <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--outline-variant)" }}>
-        <div className="t-label" style={{ marginBottom: 2 }}>Desde</div>
-        {a.precioRegular === null ? (
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 22, color: "var(--fg-3)" }}>A consultar</span>
-        ) : (
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-            <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 28, color: "var(--fg-1)" }}>{moneyAr(a.precioRegular)}</span>
-            <span style={{ fontSize: 13.5, color: "var(--fg-3)" }}>/ persona</span>
-          </div>
-        )}
-      </div>
-
-      <div style={{ padding: "18px 20px" }}>
-        {a.tarifas.length > 0 && (
-          <>
-            <div className="t-label" style={{ marginBottom: 10 }}>Tarifas por edad</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {a.tarifas.map((t) => (
-                <div key={t.id || t.nombre} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg-1)" }}>{t.nombre}</div>
-                    <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{rangoEtario(t)}</div>
-                  </div>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 14.5, fontWeight: 600, color: t.precio === 0 ? "var(--fg-3)" : "var(--fg-1)", whiteSpace: "nowrap" }}>
-                    {t.precio === 0 ? "Sin cargo" : moneyAr(t.precio)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {a.cuposMax > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, color: "var(--fg-2)", marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--outline-variant)" }}>
-            <Users size={14} color="var(--green-700)" />
-            Hasta {a.cuposMax} {a.cuposMax === 1 ? "persona" : "personas"} por fecha.
-          </div>
-        )}
-
-        <Link href={`/explorar/${a.id}/reservar`} className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center", marginTop: 16 }}>
-          Solicitar reserva
-        </Link>
-        <p style={{ fontSize: 12, color: "var(--fg-3)", textAlign: "center", margin: "10px 0 0", lineHeight: 1.5 }}>
-          Elegís la fecha y cargás los visitantes en el paso siguiente.
-        </p>
-        {/* TODO backend: medios de pago y política de cancelación no vienen en el detalle. */}
-      </div>
-    </aside>
-  );
-}
-
 /* ---- Estados de la pantalla -------------------------------------------- */
 
 function DetalleSkeleton() {
@@ -478,7 +414,8 @@ export default function DetalleClient({ id }: { id: string }) {
   const { data, isLoading, error, reload } = useActividadPublica(id);
 
   return (
-    <div style={{ maxWidth: 1240, margin: "0 auto", padding: "24px 28px 80px" }}>
+    // Abajo deja lugar para la barra fija de reserva, que en angosto tapa el final.
+    <div className="mx-auto max-w-[1240px] px-4 pt-4 pb-28 sm:px-7 sm:pt-6 shell:pb-20">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, marginBottom: 18, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--fg-3)", fontSize: 13 }}>
           <Link href="/" style={{ color: "var(--fg-3)", textDecoration: "none" }}>Inicio</Link>
@@ -512,10 +449,17 @@ function Detalle({ a }: { a: ActividadPublica }) {
         <HeroCarousel fotos={a.fotos} seed={seedDeId(a.id)} titulo={a.nombre} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 56, alignItems: "start" }} className="detalle-grid">
-        <div style={{ minWidth: 0 }}>
+      {/* En angosto el widget no ocupa lugar en la grilla: es la barra fija de
+          abajo y su hoja. Desde `shell:` pasa a la columna derecha, arriba de
+          todo y estático: se scrollea junto con el contenido. */}
+      <div className="grid grid-cols-1 items-start gap-x-8 gap-y-10 [grid-template-areas:'header'_'contenido'] shell:grid-cols-[minmax(0,1fr)_minmax(340px,370px)] shell:grid-rows-[auto_1fr] shell:[grid-template-areas:'header_reserva'_'contenido_reserva'] min-[1100px]:grid-cols-[minmax(0,1fr)_400px] min-[1100px]:gap-x-14">
+        <div className="min-w-0 [grid-area:header]">
           <ActivityHeader a={a} />
+        </div>
 
+        <BookingWidget a={a} className="self-start [grid-area:reserva]" />
+
+        <div className="min-w-0 [grid-area:contenido]">
           {parrafos.length > 0 && (
             <Block>
               <SectionTitle>Sobre la experiencia</SectionTitle>
@@ -587,15 +531,9 @@ function Detalle({ a }: { a: ActividadPublica }) {
             </Block>
           )}
         </div>
-
-        <BookingWidget a={a} />
       </div>
 
       <style>{`
-        @media (max-width: 940px) {
-          .detalle-grid { grid-template-columns: 1fr !important; }
-          .incluye-grid { grid-template-columns: 1fr 1fr !important; }
-        }
         /* Las columnas del clima son una por día: en angosto se apilan de a tres y de a dos. */
         @media (max-width: 720px) {
           .clima-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }

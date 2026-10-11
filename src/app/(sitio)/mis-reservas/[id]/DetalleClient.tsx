@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ChevronRight, ArrowLeft, MapPin, Download, ReceiptText, CalendarDays, Clock, Users,
-  SearchX, Loader,
+  SearchX, Loader, XCircle,
 } from "lucide-react";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { EstadoBadge, Skeleton } from "@/components/ui";
+import { Button, EstadoBadge, Skeleton } from "@/components/ui";
 import { metaEstadoReserva } from "@/data/reservas";
 import { fmtDiaLocal, fmtFranja, moneyAr } from "@/lib/format";
 import { useReserva } from "@/hooks/useReservas";
 import type { ReservaDetalle } from "@/types/reservas";
 import { descargarComprobante } from "./comprobante";
+import CancelarReservaModal from "./CancelarReservaModal";
 
 function MetaItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
@@ -40,7 +41,7 @@ function Bloque({ icon, title, children }: { icon: React.ReactNode; title: strin
   );
 }
 
-function Cabecera({ r }: { r: ReservaDetalle }) {
+function Cabecera({ r, onCancelar }: { r: ReservaDetalle; onCancelar?: () => void }) {
   const meta = metaEstadoReserva(r.estado);
   return (
     <div className="mb-6 overflow-hidden rounded-lg border border-outline-variant bg-surface">
@@ -75,9 +76,16 @@ function Cabecera({ r }: { r: ReservaDetalle }) {
             {r.ubicacion && <span className="text-fg-3">· {r.ubicacion}</span>}
           </div>
         </div>
-        <button type="button" className="btn btn-neutral" onClick={() => descargarComprobante(r)}>
-          <Download size={17} /> Descargar comprobante
-        </button>
+        <div className="flex flex-wrap items-start gap-2.5">
+          <button type="button" className="btn btn-neutral" onClick={() => descargarComprobante(r)}>
+            <Download size={17} /> Descargar comprobante
+          </button>
+          {onCancelar && (
+            <Button variant="neutral" className="border-danger text-danger hover:border-danger" onClick={onCancelar}>
+              <XCircle size={17} /> Cancelar reserva
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -174,7 +182,9 @@ function NoEncontrada() {
 
 export default function DetalleClient({ id }: { id: string }) {
   const router = useRouter();
-  const { reserva, isLoading, error, notFound, unauthenticated, reload } = useReserva(id);
+  const { reserva, cancelable, isLoading, error, notFound, unauthenticated, reload } = useReserva(id);
+  /** Copia de la reserva al abrir el modal: el reload posterior no debe desmontarlo ni cambiarle los datos. */
+  const [aCancelar, setACancelar] = useState<ReservaDetalle | null>(null);
 
   // Ruta protegida: sin sesión, a la pantalla de login.
   useEffect(() => {
@@ -211,11 +221,18 @@ export default function DetalleClient({ id }: { id: string }) {
           <NoEncontrada />
         ) : (
           <>
-            <Cabecera r={reserva} />
+            <Cabecera r={reserva} onCancelar={cancelable ? () => setACancelar(reserva) : undefined} />
             <Asistentes r={reserva} />
           </>
         )}
       </AsyncBoundary>
+
+      {/* Fuera del AsyncBoundary: al recargar la reserva tras cancelar, el
+          esqueleto no tiene que llevarse puesto el modal con el resultado. La
+          lista no tiene caché: /mis-reservas vuelve a pedir al montarse. */}
+      {aCancelar && (
+        <CancelarReservaModal reserva={aCancelar} onClose={() => setACancelar(null)} onCambio={reload} />
+      )}
     </div>
   );
 }
