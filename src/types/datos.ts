@@ -33,7 +33,6 @@ export interface EstablecimientoDatos {
   localidad: string;
   telefono: string;
   email: string;
-  cvu: string;
   cultivos: CultivoRef[];
   /** `null` cuando la finca todavía no tiene portada. */
   foto: FotoPortada | null;
@@ -62,7 +61,6 @@ export interface EstablecimientoEditable {
   descripcion: string;
   telefono: string;
   email: string;
-  cvu: string;
   foto: FotoClaim | null;
 }
 

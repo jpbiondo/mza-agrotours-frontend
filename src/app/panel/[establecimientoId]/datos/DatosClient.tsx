@@ -6,7 +6,6 @@ import {
   Home,
   MapPin,
   Phone,
-  Landmark,
   Sprout,
   Lock,
   ExternalLink,
@@ -28,7 +27,6 @@ import {
 import type { ToastData } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import {
-  validarCvu,
   validarDescripcion,
   validarEmail,
   validarNombre,
@@ -44,13 +42,14 @@ import {
   useGuardarEstablecimiento,
 } from "@/hooks/useEstablecimientoDatos";
 import { useFotoPortada } from "@/hooks/useFotoPortada";
+import { CobrosCard } from "./CobrosCard";
 import EliminarEstablecimientoFlow from "./EliminarEstablecimientoFlow";
 import { PortadaCard } from "./PortadaCard";
 import { SectionCard } from "./SectionCard";
 import type { EstablecimientoDatos, FotoPortada } from "@/types/datos";
 
 /** Secciones que se pueden editar; una por vez. */
-type Seccion = "identidad" | "contacto" | "operacion";
+type Seccion = "identidad" | "contacto";
 
 /** El nombre es único entre establecimientos: el PUT contesta 409 con este código. */
 const NOMBRE_DUPLICADO = "E.nombreYaExiste";
@@ -214,7 +213,7 @@ function DatosSkeleton() {
           Datos del establecimiento
         </h1>
         <p className="mt-1.5 text-[15px] text-fg-2">
-          Información general, contacto y cultivos de la finca. Editá cada
+          Información general, contacto, cobros y cultivos de la finca. Editá cada
           sección por separado.
         </p>
       </div>
@@ -307,8 +306,6 @@ function Inner({
     telefono?: string | null;
     email?: string | null;
   }>({});
-  const [cvu, setCvu] = useState("");
-  const [cvuErr, setCvuErr] = useState<string | null>(null);
 
   function notificar(title: string) {
     setToast({ tone: "success", title });
@@ -347,8 +344,6 @@ function Inner({
     setTelefono(datos.telefono);
     setEmail(datos.email);
     setContactoErr({});
-    setCvu(datos.cvu);
-    setCvuErr(null);
     setEditando(seccion);
   }
 
@@ -372,7 +367,6 @@ function Inner({
       descripcion: merged.descripcion,
       telefono: merged.telefono,
       email: merged.email,
-      cvu: merged.cvu,
       // Va SIEMPRE, aunque la sección no la toque: el PUT reemplaza el estado
       // completo y una `foto` ausente le dice al backend que la borre.
       foto: merged.foto ? { key: merged.foto.key, nombre: merged.foto.nombre } : null,
@@ -397,7 +391,7 @@ function Inner({
             Datos del establecimiento
           </h1>
           <p className="mt-1.5 text-[15px] text-fg-2">
-            Información general, contacto y cultivos de la finca. Editá cada
+            Información general, contacto, cobros y cultivos de la finca. Editá cada
             sección por separado.
           </p>
         </div>
@@ -563,39 +557,7 @@ function Inner({
         )}
       </SectionCard>
 
-      <SectionCard
-        title="Operación"
-        icon={<Landmark className="size-4 text-green-800" />}
-        isEditing={editando === "operacion"}
-        saving={saving}
-        canSave={cvu !== datos.cvu}
-        onEdit={() => abrir("operacion")}
-        onCancel={() => setEditando(null)}
-        onSave={() => {
-          const e = validarCvu(cvu);
-          if (e) {
-            setCvuErr(e);
-            return;
-          }
-          guardarSeccion({ cvu: cvu.trim() });
-        }}
-      >
-        {editando !== "operacion" ? (
-          <ReadRow label="CVU" value={datos.cvu} mono />
-        ) : (
-          <Campo
-            label="CVU"
-            value={cvu}
-            maxLength={22}
-            error={cvuErr}
-            hint="22 dígitos. Es la cuenta donde se acreditan los pagos de las reservas."
-            onChange={(v) => {
-              setCvu(v);
-              if (cvuErr) setCvuErr(null);
-            }}
-          />
-        )}
-      </SectionCard>
+      <CobrosCard establecimientoId={datos.id} />
 
       {/* Derivada: los cultivos salen de las actividades, no se editan acá. */}
       <SectionCard
