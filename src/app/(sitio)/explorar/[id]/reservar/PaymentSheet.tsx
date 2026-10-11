@@ -58,7 +58,9 @@ export function PaymentSheet({
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 20 }}>
-            <Wallet initialization={{redirectMode: "blank"}} onSubmit={handleWalletSubmit}/>
+            {/* TODO prueba marketplace: en el modo onSubmit el tipo de sdk-react no declara `marketplace`
+                (sólo con preferenceId en initialization), pero el SDK pasa `initialization` tal cual al brick. */}
+            <Wallet initialization={{ redirectMode: "blank", marketplace: true } as { redirectMode: "blank" }} onSubmit={handleWalletSubmit}/>
             <div style={{ display: "flex", gap: 10 }}>
               <button type="button" className="btn btn-neutral" style={{ flex: 1, justifyContent: "center" }} onClick={() => onResolve(preferenceId)}>Cancelar</button>
             </div>
