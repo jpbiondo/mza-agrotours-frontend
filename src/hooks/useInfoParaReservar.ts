@@ -3,6 +3,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { apiFetch, comoEnvelope } from "@/lib/api";
 import { aCalendario } from "@/lib/calendarioReserva";
+import { conToken } from "@/lib/sesion";
+import type { MesCalendario } from "@/types/catalogo";
 import type { AsyncState } from "@/hooks/useAsync";
 import type { InfoParaReservar, Precios, Rango, Viajero } from "@/data/reserva";
 
@@ -134,4 +136,23 @@ function aPrecios(rangos: Rango[], v: RangoEtarioBackend[] | undefined): Precios
   const precios: Precios = {};
   rangos.forEach((r, i) => { precios[r.id] = v?.[i]?.precio ?? 0; });
   return precios;
+}
+
+/**
+ * Vuelve a pedir la disponibilidad, para cuando la pantalla ya está armada y se
+ * sabe que cambió (otro visitante tomó los cupos). Sale a pedido del usuario,
+ * así que va con `conToken` y no espera a `onAuthStateChanged`. No toca el
+ * estado de carga de `useInfoParaReservar`: la pantalla no se desarma y no se
+ * pierden los visitantes cargados. `null` si no se pudo actualizar.
+ */
+export async function refrescarCalendario(actividadId: string): Promise<MesCalendario[] | null> {
+  try {
+    const res = await conToken((token) =>
+      apiFetch<unknown>(`${BASE}/${encodeURIComponent(actividadId)}/reservar`, { token }),
+    );
+    const env = comoEnvelope<InfoParaReservarBackend>(res);
+    return env.ok && env.data ? aCalendario(env.data.diasActividad) : null;
+  } catch {
+    return null;
+  }
 }

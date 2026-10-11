@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  MapPin, Star, Users, ShieldCheck, AlertTriangle, CalendarCheck, Lock,
+  MapPin, Star, Users, ShieldCheck, AlertTriangle, CalendarCheck, CalendarX, Lock,
   ChevronRight as Crumb,
 } from "lucide-react";
 import { moneyAr } from "@/lib/format";
@@ -11,7 +11,7 @@ import {
   precioRango, evalViajero, fechaLabel,
   type Viajero, type InfoParaReservar,
 } from "@/data/reserva";
-import { useInfoParaReservar } from "@/hooks/useInfoParaReservar";
+import { refrescarCalendario, useInfoParaReservar } from "@/hooks/useInfoParaReservar";
 import { useReserva , type RealizarReservaRequest } from "@/hooks/useCheckout";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import TravelersList from "./Travelers";
@@ -162,7 +162,11 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
   diaInicial: string;
   visitantesIniciales: number;
 }) {
-  const { calendario, rangos, precios } = info;
+  const { rangos, precios } = info;
+  // Copia propia del calendario: se reemplaza cuando la fecha elegida se llena
+  // al confirmar, sin volver a montar la pantalla.
+  const [calendario, setCalendario] = useState(info.calendario);
+  const seccionDia = useRef<HTMLElement>(null);
 
   const [sel, setSel] = useState<DiaSeleccionado | null>(() => {
     const d = buscarDia(calendario, diaInicial);
@@ -179,14 +183,9 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
   const [toast, setToast] = useState<string | null>(null);
   const [cancelando, setCancelando] = useState(false);
 
-  // El conflicto de cupos es de esa fecha y esos visitantes: cambiar cualquiera
-  // de los dos lo limpia y vuelve a habilitar "Confirmar".
+  // El aviso de fecha sin cupos queda hasta que se elige otra.
   const elegirDia = (d: DiaSeleccionado) => {
     setSel(d);
-    setBloqueo((b) => (b.estado === "conflicto" ? { estado: "libre" } : b));
-  };
-  const cambiarViajeros = (v: Viajero[]) => {
-    setViajeros(v);
     setBloqueo((b) => (b.estado === "conflicto" ? { estado: "libre" } : b));
   };
 
@@ -243,7 +242,7 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
     try {
       const res = await crear(request);
       if (!res.ok || !res.data) {
-        if (res.code === "activityFull") setBloqueo({ estado: "conflicto" });
+        if (res.code === "Actividad.FULL") await fechaSinCupos();
         else setErrorReserva("No pudimos reservar tus cupos. Probá de nuevo en un rato.");
         return;
       }
@@ -255,6 +254,24 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
     } catch {
       setErrorReserva("No pudimos reservar tus cupos. Probá de nuevo en un rato.");
     }
+  };
+
+  /**
+   * Otro visitante tomó los cupos entre que se eligió la fecha y se confirmó:
+   * se trae la disponibilidad nueva, se deselecciona la fecha y se lleva al
+   * visitante al calendario para que elija otra. Si la recarga falla queda el
+   * calendario viejo, pero igual sin esa fecha elegida.
+   */
+  const fechaSinCupos = async () => {
+    setBloqueo({ estado: "conflicto", fecha: selLabel ?? "día elegido" });
+    setSel(null);
+    const nuevo = await refrescarCalendario(id);
+    if (nuevo) {
+      setCalendario(nuevo);
+      // Los meses pueden ser otros (p. ej. si ese era el último día del mes).
+      setMonthIdx((i) => (nuevo.length === 0 ? 0 : Math.min(i, nuevo.length - 1)));
+    }
+    seccionDia.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   /** Pasa la reserva a "Expirada" en el backend, que libera los cupos. */
@@ -301,9 +318,19 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
           )}
           {/* `inert` saca la columna del foco y de los clicks mientras está bloqueada. */}
           <div inert={bloqueado} className={cn("flex flex-col gap-9 transition-opacity duration-200", bloqueado && "opacity-55")}>
-            <section>
+            <section ref={seccionDia} className="scroll-mt-24">
               <SectionHead n="1" title="Elegí el día" sub="Seleccioná una fecha disponible para la actividad." />
               <div className="card grid grid-cols-1 items-start gap-6 p-[22px] sm:grid-cols-[minmax(0,1fr)_250px]">
+                {/* Abajo del calendario y a lo ancho de la tarjeta: es ahí donde hay que elegir otra fecha. */}
+                {bloqueo.estado === "conflicto" && (
+                  <div role="alert" className="flex items-start gap-2.5 rounded-[10px] border border-danger bg-danger-fill px-3.5 py-3 sm:col-span-2">
+                    <CalendarX size={18} className="mt-px shrink-0 text-danger" aria-hidden />
+                    <div className="text-[13px] leading-[1.45] text-fg-2">
+                      <strong className="text-danger-fg">El {bloqueo.fecha} se quedó sin cupos.</strong> Otra persona
+                      reservó antes que vos. Actualizamos el calendario: elegí otra fecha.
+                    </div>
+                  </div>
+                )}
                 <div className="rounded-xl border border-outline-variant bg-cream-tert p-4">
                   {calendario.length > 0 ? (
                     <CalendarioReserva
@@ -326,7 +353,7 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
 
             <section>
               <SectionHead n="2" title="Visitantes" sub="El primer visitante viene autocompletado con tus datos. Editá lo que necesites y agregá más visitantes." />
-              <TravelersList viajeros={viajeros} precios={precios} rangos={rangos} onChange={cambiarViajeros} />
+              <TravelersList viajeros={viajeros} precios={precios} rangos={rangos} onChange={setViajeros} />
             </section>
           </div>
         </div>

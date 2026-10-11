@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarCheck, CheckCircle2, Loader, Lock, Pencil, Ticket, UsersRound, Wallet } from "lucide-react";
+import { CalendarCheck, CheckCircle2, Loader, Lock, Pencil, Ticket, Wallet } from "lucide-react";
 import { Button, buttonClasses } from "@/components/ui";
 
 /**
@@ -21,14 +21,16 @@ function urlCheckout(preferenceId: string): string {
 /**
  * Dónde está la reserva respecto de los cupos.
  * - `libre`: todavía no se confirmó; se puede editar todo.
- * - `conflicto`: al confirmar, el backend respondió que ya no alcanzan los cupos.
+ * - `conflicto`: al confirmar, el backend respondió que la fecha ya no tiene
+ *   cupos suficientes (`Actividad.FULL`). Lleva la fecha que se quedó sin lugar,
+ *   porque la selección se limpia para obligar a elegir otra.
  * - `retenida`: la reserva existe en "Pendiente" y los cupos están guardados
  *   hasta que se pague o venza.
  * - `pagada`: el pago se aprobó en el momento (pago manual, sin Mercado Pago).
  */
 export type EstadoBloqueo =
   | { estado: "libre" }
-  | { estado: "conflicto" }
+  | { estado: "conflicto"; fecha: string }
   | { estado: "retenida"; codigo: string; preferenceId: string }
   | { estado: "pagada"; codigo: string };
 
@@ -105,19 +107,10 @@ export function BloqueoCupos({
     );
   }
 
-  const conflicto = bloqueo.estado === "conflicto";
+  // El aviso de `conflicto` lo muestra la pantalla debajo del calendario.
   return (
     <>
-      {conflicto && (
-        <div className="mt-3.5 flex items-start gap-2.5 rounded-[10px] border border-danger bg-danger-fill px-3.5 py-3">
-          <UsersRound size={18} className="mt-px shrink-0 text-danger" aria-hidden />
-          <div className="text-[12.5px] leading-[1.45] text-fg-2">
-            <strong className="text-danger-fg">Ya no quedan cupos suficientes</strong> para el {fecha}. Otra persona
-            reservó antes que vos. Elegí otra fecha o reducí los visitantes.
-          </div>
-        </div>
-      )}
-      <Button size="lg" className="mt-4 w-full" disabled={!confirmable || confirmando || conflicto} onClick={onConfirmar}>
+      <Button size="lg" className="mt-4 w-full" disabled={!confirmable || confirmando} onClick={onConfirmar}>
         {confirmando ? (
           <><Loader size={18} className="spin" aria-hidden /> Reservando tus cupos…</>
         ) : (
