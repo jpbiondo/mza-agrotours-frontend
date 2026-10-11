@@ -21,12 +21,12 @@ export type Celda =
   | { tipo: "abrible"; dia: number; fecha: FechaISO }
   | { tipo: "off"; dia: number; titulo: string };
 
-const BASE = "relative flex min-h-24 w-full flex-col justify-between rounded-[10px] p-[8px_7px_9px] text-left transition-[background-color,border-color,box-shadow,transform]";
+const BASE = "relative flex w-full flex-col justify-between rounded-[10px] p-[8px_7px_9px] text-left transition-[background-color,border-color,box-shadow,transform]";
 
-function Dia({ celda, onElegir }: { celda: Celda; onElegir: (c: Celda) => void }) {
+function Dia({ celda, onElegir, alto }: { celda: Celda; onElegir: (c: Celda) => void; alto: string }) {
   if (celda.tipo === "off") {
     return (
-      <div title={celda.titulo} className={cn(BASE, "items-center justify-start text-sm text-fg-3 opacity-50")}>
+      <div title={celda.titulo} className={cn(BASE, alto, "items-center justify-start text-sm text-fg-3 opacity-50")}>
         {celda.dia}
       </div>
     );
@@ -41,6 +41,7 @@ function Dia({ celda, onElegir }: { celda: Celda; onElegir: (c: Celda) => void }
         aria-label={`${celda.dia}: abrir día`}
         className={cn(
           BASE,
+          alto,
           "group cursor-pointer border border-dashed border-outline-variant bg-transparent",
           "hover:border-solid hover:border-green-300 hover:bg-green-050",
         )}
@@ -58,7 +59,7 @@ function Dia({ celda, onElegir }: { celda: Celda; onElegir: (c: Celda) => void }
       <div
         title="Día finalizado: no se puede modificar"
         aria-disabled="true"
-        className={cn(BASE, "cursor-not-allowed border border-outline-variant bg-cream-tert")}
+        className={cn(BASE, alto, "cursor-not-allowed border border-outline-variant bg-cream-tert")}
       >
         <div className="flex items-center justify-between gap-1">
           <span className="text-[15px] leading-none font-semibold text-fg-3">{celda.dia}</span>
@@ -82,6 +83,7 @@ function Dia({ celda, onElegir }: { celda: Celda; onElegir: (c: Celda) => void }
       aria-label={`${dia}: ${pagadas} pagadas, ${pendientes} en espera de pago, cupo ${cupoMax}`}
       className={cn(
         BASE,
+        alto,
         seleccionado
           ? "border border-green-800 bg-green-800 text-fg-on-dark shadow-[inset_0_-2px_0_var(--green-900)]"
           : "border border-green-300 bg-green-050 text-fg-1",
@@ -143,6 +145,17 @@ export const LEYENDA_GESTION: ItemLeyenda[] = [
   { muestra: "border border-outline-variant bg-cream-tert", label: "Finalizado" },
 ];
 
+/**
+ * Alto mínimo de la celda, como el `cellMin` del diseño: compacta (62px) en la
+ * consulta, donde el calendario comparte la fila con el panel del día; amplia
+ * en la gestión de días, que ocupa todo el ancho. En pantallas angostas la
+ * amplia también se compacta para que la celda no quede más alta que ancha.
+ */
+const ALTO_CELDA = {
+  compacta: "min-h-[62px]",
+  amplia: "min-h-[62px] md:min-h-24",
+} as const;
+
 const NAV =
   "flex size-9 items-center justify-center rounded-md border border-outline-variant bg-surface text-fg-1 shadow-[inset_0_-2px_0_var(--outline-variant)] transition-colors hover:bg-cream-tert disabled:cursor-not-allowed disabled:border-cream-tert disabled:bg-cream-tert disabled:text-fg-3 disabled:shadow-none";
 
@@ -152,7 +165,7 @@ const NAV =
  * esqueleto del mismo tamaño para que la navegación entre meses no salte.
  */
 export function CalendarioMensual({
-  anio, mes0, celdas, cargando, onElegir, onPrev, onNext, puedePrev, puedeNext, leyenda = LEYENDA_GESTION,
+  anio, mes0, celdas, cargando, onElegir, onPrev, onNext, puedePrev, puedeNext, leyenda = LEYENDA_GESTION, alturaCelda = "compacta",
 }: {
   anio: number;
   mes0: number;
@@ -164,6 +177,7 @@ export function CalendarioMensual({
   puedePrev: boolean;
   puedeNext: boolean;
   leyenda?: ItemLeyenda[];
+  alturaCelda?: keyof typeof ALTO_CELDA;
 }) {
   const huecos = (new Date(anio, mes0, 1).getDay() + 6) % 7;
   // Cargando, los días del mes nuevo se dibujan en esqueleto aunque no haya celdas.
@@ -200,9 +214,9 @@ export function CalendarioMensual({
           c === null ? (
             <div key={i} />
           ) : cargando ? (
-            <Skeleton key={i} className="min-h-24 rounded-[10px]" />
+            <Skeleton key={i} className={cn("rounded-[10px]", ALTO_CELDA[alturaCelda])} />
           ) : (
-            <Dia key={i} celda={c} onElegir={onElegir} />
+            <Dia key={i} celda={c} onElegir={onElegir} alto={ALTO_CELDA[alturaCelda]} />
           ),
         )}
       </div>

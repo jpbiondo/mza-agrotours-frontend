@@ -370,6 +370,7 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
                   onNext={() => irA(1)}
                   puedePrev={puedePrev}
                   puedeNext={puedeNext}
+                  alturaCelda="amplia"
                 />
               </Card>
             </>
