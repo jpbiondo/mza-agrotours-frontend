@@ -55,13 +55,6 @@ function IconoArchivo({ extension }: { extension: string }) {
   return <FileIcon className={cls} />;
 }
 
-/** CVU enmascarado: sólo los últimos 4 dígitos. */
-function cvuEnmascarado(cvu: string): string {
-  if (!cvu) return "—";
-  if (cvu.length <= 4) return cvu;
-  return "•".repeat(cvu.length - 4) + cvu.slice(-4);
-}
-
 function Seccion({
   title,
   cols = 2,
@@ -247,10 +240,6 @@ function Detalle({ s }: { s: SolicitudDetalle }) {
       <Seccion title="Contacto">
         <Dato label="Correo electrónico" value={s.email} />
         <Dato label="Teléfono" value={s.telefono} />
-      </Seccion>
-
-      <Seccion title="Datos bancarios" cols={1}>
-        <Dato label="CVU" value={cvuEnmascarado(s.cvu)} mono />
       </Seccion>
 
       <Seccion title="Pruebas enviadas" cols={1}>

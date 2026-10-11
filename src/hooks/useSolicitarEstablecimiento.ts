@@ -40,7 +40,6 @@ function toPayload(f: SolicitarAltaForm, archivos: FotoClaim[]) {
     departamento: f.departamento,
     telefono: f.telefono.trim(),
     email: f.email.trim().toLowerCase(),
-    cvu: f.cvu.trim(),
     // Sólo las keys: los bytes ya están en el bucket.
     archivos,
   };

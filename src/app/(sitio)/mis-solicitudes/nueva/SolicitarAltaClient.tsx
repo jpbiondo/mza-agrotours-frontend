@@ -10,7 +10,6 @@ import {
   MapPin,
   Mail,
   Phone,
-  Landmark,
   ArrowLeft,
   Send,
   Check,
@@ -534,43 +533,6 @@ export default function SolicitarAltaClient() {
                             Ingresá tu número en formato internacional, sin
                             espacios: primero un + y luego 8 a 15 dígitos (el
                             código de país va incluido).
-                          </FormDescription>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Datos bancarios */}
-                <SectionLabel className="mt-1">Datos bancarios</SectionLabel>
-                <div className="mt-3.5 mb-2">
-                  <FormField
-                    control={form.control}
-                    name="cvu"
-                    render={({ field, fieldState }) => (
-                      <FormItem>
-                        <div className="flex items-baseline justify-between gap-3">
-                          <FormLabel required className={LABEL}>
-                            CVU
-                          </FormLabel>
-                          <Counter value={field.value} max={22} />
-                        </div>
-                        <FormControl>
-                          <TextField
-                            {...field}
-                            onChange={(v) =>
-                              field.onChange(v.replace(/\D/g, "").slice(0, 22))
-                            }
-                            icon={<Landmark />}
-                            maxLength={22}
-                            inputMode="numeric"
-                            placeholder="0000003100029723578291"
-                          />
-                        </FormControl>
-                        {!fieldState.error && (
-                          <FormDescription>
-                            22 dígitos numéricos, sin espacios ni letras.
                           </FormDescription>
                         )}
                         <FormMessage />

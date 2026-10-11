@@ -27,7 +27,6 @@ import {
   FileText,
   Image as ImageIcon,
   ExternalLink,
-  Landmark,
   BadgeCheck,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
@@ -735,11 +734,6 @@ function Detail({
                 icon={<Map className="size-[13px] text-fg-3" />}
                 label="Departamento"
                 value={sol.departamento}
-              />
-              <DetailField
-                icon={<Landmark className="size-[13px] text-fg-3" />}
-                label="CVU"
-                value={sol.cvu}
               />
               <DetailField
                 icon={<FileText className="size-[13px] text-fg-3" />}
