@@ -7,17 +7,26 @@ import { cn } from "@/lib/utils";
 import type { DiaProgramado, FechaISO } from "@/types/gestion-dias";
 
 export type Celda =
-  | { tipo: "programado"; dia: number; ref: DiaProgramado; hoy: boolean; editable: boolean }
+  | {
+      tipo: "programado";
+      dia: number;
+      ref: DiaProgramado;
+      hoy: boolean;
+      /** Si responde al click; qué hace lo decide la pantalla. */
+      clickeable: boolean;
+      seleccionado?: boolean;
+      titulo?: string;
+    }
   | { tipo: "finalizado"; dia: number; pagadas: number; cupoMax: number }
   | { tipo: "abrible"; dia: number; fecha: FechaISO }
   | { tipo: "off"; dia: number; titulo: string };
 
-const BASE = "relative flex min-h-24 w-full flex-col justify-between rounded-[10px] p-[8px_7px_9px] text-left transition-[background-color,border-color,box-shadow,transform]";
+const BASE = "relative flex w-full flex-col justify-between rounded-[10px] p-[8px_7px_9px] text-left transition-[background-color,border-color,box-shadow,transform]";
 
-function Dia({ celda, onElegir }: { celda: Celda; onElegir: (c: Celda) => void }) {
+function Dia({ celda, onElegir, alto }: { celda: Celda; onElegir: (c: Celda) => void; alto: string }) {
   if (celda.tipo === "off") {
     return (
-      <div title={celda.titulo} className={cn(BASE, "items-center justify-start text-sm text-fg-3 opacity-50")}>
+      <div title={celda.titulo} className={cn(BASE, alto, "items-center justify-start text-sm text-fg-3 opacity-50")}>
         {celda.dia}
       </div>
     );
@@ -32,6 +41,7 @@ function Dia({ celda, onElegir }: { celda: Celda; onElegir: (c: Celda) => void }
         aria-label={`${celda.dia}: abrir día`}
         className={cn(
           BASE,
+          alto,
           "group cursor-pointer border border-dashed border-outline-variant bg-transparent",
           "hover:border-solid hover:border-green-300 hover:bg-green-050",
         )}
@@ -49,7 +59,7 @@ function Dia({ celda, onElegir }: { celda: Celda; onElegir: (c: Celda) => void }
       <div
         title="Día finalizado: no se puede modificar"
         aria-disabled="true"
-        className={cn(BASE, "cursor-not-allowed border border-outline-variant bg-cream-tert")}
+        className={cn(BASE, alto, "cursor-not-allowed border border-outline-variant bg-cream-tert")}
       >
         <div className="flex items-center justify-between gap-1">
           <span className="text-[15px] leading-none font-semibold text-fg-3">{celda.dia}</span>
@@ -60,57 +70,91 @@ function Dia({ celda, onElegir }: { celda: Celda; onElegir: (c: Celda) => void }
     );
   }
 
-  const { dia, ref, hoy, editable } = celda;
+  const { dia, ref, hoy, clickeable, seleccionado, titulo } = celda;
   const { pagadas, pendientes, cupoMax } = ref;
 
   return (
     <button
       type="button"
-      disabled={!editable}
+      disabled={!clickeable}
       onClick={() => onElegir(celda)}
-      title={editable ? "Modificar el cupo de este día" : undefined}
+      title={clickeable ? titulo : undefined}
+      aria-pressed={seleccionado}
       aria-label={`${dia}: ${pagadas} pagadas, ${pendientes} en espera de pago, cupo ${cupoMax}`}
       className={cn(
         BASE,
-        "border border-green-300 bg-green-050 text-fg-1",
-        hoy && "shadow-[inset_0_0_0_1px_var(--green-800)]",
-        editable ? "cursor-pointer hover:border-green-700 hover:shadow-hover active:translate-y-px" : "cursor-default",
+        alto,
+        seleccionado
+          ? "border border-green-800 bg-green-800 text-fg-on-dark shadow-[inset_0_-2px_0_var(--green-900)]"
+          : "border border-green-300 bg-green-050 text-fg-1",
+        hoy && !seleccionado && "shadow-[inset_0_0_0_1px_var(--green-800)]",
+        clickeable && !seleccionado && "cursor-pointer hover:border-green-700 hover:shadow-hover active:translate-y-px",
+        !clickeable && "cursor-default",
       )}
     >
       <div className="flex items-center justify-between gap-1">
-        <span className="text-[15px] leading-none font-semibold">{dia}</span>
-        {hoy && <span className="text-[9px] font-bold tracking-[.06em] text-green-800 uppercase">Hoy</span>}
+        <span className={cn("text-[15px] leading-none", seleccionado ? "font-bold" : "font-semibold")}>{dia}</span>
+        {hoy && (
+          <span className={cn("text-[9px] font-bold tracking-[.06em] uppercase", seleccionado ? "text-fg-on-dark" : "text-green-800")}>
+            Hoy
+          </span>
+        )}
       </div>
       <div className="w-full">
-        <div className="mb-1 font-mono text-[11px] tracking-[.01em] text-fg-2">{pagadas}/{cupoMax}</div>
-        <BarraCupos pagadas={pagadas} pendientes={pendientes} cupoMax={cupoMax} className="h-1" />
+        <div className={cn("mb-1 font-mono text-[11px] tracking-[.01em]", seleccionado ? "text-white/80" : "text-fg-2")}>
+          {pagadas}/{cupoMax}
+        </div>
+        <BarraCupos
+          pagadas={pagadas}
+          pendientes={pendientes}
+          cupoMax={cupoMax}
+          className={cn("h-1", seleccionado && "bg-white/30")}
+          invertida={seleccionado}
+        />
       </div>
     </button>
   );
 }
 
-/** Ocupación de un día: pagadas en verde y en espera en naranja, sobre el cupo. */
+/**
+ * Ocupación de un día: pagadas en verde y en espera en naranja, sobre el cupo.
+ * `invertida` es para pintarla sobre verde oscuro (el día seleccionado).
+ */
 export function BarraCupos({
-  pagadas, pendientes, cupoMax, className,
-}: { pagadas: number; pendientes: number; cupoMax: number; className?: string }) {
+  pagadas, pendientes, cupoMax, className, invertida,
+}: { pagadas: number; pendientes: number; cupoMax: number; className?: string; invertida?: boolean }) {
   const pPag = cupoMax > 0 ? Math.min(100, (pagadas / cupoMax) * 100) : 0;
   const pPen = cupoMax > 0 ? Math.min(100 - pPag, (pendientes / cupoMax) * 100) : 0;
   return (
     <div className={cn("flex w-full overflow-hidden rounded-pill bg-cream-tert", className)}>
       {/* Los anchos salen de los datos: no hay utilidad de Tailwind que los cubra. */}
-      <div className="h-full bg-green-700 transition-[width]" style={{ width: `${pPag}%` }} />
-      <div className="h-full bg-warning transition-[width]" style={{ width: `${pPen}%` }} />
+      <div className={cn("h-full transition-[width]", invertida ? "bg-white" : "bg-green-700")} style={{ width: `${pPag}%` }} />
+      <div className={cn("h-full transition-[width]", invertida ? "bg-white/50" : "bg-warning")} style={{ width: `${pPen}%` }} />
     </div>
   );
 }
 
-const LEYENDA = [
+export type ItemLeyenda = { muestra: string; label: string };
+
+/** Leyenda de la gestión de días; la vista de consulta pasa la suya. */
+export const LEYENDA_GESTION: ItemLeyenda[] = [
   { muestra: "border border-green-300 bg-green-050", label: "Programado" },
   { muestra: "bg-green-700", label: "Cupos pagados" },
   { muestra: "bg-warning", label: "En espera de pago" },
   { muestra: "border border-dashed border-outline-variant", label: "Libre — tocá para abrir" },
   { muestra: "border border-outline-variant bg-cream-tert", label: "Finalizado" },
 ];
+
+/**
+ * Alto mínimo de la celda, como el `cellMin` del diseño: compacta (62px) en la
+ * consulta, donde el calendario comparte la fila con el panel del día; amplia
+ * en la gestión de días, que ocupa todo el ancho. En pantallas angostas la
+ * amplia también se compacta para que la celda no quede más alta que ancha.
+ */
+const ALTO_CELDA = {
+  compacta: "min-h-[62px]",
+  amplia: "min-h-[62px] md:min-h-24",
+} as const;
 
 const NAV =
   "flex size-9 items-center justify-center rounded-md border border-outline-variant bg-surface text-fg-1 shadow-[inset_0_-2px_0_var(--outline-variant)] transition-colors hover:bg-cream-tert disabled:cursor-not-allowed disabled:border-cream-tert disabled:bg-cream-tert disabled:text-fg-3 disabled:shadow-none";
@@ -121,7 +165,7 @@ const NAV =
  * esqueleto del mismo tamaño para que la navegación entre meses no salte.
  */
 export function CalendarioMensual({
-  anio, mes0, celdas, cargando, onElegir, onPrev, onNext, puedePrev, puedeNext,
+  anio, mes0, celdas, cargando, onElegir, onPrev, onNext, puedePrev, puedeNext, leyenda = LEYENDA_GESTION, alturaCelda = "compacta",
 }: {
   anio: number;
   mes0: number;
@@ -132,6 +176,8 @@ export function CalendarioMensual({
   onNext: () => void;
   puedePrev: boolean;
   puedeNext: boolean;
+  leyenda?: ItemLeyenda[];
+  alturaCelda?: keyof typeof ALTO_CELDA;
 }) {
   const huecos = (new Date(anio, mes0, 1).getDay() + 6) % 7;
   // Cargando, los días del mes nuevo se dibujan en esqueleto aunque no haya celdas.
@@ -168,15 +214,15 @@ export function CalendarioMensual({
           c === null ? (
             <div key={i} />
           ) : cargando ? (
-            <Skeleton key={i} className="min-h-24 rounded-[10px]" />
+            <Skeleton key={i} className={cn("rounded-[10px]", ALTO_CELDA[alturaCelda])} />
           ) : (
-            <Dia key={i} celda={c} onElegir={onElegir} />
+            <Dia key={i} celda={c} onElegir={onElegir} alto={ALTO_CELDA[alturaCelda]} />
           ),
         )}
       </div>
 
       <div className="mt-[18px] flex flex-wrap gap-4 border-t border-outline-variant pt-4">
-        {LEYENDA.map((l) => (
+        {leyenda.map((l) => (
           <div key={l.label} className="flex items-center gap-[7px] text-xs text-fg-2">
             <span className={cn("size-3.5 rounded-[4px]", l.muestra)} />
             {l.label}
