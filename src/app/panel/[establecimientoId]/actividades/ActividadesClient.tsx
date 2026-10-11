@@ -4,15 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle, Ban, CalendarDays, CalendarPlus, Check, Clock, Eye, EyeOff, FilePenLine,
-  Grape, LayoutGrid, Leaf, Loader, MapPin, Nut, Cherry, Plus, RotateCcw, Scissors, Search,
-  SearchX, Settings2, SlidersHorizontal, Sprout, Trash2, Wine, X,
+  Grape, LayoutGrid, Loader, MapPin, Plus, RotateCcw, Search,
+  SearchX, Settings2, SlidersHorizontal, Trash2, X,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
+import { CropChip, IconoActividad } from "@/components/panel/actividad/identidad";
 import { Pagination } from "@/components/catalog/controls";
 import { Alert, Button, Card, EstadoBadge, Modal, Skeleton, Toast } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
 import type { ToastData } from "@/components/ui";
-import { iconoDeCultivos } from "@/data/actividades-prod";
 import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useActividades, useActividadAcciones, useEstadosActividad } from "@/hooks/useActividades";
@@ -32,22 +32,9 @@ const MENSAJE_ERROR_ESTADO: Record<string, string> = {
   validacionNegocio: "La actividad cambió desde que cargaste la página. Actualizamos el listado.",
 };
 
-const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  grape: Grape, scissors: Scissors, wine: Wine, leaf: Leaf, cherry: Cherry,
-  sprout: Sprout, nut: Nut, "map-pin": MapPin,
-};
-
 type Override = Partial<Pick<ActividadProd, "estado">>;
 
 /* ---- Piezas chicas ------------------------------------------------------ */
-
-function CropChip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-pill bg-green-100 px-[11px] py-1 text-[12.5px] leading-tight font-semibold text-green-800">
-      <Sprout className="size-3 text-green-700" /> {children}
-    </span>
-  );
-}
 
 function CardAction({
   icon, label, href, onClick, danger, disabled, title,
@@ -149,7 +136,6 @@ function ActivityCard({
   onCambiarEstado: (nuevo: "publicado" | "borrador") => void;
 }) {
   const ruta = useRutaPanel();
-  const IconC = ICONS[iconoDeCultivos(act.cultivos)] ?? Grape;
   // Una actividad dada de baja no se vuelve a tocar: queda de consulta, sin el
   // toggle de publicación ni las acciones que la modifican.
   const deBaja = act.estado === "dado_de_baja";
@@ -158,7 +144,7 @@ function ActivityCard({
     <Card className={cn("overflow-hidden p-0", deBaja && "opacity-70")}>
       <div className="flex flex-wrap items-start gap-5 p-6">
         <div className="flex size-[54px] shrink-0 items-center justify-center rounded-[14px] border border-outline-variant bg-green-050">
-          <IconC className="size-[26px] text-green-700" />
+          <IconoActividad cultivos={act.cultivos} className="size-[26px] text-green-700" />
         </div>
 
         <div className="min-w-60 flex-[1_1_280px]">
@@ -244,15 +230,18 @@ function ActivityCard({
             />
             <CardAction
               icon={<CalendarPlus className="size-[15px] text-fg-2" />}
-              label="Agregar día"
+              label="Agregar días"
               href={ruta("actividades", act.id, "dias")}
               disabled={suspendido}
               title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
             />
           </>
         )}
-        {/* TODO: la vista de consulta del calendario (US-ACT-07) todavía no está; va a vivir en .../calendario. */}
-        <CardAction icon={<CalendarDays className="size-[15px] text-fg-2" />} label="Ver calendario" disabled title="Próximamente" />
+        <CardAction
+          icon={<CalendarDays className="size-[15px] text-fg-2" />}
+          label="Ver reservas"
+          href={ruta("actividades", act.id, "calendario")}
+        />
         {!deBaja && <CardAction icon={<Trash2 className="size-[15px] text-danger" />} label="Eliminar" danger onClick={onEliminar} />}
       </div>
     </Card>

@@ -187,6 +187,9 @@ button { font-family: inherit; }
 }
 .slide { animation: slideIn .22s cubic-bezier(.2,0,0,1); }
 
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheetIn { from { transform: translateY(100%); } to { transform: none; } }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 1s linear infinite; }
 

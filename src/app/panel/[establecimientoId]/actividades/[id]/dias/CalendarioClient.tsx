@@ -6,10 +6,11 @@ import {
   ArrowLeft, Ban, CalendarDays, CalendarPlus, ChevronLeft, DollarSign, FilePenLine, Grape, MapPin, Users,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
+import { Alert, Button, Card, Skeleton, Toast } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
 import type { ToastData } from "@/components/ui";
 import { aISO, hoyISO, sumarDiasISO } from "@/components/ui/date-picker";
+import { EstadoActividadBadge } from "@/components/panel/actividad/identidad";
 import { AbrirDiaModal } from "@/components/panel/gestion-dias/AbrirDiaModal";
 import { CalendarioMensual, type Celda } from "@/components/panel/gestion-dias/CalendarioMensual";
 import { EditarCupoModal } from "@/components/panel/gestion-dias/EditarCupoModal";
@@ -19,19 +20,12 @@ import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useCalendarioGestion, useConfiguracionDias, useGestionDiasAcciones } from "@/hooks/useGestionDias";
 import { moneyAr } from "@/lib/format";
 import { ORDEN_DIAS, SUSPENDIDO_DIAS, diaSemanaDe, fechaCorta, mensajeErrorDias } from "@/lib/gestion-dias";
-import type { EstadoActividad } from "@/types/actividad-prod";
 import type { AltaDia, AltaLote, CalendarioGestion, DiaProgramado, DiaSemana, FechaISO } from "@/types/gestion-dias";
 
 /** Si el backend no manda la ventana, es la misma que usa él. */
 const VENTANA_POR_DEFECTO = 120;
 
 const DE_BAJA = "La actividad está dada de baja: su calendario queda de consulta.";
-
-const ESTADO_BADGE: Record<EstadoActividad, { tone: "success" | "neutral" | "danger"; label: string }> = {
-  publicado: { tone: "success", label: "Publicada" },
-  borrador: { tone: "neutral", label: "Borrador" },
-  dado_de_baja: { tone: "danger", label: "Dada de baja" },
-};
 
 /** Códigos que significan que el calendario que ve el productor quedó viejo. */
 const CALENDARIO_VIEJO = new Set(["A.diaFechaOcupada", "A.diaNoModificable", "A.diaYaComenzo", "A.cupoMenorAReservados"]);
@@ -76,7 +70,7 @@ function armarCeldas(
     const d = porFecha.get(fecha);
     if (d) {
       celdas.push(esModificable(d, ahora)
-        ? { tipo: "programado", dia: n, ref: d, hoy: fecha === hoy, editable: !soloLectura }
+        ? { tipo: "programado", dia: n, ref: d, hoy: fecha === hoy, clickeable: !soloLectura, titulo: "Modificar el cupo de este día" }
         : { tipo: "finalizado", dia: n, pagadas: d.pagadas, cupoMax: d.cupoMax });
     } else if (fecha < hoy) {
       celdas.push({ tipo: "off", dia: n, titulo: "Día pasado" });
@@ -204,7 +198,7 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
   const irA = (delta: number) => setMes((m) => moverMes(m, delta));
 
   function onElegir(c: Celda) {
-    if (c.tipo === "programado" && c.editable) setEditando(c.ref);
+    if (c.tipo === "programado" && c.clickeable) setEditando(c.ref);
     else if (c.tipo === "abrible") setAbriendo(c.fecha);
   }
 
@@ -246,8 +240,6 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
     return null;
   }
 
-  const badge = base ? ESTADO_BADGE[base.estado] : null;
-
   return (
     <div className="min-h-screen bg-cream-bg">
       <div className="mx-auto max-w-[1240px] px-7 pt-6 pb-16">
@@ -265,7 +257,7 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
           skeleton={<CalendarioSkeleton />}
           pad={72}
         >
-          {base && badge && (
+          {base && (
             <>
               <nav className="mb-3.5 flex items-center gap-2 text-[13px] text-fg-2" aria-label="Migas de pan">
                 <Link href={ruta("actividades")} className="inline-flex items-center gap-1 font-medium text-fg-2 no-underline hover:text-fg-1">
@@ -283,7 +275,7 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <h1 className="font-display text-[30px] leading-tight font-bold text-fg-1">{base.nombre}</h1>
-                      <EstadoBadge tone={badge.tone}>{badge.label}</EstadoBadge>
+                      <EstadoActividadBadge estado={base.estado} />
                     </div>
                     <div className="mt-2 flex flex-wrap gap-4">
                       {base.establecimiento && (
@@ -378,6 +370,7 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
                   onNext={() => irA(1)}
                   puedePrev={puedePrev}
                   puedeNext={puedeNext}
+                  alturaCelda="amplia"
                 />
               </Card>
             </>

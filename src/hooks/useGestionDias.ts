@@ -18,7 +18,7 @@ function diasPath(establecimientoId: string, actividadId: string): string {
    Todo campo del backend se trata como opcional: la pantalla nunca ve su
    vocabulario, y uno que falte no tira abajo el calendario. */
 
-interface DiaBackend {
+export interface DiaBackend {
   id?: string;
   fecha?: unknown;
   estadoActual?: unknown;
@@ -81,7 +81,7 @@ const ESTADOS_DIA: Record<string, EstadoDia> = {
   CANCELADA: "cancelada",
 };
 
-function objetos<T>(v: unknown): T[] {
+export function objetos<T>(v: unknown): T[] {
   return Array.isArray(v) ? v.filter((x): x is T => !!x && typeof x === "object") : [];
 }
 
@@ -94,7 +94,7 @@ function aHora(v: unknown): string {
   return typeof v === "string" && /^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : "";
 }
 
-function aNumero(v: unknown): number {
+export function aNumero(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
@@ -113,7 +113,7 @@ function aDiasSemana(v: unknown): DiaSemana[] {
   return ORDEN_DIAS.filter((d) => v.some((x) => typeof x === "string" && x.trim().toUpperCase() === d));
 }
 
-function aDia(d: DiaBackend): DiaProgramado | null {
+export function aDia(d: DiaBackend): DiaProgramado | null {
   const fecha = aFecha(d.fecha);
   // Sin id no hay sobre qué modificar el cupo, y sin fecha no hay dónde dibujarlo.
   if (typeof d.id !== "string" || !d.id || !fecha) return null;
