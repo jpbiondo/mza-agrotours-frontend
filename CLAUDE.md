@@ -71,7 +71,7 @@ Para leer un campo de forma reactiva usá **`useWatch`, nunca `form.watch()`**: 
 
 Por eso en `ui/` conviven dos capas, y está bien que así sea:
 
-- `input`, `select`, `checkbox`, `popover` (sobre `@base-ui/react`), `command` (cmdk), `label` y `form` vienen de shadcn. Son los únicos.
+- `input`, `select`, `checkbox`, `popover` y `sheet` (sobre `@base-ui/react`), `command` (cmdk), `label` y `form` vienen de shadcn. Son los únicos. `sheet` es el patrón a seguir para migrar `Modal.tsx` al `Dialog` de Base UI.
 - Los `PascalCase` (`Button`, `Card`, `Alert`, `Toast`, `Skeleton`, `EstadoBadge`…) son presentacionales de Agrotours, escritos a mano.
 - Los `kebab-case` restantes (`text-field`, `date-field`, `searchable-select`, `country-select`, `file-uploader`…) son composites de Agrotours **construidos sobre** los primitivos de shadcn. Ahí va lo nuevo.
 

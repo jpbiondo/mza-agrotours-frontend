@@ -1,6 +1,7 @@
 import { useAsync } from "@/hooks/useAsync";
 import type { AsyncState } from "@/hooks/useAsync";
 import { ApiError, apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
+import { aCalendario } from "@/lib/calendarioReserva";
 import type { Pagina } from "@/lib/api";
 import type { CultivoRef } from "@/types/datos";
 import type {
@@ -54,6 +55,9 @@ interface DetalleBackend {
   preguntasFrecuentes?: unknown;
   tarifas?: unknown;
   precioRegular?: unknown;
+  diasActividad?: unknown;
+  // TODO backend: `resumenResenias` todavía no trae el puntaje; cuando llegue,
+  // se mapea acá para la pastilla de estrellas del widget de reserva.
 }
 
 /**
@@ -189,6 +193,7 @@ function aDetalle(d: DetalleBackend): ActividadPublica {
     preguntasFrecuentes: aFaqs(d.preguntasFrecuentes),
     tarifas: aTarifas(d.tarifas),
     precioRegular: aNumeroOpcional(d.precioRegular),
+    calendario: aCalendario(d.diasActividad),
   };
 }
 
