@@ -39,7 +39,6 @@ interface DetalleBackend {
   domicilioLegal?: string;
   email?: string;
   telefono?: string;
-  cvu?: string;
   estado?: string;
   /** `unknown`: si el backend la serializa como array/objeto en vez de string, se descarta. */
   fechaHoraAlta?: unknown;
@@ -123,7 +122,6 @@ function aDetalle(d: DetalleBackend): SolicitudDetalle {
     domicilioLegal: d.domicilioLegal ?? "",
     email: d.email ?? "",
     telefono: d.telefono ?? "",
-    cvu: d.cvu ?? "",
     // Se normaliza igual que en la lista: un valor fuera del enum cae a tono neutro.
     estado: aEstado(d.estado),
     fechaHoraAlta: aFecha(d.fechaHoraAlta),
