@@ -1,17 +1,23 @@
+import { useCallback, useEffect, useState } from "react";
 import { useAsync } from "@/hooks/useAsync";
 import type { AsyncState } from "@/hooks/useAsync";
 import { ApiError, apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
 import { aCalendario } from "@/lib/calendarioReserva";
+import { leerFechaLocal } from "@/lib/format";
 import type { Pagina } from "@/lib/api";
 import type { CultivoRef } from "@/types/datos";
 import type {
   ActividadPublica,
   ActividadResumen,
+  BarraResenias,
   ConsultaActividades,
   EstablecimientoDeActividad,
   FaqActividad,
   FilterOption,
   FotoRef,
+  OrdenResenias,
+  Resenia,
+  ResumenResenias,
   TarifaActividad,
 } from "@/types/catalogo";
 
@@ -56,8 +62,8 @@ interface DetalleBackend {
   tarifas?: unknown;
   precioRegular?: unknown;
   diasActividad?: unknown;
-  // TODO backend: `resumenResenias` todavía no trae el puntaje; cuando llegue,
-  // se mapea acá para la pastilla de estrellas del widget de reserva.
+  resumenResenias?: unknown;
+  reseniasRecientes?: unknown;
 }
 
 /**
@@ -166,6 +172,34 @@ function aTarifas(v: unknown): TarifaActividad[] {
     .sort((a, b) => a.edadMinima - b.edadMinima);
 }
 
+/** ResumenReseniasDTO. Las barras se rearman de 5 a 1 por si falta alguna. */
+function aResumenResenias(v: unknown): ResumenResenias {
+  const r = (v ?? {}) as { promedio?: unknown; totalResenias?: unknown; distribucion?: unknown };
+  const barras = Array.isArray(r.distribucion)
+    ? r.distribucion.filter((b): b is Record<string, unknown> => !!b && typeof b === "object")
+    : [];
+  const distribucion: BarraResenias[] = [5, 4, 3, 2, 1].map((puntaje) => {
+    const b = barras.find((x) => x.puntaje === puntaje);
+    return { puntaje, cantidad: aNumero(b?.cantidad), porcentaje: aNumero(b?.porcentaje) };
+  });
+  const total = aNumero(r.totalResenias);
+  return { promedio: total > 0 ? aNumeroOpcional(r.promedio) : null, total, distribucion };
+}
+
+/** ReseniaCardDTO. Un puntaje fuera de 1–5 no se puede dibujar: esa fila se descarta. */
+function aResenias(v: unknown): Resenia[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((r): r is Record<string, unknown> => !!r && typeof r === "object")
+    .map((r) => ({
+      autor: aTexto(r.nombreUsuario),
+      fecha: leerFechaLocal(r.fechaHoraCalificacion),
+      puntaje: aNumero(r.puntaje),
+      texto: aTexto(r.resenia),
+    }))
+    .filter((r) => r.puntaje >= 1 && r.puntaje <= 5);
+}
+
 function aResumen(a: ResumenBackend): ActividadResumen {
   return {
     id: aTexto(a.id),
@@ -194,6 +228,8 @@ function aDetalle(d: DetalleBackend): ActividadPublica {
     tarifas: aTarifas(d.tarifas),
     precioRegular: aNumeroOpcional(d.precioRegular),
     calendario: aCalendario(d.diasActividad),
+    resenias: aResumenResenias(d.resumenResenias),
+    reseniasRecientes: aResenias(d.reseniasRecientes),
   };
 }
 
@@ -302,4 +338,108 @@ export function useFiltroDepartamentosActividad(): AsyncState<FilterOption[]> {
   return useAsync<FilterOption[]>(() =>
     listarFiltro(FILTRO_DEPARTAMENTOS, "No pudimos cargar los departamentos"),
   );
+}
+
+/* ---- Reseñas ------------------------------------------------------------- */
+
+/** Reseñas por pedido: el modal las va sumando de a una página al scrollear. */
+const LOTE_RESENIAS = 10;
+
+/** El backend sólo distingue "ASC"; cualquier otro valor es de la más nueva a la más vieja. */
+const ORDEN_BACKEND: Record<OrdenResenias, string> = { recientes: "DESC", antiguas: "ASC" };
+
+async function listarResenias(
+  actividadId: string,
+  puntaje: number | null,
+  orden: OrdenResenias,
+  page: number,
+): Promise<Pagina<Resenia>> {
+  const qs = new URLSearchParams({ orden: ORDEN_BACKEND[orden], page: String(page), size: String(LOTE_RESENIAS) });
+  if (puntaje) qs.set("puntaje", String(puntaje));
+  const data = await leer<unknown>(
+    `${BASE}/${encodeURIComponent(actividadId)}/resenias?${qs.toString()}`,
+    "No pudimos cargar las reseñas",
+  );
+  const pagina = comoPagina<unknown>(data);
+  return { ...pagina, items: aResenias(pagina.items) };
+}
+
+interface UseReseniasReturn {
+  /** Todas las cargadas hasta ahora, en el orden pedido. */
+  resenias: Resenia[];
+  /** Cuántas hay en total con el filtro actual; `null` hasta que llega la primera página. */
+  total: number | null;
+  hayMas: boolean;
+  isLoading: boolean;
+  error: string | null;
+  /** Pide la página siguiente. No hace nada si ya está cargando o no quedan. */
+  cargarMas: () => void;
+  /** Vuelve a pedir la página que falló. */
+  reintentar: () => void;
+}
+
+/**
+ * Listado completo de reseñas de una actividad (GET /actividades/{id}/resenias),
+ * filtrable por puntaje y ordenable por fecha, de a `LOTE_RESENIAS`. Cambiar el
+ * filtro o el orden arranca de nuevo desde la primera página.
+ *
+ * Todo el estado lleva la clave del filtro con el que se pidió: así, al
+ * cambiarlo, lo anterior deja de valer sin tener que resetearlo en un efecto.
+ */
+export function useReseniasActividad(
+  actividadId: string,
+  puntaje: number | null,
+  orden: OrdenResenias,
+): UseReseniasReturn {
+  const filtro = `${actividadId}|${puntaje ?? ""}|${orden}`;
+  const [cargadas, setCargadas] = useState<{ filtro: string; paginas: Resenia[][]; total: number; totalPaginas: number } | null>(null);
+  /** Cuántas páginas se quieren tener para este filtro. */
+  const [objetivo, setObjetivo] = useState<{ filtro: string; paginas: number } | null>(null);
+  const [fallo, setFallo] = useState<{ filtro: string; pagina: number; mensaje: string } | null>(null);
+
+  const paginas = cargadas?.filtro === filtro ? cargadas.paginas : [];
+  const quiere = objetivo?.filtro === filtro ? objetivo.paginas : 1;
+  const error = fallo?.filtro === filtro && fallo.pagina === paginas.length ? fallo.mensaje : null;
+  const falta = paginas.length < quiere && !error;
+  const total = cargadas?.filtro === filtro ? cargadas.total : null;
+  const hayMas = cargadas?.filtro === filtro ? paginas.length < cargadas.totalPaginas : true;
+  const siguiente = paginas.length;
+
+  useEffect(() => {
+    if (!falta) return;
+    let active = true;
+    listarResenias(actividadId, puntaje, orden, siguiente)
+      .then((p) => {
+        if (!active) return;
+        setCargadas((prev) => {
+          const base = prev?.filtro === filtro ? prev.paginas : [];
+          // Una respuesta que llega tarde no pisa una página ya cargada.
+          if (base.length !== siguiente) return prev;
+          return { filtro, paginas: [...base, p.items], total: p.totalElements, totalPaginas: p.totalPages };
+        });
+      })
+      .catch((e) => {
+        if (active) setFallo({ filtro, pagina: siguiente, mensaje: e instanceof Error ? e.message : "Error inesperado" });
+      });
+    return () => {
+      active = false;
+    };
+  }, [falta, actividadId, puntaje, orden, filtro, siguiente]);
+
+  const cargarMas = useCallback(() => {
+    if (falta || error || !hayMas) return;
+    setObjetivo({ filtro, paginas: siguiente + 1 });
+  }, [falta, error, hayMas, filtro, siguiente]);
+
+  const reintentar = useCallback(() => setFallo(null), []);
+
+  return {
+    resenias: paginas.flat(),
+    total,
+    hayMas,
+    isLoading: falta,
+    error,
+    cargarMas,
+    reintentar,
+  };
 }

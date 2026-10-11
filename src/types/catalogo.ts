@@ -204,7 +204,40 @@ export interface ActividadPublica {
   precioRegular: number | null;
   /** Días futuros con su disponibilidad, agrupados por mes. Vacío si no hay fechas. */
   calendario: MesCalendario[];
+  resenias: ResumenResenias;
+  /** Las más recientes (el backend manda hasta tres), para la sección del detalle. */
+  reseniasRecientes: Resenia[];
 }
+
+/** Cuántas reseñas hay de un puntaje. */
+export interface BarraResenias {
+  puntaje: number;
+  cantidad: number;
+  /** 0–100, redondeado por el backend. */
+  porcentaje: number;
+}
+
+/** Promedio y distribución de las reseñas de una actividad. */
+export interface ResumenResenias {
+  /** `null` es "todavía sin reseñas". */
+  promedio: number | null;
+  total: number;
+  /** Siempre las cinco barras, de 5 a 1 estrellas, aunque alguna esté en 0. */
+  distribucion: BarraResenias[];
+}
+
+/** Una reseña de un visitante. */
+export interface Resenia {
+  autor: string;
+  /** `null` si el backend no la mandó o no se pudo leer. */
+  fecha: Date | null;
+  puntaje: number;
+  /** Puede venir vacío: la reseña escrita es opcional al valorar. */
+  texto: string;
+}
+
+/** Orden del listado de reseñas, por fecha de calificación. */
+export type OrdenResenias = "recientes" | "antiguas";
 
 /** Opción de un filtro de catálogo (valor + etiqueta + cantidad). */
 export interface FilterOption {

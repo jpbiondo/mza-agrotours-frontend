@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CalendarCheck, CalendarDays, CalendarX, Info, Minus, Plus, Users } from "lucide-react";
+import { AlertTriangle, CalendarCheck, CalendarDays, CalendarX, Info, Minus, Plus, Star, Users } from "lucide-react";
 import { Button, buttonClasses } from "@/components/ui";
 import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CalendarioReserva, type DiaSeleccionado } from "@/components/reserva/CalendarioReserva";
 import { primerMesDisponible } from "@/lib/calendarioReserva";
 import { fechaLabel } from "@/data/reserva";
-import { moneyAr } from "@/lib/format";
+import { fmtPuntaje, moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ActividadPublica, TarifaActividad } from "@/types/catalogo";
 
@@ -165,7 +165,16 @@ function PanelReserva({ a, r, tactil = false }: { a: ActividadPublica; r: Estado
     <>
       <div className="mb-3.5 flex items-start justify-between gap-2.5">
         <PrecioDesde a={a} />
-        {/* TODO backend: falta el puntaje para la pastilla de estrellas · reseñas del diseño. */}
+        {a.resenias.promedio !== null && (
+          <div
+            className="flex shrink-0 items-center gap-[5px] rounded-full bg-cream-tert px-2.5 py-[5px] text-[12.5px] font-semibold text-fg-1"
+            aria-label={`${fmtPuntaje(a.resenias.promedio)} de 5, ${a.resenias.total} ${a.resenias.total === 1 ? "reseña" : "reseñas"}`}
+          >
+            <Star size={13} className="fill-star text-star" aria-hidden />
+            {fmtPuntaje(a.resenias.promedio)}
+            <span className="font-medium text-fg-3">· {a.resenias.total}</span>
+          </div>
+        )}
       </div>
 
       <div className="t-label mb-2.5">Elegí una fecha</div>

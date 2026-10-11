@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
+import { leerFechaLocal } from "@/lib/format";
 import { conToken } from "@/lib/sesion";
 import type {
   AsistenteReserva, CondicionCancelacion, ErrorCancelacion, ErrorValoracion, ReservaDetalle,
@@ -26,19 +27,6 @@ interface ReservaBackend {
   ubicacionEstablecimiento?: string | null;
 }
 
-/**
- * `LocalDateTime` del backend ("2026-10-12T09:30:00", sin offset) como hora
- * local. Se arma a mano en vez de confiar en `Date.parse`, que según el formato
- * exacto puede interpretarlo como UTC y correr la hora.
- */
-function aFechaLocal(v: unknown): Date | null {
-  if (typeof v !== "string") return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(v.trim());
-  if (!m) return null;
-  const [, y, mo, d, h, mi, s] = m;
-  return new Date(+y, +mo - 1, +d, +h, +mi, s ? +s : 0);
-}
-
 function aNumero(v: unknown): number {
   // BigDecimal puede venir como número o como string según la config de Jackson.
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
@@ -52,8 +40,8 @@ function aResumen(r: ReservaBackend, i: number): ReservaResumen {
     actividad: r.nombreActividad ?? "",
     establecimiento: r.nombreEstablecimiento ?? "",
     ubicacion: r.ubicacionEstablecimiento ?? "",
-    inicio: aFechaLocal(r.actividadFechaHoraInicio),
-    fin: aFechaLocal(r.actividadFechaHoraFin),
+    inicio: leerFechaLocal(r.actividadFechaHoraInicio),
+    fin: leerFechaLocal(r.actividadFechaHoraFin),
     personas: aNumero(r.cantPersonas),
     total: aNumero(r.totalReserva),
     estado: (r.estadoReserva ?? "").trim(),

@@ -10,3 +10,4 @@ export { EstadoBadge } from "./EstadoBadge";
 export { IconCircle } from "./IconCircle";
 export { Skeleton } from "./Skeleton";
 export { SectionLabel } from "./SectionLabel";
+export { Estrellas } from "./Estrellas";

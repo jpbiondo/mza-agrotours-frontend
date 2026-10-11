@@ -40,3 +40,31 @@ export function fmtFranja(inicio: Date | null, fin: Date | null): string | undef
   if (!inicio) return undefined;
   return fin ? `${fmtHoraLocal(inicio)} — ${fmtHoraLocal(fin)}` : fmtHoraLocal(inicio);
 }
+
+/**
+ * `LocalDateTime` del backend ("2026-10-12T09:30:00", sin offset) como hora
+ * local. Se arma a mano en vez de confiar en `Date.parse`, que según el formato
+ * exacto puede interpretarlo como UTC y correr la hora.
+ */
+export function leerFechaLocal(v: unknown): Date | null {
+  if (typeof v !== "string") return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(v.trim());
+  if (!m) return null;
+  const [, y, mo, d, h, mi, s] = m;
+  return new Date(+y, +mo - 1, +d, +h, +mi, s ? +s : 0);
+}
+
+const MESES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+/** Día en palabras: → "20 de marzo de 2026". */
+export function fmtDiaLargo(d: Date): string {
+  return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+/** Promedio de reseñas con un decimal y coma: 4.85 → "4,9". */
+export function fmtPuntaje(n: number): string {
+  return n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}

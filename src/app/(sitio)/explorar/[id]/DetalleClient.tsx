@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Share2, Check, X, MapPin, Users, ChevronLeft, ChevronRight, SearchX,
-  ArrowRight, Sprout, ChevronDown, Navigation, Droplets, ExternalLink,
+  ArrowRight, Sprout, ChevronDown, Navigation, Droplets, ExternalLink, Star,
   Sun, CloudSun, Cloud, Cloudy, CloudDrizzle, CloudRain, CloudLightning, CloudSnow, CloudFog,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -16,6 +16,8 @@ import { usePronosticoClima } from "@/hooks/useClima";
 import ContactarEstablecimiento from "@/components/chat/ContactarEstablecimiento";
 import MapaEmbed, { HAY_MAPA_EMBED, consultaMapa, urlComoLlegar } from "@/components/MapaEmbed";
 import BookingWidget from "./BookingWidget";
+import Resenias from "./Resenias";
+import { fmtPuntaje } from "@/lib/format";
 import type { ActividadPublica, FotoRef } from "@/types/catalogo";
 import type { CondicionClima, DiaPronostico } from "@/types/clima";
 
@@ -107,8 +109,15 @@ function ActivityHeader({ a }: { a: ActividadPublica }) {
             <Users size={16} color="var(--fg-3)" /> Hasta {a.cuposMax} {a.cuposMax === 1 ? "persona" : "personas"}
           </span>
         )}
+        {a.resenias.promedio !== null && (
+          <a href="#resenias" className="inline-flex items-center gap-1.5 text-fg-2 no-underline hover:underline">
+            <Star size={16} className="fill-star text-star" aria-hidden />
+            <span className="font-semibold text-fg-1">{fmtPuntaje(a.resenias.promedio)}</span>
+            · {a.resenias.total} {a.resenias.total === 1 ? "reseña" : "reseñas"}
+          </a>
+        )}
       </div>
-      {/* TODO backend: el detalle todavía no manda puntuación, reseñas ni duración. */}
+      {/* TODO backend: el detalle todavía no manda la duración. */}
     </div>
   );
 }
@@ -122,9 +131,10 @@ function SectionTitle({ children, sub }: { children: React.ReactNode; sub?: stri
   );
 }
 
-function Block({ children }: { children: React.ReactNode }) {
+function Block({ id, children }: { id?: string; children: React.ReactNode }) {
   // `first:mt-0`: la primera sección ya queda separada del título por el gap de la grilla.
-  return <section className="mt-10 first:mt-0">{children}</section>;
+  // `scroll-mt`: al saltar con un ancla, que el header fijo no tape el título.
+  return <section id={id} className="mt-10 scroll-mt-24 first:mt-0">{children}</section>;
 }
 
 /* ---- FAQ acordeón ------------------------------------------------------ */
@@ -449,6 +459,11 @@ function Detalle({ a }: { a: ActividadPublica }) {
           {a.establecimiento.departamento && (
             <Pronostico departamento={a.establecimiento.departamento} />
           )}
+
+          <Block id="resenias">
+            <SectionTitle>Reseñas de visitantes</SectionTitle>
+            <Resenias a={a} />
+          </Block>
 
           {a.preguntasFrecuentes.length > 0 && (
             <Block>
