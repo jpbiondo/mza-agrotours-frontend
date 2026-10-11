@@ -5,17 +5,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ChevronRight, ArrowLeft, MapPin, Download, ReceiptText, CalendarDays, Clock, Users,
-  SearchX, Loader, XCircle,
+  SearchX, Loader, XCircle, Map as MapIcon, ExternalLink, Star, CheckCircle2,
 } from "lucide-react";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Button, EstadoBadge, Skeleton } from "@/components/ui";
+import ContactarEstablecimiento from "@/components/chat/ContactarEstablecimiento";
+import MapaEmbed, { consultaMapa, urlComoLlegar } from "@/components/MapaEmbed";
+import { Button, EstadoBadge, Skeleton, Toast, buttonClasses } from "@/components/ui";
+import type { ToastData } from "@/components/ui";
 import { metaEstadoReserva } from "@/data/reservas";
 import { fmtDiaLocal, fmtFranja, moneyAr } from "@/lib/format";
 import { useReserva } from "@/hooks/useReservas";
 import type { ReservaDetalle } from "@/types/reservas";
 import { descargarComprobante } from "./comprobante";
 import CancelarReservaModal from "./CancelarReservaModal";
+import ValorarModal, { type ResultadoValoracion } from "./ValorarModal";
 
 function MetaItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
@@ -80,6 +84,15 @@ function Cabecera({ r, onCancelar }: { r: ReservaDetalle; onCancelar?: () => voi
           <button type="button" className="btn btn-neutral" onClick={() => descargarComprobante(r)}>
             <Download size={17} /> Descargar comprobante
           </button>
+          {/* El chat es por actividad: sin los dos ids no hay a quién escribirle. */}
+          {r.actividadId && r.establecimientoId && (
+            <ContactarEstablecimiento
+              actividadId={r.actividadId}
+              establecimientoId={r.establecimientoId}
+              titulo={r.actividad}
+              etiqueta="Contactar establecimiento"
+            />
+          )}
           {onCancelar && (
             <Button variant="neutral" className="border-danger text-danger hover:border-danger" onClick={onCancelar}>
               <XCircle size={17} /> Cancelar reserva
@@ -139,6 +152,69 @@ function Asistentes({ r }: { r: ReservaDetalle }) {
   );
 }
 
+/**
+ * Dónde queda el establecimiento. `ubicacion` es la dirección que cargó el
+ * productor; el detalle no trae departamento, así que se busca con la provincia.
+ */
+function Ubicacion({ r }: { r: ReservaDetalle }) {
+  const consulta = consultaMapa(r.ubicacion);
+  return (
+    <Bloque icon={<MapIcon size={17} />} title="Mapa y ubicación">
+      <MapaEmbed
+        consulta={consulta}
+        titulo={`Mapa de ${r.establecimiento || "el establecimiento"}`}
+        className="mb-4 h-60 overflow-hidden rounded-[var(--radius)] border border-outline-variant"
+      />
+      <div className="flex items-start gap-2.5">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-cream-tert text-green-800">
+          <MapPin size={16} />
+        </div>
+        <div className="min-w-0 leading-[1.4]">
+          <div className="text-[14.5px] font-semibold text-fg-1">{r.establecimiento || "Establecimiento"}</div>
+          <div className="mt-0.5 text-[13.5px] text-fg-2">{r.ubicacion}</div>
+        </div>
+      </div>
+      <a
+        href={urlComoLlegar(consulta)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={buttonClasses({ variant: "neutral", size: "sm", className: "mt-4 w-full" })}
+      >
+        Cómo llegar <ExternalLink size={15} />
+      </a>
+    </Bloque>
+  );
+}
+
+/**
+ * Se valora una reserva Finalizada, y una sola vez. La tarjeta se ve siempre:
+ * antes de terminar la actividad explica cuándo se va a poder.
+ */
+function Valorar({ r, onValorar }: { r: ReservaDetalle; onValorar: () => void }) {
+  const finalizada = r.estado === "Finalizada";
+  const texto = r.calificada
+    ? "Ya valoraste esta actividad. ¡Gracias por contarnos cómo te fue!"
+    : finalizada
+      ? "Contanos cómo fue tu experiencia. Tu valoración ayuda a otros visitantes y al establecimiento."
+      : "Vas a poder valorar la actividad una vez que esté finalizada.";
+  return (
+    <section className="flex flex-col gap-3 rounded-lg border border-outline-variant bg-surface p-5">
+      <div className="flex items-center gap-2.5">
+        <Star size={18} className="text-brown-700" />
+        <h2 className="font-display text-base font-semibold text-fg-1">Valorar actividad</h2>
+      </div>
+      <p className="text-[13.5px] leading-normal text-fg-2">{texto}</p>
+      <Button className="w-full" disabled={r.calificada || !finalizada} onClick={onValorar}>
+        {r.calificada ? <CheckCircle2 size={17} aria-hidden /> : <Star size={17} aria-hidden />}
+        {r.calificada ? "Actividad valorada" : "Valorar actividad"}
+      </Button>
+    </section>
+  );
+}
+
+/** Información a la izquierda; mapa y valoración a la derecha. Debajo de 880px, apilados. */
+const GRILLA = "grid grid-cols-1 items-start gap-6 min-[881px]:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]";
+
 function DetalleSkeleton() {
   return (
     <>
@@ -150,14 +226,21 @@ function DetalleSkeleton() {
           <Skeleton className="mt-3 h-4 w-[40%]" />
         </div>
       </div>
-      <div className="rounded-lg border border-outline-variant bg-surface p-[22px]">
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-          {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-8" />)}
+      <div className={GRILLA}>
+        <div className="rounded-lg border border-outline-variant bg-surface p-[22px]">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+            {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-8" />)}
+          </div>
+          <div className="mt-6 flex flex-col gap-3">
+            {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-5" />)}
+          </div>
+          <Skeleton className="mt-4 h-14" />
         </div>
-        <div className="mt-6 flex flex-col gap-3">
-          {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-5" />)}
+        <div className="rounded-lg border border-outline-variant bg-surface p-[22px]">
+          <Skeleton className="h-60" />
+          <Skeleton className="mt-4 h-4 w-[60%]" />
+          <Skeleton className="mt-2 h-4 w-[80%]" />
         </div>
-        <Skeleton className="mt-4 h-14" />
       </div>
     </>
   );
@@ -185,6 +268,29 @@ export default function DetalleClient({ id }: { id: string }) {
   const { reserva, cancelable, isLoading, error, notFound, unauthenticated, reload } = useReserva(id);
   /** Copia de la reserva al abrir el modal: el reload posterior no debe desmontarlo ni cambiarle los datos. */
   const [aCancelar, setACancelar] = useState<ReservaDetalle | null>(null);
+  const [valorando, setValorando] = useState(false);
+  const [toast, setToast] = useState<ToastData | null>(null);
+
+  function avisar(t: ToastData) {
+    setToast(t);
+    setTimeout(() => setToast((cur) => (cur === t ? null : cur)), t.tone === "danger" ? 7000 : 5500);
+  }
+
+  function alValorar(r: ResultadoValoracion) {
+    if (r.ok) {
+      setValorando(false);
+      avisar({ tone: "success", title: "Valoración enviada", sub: "Muchas gracias por contarnos cómo te fue." });
+      reload();
+      return;
+    }
+    // Si la reserva cambió en el backend, se cierra y se vuelve a pedir para
+    // que la tarjeta muestre el estado real; si no, se queda con lo escrito.
+    if (r.definitivo) {
+      setValorando(false);
+      reload();
+    }
+    avisar({ tone: "danger", title: "No se pudo enviar tu valoración", sub: r.mensaje });
+  }
 
   // Ruta protegida: sin sesión, a la pantalla de login.
   useEffect(() => {
@@ -222,7 +328,14 @@ export default function DetalleClient({ id }: { id: string }) {
         ) : (
           <>
             <Cabecera r={reserva} onCancelar={cancelable ? () => setACancelar(reserva) : undefined} />
-            <Asistentes r={reserva} />
+            <div className={GRILLA}>
+              <Asistentes r={reserva} />
+              <div className="flex flex-col gap-6">
+                {/* Sin dirección no hay nada que ubicar. */}
+                {reserva.ubicacion && <Ubicacion r={reserva} />}
+                <Valorar r={reserva} onValorar={() => setValorando(true)} />
+              </div>
+            </div>
           </>
         )}
       </AsyncBoundary>
@@ -233,6 +346,10 @@ export default function DetalleClient({ id }: { id: string }) {
       {aCancelar && (
         <CancelarReservaModal reserva={aCancelar} onClose={() => setACancelar(null)} onCambio={reload} />
       )}
+      {valorando && reserva && (
+        <ValorarModal reserva={reserva} onClose={() => setValorando(false)} onResultado={alValorar} />
+      )}
+      {toast && <Toast {...toast} />}
     </div>
   );
 }

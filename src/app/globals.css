@@ -62,6 +62,9 @@
      un cultivo. La cosecha y el reposo usan green-800 y cream-tert. */
   --color-season-growing: #C9A227;
 
+  /* Estrellas de una calificación (selector de valoración). */
+  --color-star: #E0A422;
+
   /* Radii — rounded-sm / rounded-md / rounded-lg / rounded-pill */
   --radius-sm:   0.375rem;
   --radius-md:   0.5rem;
