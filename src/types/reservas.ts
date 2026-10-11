@@ -1,7 +1,7 @@
 /**
  * Agrupa los estados del backend para los filtros de "Mis reservas": `activa`
- * es la que todavía va a ocurrir (Pendiente, Pagada); `cancelada` incluye las
- * expiradas, que tampoco se van a hacer.
+ * es la que todavía va a ocurrir (Pendiente, Pagada). Las expiradas el backend
+ * no las lista; si una llega (p. ej. al abrir el detalle) cuenta como `cancelada`.
  */
 export type CategoriaReserva = "activa" | "finalizada" | "cancelada";
 
@@ -15,6 +15,8 @@ export interface ReservaResumen {
   /** Inicio y fin como `Date` local; `null` si el backend no las mandó o no se pudieron leer. */
   inicio: Date | null;
   fin: Date | null;
+  /** Cuándo el visitante empezó la reserva (no el día de la actividad); `null` si no vino. */
+  creada: Date | null;
   personas: number;
   total: number;
   /** Nombre del estado tal como lo manda el backend ("Pagada", "Cancelada con reembolso"…). */
