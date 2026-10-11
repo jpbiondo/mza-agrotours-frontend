@@ -27,13 +27,15 @@ const CONTENIDO: Record<ResultadoVinculacion, {
   },
   cancelada: {
     titulo: "No se vinculó la cuenta",
-    texto: "Cancelaste la autorización en Mercado Pago. Hasta que vincules una cuenta, el establecimiento no recibe reservas.",
+    // Puede venir de un primer vínculo o de un cambio de cuenta: en los dos
+    // casos lo que había sigue igual.
+    texto: "Cancelaste la autorización en Mercado Pago, así que la cuenta de cobro del establecimiento sigue como estaba.",
     Icono: XCircle,
     tono: "text-warning",
   },
   error: {
     titulo: "No pudimos vincular la cuenta",
-    texto: "Algo falló al conectar con Mercado Pago o el enlace venció. Probá de nuevo desde los datos del establecimiento.",
+    texto: "Algo falló al conectar con Mercado Pago o el enlace venció. La cuenta de cobro sigue como estaba: probá de nuevo desde los datos del establecimiento.",
     Icono: AlertTriangle,
     tono: "text-danger",
   },

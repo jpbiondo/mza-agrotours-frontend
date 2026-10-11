@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Landmark, Link2, Loader, RefreshCw } from "lucide-react";
+import { ArrowLeftRight, CheckCircle2, Info, Landmark, Link2, Loader, RefreshCw } from "lucide-react";
 import { Alert, Button, Skeleton } from "@/components/ui";
 import { useCuentaMercadoPago, useVincularMercadoPago } from "@/hooks/useMercadoPago";
 import { fmtFechaHora } from "@/lib/format";
@@ -20,11 +20,16 @@ const ETIQUETA: Record<EstadoCobro, { texto: string; clase: string }> = {
  * utilizable el establecimiento y sus actividades se siguen mostrando, pero no
  * admiten reservas nuevas. Se vincula con el OAuth de Mercado Pago, que al
  * terminar vuelve a `/mercadopago/vinculacion`.
+ *
+ * Con la cuenta habilitada se puede vincular otra por el mismo endpoint: si sale
+ * bien, el backend da de baja la anterior; si se cancela, la anterior sigue.
  */
 export function CobrosCard({ establecimientoId }: { establecimientoId: string }) {
   const { cuenta, isLoading, error, reload } = useCuentaMercadoPago(establecimientoId);
   const { vincular, isLoading: vinculando } = useVincularMercadoPago();
   const [errorVincular, setErrorVincular] = useState<string | null>(null);
+  /** Con la cuenta habilitada, cambiarla pide una confirmación antes de ir a Mercado Pago. */
+  const [cambiando, setCambiando] = useState(false);
 
   async function alVincular() {
     setErrorVincular(null);
@@ -83,6 +88,50 @@ export function CobrosCard({ establecimientoId }: { establecimientoId: string })
                 <p className="mt-2 pl-7 text-[13px] text-fg-3">
                   Vinculada el {fmtFechaHora(cuenta.fechaHoraVinculacion)}
                 </p>
+              )}
+
+              {!cambiando ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-4 text-sm"
+                  onClick={() => {
+                    setErrorVincular(null);
+                    setCambiando(true);
+                  }}
+                >
+                  <ArrowLeftRight className="size-3.75" /> Vincular otra cuenta
+                </Button>
+              ) : (
+                <div className="mt-4 rounded-md border border-outline-variant bg-cream-tert px-4 py-3.5">
+                  <div className="flex items-start gap-2.5 text-[13.5px] leading-normal text-pretty text-fg-2">
+                    <Info className="mt-px size-3.75 shrink-0 text-info-fg" />
+                    <div>
+                      <p className="font-semibold text-fg-1">Vas a cambiar la cuenta donde cobrás</p>
+                      <p className="mt-1">
+                        Los pagos de las reservas nuevas se van a acreditar en la cuenta que autorices.
+                        Las reservas ya pagadas se siguen gestionando con la cuenta anterior, incluidos
+                        sus reembolsos. Mercado Pago usa la cuenta con la que tengas la sesión abierta: si es la actual,
+                        cerrá sesión allá antes de seguir y entrá con la nueva.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3.5 flex flex-wrap gap-2 pl-6">
+                    <Button size="sm" className="text-sm" onClick={alVincular} disabled={vinculando}>
+                      {vinculando ? <Loader className="spin size-3.75" /> : <Link2 className="size-3.75" />}
+                      Continuar a Mercado Pago
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-sm"
+                      onClick={() => setCambiando(false)}
+                      disabled={vinculando}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
               )}
             </>
           ) : (
