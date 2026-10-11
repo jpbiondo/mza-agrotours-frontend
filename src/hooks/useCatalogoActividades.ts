@@ -64,6 +64,7 @@ interface DetalleBackend {
   diasActividad?: unknown;
   resumenResenias?: unknown;
   reseniasRecientes?: unknown;
+  admiteReservas?: unknown;
 }
 
 /**
@@ -230,6 +231,9 @@ function aDetalle(d: DetalleBackend): ActividadPublica {
     calendario: aCalendario(d.diasActividad),
     resenias: aResumenResenias(d.resumenResenias),
     reseniasRecientes: aResenias(d.reseniasRecientes),
+    // Sólo un `false` explícito corta las reservas: si el campo no viene, el
+    // backend igual rechaza la reserva y el visitante se entera en `/reservar`.
+    admiteReservas: d.admiteReservas !== false,
   };
 }
 

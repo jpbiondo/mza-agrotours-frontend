@@ -207,6 +207,11 @@ export interface ActividadPublica {
   resenias: ResumenResenias;
   /** Las más recientes (el backend manda hasta tres), para la sección del detalle. */
   reseniasRecientes: Resenia[];
+  /**
+   * `false` cuando el establecimiento no tiene una cuenta de Mercado Pago
+   * utilizable: la actividad se sigue mostrando, pero no se puede reservar.
+   */
+  admiteReservas: boolean;
 }
 
 /** Cuántas reseñas hay de un puntaje. */
