@@ -1,39 +1,43 @@
-export type ChatFrom = "visitor" | "productor";
+/* ---- Chats en tiempo real (Realtime Database) ------------------------- */
 
-export interface ChatMensaje {
+/** Fila del inbox del visitante: `chats_usuario/{uid}/{chatId}`. */
+export interface ChatResumen {
   id: string;
-  from: ChatFrom;
-  text: string;
-  time: string;
+  establecimientoId: string;
+  /**
+   * Nombre de la actividad tal como era al iniciar el chat (en chats viejos, el
+   * del establecimiento). El nombre al día lo da `useInfoChatsUsuario`.
+   */
+  titulo: string;
+  /** Vacío mientras nadie escribió. */
+  ultimoMensaje: string;
+  /** Epoch en ms del último movimiento (o de la creación). */
+  timestamp: number;
+  noLeidos: number;
 }
 
-export interface ChatDia {
-  label: string;
-  date: string;
-  messages: ChatMensaje[];
+/** Fila del inbox del establecimiento: `chats_establecimiento/{establecimientoId}/{chatId}`. */
+export interface ChatEstablecimientoResumen {
+  id: string;
+  visitanteId: string;
+  /** Nombre del visitante al iniciar el chat. El nombre al día lo da `useInfoChatsEstablecimiento`. */
+  titulo: string;
+  /** Vacío mientras nadie escribió. */
+  ultimoMensaje: string;
+  /** Epoch en ms del último movimiento (o de la creación). */
+  timestamp: number;
+  noLeidos: number;
 }
 
-/** Conversación del lado del establecimiento (productor responde a visitantes). */
-export interface EstChat {
-  id: string;
-  visitor: { name: string; initials: string };
-  activity: { title: string; date: string; seed: number };
-  reservaCode: string;
-  personas: number;
-  unread: number;
-  lastTime: string;
-  lastFrom: ChatFrom;
-  lastText: string;
-  days: ChatDia[];
-}
+/** Quién mandó un mensaje. Son los dos valores que aceptan las reglas. */
+export type TipoEmisor = "VISITANTE" | "ESTABLECIMIENTO";
 
-/** Conversación del lado del visitante (consulta a un establecimiento). */
-export interface VisitorChat {
+/** Mensaje de `mensajes/{chatId}/{mensajeId}`. */
+export interface MensajeChat {
   id: string;
-  activity: { id: string; title: string; finca: string; loc: string; seed: number };
-  unread: number;
-  lastTime: string;
-  lastFrom: ChatFrom;
-  lastText: string;
-  days: ChatDia[];
+  remitenteId: string;
+  tipoEmisor: TipoEmisor;
+  texto: string;
+  /** Epoch en ms. Con la escritura local todavía sin confirmar es una estimación del SDK. */
+  timestamp: number;
 }

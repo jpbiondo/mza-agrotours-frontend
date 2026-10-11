@@ -181,6 +181,12 @@ button { font-family: inherit; }
 }
 .pop  { animation: popIn .2s cubic-bezier(.2,0,0,1); }
 
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: none; }
+}
+.slide { animation: slideIn .22s cubic-bezier(.2,0,0,1); }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 1s linear infinite; }
 

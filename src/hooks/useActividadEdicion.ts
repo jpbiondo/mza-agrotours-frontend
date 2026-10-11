@@ -6,7 +6,7 @@ import { conToken } from "@/lib/sesion";
 import { tarifasIniciales } from "@/data/actividad-form";
 import { limpiarLista } from "@/lib/actividad-form";
 import { aEstado } from "@/hooks/useActividades";
-import type { ActividadEditarForm } from "@/app/panel/actividades/[id]/editar/schema";
+import type { ActividadEditarForm } from "@/app/panel/[establecimientoId]/actividades/[id]/editar/schema";
 import type { EstadoActividad } from "@/types/actividad-prod";
 import type { FaqItem, TarifaFila } from "@/types/actividad-form";
 import type { FotoActividad, FotoClaim } from "@/types/actividad-foto";

@@ -1,254 +1,578 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ChevronRight, MessagesSquare, Plus, Search, X, HelpCircle, Pencil, Trash2, ChevronDown,
-  SearchX, RotateCcw, AlertCircle, Check, Loader, LayoutGrid, Info, CalendarCheck, UserRound,
-  Tractor, Wallet,
+  SearchX, RotateCcw, Check, Loader,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { genId } from "@/lib/id";
+import { Alert, Button, Modal, Skeleton, Toast } from "@/components/ui";
+import { TextField } from "@/components/ui/text-field";
+import { TextArea } from "@/components/ui/text-area";
+import { SimpleSelect } from "@/components/ui/simple-select";
+import {
+  Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
+} from "@/components/ui/form";
+import { GcrFormFooter, GcrFormShell } from "@/components/admin/gcr/shared";
+import {
+  CatIcono, FaqChips, FaqDesplegable, contarPorCategoria, etiquetaCat, resaltar,
+} from "@/components/faq/piezas";
 import { FAQ_CATEGORIAS } from "@/data/faq";
-import { useFaq, useGuardarFaq, useEliminarFaq } from "@/hooks/useFaq";
+import { useFaq, useFaqCrud } from "@/hooks/useFaq";
+import { cn } from "@/lib/utils";
 import type { FaqItem } from "@/types/catalogo";
+import { FAQ_INICIAL, PREGUNTA_MAX, RESPUESTA_MAX, faqSchema, type FaqForm } from "./schema";
 
-const CAT_ICON: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
-  "layout-grid": LayoutGrid, info: Info, "calendar-check": CalendarCheck, "user-round": UserRound, tractor: Tractor, wallet: Wallet,
-};
-const CAT_BY_ID = Object.fromEntries(FAQ_CATEGORIAS.map((c) => [c.id, c]));
+/** Las que se pueden asignar: "todas" es sólo un filtro. */
+const CATEGORIAS_ASIGNABLES = FAQ_CATEGORIAS.filter((c) => c.id !== "todas");
 
-function highlight(text: string, term: string): React.ReactNode {
-  const t = term.trim();
-  if (!t) return text;
-  const idx = text.toLowerCase().indexOf(t.toLowerCase());
-  if (idx === -1) return text;
-  return <>{text.slice(0, idx)}<mark style={{ background: "var(--green-100)", color: "var(--green-900)", borderRadius: 3, padding: "0 2px" }}>{text.slice(idx, idx + t.length)}</mark>{text.slice(idx + t.length)}</>;
+/** Mensaje para un rechazo del backend: con `code` es de dominio; sin él, técnico. */
+function mensajeError(code: string | undefined, accion: "guardar" | "eliminar"): string {
+  if (code === "entityNotFound") return "Esta pregunta ya no existe. Recargá el listado para ver los cambios.";
+  if (code === "validationError") return "El servidor rechazó los datos. Revisá la pregunta y la respuesta.";
+  return accion === "guardar"
+    ? "No pudimos guardar la pregunta. Probá de nuevo en unos minutos."
+    : "No pudimos eliminar la pregunta. Probá de nuevo en unos minutos.";
 }
 
-const inputStyle: React.CSSProperties = { width: "100%", fontFamily: "var(--font-sans)", fontSize: 14.5, color: "var(--fg-1)", borderRadius: "var(--radius)", border: "1px solid var(--sand)", padding: "12px 14px", outline: "none", boxSizing: "border-box", background: "var(--surface)" };
+/* ---- Una entrada del acordeón (con acciones de gestión) ---------------- */
+const ACCION = "flex size-[38px] shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface transition-colors";
 
-/* ---- Item del acordeón ------------------------------------------------- */
-function FaqItemRow({ item, term, open, onToggle, onEdit, onDelete }: { item: FaqItem; term: string; open: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void }) {
-  const cat = CAT_BY_ID[item.cat] ?? { label: "General", icon: "info" };
-  const CIcon = CAT_ICON[cat.icon] ?? Info;
-  const actBtn: React.CSSProperties = { width: 38, height: 38, flexShrink: 0, borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" };
+function FaqFila({ item, term, open, onToggle, onEdit, onDelete }: {
+  item: FaqItem;
+  term: string;
+  open: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   return (
-    <div style={{ background: "var(--surface)", border: "1px solid " + (open ? "var(--green-300)" : "var(--outline-variant)"), borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: open ? "var(--shadow-hover)" : "none" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>
-        <button onClick={onToggle} aria-expanded={open} style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 14, padding: 0, background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}>
-          <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: open ? "var(--green-800)" : "var(--green-050)", color: open ? "#fff" : "var(--green-800)" }}><HelpCircle size={19} /></span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16.5, color: "var(--fg-1)", lineHeight: 1.35 }}>{highlight(item.q, term)}</span>
-            <span className="t-label" style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 6, fontSize: 11 }}><CIcon size={12} color="var(--fg-3)" /> {cat.label}</span>
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border bg-surface transition-[border-color,box-shadow] duration-200",
+        open ? "border-green-300 shadow-hover" : "border-outline-variant",
+      )}
+    >
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        {/* Pregunta: abre y cierra el acordeón */}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3.5 bg-transparent p-0 text-left"
+        >
+          <span
+            className={cn(
+              "flex size-[38px] shrink-0 items-center justify-center rounded-[10px] transition-colors",
+              open ? "bg-green-800 text-white" : "bg-green-050 text-green-800",
+            )}
+          >
+            <HelpCircle className="size-[19px]" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-[16.5px] leading-[1.35] font-semibold text-fg-1">
+              {resaltar(item.q, term)}
+            </span>
+            <span className="t-label mt-1.5 inline-flex items-center gap-[5px] text-[11px]">
+              <CatIcono catId={item.cat} className="size-3 text-fg-3" /> {etiquetaCat(item.cat)}
+            </span>
           </span>
         </button>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-          <button type="button" onClick={onEdit} title="Editar" style={actBtn}><Pencil size={16} color="var(--green-800)" /></button>
-          <button type="button" onClick={onDelete} title="Eliminar" style={actBtn}><Trash2 size={16} color="var(--danger-fg)" /></button>
-          <button type="button" onClick={onToggle} aria-label={open ? "Contraer" : "Expandir"} style={{ ...actBtn, border: "1px solid transparent", background: "transparent" }}><ChevronDown size={20} color={open ? "var(--green-800)" : "var(--fg-3)"} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }} /></button>
+
+        {/* Acciones de gestión */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onEdit}
+            title="Editar"
+            aria-label={`Editar: ${item.q}`}
+            className={cn(ACCION, "hover:border-green-800 hover:bg-cream-tert")}
+          >
+            <Pencil className="size-4 text-green-800" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            title="Eliminar"
+            aria-label={`Eliminar: ${item.q}`}
+            className={cn(ACCION, "hover:border-danger hover:bg-danger-fill")}
+          >
+            <Trash2 className="size-4 text-danger-fg" />
+          </button>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label={open ? "Contraer" : "Expandir"}
+            className={cn(ACCION, "border-transparent bg-transparent")}
+          >
+            <ChevronDown
+              className={cn(
+                "size-5 transition-[transform,color] duration-200",
+                open ? "rotate-180 text-green-800" : "text-fg-3",
+              )}
+            />
+          </button>
         </div>
       </div>
-      {open && (
-        <div style={{ padding: "0 18px 20px 74px" }}>
-          <div style={{ height: 1, background: "var(--outline-variant)", margin: "0 0 14px" }} />
-          <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 15, lineHeight: 1.6 }}>{highlight(item.a, term)}</p>
-        </div>
+
+      <FaqDesplegable open={open} className="pr-4 pb-[18px] pl-[68px]">
+        <p className="text-[15px] leading-relaxed text-pretty text-fg-2">{resaltar(item.a, term)}</p>
+      </FaqDesplegable>
+    </div>
+  );
+}
+
+/* ---- Estado vacío ------------------------------------------------------- */
+function FaqVacio({ kind, term, onClear, onNueva }: {
+  kind: "sin-datos" | "sin-busqueda" | "sin-categoria";
+  term: string;
+  onClear: () => void;
+  onNueva: () => void;
+}) {
+  const buscando = kind !== "sin-datos";
+  return (
+    <div className="flex flex-col items-center rounded-lg border border-dashed border-sand bg-surface px-8 py-[60px] text-center">
+      <span
+        className={cn(
+          "mb-[18px] flex size-16 items-center justify-center rounded-2xl",
+          buscando ? "bg-cream-tert" : "bg-green-050",
+        )}
+      >
+        {buscando
+          ? <SearchX className="size-[30px] text-fg-3" />
+          : <MessagesSquare className="size-[30px] text-green-800" />}
+      </span>
+      <h2 className="mb-2 font-display text-xl font-bold text-fg-1">
+        {kind === "sin-datos"
+          ? "Todavía no cargaste preguntas frecuentes"
+          : kind === "sin-categoria"
+            ? "No hay preguntas en esta categoría"
+            : "No encontramos preguntas relacionadas"}
+      </h2>
+      <p className="mx-auto mb-5 max-w-[440px] text-[15px] text-fg-2">
+        {kind === "sin-datos" ? (
+          "Empezá creando la primera. Cada entrada necesita una pregunta y su respuesta."
+        ) : kind === "sin-categoria" ? (
+          "Probá con otra categoría o seleccioná «Todas» para ver el listado completo."
+        ) : (
+          <>No hay coincidencias para <strong className="text-fg-1">«{term}»</strong>. Probá con otra palabra.</>
+        )}
+      </p>
+      {kind === "sin-datos" ? (
+        <Button onClick={onNueva}><Plus className="size-[17px]" /> Cargá una pregunta</Button>
+      ) : (
+        <Button variant="neutral" onClick={onClear}><RotateCcw className="size-[17px]" /> Limpiar filtros</Button>
       )}
     </div>
   );
 }
 
-/* ---- Editor modal ------------------------------------------------------ */
-function EditorModal({ item, busy, onCancel, onSave }: { item: FaqItem | null; busy: boolean; onCancel: () => void; onSave: (i: FaqItem) => void }) {
+/* ---- Editor (alta / edición) ------------------------------------------- */
+function FaqEditor({ item, busy, error, onCancel, onSave }: {
+  item: FaqItem | null;
+  busy: boolean;
+  /** Rechazo del backend: el panel queda abierto con lo cargado. */
+  error: string | null;
+  onCancel: () => void;
+  onSave: (datos: FaqForm) => void;
+}) {
   const esEdicion = !!item;
-  const categorias = FAQ_CATEGORIAS.filter((c) => c.id !== "todas");
-  const [q, setQ] = useState(item?.q ?? "");
-  const [a, setA] = useState(item?.a ?? "");
-  const [cat, setCat] = useState(item?.cat ?? "general");
-  const [intento, setIntento] = useState(false);
+  const form = useForm<FaqForm>({
+    resolver: zodResolver(faqSchema),
+    mode: "onTouched",
+    defaultValues: item ? { q: item.q, a: item.a, cat: item.cat } : FAQ_INICIAL,
+  });
+  const q = useWatch({ control: form.control, name: "q" });
+  const a = useWatch({ control: form.control, name: "a" });
+  const cat = useWatch({ control: form.control, name: "cat" });
 
+  const { setFocus } = form;
+  useEffect(() => { setFocus("q"); }, [setFocus]);
+
+  const cerrar = busy ? () => {} : onCancel;
+
+  return (
+    <GcrFormShell onCancel={cerrar}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={esEdicion ? "Editar pregunta frecuente" : "Nueva pregunta frecuente"}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        {/* Cabecera */}
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline-variant px-[26px] py-[22px]">
+          <div className="flex min-w-0 items-center gap-[13px]">
+            <span className="flex size-[42px] shrink-0 items-center justify-center rounded-xl border border-green-100 bg-green-050 text-green-800">
+              {esEdicion ? <Pencil className="size-5" /> : <Plus className="size-5" />}
+            </span>
+            <div className="min-w-0">
+              <span className="t-label">{esEdicion ? "Editar entrada" : "Nueva entrada"}</span>
+              <h2 className="mt-[3px] font-display text-xl leading-tight font-bold text-fg-1">
+                {esEdicion ? "Editar pregunta frecuente" : "Cargá una pregunta frecuente"}
+              </h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={cerrar}
+            aria-label="Cerrar"
+            className="flex size-[42px] shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface"
+          >
+            <X className="size-5 text-fg-2" />
+          </button>
+        </div>
+
+        {/* Cuerpo */}
+        <Form {...form}>
+          <form
+            noValidate
+            onSubmit={form.handleSubmit(onSave)}
+            className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-[26px] py-[22px]"
+          >
+            <FormField
+              control={form.control}
+              name="q"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required className="font-display text-[14.5px] font-semibold">Pregunta</FormLabel>
+                  <FormControl>
+                    <TextField
+                      {...field}
+                      maxLength={PREGUNTA_MAX}
+                      placeholder="Ej.: ¿Cómo reservo una experiencia?"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  {!form.formState.errors.q && (
+                    <FormDescription className="flex items-center justify-between gap-2.5 text-[12.5px]">
+                      <span>Redactá la duda tal como la haría un usuario.</span>
+                      <span className="font-mono">{q.length}/{PREGUNTA_MAX}</span>
+                    </FormDescription>
+                  )}
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="a"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required className="font-display text-[14.5px] font-semibold">Respuesta</FormLabel>
+                  <FormControl>
+                    <TextArea
+                      {...field}
+                      rows={5}
+                      maxLength={RESPUESTA_MAX}
+                      placeholder="Escribí una respuesta clara y completa para resolver la consulta."
+                      className="min-h-[120px]"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  {!form.formState.errors.a && (
+                    <FormDescription className="flex items-center justify-between gap-2.5 text-[12.5px]">
+                      <span>Aparecerá justo debajo de la pregunta al desplegarla.</span>
+                      <span className="font-mono">{a.length}/{RESPUESTA_MAX}</span>
+                    </FormDescription>
+                  )}
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="cat"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-display text-[14.5px] font-semibold">Categoría</FormLabel>
+                  <FormControl>
+                    <SimpleSelect
+                      {...field}
+                      icon={<CatIcono catId={cat} />}
+                      options={CATEGORIAS_ASIGNABLES.map((c) => ({ value: c.id, label: c.label }))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <FormDescription className="text-[12.5px]">
+                    Agrupa la pregunta dentro de la base de conocimiento.
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+          </form>
+        </Form>
+
+        <GcrFormFooter
+          onCancel={cerrar}
+          onSave={form.handleSubmit(onSave)}
+          saveLabel={esEdicion ? "Guardar cambios" : "Crear pregunta"}
+          saveIcon={busy ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />}
+          busy={busy}
+          error={error}
+        />
+      </div>
+    </GcrFormShell>
+  );
+}
+
+/* ---- Confirmación de eliminación --------------------------------------- */
+function FaqEliminar({ item, busy, error, onCancel, onConfirm }: {
+  item: FaqItem;
+  busy: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
   useEffect(() => {
+    if (busy) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
-
-  const errQ = !q.trim() ? "Ingresá la pregunta." : "";
-  const errA = !a.trim() ? "Ingresá la respuesta." : "";
-  const showQ = intento && errQ;
-  const showA = intento && errA;
-
-  function guardar() {
-    setIntento(true);
-    if (errQ || errA) return;
-    onSave({ id: item?.id ?? genId("q"), q: q.trim(), a: a.trim(), cat });
-  }
-
-  const lbl: React.CSSProperties = { display: "block", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 14.5, color: "var(--fg-1)", marginBottom: 9 };
-  const hint: React.CSSProperties = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 7, fontSize: 12.5, color: "var(--fg-3)" };
-  const errMsg = (m: string) => <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 7, fontSize: 12.5, color: "var(--danger-fg)" }}><AlertCircle size={14} color="var(--danger)" /> {m}</div>;
+  }, [busy, onCancel]);
 
   return (
-    <div onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }} style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(42,38,32,.45)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px", overflowY: "auto", backdropFilter: "blur(2px)" }}>
-      <div className="pop" style={{ background: "var(--surface)", width: "min(640px, 100%)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-pop)", margin: "auto", display: "flex", flexDirection: "column", overflow: "hidden", maxHeight: "calc(100vh - 80px)" }}>
-        <div style={{ padding: "22px 26px", borderBottom: "1px solid var(--outline-variant)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
-            <span style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 12, background: "var(--green-050)", color: "var(--green-800)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--green-100)" }}>{esEdicion ? <Pencil size={20} /> : <Plus size={20} />}</span>
-            <div><span className="t-label">{esEdicion ? "Editar entrada" : "Nueva entrada"}</span><h2 style={{ margin: "3px 0 0", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>{esEdicion ? "Editar pregunta frecuente" : "Cargá una pregunta frecuente"}</h2></div>
-          </div>
-          <button type="button" onClick={onCancel} aria-label="Cerrar" style={{ width: 42, height: 42, flexShrink: 0, borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", background: "var(--surface)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={20} color="var(--fg-2)" /></button>
+    <Modal onClose={onCancel} dismissable={!busy} padding="p-0" className="w-[480px] overflow-hidden">
+      <div className="px-[26px] pt-[26px] pb-1.5 text-center" aria-label="Eliminar pregunta frecuente">
+        <span className="mb-4 inline-flex size-14 items-center justify-center rounded-[14px] bg-danger-fill">
+          <Trash2 className="size-[26px] text-danger-fg" />
+        </span>
+        <h2 className="mb-2 font-display text-xl font-bold text-fg-1">¿Eliminar esta pregunta?</h2>
+        <p className="mx-auto max-w-[380px] text-[14.5px] leading-normal text-fg-2">
+          Se quitará de la base de conocimiento y dejará de mostrarse a los usuarios. Esta acción no se puede deshacer.
+        </p>
+        <div className="mt-[18px] flex items-start gap-[11px] rounded-md border border-outline-variant bg-cream-tert px-3.5 py-3 text-left">
+          <HelpCircle className="mt-px size-[18px] shrink-0 text-fg-3" />
+          <span className="font-display text-[14.5px] leading-[1.4] font-semibold text-fg-1">{item.q}</span>
         </div>
+        {error && <Alert className="mt-4 text-left">{error}</Alert>}
+      </div>
+      <div className="flex flex-wrap justify-center gap-3 px-[26px] pt-[18px] pb-6">
+        <Button variant="neutral" onClick={onCancel} disabled={busy}>
+          <X className="size-[17px]" /> Cancelar
+        </Button>
+        <Button variant="danger" onClick={onConfirm} disabled={busy}>
+          {busy ? <Loader className="spin size-[17px]" /> : <Trash2 className="size-[17px]" />} Eliminar
+        </Button>
+      </div>
+    </Modal>
+  );
+}
 
-        <div style={{ padding: "22px 26px", display: "flex", flexDirection: "column", gap: 20, overflowY: "auto" }}>
-          <div>
-            <label htmlFor="faq-q" style={lbl}>Pregunta <span style={{ color: "var(--danger)" }}>*</span></label>
-            <input id="faq-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ej.: ¿Cómo reservo una experiencia?" maxLength={160} autoFocus style={{ ...inputStyle, borderColor: showQ ? "var(--danger)" : "var(--sand)" }} />
-            {showQ ? errMsg(errQ) : <div style={hint}><span>Redactá la duda tal como la haría un usuario.</span><span style={{ fontFamily: "var(--font-mono)" }}>{q.length}/160</span></div>}
-          </div>
-          <div>
-            <label htmlFor="faq-a" style={lbl}>Respuesta <span style={{ color: "var(--danger)" }}>*</span></label>
-            <textarea id="faq-a" value={a} onChange={(e) => setA(e.target.value)} placeholder="Escribí una respuesta clara y completa para resolver la consulta." rows={5} maxLength={700} style={{ ...inputStyle, resize: "vertical", minHeight: 120, lineHeight: 1.55, borderColor: showA ? "var(--danger)" : "var(--sand)" }} />
-            {showA ? errMsg(errA) : <div style={hint}><span>Aparecerá justo debajo de la pregunta al desplegarla.</span><span style={{ fontFamily: "var(--font-mono)" }}>{a.length}/700</span></div>}
-          </div>
-          <div>
-            <label htmlFor="faq-cat" style={lbl}>Categoría</label>
-            <select id="faq-cat" value={cat} onChange={(e) => setCat(e.target.value)} style={{ ...inputStyle }}>{categorias.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select>
-            <div style={hint}><span>Agrupa la pregunta dentro de la base de conocimiento.</span></div>
-          </div>
-        </div>
-
-        <div style={{ padding: "16px 26px", borderTop: "1px solid var(--outline-variant)", background: "var(--cream-tert)", display: "flex", justifyContent: "flex-end", gap: 12 }}>
-          <button type="button" className="btn btn-neutral" onClick={onCancel} disabled={busy}><X size={17} /> Cancelar</button>
-          <button type="button" className="btn btn-primary" onClick={guardar} disabled={busy}>{busy ? <Loader size={17} className="spin" /> : <Check size={17} />} {esEdicion ? "Guardar cambios" : "Crear pregunta"}</button>
-        </div>
+/* ---- Esqueleto del listado --------------------------------------------- */
+function FaqEsqueleto() {
+  return (
+    <div aria-busy="true" aria-label="Cargando preguntas…">
+      <Skeleton className="mb-4 h-11 max-w-[420px]" />
+      <div className="mb-[22px] flex flex-wrap gap-2">
+        {Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-9 w-28 rounded-pill" />)}
+      </div>
+      <div className="flex flex-col gap-3">
+        {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-[74px] rounded-lg" />)}
       </div>
     </div>
   );
 }
 
-/* ---- Inner ------------------------------------------------------------- */
-function Inner({ initial }: { initial: FaqItem[] }) {
+/* ---- Listado + gestión -------------------------------------------------- */
+function FaqGestion({ initial, editor, setEditor }: {
+  initial: FaqItem[];
+  editor: { item: FaqItem | null } | null;
+  setEditor: (e: { item: FaqItem | null } | null) => void;
+}) {
   const [items, setItems] = useState<FaqItem[]>(initial);
   const [term, setTerm] = useState("");
   const [cat, setCat] = useState("todas");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [editor, setEditor] = useState<{ open: boolean; item: FaqItem | null } | null>(null);
   const [borrar, setBorrar] = useState<FaqItem | null>(null);
+  const [errorEditor, setErrorEditor] = useState<string | null>(null);
+  const [errorBorrar, setErrorBorrar] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const { guardar, isLoading: saving } = useGuardarFaq();
-  const { eliminar, isLoading: deleting } = useEliminarFaq();
+  const { crear, actualizar, eliminar, guardando, borrando } = useFaqCrud();
 
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4200);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  // 1) Búsqueda por término
   const afterSearch = useMemo(() => {
     const q = term.trim().toLowerCase();
-    return q ? items.filter((i) => (i.q + " " + i.a).toLowerCase().includes(q)) : items;
+    return q ? items.filter((i) => `${i.q} ${i.a}`.toLowerCase().includes(q)) : items;
   }, [items, term]);
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { todas: afterSearch.length };
-    FAQ_CATEGORIAS.forEach((k) => { if (k.id !== "todas") c[k.id] = 0; });
-    afterSearch.forEach((i) => { c[i.cat] = (c[i.cat] || 0) + 1; });
-    return c;
-  }, [afterSearch]);
-  const visible = useMemo(() => (cat === "todas" ? afterSearch : afterSearch.filter((i) => i.cat === cat)), [afterSearch, cat]);
+  // 2) Conteos por categoría, sobre el resultado de la búsqueda
+  const counts = useMemo(() => contarPorCategoria(afterSearch), [afterSearch]);
+  // 3) Filtro por categoría
+  const visible = useMemo(
+    () => (cat === "todas" ? afterSearch : afterSearch.filter((i) => i.cat === cat)),
+    [afterSearch, cat],
+  );
 
-  function notify(msg: string) { setToast(msg); setTimeout(() => setToast((t) => (t === msg ? null : t)), 4000); }
-
-  async function onSave(it: FaqItem) {
-    const editing = items.some((x) => x.id === it.id);
-    await guardar(it);
-    setItems((prev) => (editing ? prev.map((x) => (x.id === it.id ? it : x)) : [it, ...prev]));
-    if (!editing) setOpenId(it.id);
+  function cerrarEditor() {
     setEditor(null);
-    notify(editing ? "Pregunta actualizada correctamente." : "Pregunta agregada a la base de conocimiento.");
-  }
-  async function onDelete(it: FaqItem) {
-    await eliminar(it.id);
-    setItems((prev) => prev.filter((x) => x.id !== it.id));
-    if (openId === it.id) setOpenId(null);
-    setBorrar(null);
-    notify("Pregunta eliminada.");
+    setErrorEditor(null);
   }
 
+  async function guardar(datos: FaqForm) {
+    setErrorEditor(null);
+    const actual = editor?.item;
+    if (actual) {
+      const r = await actualizar(actual.id, datos);
+      if (!r.ok) { setErrorEditor(mensajeError(r.code, "guardar")); return; }
+      setItems((prev) => prev.map((x) => (x.id === actual.id ? { ...x, ...datos } : x)));
+      setToast("Pregunta actualizada correctamente.");
+    } else {
+      const r = await crear(datos);
+      if (!r.ok) { setErrorEditor(mensajeError(r.code, "guardar")); return; }
+      // Sin id no hay contra qué editar ni borrar después: mejor que la entrada
+      // no aparezca hasta recargar a que aparezca y falle al tocarla.
+      if (r.id) {
+        const nueva = { id: r.id, ...datos };
+        setItems((prev) => [nueva, ...prev]);
+        setOpenId(nueva.id);
+      }
+      setToast("Pregunta agregada a la base de conocimiento.");
+    }
+    cerrarEditor();
+  }
+
+  async function confirmarBorrado() {
+    if (!borrar) return;
+    setErrorBorrar(null);
+    const r = await eliminar(borrar.id);
+    if (!r.ok) { setErrorBorrar(mensajeError(r.code, "eliminar")); return; }
+    setItems((prev) => prev.filter((x) => x.id !== borrar.id));
+    if (openId === borrar.id) setOpenId(null);
+    setBorrar(null);
+    setToast("Pregunta eliminada.");
+  }
+
+  const limpiar = () => { setTerm(""); setCat("todas"); };
+  const nueva = () => setEditor({ item: null });
   const sinDatos = items.length === 0;
   const noResults = visible.length === 0;
 
   return (
-    <div style={{ maxWidth: 920, margin: "0 auto", padding: "28px 28px 88px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--fg-3)", fontSize: 13.5, marginBottom: 14 }}><span>Soporte</span><ChevronRight size={15} /><span style={{ color: "var(--fg-2)", fontWeight: 500 }}>Preguntas frecuentes</span></div>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, flexWrap: "wrap", marginBottom: 28 }}>
-        <div style={{ minWidth: 280 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
-            <span style={{ flexShrink: 0, width: 50, height: 50, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--green-050)", color: "var(--green-800)", border: "1px solid var(--green-100)" }}><MessagesSquare size={25} /></span>
-            <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 32, color: "var(--fg-1)", letterSpacing: "-.01em" }}>Preguntas frecuentes</h1>
-          </div>
-          <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 15.5, lineHeight: 1.5, maxWidth: 620 }}>Mantené la base de conocimiento que consultan los usuarios. Cada entrada necesita una pregunta y su respuesta.</p>
-        </div>
-        <button type="button" className="btn btn-primary btn-lg" onClick={() => setEditor({ open: true, item: null })}><Plus size={18} /> Cargá una pregunta</button>
-      </div>
-
+    <>
+      {/* Barra de filtros */}
       {!sinDatos && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 22 }}>
-          <div style={{ position: "relative", maxWidth: 420 }}>
-            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", display: "flex", color: "var(--fg-3)" }}><Search size={18} /></span>
-            <input placeholder="Buscar por pregunta o respuesta…" value={term} onChange={(e) => setTerm(e.target.value)} style={{ ...inputStyle, paddingLeft: 42, paddingRight: term ? 40 : 14, height: 46 }} />
-            {term && <button type="button" onClick={() => setTerm("")} aria-label="Limpiar" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", border: "none", background: "var(--cream-tert)", width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><X size={14} color="var(--fg-2)" /></button>}
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {FAQ_CATEGORIAS.map((c) => {
-              const on = cat === c.id;
-              const CIcon = CAT_ICON[c.icon] ?? Info;
-              return (
-                <button key={c.id} type="button" onClick={() => setCat(c.id)} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 13px", borderRadius: "var(--radius-pill)", cursor: "pointer", fontSize: 13.5, fontWeight: 600, whiteSpace: "nowrap", border: "1px solid " + (on ? "var(--green-800)" : "var(--sand)"), background: on ? "var(--green-800)" : "var(--surface)", color: on ? "#fff" : "var(--fg-2)" }}>
-                  <CIcon size={15} color={on ? "#fff" : "var(--fg-3)"} /> {c.label}
-                  <span style={{ minWidth: 20, height: 19, padding: "0 6px", borderRadius: 10, display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-mono)", fontSize: 11.5, fontWeight: 700, background: on ? "rgba(255,255,255,.22)" : "var(--cream-tert)", color: on ? "#fff" : "var(--fg-2)" }}>{counts[c.id] ?? 0}</span>
+        <div className="mb-[22px] flex flex-col gap-4">
+          <div className="max-w-[420px]">
+            <TextField
+              value={term}
+              onChange={setTerm}
+              icon={<Search />}
+              placeholder="Buscar por pregunta o respuesta…"
+              rightSlot={term ? (
+                <button
+                  type="button"
+                  onClick={() => setTerm("")}
+                  aria-label="Limpiar búsqueda"
+                  className="flex size-[26px] cursor-pointer items-center justify-center rounded-full bg-cream-tert"
+                >
+                  <X className="size-3.5 text-fg-2" />
                 </button>
-              );
-            })}
+              ) : undefined}
+            />
           </div>
+          <FaqChips value={cat} onChange={setCat} counts={counts} />
         </div>
       )}
 
-      {!sinDatos && !noResults && <div style={{ fontSize: 13.5, color: "var(--fg-3)", marginBottom: 14 }}>{visible.length} {visible.length === 1 ? "pregunta" : "preguntas"}{cat !== "todas" && <> · {CAT_BY_ID[cat].label.toLowerCase()}</>}{term.trim() && <> · resultados para «{term.trim()}»</>}</div>}
-
-      {sinDatos || noResults ? (
-        <div style={{ padding: "60px 32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", background: "var(--surface)", border: "1px dashed var(--sand)", borderRadius: "var(--radius-lg)" }}>
-          <span style={{ width: 64, height: 64, borderRadius: 16, background: sinDatos ? "var(--green-050)" : "var(--cream-tert)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>{sinDatos ? <MessagesSquare size={30} color="var(--green-800)" /> : <SearchX size={30} color="var(--fg-3)" />}</span>
-          <h2 style={{ margin: "0 0 8px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>{sinDatos ? "Todavía no cargaste preguntas frecuentes" : term.trim() ? "No encontramos preguntas relacionadas" : "No hay preguntas en esta categoría"}</h2>
-          <p style={{ margin: "0 auto 20px", color: "var(--fg-2)", fontSize: 15, maxWidth: 440 }}>{sinDatos ? "Empezá creando la primera. Cada entrada necesita una pregunta y su respuesta." : term.trim() ? <>No hay coincidencias para <strong style={{ color: "var(--fg-1)" }}>«{term.trim()}»</strong>. Probá con otra palabra.</> : "Probá con otra categoría o seleccioná «Todas» para ver el listado completo."}</p>
-          {sinDatos ? <button type="button" className="btn btn-primary" onClick={() => setEditor({ open: true, item: null })}><Plus size={17} /> Cargá una pregunta</button> : <button type="button" className="btn btn-neutral" onClick={() => { setTerm(""); setCat("todas"); }}><RotateCcw size={17} /> Limpiar filtros</button>}
+      {/* Contador */}
+      {!sinDatos && !noResults && (
+        <div className="mb-3.5 text-[13.5px] text-fg-3">
+          {visible.length} {visible.length === 1 ? "pregunta" : "preguntas"}
+          {cat !== "todas" && <> · {etiquetaCat(cat).toLowerCase()}</>}
+          {term.trim() && <> · resultados para «{term.trim()}»</>}
         </div>
+      )}
+
+      {/* Listado / estado vacío */}
+      {sinDatos ? (
+        <FaqVacio kind="sin-datos" term="" onClear={limpiar} onNueva={nueva} />
+      ) : noResults ? (
+        <FaqVacio kind={term.trim() ? "sin-busqueda" : "sin-categoria"} term={term.trim()} onClear={limpiar} onNueva={nueva} />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {visible.map((it) => <FaqItemRow key={it.id} item={it} term={term} open={openId === it.id} onToggle={() => setOpenId(openId === it.id ? null : it.id)} onEdit={() => setEditor({ open: true, item: it })} onDelete={() => setBorrar(it)} />)}
+        <div className="flex flex-col gap-3">
+          {visible.map((it) => (
+            <FaqFila
+              key={it.id}
+              item={it}
+              term={term}
+              open={openId === it.id}
+              onToggle={() => setOpenId(openId === it.id ? null : it.id)}
+              onEdit={() => setEditor({ item: it })}
+              onDelete={() => { setErrorBorrar(null); setBorrar(it); }}
+            />
+          ))}
         </div>
       )}
 
-      {editor?.open && <EditorModal item={editor.item} busy={saving} onCancel={() => setEditor(null)} onSave={onSave} />}
-      {borrar && (
-        <div onMouseDown={(e) => { if (e.target === e.currentTarget) setBorrar(null); }} style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(42,38,32,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(2px)" }}>
-          <div className="pop" style={{ background: "var(--surface)", width: "min(480px, 100%)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-pop)" }}>
-            <div style={{ padding: "26px 26px 6px", textAlign: "center" }}>
-              <span style={{ width: 56, height: 56, borderRadius: 14, background: "var(--danger-fill)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}><Trash2 size={26} color="var(--danger-fg)" /></span>
-              <h2 style={{ margin: "0 0 8px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>¿Eliminar esta pregunta?</h2>
-              <p style={{ margin: "0 auto", maxWidth: 380, color: "var(--fg-2)", fontSize: 14.5, lineHeight: 1.5 }}>Se quitará de la base de conocimiento y dejará de mostrarse a los usuarios. Esta acción no se puede deshacer.</p>
-              <div style={{ marginTop: 18, padding: "12px 14px", background: "var(--cream-tert)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius)", textAlign: "left", display: "flex", alignItems: "flex-start", gap: 11 }}><HelpCircle size={18} color="var(--fg-3)" style={{ marginTop: 1, flexShrink: 0 }} /><span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 14.5, color: "var(--fg-1)", lineHeight: 1.4 }}>{borrar.q}</span></div>
-            </div>
-            <div style={{ display: "flex", justifyContent: "center", gap: 12, padding: "18px 26px 24px" }}>
-              <button type="button" className="btn btn-neutral" onClick={() => setBorrar(null)} disabled={deleting}><X size={17} /> Cancelar</button>
-              <button type="button" className="btn" onClick={() => onDelete(borrar)} disabled={deleting} style={{ background: "var(--danger)", color: "#fff", boxShadow: "inset 0 -2px 0 var(--danger-fg)" }}>{deleting ? <Loader size={17} className="spin" /> : <Trash2 size={17} />} Eliminar</button>
-            </div>
-          </div>
-        </div>
+      {editor && (
+        <FaqEditor
+          key={editor.item?.id ?? "nueva"}
+          item={editor.item}
+          busy={guardando}
+          error={errorEditor}
+          onCancel={cerrarEditor}
+          onSave={guardar}
+        />
       )}
-      {toast && <div className="pop" style={{ position: "fixed", right: 24, bottom: 24, zIndex: 90, maxWidth: 400, background: "var(--green-800)", color: "#fff", borderRadius: "var(--radius)", padding: "14px 18px", display: "flex", alignItems: "center", gap: 11, fontWeight: 500, fontSize: 14.5, boxShadow: "var(--shadow-pop)" }}><Check size={19} color="#fff" /> {toast}</div>}
-    </div>
+      {borrar && (
+        <FaqEliminar
+          item={borrar}
+          busy={borrando}
+          error={errorBorrar}
+          onCancel={() => setBorrar(null)}
+          onConfirm={confirmarBorrado}
+        />
+      )}
+      {toast && <Toast tone="success" title={toast} />}
+    </>
   );
 }
 
+/* ---- Página ------------------------------------------------------------- */
 export default function FaqAdminClient() {
   const { data, isLoading, error, reload } = useFaq();
+  // El editor vive acá arriba porque lo abre el botón del encabezado, que queda
+  // fuera del <AsyncBoundary>. Se habilita recién con el listado cargado: el
+  // alta se suma a la lista local.
+  const [editor, setEditor] = useState<{ item: FaqItem | null } | null>(null);
+
   return (
-    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando preguntas…">
-      {data && <Inner initial={data} />}
-    </AsyncBoundary>
+    <div className="mx-auto max-w-[920px] px-7 pt-7 pb-[88px]">
+      {/* Breadcrumb */}
+      <div className="mb-3.5 flex items-center gap-2.5 text-[13.5px] text-fg-3">
+        <span>Soporte</span>
+        <ChevronRight className="size-[15px]" />
+        <span className="font-medium text-fg-2">Preguntas frecuentes</span>
+      </div>
+
+      {/* Encabezado */}
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-5">
+        <div className="min-w-[280px]">
+          <div className="mb-3 flex items-center gap-3.5">
+            <span className="flex size-[50px] shrink-0 items-center justify-center rounded-[14px] border border-green-100 bg-green-050 text-green-800">
+              <MessagesSquare className="size-[25px]" />
+            </span>
+            <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">Preguntas frecuentes</h1>
+          </div>
+          <p className="max-w-[620px] text-[15.5px] leading-normal text-fg-2">
+            Mantené la base de conocimiento que consultan los usuarios. Cada entrada necesita una pregunta y su respuesta.
+          </p>
+        </div>
+        <Button size="lg" onClick={() => setEditor({ item: null })} disabled={isLoading || !!error}>
+          <Plus className="size-[18px]" /> Cargá una pregunta
+        </Button>
+      </div>
+
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<FaqEsqueleto />}>
+        <FaqGestion initial={data} editor={editor} setEditor={setEditor} />
+      </AsyncBoundary>
+    </div>
   );
 }
