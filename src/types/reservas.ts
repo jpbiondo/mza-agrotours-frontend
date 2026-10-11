@@ -35,6 +35,8 @@ export interface ReservaDetalle extends ReservaResumen {
   establecimientoId: string;
   /** Ordenados por renglón. */
   asistentes: AsistenteReserva[];
+  /** El visitante ya la valoró: sólo se valora una vez. */
+  calificada: boolean;
 }
 
 /** Qué pasaría si se cancela ahora (GET /reserva/cancelarReservaCondicion). */
@@ -53,3 +55,12 @@ export type ResultadoCancelacion =
 
 /** Por qué no se pudo consultar o cancelar. `tecnico` = red, 5xx o un code que no conocemos. */
 export type ErrorCancelacion = "noEncontrada" | "estadoInvalido" | "yaTermino" | "tecnico";
+
+/** Por qué no se pudo valorar. `tecnico` = red, 5xx o un code que no conocemos. */
+export type ErrorValoracion =
+  | "noFinalizada"
+  | "yaValorada"
+  | "noEncontrada"
+  /** El backend rechazó los datos (puntaje o reseña fuera de rango). */
+  | "invalida"
+  | "tecnico";

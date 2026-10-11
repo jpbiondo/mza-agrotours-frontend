@@ -2,20 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Share2, Check, X, MapPin, Users, ChevronLeft, ChevronRight, SearchX,
-  ArrowRight, Sprout, ChevronDown, Navigation, Droplets, ExternalLink, MessageCircle, Loader,
+  ArrowRight, Sprout, ChevronDown, Navigation, Droplets, ExternalLink,
   Sun, CloudSun, Cloud, Cloudy, CloudDrizzle, CloudRain, CloudLightning, CloudSnow, CloudFog,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { Button, Skeleton, buttonClasses } from "@/components/ui";
+import { Skeleton, buttonClasses } from "@/components/ui";
 import { useActividadPublica } from "@/hooks/useCatalogoActividades";
 import { usePronosticoClima } from "@/hooks/useClima";
-import { useChatDeActividad } from "@/hooks/useChats";
-import { useChatDrawer } from "@/stores/chatDrawerStore";
+import ContactarEstablecimiento from "@/components/chat/ContactarEstablecimiento";
+import MapaEmbed, { HAY_MAPA_EMBED, consultaMapa, urlComoLlegar } from "@/components/MapaEmbed";
 import BookingWidget from "./BookingWidget";
 import type { ActividadPublica, FotoRef } from "@/types/catalogo";
 import type { CondicionClima, DiaPronostico } from "@/types/clima";
@@ -144,46 +143,18 @@ function FaqRow({ q, a }: { q: string; a: string }) {
 
 /* ---- Establecimiento --------------------------------------------------- */
 
-/**
- * "Ver detalle" lleva a la página del establecimiento. Si el visitante ya tiene
- * un chat sobre esta actividad, "Continuar chat" lo abre en el drawer global del
- * header; si no, "Contactar" abre uno nuevo con un mensaje de arranque, y el chat
- * se crea recién al enviarlo. Sin sesión no hay drawer: manda a iniciar sesión.
- */
+/** "Ver detalle" lleva a la página del establecimiento; "Contactar" abre el chat. */
 function AccionesEstablecimiento({ id, actividadId, actividadNombre }: {
   id: string;
   actividadId: string;
   actividadNombre: string;
 }) {
-  const router = useRouter();
-  const chat = useChatDeActividad(actividadId);
-  const abrirChat = useChatDrawer((s) => s.abrir);
-
-  function contactar() {
-    if (chat.estado === "sin-sesion") {
-      router.push("/acceso");
-      return;
-    }
-    if (chat.estado !== "listo") return;
-    // El chat se titula con la actividad, igual que lo deja el backend en el inbox.
-    abrirChat({
-      id: chat.chatId,
-      establecimientoId: id,
-      titulo: actividadNombre,
-      nuevo: chat.existe ? undefined : { actividadId },
-    });
-  }
-
-  const existe = chat.estado === "listo" && chat.existe;
   return (
     <div className="mt-3.5 flex flex-wrap gap-2">
       <Link href={`/establecimientos/${id}`} className={buttonClasses({ size: "sm" })}>
         Ver detalle <ArrowRight size={15} />
       </Link>
-      <Button variant="neutral" size="sm" onClick={contactar} disabled={chat.estado === "cargando"}>
-        {chat.estado === "cargando" ? <Loader size={15} className="spin" aria-hidden /> : <MessageCircle size={15} aria-hidden />}
-        {existe ? "Continuar chat" : "Contactar"}
-      </Button>
+      <ContactarEstablecimiento actividadId={actividadId} establecimientoId={id} titulo={actividadNombre} size="sm" />
     </div>
   );
 }
@@ -191,64 +162,21 @@ function AccionesEstablecimiento({ id, actividadId, actividadNombre }: {
 /* ---- Ubicación --------------------------------------------------------- */
 
 /**
- * Clave de la Embed API de Google Maps. Viaja en la URL del iframe, así que
- * termina en el bundle del cliente: en la consola de Google tiene que estar
- * restringida por referrer al dominio del sitio, y limitada a la Embed API.
- */
-const GOOGLE_MAPS_EMBED_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY ?? "";
-
-/**
- * Qué se busca en el mapa. El detalle no manda coordenadas, sólo la dirección
- * que escribió el productor, así que se le agrega el departamento y la
- * provincia: "San Martín 1250" solo existe en media Argentina.
- */
-function consultaMapa(a: ActividadPublica): string {
-  return [a.direccion, a.establecimiento.departamento, "Mendoza, Argentina"].filter(Boolean).join(", ");
-}
-
-/** URL del embed en modo `place`, que resuelve la dirección como búsqueda de texto. */
-function urlEmbed(consulta: string): string {
-  const qs = new URLSearchParams({
-    key: GOOGLE_MAPS_EMBED_KEY,
-    q: consulta,
-    language: "es",
-    region: "AR",
-  });
-  return `https://www.google.com/maps/embed/v1/place?${qs.toString()}`;
-}
-
-/**
- * Mapa del establecimiento con la Embed API de Google. El modo `place` busca por
- * texto, no por coordenadas, así que una dirección mal cargada cae en el centro
- * del departamento en vez de marcar un lugar equivocado.
- *
- * Sin `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` el iframe no se dibuja —Google
- * devolvería su propio cartel de error— y queda sólo la barra de la dirección,
- * que con el botón "Cómo llegar" sigue sirviendo igual.
+ * Mapa del establecimiento y, debajo, la dirección con "Cómo llegar".
  *
  * Esa barra va **debajo** del mapa y no flotando encima como en el diseño: ahí
  * el mapa era un dibujo y acá es un iframe que se arrastra, así que una tarjeta
  * encima le comería los clicks y taparía la atribución de Google.
  */
 function MapaUbicacion({ a }: { a: ActividadPublica }) {
-  const consulta = consultaMapa(a);
+  const consulta = consultaMapa(a.direccion, a.establecimiento.departamento);
   const lugar = [a.establecimiento.nombre, a.establecimiento.departamento].filter(Boolean).join(" · ");
   return (
     <Block>
       <SectionTitle sub={lugar || undefined}>Ubicación</SectionTitle>
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        {GOOGLE_MAPS_EMBED_KEY !== "" && (
-          <iframe
-            title={`Mapa de ${a.establecimiento.nombre || a.nombre}`}
-            src={urlEmbed(consulta)}
-            /* Está cerca del final de la página: no hace falta cargarlo hasta llegar. */
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            allowFullScreen
-            style={{ display: "block", width: "100%", height: 280, border: "none" }}
-          />
-        )}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", padding: "14px 18px", borderTop: GOOGLE_MAPS_EMBED_KEY !== "" ? "1px solid var(--outline-variant)" : "none" }}>
+        <MapaEmbed consulta={consulta} titulo={`Mapa de ${a.establecimiento.nombre || a.nombre}`} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", padding: "14px 18px", borderTop: HAY_MAPA_EMBED ? "1px solid var(--outline-variant)" : "none" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <MapPin size={18} color="var(--brown-700)" style={{ flexShrink: 0 }} />
             <div style={{ minWidth: 0 }}>
@@ -259,7 +187,7 @@ function MapaUbicacion({ a }: { a: ActividadPublica }) {
             </div>
           </div>
           <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(consulta)}`}
+            href={urlComoLlegar(consulta)}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-neutral btn-sm"

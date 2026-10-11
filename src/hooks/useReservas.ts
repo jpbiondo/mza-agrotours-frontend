@@ -4,8 +4,8 @@ import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { conToken } from "@/lib/sesion";
 import type {
-  AsistenteReserva, CondicionCancelacion, ErrorCancelacion, ReservaDetalle, ReservaResumen,
-  ResultadoCancelacion,
+  AsistenteReserva, CondicionCancelacion, ErrorCancelacion, ErrorValoracion, ReservaDetalle,
+  ReservaResumen, ResultadoCancelacion,
 } from "@/types/reservas";
 
 /**
@@ -156,6 +156,7 @@ export function useReservas(): UseReservasReturn {
 interface ReservaDetalleBackend extends ReservaBackend {
   idEstablecimiento?: string | null;
   detalleDTOs?: unknown;
+  calificada?: boolean | null;
 }
 
 /** Renglón crudo de `detalleDTOs` (ConsultarReservaDetalleDTO). */
@@ -185,6 +186,7 @@ function aDetalle(r: ReservaDetalleBackend): ReservaDetalle {
     ...aResumen(r, 0),
     establecimientoId: r.idEstablecimiento ?? "",
     asistentes: aAsistentes(r.detalleDTOs),
+    calificada: r.calificada === true,
   };
 }
 
@@ -370,6 +372,56 @@ export function useCancelarReserva(idReserva: string) {
   }
 
   return { consultarCondicion, cancelar, cancelando };
+}
+
+/* ---- Valoración ---------------------------------------------------------- */
+
+const ERRORES_VALORACION: Record<string, ErrorValoracion> = {
+  "CAL.reservaNoFinalizada": "noFinalizada",
+  "CAL.yaCalificada": "yaValorada",
+  notFound: "noEncontrada",
+  validationError: "invalida",
+};
+
+function aErrorValoracion(code: string | undefined): ErrorValoracion {
+  return (code && ERRORES_VALORACION[code]) || "tecnico";
+}
+
+/**
+ * Valoración de una reserva Finalizada del visitante (POST
+ * /calificaciones/reserva/{uuid}). Se valora una sola vez: después el detalle
+ * llega con `calificada`. La reseña es opcional; vacía no se manda, porque el
+ * backend exige entre 20 y 2000 caracteres si viene.
+ */
+export function useValorarReserva(idReserva: string) {
+  const [enviando, setEnviando] = useState(false);
+
+  async function valorar(
+    puntaje: number,
+    resenia: string,
+  ): Promise<{ ok: true } | { ok: false; error: ErrorValoracion }> {
+    setEnviando(true);
+    try {
+      const body = resenia ? { puntaje, resenia } : { puntaje };
+      const res = await conToken((token) => apiFetch<unknown>(
+        `/calificaciones/reserva/${encodeURIComponent(idReserva)}`,
+        { method: "POST", token, body: JSON.stringify(body) },
+      ));
+      const env = comoEnvelope<unknown>(res);
+      return env.ok ? { ok: true } : { ok: false, error: aErrorValoracion(env.code) };
+    } catch (e) {
+      // 2xx con cuerpo vacío: se registró igual.
+      if (e instanceof SyntaxError) return { ok: true };
+      if (e instanceof ApiError) {
+        return { ok: false, error: e.status === 404 ? "noEncontrada" : aErrorValoracion(e.code) };
+      }
+      return { ok: false, error: "tecnico" };
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return { valorar, enviando };
 }
 
 /* ---- Contrato de POST /reserva/reservar ----------------------------------- */
