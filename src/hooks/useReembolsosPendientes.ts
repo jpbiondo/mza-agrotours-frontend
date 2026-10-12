@@ -41,7 +41,7 @@ function aReembolso(r: ReembolsoBackend, n: number): ReembolsoPendiente {
   };
 }
 
-/** Sin GESTIONAR_REEMBOLSOS el backend contesta 403 sin code. */
+/** Sin GESTIONAR_REEMBOLSOS_PENDIENTES el backend contesta 403 sin code. */
 function mensajeLista(e: unknown): string {
   if (e instanceof ApiError && e.status === 403) {
     return "Tu rol en este establecimiento no incluye gestionar reembolsos.";
