@@ -15,7 +15,7 @@ import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import {
   REEMBOLSOS_POR_PAGINA, useReembolsar, useReembolsosPendientes,
 } from "@/hooks/useReembolsosPendientes";
-import { fmtDiaLargo, fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
+import { fmtCodigoReserva, fmtDiaLargo, fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ReembolsoPendiente } from "@/types/reembolsos";
 
@@ -149,17 +149,19 @@ function SinPendientes() {
 
 /* ---- Detalle ------------------------------------------------------------- */
 
-function Dato({ label, children, sub, grande, mono }: {
+function Dato({ label, children, sub, grande, mono, title }: {
   label: string;
   children: ReactNode;
   sub?: string;
   grande?: boolean;
   mono?: boolean;
+  title?: string;
 }) {
   return (
     <div className="border-b border-dashed border-cream-tert py-3">
       <div className="t-label mb-1.5">{label}</div>
       <div
+        title={title}
         className={cn(
           "font-medium text-fg-1",
           mono ? "font-mono" : "font-sans",
@@ -208,6 +210,9 @@ function Detalle({ reembolso, error, reembolsando, onCerrar, onReembolsar }: {
             <SheetBody className="px-6 py-4">
               <Dato label="Visitante" sub={reembolso.emailVisitante || undefined}>
                 {reembolso.visitante || "—"}
+              </Dato>
+              <Dato label="Reserva" mono title={reembolso.reservaId || undefined}>
+                {fmtCodigoReserva(reembolso.reservaId)}
               </Dato>
               <Dato label="Fecha de la actividad">
                 {reembolso.diaActividad

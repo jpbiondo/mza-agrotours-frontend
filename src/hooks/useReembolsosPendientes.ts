@@ -19,6 +19,7 @@ interface ReembolsoBackend {
   montoReembolso?: unknown;
   nombreVisitante?: string;
   emailVisitante?: string;
+  reservaId?: string;
   cuposReservados?: unknown;
   nombreActividad?: string;
   diaActividad?: unknown;
@@ -33,6 +34,7 @@ function aReembolso(r: ReembolsoBackend, n: number): ReembolsoPendiente {
     monto: numero(r.montoReembolso),
     visitante: r.nombreVisitante ?? "",
     emailVisitante: r.emailVisitante ?? "",
+    reservaId: r.reservaId ?? "",
     cupos: numero(r.cuposReservados),
     actividad: r.nombreActividad ?? "",
     diaActividad: leerFechaLocal(r.diaActividad),

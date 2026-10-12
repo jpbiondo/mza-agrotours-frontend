@@ -11,6 +11,8 @@ export interface ReembolsoPendiente {
   monto: number;
   visitante: string;
   emailVisitante: string;
+  /** UUID de la reserva cancelada. `""` si no vino. */
+  reservaId: string;
   /** Personas de la reserva. */
   cupos: number;
   actividad: string;
