@@ -13,7 +13,7 @@ const SIN_PERMISO =
 
 export default function ReembolsosPage() {
   return (
-    <GuardPermisoProductor permiso={PermisoProductor.GESTIONAR_REEMBOLSOS} motivo={SIN_PERMISO}>
+    <GuardPermisoProductor permiso={PermisoProductor.GESTIONAR_REEMBOLSOS_PENDIENTES} motivo={SIN_PERMISO}>
       <ReembolsosClient />
     </GuardPermisoProductor>
   );

@@ -53,7 +53,7 @@ const SIDEBAR: Row[] = [
   { id: "reservas", icon: CalendarCheck, label: "Reservas", seccion: "reservas" },
   {
     id: "reembolsos", icon: ReceiptText, label: "Reembolsos pendientes", seccion: "reembolsos",
-    permiso: PermisoProductor.GESTIONAR_REEMBOLSOS,
+    permiso: PermisoProductor.GESTIONAR_REEMBOLSOS_PENDIENTES,
   },
   { section: "Mensajes" },
   { id: "chats", icon: MessageSquare, label: "Chats", seccion: "chats", badge: 3 },
