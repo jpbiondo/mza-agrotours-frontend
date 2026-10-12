@@ -7,11 +7,11 @@ import { aCultivos } from "@/hooks/useTiposCultivo";
 import type { ActividadProd, ConsultaActividadesProd, DiaHorario, EstadoActividad } from "@/types/actividad-prod";
 
 /**
- * El listado de un establecimiento es chico, así que se pide una sola página grande
+ * Ruta base, sin query: el listado le suma la suya (búsqueda, estado y
+ * paginado) y la faceta de estados cuelga `/estados` de acá.
  */
 function actividadesPath(establecimientoId: string): string {
-  const qs = new URLSearchParams({ page: "0", size: "200" });
-  return `/establecimientos/${encodeURIComponent(establecimientoId)}/actividades?${qs.toString()}`;
+  return `/establecimientos/${encodeURIComponent(establecimientoId)}/actividades`;
 }
 
 /** Fila cruda del listado. Todo opcional: defensivo. */
