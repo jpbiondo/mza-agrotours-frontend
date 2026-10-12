@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import GuardRol from "@/components/GuardRol";
+import { PermisoAdmin } from "@/lib/permisos";
 import ImpagasClient from "./ImpagasClient";
 
 export const metadata: Metadata = {
@@ -7,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function ImpagasPage() {
-  return <ImpagasClient />;
+  return (
+    <GuardRol rol="admin" permiso={PermisoAdmin.LEER_REEMBOLSOS}>
+      <ImpagasClient />
+    </GuardRol>
+  );
 }
