@@ -3,8 +3,9 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { leerFechaLocal } from "@/lib/format";
+import { conToken } from "@/lib/sesion";
 import type {
-  ContactoReembolso, EstadoReembolso, MetodoPago, PagoReembolsoSistema, PersonaReembolso, Reembolso,
+  ContactoReembolso, DatosPagoReembolso, EstadoReembolso, PagoReembolsoSistema, PersonaReembolso, Reembolso,
   ReembolsoDetalle,
 } from "@/types/impagas";
 
@@ -135,20 +136,21 @@ interface PersonaBackend {
 interface PagoBackend {
   idPago?: string | null;
   fechaHoraPago?: unknown;
+  idPagoExterno?: string | null;
   metodoPago?: string | null;
+  fechaHoraCarga?: unknown;
+  administrador?: string | null;
 }
-
-const METODO: Record<string, MetodoPago> = {
-  MANUAL: "manual",
-  MERCADO_PAGO: "mercadoPago",
-};
 
 function aPago(p: PagoBackend | null | undefined): PagoReembolsoSistema | null {
   if (!p || typeof p !== "object") return null;
   return {
     id: p.idPago ?? "",
     fecha: leerFechaLocal(p.fechaHoraPago),
-    metodo: METODO[(p.metodoPago ?? "").trim()] ?? null,
+    metodo: p.metodoPago?.trim() ?? "",
+    idExterno: p.idPagoExterno?.trim() ?? "",
+    fechaCarga: leerFechaLocal(p.fechaHoraCarga),
+    administrador: p.administrador?.trim() ?? "",
   };
 }
 
@@ -207,6 +209,8 @@ interface UseReembolsoReturn {
    */
   notFound: boolean;
   reload: () => void;
+  /** Pisa el detalle con uno que ya devolvió una escritura, sin volver a pedirlo. */
+  reemplazar: (r: ReembolsoDetalle) => void;
 }
 
 /** Detalle de un reembolso impago o cubierto por el sistema. */
@@ -269,6 +273,11 @@ export function useReembolso(id: string): UseReembolsoReturn {
   }, [clave, id]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
+  // Con la clave vigente: queda al día sin disparar el efecto.
+  const reemplazar = useCallback(
+    (reembolso: ReembolsoDetalle) => setCargado({ clave, reembolso, error: null, notFound: false }),
+    [clave],
+  );
 
   return {
     reembolso: alDia ? cargado.reembolso : null,
@@ -276,7 +285,102 @@ export function useReembolso(id: string): UseReembolsoReturn {
     error: alDia ? cargado.error : null,
     notFound: alDia ? cargado.notFound : false,
     reload,
+    reemplazar,
   };
 }
 
-// TODO backend: cargar la transferencia de un reembolso impago (US-RESE-10).
+/* ---- Registrar el pago de un impago ------------------------------------- */
+
+const p2 = (n: number) => String(n).padStart(2, "0");
+
+/** `LocalDateTime` sin zona, que es lo que espera el backend: "2026-10-12T14:30:00". */
+function aFechaLocal(d: Date): string {
+  return (
+    `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}` +
+    `T${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`
+  );
+}
+
+/** Campos del DTO del backend → los del formulario. */
+const CAMPO: Record<string, keyof DatosPagoReembolso> = {
+  fechaHoraPago: "fecha",
+  metodoPago: "metodo",
+  idPagoExterno: "idExterno",
+};
+
+export interface ResultadoPagoReembolso {
+  ok: boolean;
+  /** Sólo si `ok`: el detalle ya actualizado, o `null` si vino sin un detalle legible. */
+  reembolso?: ReembolsoDetalle | null;
+  code?: string;
+  status?: number;
+  /** El `message` del backend, si vino. */
+  mensaje?: string;
+  /** En `validationError`: el mensaje de cada campo que rechazó. */
+  errores?: Partial<Record<keyof DatosPagoReembolso, string>>;
+  /** Mensajes de `validationError` de campos que el formulario no tiene. */
+  otros?: string[];
+}
+
+function comoRechazo(status: number | undefined, body: unknown): ResultadoPagoReembolso {
+  const b = (body ?? {}) as { code?: unknown; message?: unknown; data?: unknown };
+  const code = typeof b.code === "string" ? b.code : undefined;
+  const r: ResultadoPagoReembolso = {
+    ok: false,
+    code,
+    status,
+    mensaje: typeof b.message === "string" && b.message.trim() ? b.message.trim() : undefined,
+  };
+  if (code === "validationError" && b.data && typeof b.data === "object") {
+    const errores: ResultadoPagoReembolso["errores"] = {};
+    const otros: string[] = [];
+    for (const [campo, msg] of Object.entries(b.data as Record<string, unknown>)) {
+      if (typeof msg !== "string" || !msg.trim()) continue;
+      const nuestro = CAMPO[campo];
+      if (nuestro) errores[nuestro] = msg.trim();
+      else otros.push(msg.trim());
+    }
+    r.errores = errores;
+    r.otros = otros;
+  }
+  return r;
+}
+
+/**
+ * Registra la transferencia con la que un administrador cubrió un reembolso
+ * impago (POST /admin/reembolsos/{id}/pago-sistema). Devuelve el detalle ya
+ * en REEMBOLSADO_SISTEMA para pisar el de la pantalla sin volver a pedirlo.
+ */
+export function useRegistrarPagoReembolso() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function registrar(id: string, datos: DatosPagoReembolso): Promise<ResultadoPagoReembolso> {
+    setIsLoading(true);
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(`/admin/reembolsos/${encodeURIComponent(id)}/pago-sistema`, {
+          method: "POST",
+          token,
+          body: JSON.stringify({
+            fechaHoraPago: aFechaLocal(datos.fecha),
+            metodoPago: datos.metodo,
+            idPagoExterno: datos.idExterno,
+          }),
+        }),
+      );
+      const env = comoEnvelope<ReembolsoDetalleBackend>(res);
+      if (!env.ok) return comoRechazo(undefined, res);
+      return { ok: true, reembolso: env.data && typeof env.data === "object" ? aDetalle(env.data) : null };
+    } catch (e) {
+      if (e instanceof ApiError) return comoRechazo(e.status, e.body);
+      // `apiFetch` sólo llega a res.json() con un 2xx: un error de parseo es un
+      // pago registrado y contestado sin cuerpo.
+      if (e instanceof SyntaxError) return { ok: true, reembolso: null };
+      return { ok: false };
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return { registrar, isLoading };
+}

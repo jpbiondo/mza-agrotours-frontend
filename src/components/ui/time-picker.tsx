@@ -6,8 +6,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 
 const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
-// De a cinco minutos: alcanza para una franja horaria y evita una lista de 60.
-const MINUTOS = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
 
 interface TimePickerProps {
   id?: string;
@@ -15,6 +13,12 @@ interface TimePickerProps {
   onChange: (hhmm: string) => void;
   onBlur?: () => void;
   ref?: React.Ref<HTMLButtonElement>;
+  /**
+   * Cada cuántos minutos hay una opción. Por defecto de a cinco: alcanza para
+   * una franja horaria y evita una lista de 60. Con 1 se puede cargar la hora
+   * exacta de algo que ya pasó (una transferencia, p. ej.).
+   */
+  pasoMinutos?: number;
   disabled?: boolean;
   /** Fuera de un formulario de RHF; adentro lo marca `aria-invalid` vía `<FormControl>`. */
   error?: boolean;
@@ -31,10 +35,11 @@ interface TimePickerProps {
  * Reenvía ref/onBlur/id/aria-* al trigger para integrarse con `<FormControl>`.
  */
 export function TimePicker({
-  id, value, onChange, onBlur, ref, disabled, error: errorProp, placeholder = "--:--",
+  id, value, onChange, onBlur, ref, pasoMinutos = 5, disabled, error: errorProp, placeholder = "--:--",
   "aria-label": ariaLabel, "aria-invalid": ariaInvalid, "aria-describedby": describedBy,
 }: TimePickerProps) {
   const [open, setOpen] = useState(false);
+  const minutos = Array.from({ length: Math.ceil(60 / pasoMinutos) }, (_, i) => String(i * pasoMinutos).padStart(2, "0"));
   const [h, m] = value ? value.split(":") : ["", ""];
   const error = errorProp || ariaInvalid === true;
 
@@ -85,7 +90,7 @@ export function TimePicker({
               Min
             </div>
             <div className="flex max-h-[168px] flex-col gap-0.5 overflow-y-auto">
-              {MINUTOS.map((mm) => (
+              {minutos.map((mm) => (
                 <button key={mm} type="button" onClick={() => onChange(`${h || "00"}:${mm}`)} className={opcion(mm === m)}>
                   {mm}
                 </button>

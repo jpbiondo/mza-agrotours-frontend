@@ -1,16 +1,21 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft, Banknote, CalendarClock, CalendarDays, ChevronRight, Clock, CreditCard, HandCoins, Hash, Mail,
-  Phone, ReceiptText, SearchX, User, Users, Warehouse,
+  ArrowLeft, Banknote, CalendarClock, CalendarDays, ChevronRight, ClipboardClock, Clock, CreditCard, Fingerprint,
+  HandCoins, Hash, Mail, Phone, ReceiptText, SearchX, User, UserCheck, Users, Warehouse,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Button, EstadoBadge, Skeleton, buttonClasses } from "@/components/ui";
-import { ESTADO_META, METODO_PAGO_LABEL } from "@/data/impagas";
+import { Alert, Button, EstadoBadge, Skeleton, Toast, buttonClasses } from "@/components/ui";
+import { ESTADO_META } from "@/data/impagas";
 import { fmtDiaLocal, fmtFecha, fmtFranja, fmtHoraLocal, moneyAr } from "@/lib/format";
+import { PermisoAdmin } from "@/lib/permisos";
+import { tienePermiso } from "@/lib/roles";
 import { useReembolso } from "@/hooks/useImpagas";
+import { useAuthStore } from "@/stores/authStore";
 import type { ContactoReembolso, ReembolsoDetalle } from "@/types/impagas";
+import { RegistrarPagoModal } from "./RegistrarPagoModal";
 
 function FechaHora({ d }: { d: Date | null }) {
   if (!d) return <>—</>;
@@ -41,7 +46,11 @@ function Bloque({ icon, title, children }: { icon: React.ReactNode; title: strin
   );
 }
 
-function Cabecera({ r }: { r: ReembolsoDetalle }) {
+function Cabecera({ r, onAgregarPago }: {
+  r: ReembolsoDetalle;
+  /** Sin GESTIONAR_REEMBOLSOS no se pasa, y el botón no aparece. */
+  onAgregarPago?: () => void;
+}) {
   const meta = ESTADO_META[r.estado];
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-6 rounded-lg border border-outline-variant bg-surface px-6 py-[22px]">
@@ -63,9 +72,9 @@ function Cabecera({ r }: { r: ReembolsoDetalle }) {
           <div className="t-label mb-1">Monto a reembolsar</div>
           <div className="font-display text-[30px] leading-none font-bold text-fg-1">{moneyAr(r.monto)}</div>
         </div>
-        {/* TODO: se wirea en US-RESE-10; por ahora no hace nada. Sólo el impago: el del sistema ya se pagó. */}
-        {r.estado === "impago" && (
-          <Button><Banknote size={17} /> Agregar transferencia de reembolso</Button>
+        {/* Sólo el impago: el del sistema ya se pagó. */}
+        {r.estado === "impago" && onAgregarPago && (
+          <Button onClick={onAgregarPago}><Banknote size={17} /> Agregar transferencia de reembolso</Button>
         )}
       </div>
     </div>
@@ -77,19 +86,24 @@ function Pago({ r }: { r: ReembolsoDetalle }) {
   const p = r.pago;
   return (
     <div className="mb-6">
-      <Bloque icon={<Banknote size={17} />} title="Pago del reembolso">
+      <Bloque icon={<Banknote size={17} />} title="Pago realizado por el sistema">
         {!p ? (
           <p className="text-sm text-fg-3">Pago no registrado.</p>
         ) : (
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-            <Dato icon={<Hash size={15} />} label="ID del pago">
-              <span className="font-mono text-[12.5px] break-all">{p.id || "—"}</span>
-            </Dato>
             <Dato icon={<CalendarClock size={15} />} label="Fecha y hora del pago">
               <span className="font-mono"><FechaHora d={p.fecha} /></span>
             </Dato>
-            <Dato icon={<CreditCard size={15} />} label="Método de pago">
-              {p.metodo ? METODO_PAGO_LABEL[p.metodo] : "—"}
+            <Dato icon={<CreditCard size={15} />} label="Método de pago">{p.metodo || "—"}</Dato>
+            <Dato icon={<Hash size={15} />} label="ID de la operación">
+              <span className="font-mono text-[12.5px] break-all">{p.idExterno || "—"}</span>
+            </Dato>
+            <Dato icon={<UserCheck size={15} />} label="Registrado por">{p.administrador || "—"}</Dato>
+            <Dato icon={<ClipboardClock size={15} />} label="Registrado el">
+              <span className="font-mono"><FechaHora d={p.fechaCarga} /></span>
+            </Dato>
+            <Dato icon={<Fingerprint size={15} />} label="ID del pago">
+              <span className="font-mono text-[12.5px] break-all">{p.id || "—"}</span>
             </Dato>
           </div>
         )}
@@ -195,7 +209,36 @@ function DetalleSkeleton() {
 }
 
 export default function DetalleReembolsoClient({ id }: { id: string }) {
-  const { reembolso, isLoading, error, notFound, reload } = useReembolso(id);
+  const { reembolso, isLoading, error, notFound, reload, reemplazar } = useReembolso(id);
+  // LEER_REEMBOLSOS ya lo exige el guard de la ruta; acá se distingue quién
+  // además puede registrar el pago.
+  const accesos = useAuthStore((s) => s.accesos);
+  const puedeGestionar = tienePermiso(accesos, PermisoAdmin.GESTIONAR_REEMBOLSOS);
+  const [registrando, setRegistrando] = useState(false);
+  /** Por qué el detalle se recargó por su cuenta: queda a la vista hasta la próxima acción. */
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4200);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  function onRegistrado(r: ReembolsoDetalle | null) {
+    setRegistrando(false);
+    setAviso(null);
+    // El listado de impagas no se cachea —se pide al montar—, así que no hay nada que invalidar.
+    if (r) reemplazar(r);
+    else reload();
+    setToast("Pago del reembolso registrado.");
+  }
+
+  function onDesactualizado(mensaje: string) {
+    setRegistrando(false);
+    setAviso(mensaje);
+    reload();
+  }
 
   return (
     <div className="mx-auto max-w-[1280px] px-7 pt-7 pb-20">
@@ -215,12 +258,17 @@ export default function DetalleReembolsoClient({ id }: { id: string }) {
         </Link>
       </div>
 
+      {aviso && <Alert tone="warning" className="mb-6">{aviso}</Alert>}
+
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<DetalleSkeleton />} pad={72}>
         {notFound || !reembolso ? (
           <NoEncontrado />
         ) : (
           <>
-            <Cabecera r={reembolso} />
+            <Cabecera
+              r={reembolso}
+              onAgregarPago={puedeGestionar ? () => { setAviso(null); setRegistrando(true); } : undefined}
+            />
             {reembolso.estado === "sistema" && <Pago r={reembolso} />}
             <div className={GRILLA}>
               <Reserva r={reembolso} />
@@ -232,6 +280,16 @@ export default function DetalleReembolsoClient({ id }: { id: string }) {
           </>
         )}
       </AsyncBoundary>
+
+      {registrando && reembolso?.estado === "impago" && (
+        <RegistrarPagoModal
+          reembolso={reembolso}
+          onRegistrado={onRegistrado}
+          onDesactualizado={onDesactualizado}
+          onCerrar={() => setRegistrando(false)}
+        />
+      )}
+      {toast && <Toast tone="success" title={toast} />}
     </div>
   );
 }
