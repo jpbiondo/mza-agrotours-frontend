@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import DashboardSkeleton from "@/components/panel/DashboardSkeleton";
 import { useEstablecimientoPorDefecto } from "@/hooks/useEstablecimientos";
 import { rutaPanel } from "@/lib/rutasPanel";
 import EmptyEstablecimiento from "./EmptyEstablecimiento";
@@ -21,5 +22,6 @@ export default function RedirigirPanel() {
   }, [listo, destino, router]);
 
   if (listo && !destino) return <EmptyEstablecimiento />;
-  return null;
+  // Mientras decide y mientras navega: casi siempre termina en el dashboard.
+  return <DashboardSkeleton />;
 }

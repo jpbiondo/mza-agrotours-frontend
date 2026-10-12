@@ -4,6 +4,7 @@ import {
   CalendarCheck, Users, Grape, Banknote, TrendingUp, Download, Plus,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
+import DashboardSkeleton from "@/components/panel/DashboardSkeleton";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { usePanelDashboard } from "@/hooks/usePanelDashboard";
 import type { PanelCultivo, PanelReserva, PanelStat, ReservaTone, CultivoState } from "@/types/panel";
@@ -112,7 +113,7 @@ export default function PanelClient() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
 
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando tu panel…">
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<DashboardSkeleton />}>
         {data && (
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "32px 28px 80px" }}>
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
