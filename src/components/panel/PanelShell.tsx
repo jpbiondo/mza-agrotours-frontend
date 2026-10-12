@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -48,8 +48,11 @@ const SIDEBAR: Row[] = [
   { section: "Análisis" },
   { id: "panel", icon: LayoutDashboard, label: "Panel", seccion: "" },
   { id: "estadisticas", icon: BarChart3, label: "Estadísticas", seccion: "estadisticas" },
-  { section: "Operación" },
-  { id: "actividades", icon: Grape, label: "Experiencias", seccion: "actividades" },
+  { section: "Actividades" },
+  {
+    id: "actividades", icon: Grape, label: "Actividades", seccion: "actividades",
+    permiso: PermisoProductor.GESTIONAR_ACTIVIDAD,
+  },
   { id: "reservas", icon: CalendarCheck, label: "Reservas", seccion: "reservas" },
   {
     id: "reembolsos", icon: ReceiptText, label: "Reembolsos pendientes", seccion: "reembolsos",
@@ -59,10 +62,16 @@ const SIDEBAR: Row[] = [
   { id: "chats", icon: MessageSquare, label: "Chats", seccion: "chats", badge: 3 },
   { section: "Establecimiento" },
   { id: "datos", icon: Home, label: "Datos del establecimiento", seccion: "datos" },
-  { id: "productores", icon: Users, label: "Productores", seccion: "productores" },
+  {
+    id: "productores", icon: Users, label: "Productores", seccion: "productores",
+    permiso: PermisoProductor.LEER_PRODUCTOR,
+  },
   { id: "cultivos", icon: Sprout, label: "Cultivos", href: "/cultivos" },
   { section: "Configuración" },
-  { id: "roles", icon: ShieldCheck, label: "Roles y permisos", seccion: "roles" },
+  {
+    id: "roles", icon: ShieldCheck, label: "Roles y permisos", seccion: "roles",
+    permiso: PermisoProductor.LEER_ROLES_PRODUCTOR,
+  },
 ];
 
 /** A dónde lleva un ítem estando en `establecimientoId`. */
@@ -441,11 +450,19 @@ export default function PanelShell({ children }: { children: ReactNode }) {
   const { lista, activo, elegir, listo } = useEstablecimientos();
   const active = idActivo(pathname, activo?.id ?? null);
   const accesos = useAuthStore((s) => s.accesos);
-  const visibles = activo
-    ? SIDEBAR.filter((row) =>
-        "section" in row || !row.permiso ||
-        tienePermiso(accesos, row.permiso, { tipoPermiso: TipoPermiso.PRODUCTOR, establecimientoId: activo.id }))
-    : [];
+  const visibles = useMemo(() => {
+    if (!activo) return [];
+    const conPermiso = SIDEBAR.filter((row) =>
+      "section" in row || !row.permiso ||
+      tienePermiso(accesos, row.permiso, { tipoPermiso: TipoPermiso.PRODUCTOR, establecimientoId: activo.id }));
+    // Igual que en AdminShell: si se filtraron todos los ítems de una sección,
+    // su rótulo quedaría suelto, así que se conserva sólo cuando lo sigue un ítem.
+    return conPermiso.filter((row, i) => {
+      if (!("section" in row)) return true;
+      const siguiente = conPermiso[i + 1];
+      return !!siguiente && !("section" in siguiente);
+    });
+  }, [activo, accesos]);
 
   const bloqueado = listo && !!activo?.suspension;
 
