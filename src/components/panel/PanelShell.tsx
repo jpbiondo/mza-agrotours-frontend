@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BarChart3, Grape, CalendarCheck, MessageSquare, Home, ShieldCheck,
   ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound, Users, ReceiptText,
+  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -46,9 +47,9 @@ type Row = { section: string } | NavItem;
  * primer grupo va sin rótulo: es la vista rápida del establecimiento.
  */
 const SIDEBAR: Row[] = [
-  { id: "panel", icon: LayoutDashboard, label: "Panel", seccion: "" },
+  { id: "panel", icon: Home, label: "Panel", seccion: "" },
   { id: "estadisticas", icon: BarChart3, label: "Estadísticas", seccion: "estadisticas" },
-  { id: "datos", icon: Home, label: "Datos del establecimiento", seccion: "datos", soloLider: true },
+  { id: "datos", icon: FileText, label: "Datos del establecimiento", seccion: "datos", soloLider: true },
   { section: "Actividades" },
   {
     id: "actividades", icon: Grape, label: "Actividades", seccion: "actividades",
