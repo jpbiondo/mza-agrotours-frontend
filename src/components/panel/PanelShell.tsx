@@ -378,7 +378,11 @@ function AccountBar({
   establecimientoId: string | null;
 }) {
   const nombre = useAuthStore((s) => s.nombre);
+  const hidratado = useAuthStore((s) => s.hasHydrated);
   const iniciales = admInitials(nombre ?? "");
+  // Sin nombre después de rehidratar es la primera visita, con el perfil todavía
+  // en camino. El rol además espera al establecimiento activo.
+  const cargando = !hidratado || !nombre;
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-2.5 border-b border-outline-variant bg-surface px-3.5 shell:gap-3 shell:px-7">
@@ -414,21 +418,32 @@ function AccountBar({
 
       <div className="hidden h-7 w-px bg-outline-variant shell:block" />
 
-      {/* Ancho fijo: el nombre llega recién al rehidratar y con ancho automático
-          la campana se corría al aparecer. Donde el diseño pone el nombre del
-          establecimiento va el rol de la cuenta en él. */}
-      <div className="hidden w-[170px] text-right leading-tight shell:block">
-        <div className="truncate text-[12.5px] text-fg-3">{rol}</div>
-        <div className="truncate text-[13.5px] font-semibold text-fg-1">{nombre ?? ""}</div>
+      {/* Donde el diseño pone el nombre del establecimiento va el rol de la
+          cuenta en él. Mientras carga, barras del alto de cada línea. */}
+      <div className="hidden text-right leading-tight shell:block">
+        {cargando || !rol ? (
+          <Skeleton className="ml-auto h-3 w-24 my-0.5" />
+        ) : (
+          <div className="truncate text-[12.5px] text-fg-3">{rol}</div>
+        )}
+        {cargando ? (
+          <Skeleton className="ml-auto mt-1 h-3.5 w-32" />
+        ) : (
+          <div className="truncate text-[13.5px] font-semibold text-fg-1">{nombre}</div>
+        )}
       </div>
 
-      <Link
-        href="/cuenta"
-        aria-label={nombre ? `Mi cuenta: ${nombre}` : "Mi cuenta"}
-        className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-full bg-brown-700 text-[13px] font-semibold text-white no-underline shadow-[inset_0_-2px_0_var(--brown-800)]"
-      >
-        {iniciales || <UserRound className="size-[18px]" />}
-      </Link>
+      {cargando ? (
+        <Skeleton className="size-[38px] shrink-0 rounded-full" />
+      ) : (
+        <Link
+          href="/cuenta"
+          aria-label={`Mi cuenta: ${nombre}`}
+          className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-full bg-brown-700 text-[13px] font-semibold text-white no-underline shadow-[inset_0_-2px_0_var(--brown-800)]"
+        >
+          {iniciales || <UserRound className="size-[18px]" />}
+        </Link>
+      )}
     </header>
   );
 }
