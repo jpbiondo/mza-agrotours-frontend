@@ -14,7 +14,7 @@ import { hoyISO } from "@/components/ui/date-picker";
 import { CropChip, IconoActividad } from "@/components/panel/actividad/identidad";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useEstadosReservaDia, useReservasDia, useResumenDia } from "@/hooks/useReservasDia";
-import { moneyAr } from "@/lib/format";
+import { fmtCodigoReserva, moneyAr } from "@/lib/format";
 import { fechaCorta, fechaLarga } from "@/lib/gestion-dias";
 import { cn } from "@/lib/utils";
 import type { ConteoEstados, EstadoReservaDia, ReservaDia, ResumenDia } from "@/types/reservas-dia";
@@ -152,7 +152,7 @@ function TarjetaReserva({ r }: { r: ReservaDia }) {
               <span className="font-display text-[17px] font-bold text-fg-1">
                 {r.personas} {r.personas === 1 ? "persona" : "personas"}
               </span>
-              <span className="font-mono text-[11.5px] text-fg-3" title={r.id}>#{r.id.slice(0, 8).toUpperCase()}</span>
+              <span className="font-mono text-[11.5px] text-fg-3" title={r.id}>{fmtCodigoReserva(r.id)}</span>
             </div>
             {r.rangos.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1.5">
