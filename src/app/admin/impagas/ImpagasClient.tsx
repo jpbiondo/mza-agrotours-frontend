@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronRight, AlertCircle, Landmark, Search, X, Warehouse, HandCoins, SearchX, User } from "lucide-react";
+import { ChevronRight, AlertCircle, Landmark, Search, X, Warehouse, HandCoins, SearchX, User, ReceiptText } from "lucide-react";
+import Link from "next/link";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { EstadoBadge, Skeleton } from "@/components/ui";
+import { Button, EstadoBadge, Skeleton, buttonClasses } from "@/components/ui";
 import { ESTADO_META } from "@/data/impagas";
 import { fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,20 @@ function Fila({ r }: { r: Reembolso }) {
         <div className="font-mono text-[12.5px] text-fg-2"><FechaHora d={r.fechaEstado} /></div>
       </td>
       <td className="p-4 text-right align-top font-mono text-[15px] font-semibold whitespace-nowrap text-fg-1">{moneyAr(r.monto)}</td>
+      <td className="p-4 align-top">
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link
+            href={`/admin/impagas/${encodeURIComponent(r.id)}`}
+            className={buttonClasses({ variant: "neutral", size: "sm", className: "whitespace-nowrap" })}
+          >
+            <ReceiptText size={15} /> Detalle
+          </Link>
+          {/* TODO: "Ir a deuda" se wirea en su propia US; por ahora no hace nada. */}
+          {r.estado === "sistema" && (
+            <Button size="sm" className="whitespace-nowrap"><Landmark size={15} /> Ir a deuda</Button>
+          )}
+        </div>
+      </td>
     </tr>
   );
 }
@@ -80,6 +95,7 @@ function TablaSkeleton() {
           <Skeleton className="h-4 w-32" />
           <Skeleton className="h-6 w-24 rounded-pill" />
           <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-8 w-28" />
         </div>
       ))}
     </div>
@@ -211,13 +227,14 @@ export default function ImpagasClient() {
         ) : (
           <div className="overflow-hidden rounded-lg border border-outline-variant bg-surface">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] border-collapse">
+              <table className="w-full min-w-[920px] border-collapse">
                 <thead>
                   <tr className="bg-cream-tert">
                     <th className={TH}>Reembolso</th>
                     <th className={TH}>Fecha y hora pedido</th>
                     <th className={TH}>Estado</th>
                     <th className={cn(TH, "text-right")}>Monto</th>
+                    <th className={cn(TH, "text-right")}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
