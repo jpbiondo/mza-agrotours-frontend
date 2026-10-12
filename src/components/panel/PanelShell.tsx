@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, BarChart3, Grape, CalendarCheck, MessageSquare, Home, Sprout, ShieldCheck,
+  LayoutDashboard, BarChart3, Grape, CalendarCheck, MessageSquare, Home, ShieldCheck,
   ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound, Users, ReceiptText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { PermisoProductor, TipoPermiso } from "@/lib/permisos";
 import { RAIZ_PANEL, rutaPanel } from "@/lib/rutasPanel";
-import { tienePermiso } from "@/lib/roles";
+import { ROL_PRODUCTOR_LIDER, tienePermiso, tieneRol } from "@/lib/roles";
 import type { EstablecimientoAcceso } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import { useEstablecimientoStore } from "@/stores/establecimientoStore";
@@ -27,12 +27,8 @@ interface NavItem {
   id: string;
   icon: LucideIcon;
   label: string;
-  /**
-   * Sección del panel, que se arma sobre el establecimiento activo (`""` es
-   * su raíz). Con `href` en cambio es un link fijo fuera del panel.
-   */
-  seccion?: string;
-  href?: string;
+  /** Sección del panel, que se arma sobre el establecimiento activo (`""` es su raíz). */
+  seccion: string;
   badge?: number;
   /**
    * Sin este permiso en el establecimiento activo el ítem no se muestra. Es
@@ -40,14 +36,19 @@ interface NavItem {
    * tiene su guard.
    */
   permiso?: PermisoProductor;
+  /** Sólo para el Productor Líder del establecimiento activo, con el mismo criterio que su pantalla. */
+  soloLider?: boolean;
 }
 type Row = { section: string } | NavItem;
 
-/** Navegación del panel del productor, mapeada a las rutas reales del repo. */
+/**
+ * Navegación del panel del productor, mapeada a las rutas reales del repo. El
+ * primer grupo va sin rótulo: es la vista rápida del establecimiento.
+ */
 const SIDEBAR: Row[] = [
-  { section: "Análisis" },
   { id: "panel", icon: LayoutDashboard, label: "Panel", seccion: "" },
   { id: "estadisticas", icon: BarChart3, label: "Estadísticas", seccion: "estadisticas" },
+  { id: "datos", icon: Home, label: "Datos del establecimiento", seccion: "datos", soloLider: true },
   { section: "Actividades" },
   {
     id: "actividades", icon: Grape, label: "Actividades", seccion: "actividades",
@@ -60,23 +61,16 @@ const SIDEBAR: Row[] = [
   },
   { section: "Mensajes" },
   { id: "chats", icon: MessageSquare, label: "Chats", seccion: "chats", badge: 3 },
-  { section: "Establecimiento" },
-  { id: "datos", icon: Home, label: "Datos del establecimiento", seccion: "datos" },
+  { section: "Equipo" },
   {
     id: "productores", icon: Users, label: "Productores", seccion: "productores",
     permiso: PermisoProductor.LEER_PRODUCTOR,
   },
-  { id: "cultivos", icon: Sprout, label: "Cultivos", href: "/cultivos" },
-  { section: "Configuración" },
-  {
-    id: "roles", icon: ShieldCheck, label: "Roles y permisos", seccion: "roles",
-    permiso: PermisoProductor.LEER_ROLES_PRODUCTOR,
-  },
+  { id: "roles", icon: ShieldCheck, label: "Roles y permisos", seccion: "roles", soloLider: true },
 ];
 
 /** A dónde lleva un ítem estando en `establecimientoId`. */
 function hrefDe(row: NavItem, establecimientoId: string): string {
-  if (row.href) return row.href;
   return row.seccion ? rutaPanel(establecimientoId, row.seccion) : rutaPanel(establecimientoId);
 }
 
@@ -452,9 +446,12 @@ export default function PanelShell({ children }: { children: ReactNode }) {
   const accesos = useAuthStore((s) => s.accesos);
   const visibles = useMemo(() => {
     if (!activo) return [];
+    const ambito = { tipoPermiso: TipoPermiso.PRODUCTOR, establecimientoId: activo.id };
     const conPermiso = SIDEBAR.filter((row) =>
-      "section" in row || !row.permiso ||
-      tienePermiso(accesos, row.permiso, { tipoPermiso: TipoPermiso.PRODUCTOR, establecimientoId: activo.id }));
+      "section" in row || (
+        (!row.permiso || tienePermiso(accesos, row.permiso, ambito)) &&
+        (!row.soloLider || tieneRol(accesos, ROL_PRODUCTOR_LIDER, ambito))
+      ));
     // Igual que en AdminShell: si se filtraron todos los ítems de una sección,
     // su rótulo quedaría suelto, así que se conserva sólo cuando lo sigue un ítem.
     return conPermiso.filter((row, i) => {
@@ -545,7 +542,7 @@ export default function PanelShell({ children }: { children: ReactNode }) {
         {/* Sin establecimiento no hay nada que navegar: la pantalla es el prompt
             de alta. Al elegir una sección el cajón se cierra solo. */}
         {activo && (
-          <nav className="flex-1 overflow-y-auto pb-4" onClick={cerrar}>
+          <nav className="flex-1 overflow-y-auto pt-2 pb-4" onClick={cerrar}>
             {visibles.map((row, i) =>
               "section" in row ? (
                 <div

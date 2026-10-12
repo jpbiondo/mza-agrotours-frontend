@@ -5,8 +5,8 @@ import AsyncBoundary from "@/components/AsyncBoundary";
 import { SinPermiso } from "@/components/GuardRol";
 import { RolesScreen, RolesSkeleton } from "@/components/roles/RolesScreen";
 import type { TextosRoles } from "@/components/roles/textos";
-import { PermisoProductor, TipoPermiso } from "@/lib/permisos";
-import { ROL_PRODUCTOR_LIDER, tieneRol, tienePermiso } from "@/lib/roles";
+import { TipoPermiso } from "@/lib/permisos";
+import { ROL_PRODUCTOR_LIDER, tieneRol } from "@/lib/roles";
 import type { AmbitoRol } from "@/lib/roles";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { rolesDeEstablecimiento, useRolesCrud, useRolesProductor } from "@/hooks/useRoles";
@@ -15,7 +15,7 @@ import EmptyEstablecimiento from "../../EmptyEstablecimiento";
 
 /** Un rol de productor se asigna al personal de la finca. */
 const TEXTOS: TextosRoles = {
-  breadcrumb: ["Configuración", "Roles y permisos"],
+  breadcrumb: ["Equipo", "Roles y permisos"],
   titulo: "Gestionar roles de productores",
   bajada: "Creá roles para tu personal y elegí qué puede hacer cada uno dentro de la finca.",
   columnaRol: "Nombre del rol",
@@ -37,14 +37,14 @@ const TEXTOS: TextosRoles = {
   },
 };
 
-const SIN_LECTURA =
-  "Tu rol en este establecimiento no incluye ver los roles. Pedíselo al Productor Líder de la finca.";
+const SIN_ACCESO =
+  "Sólo el Productor Líder puede ver y gestionar los roles. Pedíselo al Productor Líder de la finca.";
 
 /**
- * Roles del establecimiento activo. A diferencia de /admin, acá el acceso no se
- * puede resolver en la ruta: los permisos de PRODUCTOR valen por
- * establecimiento y cuál está activo lo elige el switcher del shell, del lado
- * del cliente. Por eso el chequeo de lectura vive acá y no en un <GuardRol>.
+ * Roles del establecimiento activo, sólo para su Productor Líder. A diferencia
+ * de /admin, acá el acceso no se puede resolver en la ruta: el rol de PRODUCTOR
+ * vale por establecimiento y cuál está activo lo elige el switcher del shell,
+ * del lado del cliente. Por eso el chequeo vive acá y no en un <GuardRol>.
  */
 export default function RolesClient() {
   const { activo } = useEstablecimientos();
@@ -57,16 +57,14 @@ export default function RolesClient() {
     tipoPermiso: TipoPermiso.PRODUCTOR,
     establecimientoId,
   };
-  const leer = tienePermiso(accesos, PermisoProductor.LEER_ROLES_PRODUCTOR, ambito);
-  const gestionar = tieneRol(accesos, ROL_PRODUCTOR_LIDER, ambito);
+  const esLider = tieneRol(accesos, ROL_PRODUCTOR_LIDER, ambito);
 
-  // Sin el permiso no se pide nada: el backend contestaría 403 y la pantalla ya
-  // sabe que no corresponde mostrarla.
-  const { roles, grupos, isLoading, error, reload } = useRolesProductor(leer ? establecimientoId : "");
+  // Sin ser líder no se pide nada: la pantalla ya sabe que no corresponde mostrarla.
+  const { roles, grupos, isLoading, error, reload } = useRolesProductor(esLider ? establecimientoId : "");
   const acciones = useRolesCrud(rolesDeEstablecimiento(establecimientoId));
 
   if (!activo) return <EmptyEstablecimiento />;
-  if (!leer) return <SinPermiso motivo={SIN_LECTURA} />;
+  if (!esLider) return <SinPermiso motivo={SIN_ACCESO} />;
 
   return (
     <AsyncBoundary
@@ -80,7 +78,7 @@ export default function RolesClient() {
         grupos={grupos}
         textos={TEXTOS}
         acciones={acciones}
-        puedeGestionar={gestionar}
+        puedeGestionar
       />
     </AsyncBoundary>
   );
