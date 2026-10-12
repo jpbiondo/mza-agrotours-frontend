@@ -44,6 +44,8 @@ export const PermisoAdmin = {
   GESTIONAR_INCIDENCIAS: "GESTIONAR_INCIDENCIAS",
   /** Ver los reembolsos impagos y los que cubrió el sistema. */
   LEER_REEMBOLSOS: "LEER_REEMBOLSOS",
+  /** Registrar el pago con el que un administrador cubrió un reembolso impago. */
+  GESTIONAR_REEMBOLSOS: "GESTIONAR_REEMBOLSOS",
 } as const;
 
 export type PermisoAdmin = (typeof PermisoAdmin)[keyof typeof PermisoAdmin];

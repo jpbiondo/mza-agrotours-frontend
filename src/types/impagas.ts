@@ -34,14 +34,26 @@ export interface PersonaReembolso {
   fechaNacimiento: string | null;
 }
 
-export type MetodoPago = "manual" | "mercadoPago";
-
 /** El pago con el que un administrador cubrió el reembolso. */
 export interface PagoReembolsoSistema {
   id: string;
+  /** Cuándo se hizo la transacción. */
   fecha: Date | null;
-  /** `null` si vino un método que la pantalla no conoce. */
-  metodo: MetodoPago | null;
+  /** El método tal cual lo escribió el administrador: texto libre, no un enum. */
+  metodo: string;
+  /** ID de la operación en el medio que se usó. */
+  idExterno: string;
+  /** Cuándo se registró en el sistema. */
+  fechaCarga: Date | null;
+  /** Nombre del administrador que lo registró. */
+  administrador: string;
+}
+
+/** Lo que carga el administrador para registrar el pago de un reembolso impago. */
+export interface DatosPagoReembolso {
+  fecha: Date;
+  metodo: string;
+  idExterno: string;
 }
 
 /** Detalle de GET /admin/reembolsos/{id}: el reembolso, su reserva y los contactos. */
