@@ -7,7 +7,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BarChart3, Grape, CalendarCheck, MessageSquare, Home, Sprout, ShieldCheck,
-  ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound, Users,
+  ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound, Users, ReceiptText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -16,7 +16,9 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { admInitials } from "@/data/admin";
 import { cn } from "@/lib/utils";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
+import { PermisoProductor, TipoPermiso } from "@/lib/permisos";
 import { RAIZ_PANEL, rutaPanel } from "@/lib/rutasPanel";
+import { tienePermiso } from "@/lib/roles";
 import type { EstablecimientoAcceso } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import { useEstablecimientoStore } from "@/stores/establecimientoStore";
@@ -32,6 +34,12 @@ interface NavItem {
   seccion?: string;
   href?: string;
   badge?: number;
+  /**
+   * Sin este permiso en el establecimiento activo el ítem no se muestra. Es
+   * sólo para no ofrecer una pantalla que va a dar 403: la pantalla igual
+   * tiene su guard.
+   */
+  permiso?: PermisoProductor;
 }
 type Row = { section: string } | NavItem;
 
@@ -43,6 +51,10 @@ const SIDEBAR: Row[] = [
   { section: "Operación" },
   { id: "actividades", icon: Grape, label: "Experiencias", seccion: "actividades" },
   { id: "reservas", icon: CalendarCheck, label: "Reservas", seccion: "reservas" },
+  {
+    id: "reembolsos", icon: ReceiptText, label: "Reembolsos pendientes", seccion: "reembolsos",
+    permiso: PermisoProductor.GESTIONAR_REEMBOLSOS,
+  },
   { section: "Mensajes" },
   { id: "chats", icon: MessageSquare, label: "Chats", seccion: "chats", badge: 3 },
   { section: "Establecimiento" },
@@ -428,6 +440,12 @@ export default function PanelShell({ children }: { children: ReactNode }) {
   const [pedido, setPedido] = useState(false);
   const { lista, activo, elegir, listo } = useEstablecimientos();
   const active = idActivo(pathname, activo?.id ?? null);
+  const accesos = useAuthStore((s) => s.accesos);
+  const visibles = activo
+    ? SIDEBAR.filter((row) =>
+        "section" in row || !row.permiso ||
+        tienePermiso(accesos, row.permiso, { tipoPermiso: TipoPermiso.PRODUCTOR, establecimientoId: activo.id }))
+    : [];
 
   const bloqueado = listo && !!activo?.suspension;
 
@@ -511,7 +529,7 @@ export default function PanelShell({ children }: { children: ReactNode }) {
             de alta. Al elegir una sección el cajón se cierra solo. */}
         {activo && (
           <nav className="flex-1 overflow-y-auto pb-4" onClick={cerrar}>
-            {SIDEBAR.map((row, i) =>
+            {visibles.map((row, i) =>
               "section" in row ? (
                 <div
                   key={`s-${i}`}

@@ -57,6 +57,7 @@ export const PermisoProductor = {
   GESTIONAR_PRODUCTOR: "GESTIONAR_PRODUCTOR",
   LEER_ROLES_PRODUCTOR: "LEER_ROLES_PRODUCTOR",
   GESTIONAR_ACTIVIDAD: "GESTIONAR_ACTIVIDAD",
+  GESTIONAR_REEMBOLSOS: "GESTIONAR_REEMBOLSOS",
 } as const;
 
 export type PermisoProductor = (typeof PermisoProductor)[keyof typeof PermisoProductor];

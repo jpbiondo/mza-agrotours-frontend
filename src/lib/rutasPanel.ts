@@ -10,7 +10,7 @@ export const RAIZ_PANEL = "/panel";
  * reconocer las URLs de antes del cambio, que no tenían id (`/panel/reservas`).
  */
 const SECCIONES = new Set([
-  "estadisticas", "actividades", "reservas", "chats", "datos", "productores", "roles",
+  "estadisticas", "actividades", "reservas", "reembolsos", "chats", "datos", "productores", "roles",
 ]);
 
 /** `/panel/{id}` más lo que se le pase, segmento a segmento. */

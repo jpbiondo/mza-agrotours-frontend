@@ -64,6 +64,15 @@ export function fmtDiaLargo(d: Date): string {
   return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
 }
 
+/**
+ * Código corto de una reserva para mostrar: el backend no tiene uno propio,
+ * así que se toman los primeros 8 caracteres del UUID → "#3F2A9C1B". Para
+ * identificarla sin ambigüedad, poné el UUID completo en el `title`.
+ */
+export function fmtCodigoReserva(id: string): string {
+  return id ? `#${id.slice(0, 8).toUpperCase()}` : "—";
+}
+
 /** Promedio de reseñas con un decimal y coma: 4.85 → "4,9". */
 export function fmtPuntaje(n: number): string {
   return n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
