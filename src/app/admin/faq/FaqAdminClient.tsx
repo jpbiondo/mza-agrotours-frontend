@@ -16,6 +16,7 @@ import {
   Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { GcrFormFooter, GcrFormShell } from "@/components/admin/gcr/shared";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import {
   CatIcono, FaqChips, FaqDesplegable, contarPorCategoria, etiquetaCat, resaltar,
 } from "@/components/faq/piezas";
@@ -187,6 +188,7 @@ function FaqEditor({ item, busy, error, onCancel, onSave }: {
   const q = useWatch({ control: form.control, name: "q" });
   const a = useWatch({ control: form.control, name: "a" });
   const cat = useWatch({ control: form.control, name: "cat" });
+  const { faltan, verQueFalta } = useCamposFaltantes(form, faqSchema);
 
   const { setFocus } = form;
   useEffect(() => { setFocus("q"); }, [setFocus]);
@@ -310,6 +312,14 @@ function FaqEditor({ item, busy, error, onCancel, onSave }: {
           saveLabel={esEdicion ? "Guardar cambios" : "Crear pregunta"}
           saveIcon={busy ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />}
           busy={busy}
+          saveDisabled={faltan > 0}
+          aviso={
+            <FaltanCampos
+              faltan={faltan}
+              para={esEdicion ? "guardar" : "crear la pregunta"}
+              onVerQueFalta={verQueFalta}
+            />
+          }
           error={error}
         />
       </div>
