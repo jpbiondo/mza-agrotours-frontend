@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import {
   AlertCircle,
   BadgeCheck,
@@ -636,6 +637,7 @@ function SuspenderForm({
     defaultValues: { motivo: "", hasta: "" },
     mode: "onTouched",
   });
+  const { faltan, verQueFalta } = useCamposFaltantes(form, suspensionSchema);
 
   const hasta = useWatch({ control: form.control, name: "hasta" });
   const dias = diasHasta(hasta || null);
@@ -747,7 +749,7 @@ function SuspenderForm({
             <Button variant="neutral" onClick={onCancel} disabled={acciones.moderando}>
               Cancelar
             </Button>
-            <Button type="submit" variant="danger" disabled={acciones.moderando}>
+            <Button type="submit" variant="danger" disabled={acciones.moderando || faltan > 0}>
               {acciones.moderando ? (
                 <Loader className="spin size-[17px]" />
               ) : (
@@ -756,6 +758,7 @@ function SuspenderForm({
               Suspender productor
             </Button>
           </div>
+          <FaltanCampos faltan={faltan} para="suspender" onVerQueFalta={verQueFalta} className="mt-2" />
         </div>
       </form>
     </Form>
@@ -779,6 +782,7 @@ function LevantarForm({
     defaultValues: { motivo: "" },
     mode: "onTouched",
   });
+  const { faltan } = useCamposFaltantes(form, levantarSchema);
 
   async function onValid(data: LevantarFormValues) {
     setSubmitError(null);
@@ -877,7 +881,7 @@ function LevantarForm({
             <Button variant="neutral" onClick={onCancel} disabled={acciones.moderando}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={acciones.moderando}>
+            <Button type="submit" disabled={acciones.moderando || faltan > 0}>
               {acciones.moderando ? (
                 <Loader className="spin size-[17px]" />
               ) : (
@@ -886,6 +890,7 @@ function LevantarForm({
               Levantar suspensión
             </Button>
           </div>
+          <FaltanCampos faltan={faltan} para="levantarla" className="mt-2" />
         </div>
       </form>
     </Form>

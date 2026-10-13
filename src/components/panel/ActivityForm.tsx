@@ -12,6 +12,7 @@ import { Alert, Button, Card, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { ImageUploader } from "@/components/ui/image-uploader";
+import { FaltanCampos } from "@/components/ui/faltan-campos";
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
@@ -539,19 +540,11 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
                   </>
                 )}
               </div>
-              {erroresDelPaso > 0 && (
-                <span className="flex items-center justify-end gap-1.5 text-xs font-medium text-fg-3">
-                  {erroresDelPaso === 1 ? "Falta 1 campo" : `Faltan ${erroresDelPaso} campos`} para
-                  {paso < PASOS.length ? " seguir." : " guardar."}
-                  <button
-                    type="button"
-                    onClick={verQueFalta}
-                    className="cursor-pointer font-semibold text-green-800 underline underline-offset-2"
-                  >
-                    Ver qué falta
-                  </button>
-                </span>
-              )}
+              <FaltanCampos
+                faltan={erroresDelPaso}
+                para={paso < PASOS.length ? "seguir" : "guardar"}
+                onVerQueFalta={verQueFalta}
+              />
             </div>
           </div>
         </Card>

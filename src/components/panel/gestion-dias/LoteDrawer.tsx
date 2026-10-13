@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { AlertTriangle, Calendar, CalendarCheck, CalendarPlus, Check, Info, Loader, X } from "lucide-react";
 import { Alert, Button, Panel } from "@/components/ui";
 import { DatePicker, hoyISO } from "@/components/ui/date-picker";
@@ -199,21 +200,20 @@ export function LoteDrawer({
   });
 
   // La previsualización sale en cuanto el formulario es válido, sin esperar al blur.
-  const valores = useWatch({ control: form.control });
-  const parseado = loteSchema.safeParse(valores);
-  const lote: AltaLote | null = parseado.success
+  const { faltan, datos, verQueFalta } = useCamposFaltantes(form, loteSchema);
+  const lote: AltaLote | null = datos
     ? {
-        desde: parseado.data.desde,
-        hasta: parseado.data.hasta,
-        dias: parseado.data.dias,
-        horaInicio: parseado.data.horaInicio,
-        horaFin: parseado.data.horaFin,
-        cupoMax: Number(parseado.data.cupos),
+        desde: datos.desde,
+        hasta: datos.hasta,
+        dias: datos.dias,
+        horaInicio: datos.horaInicio,
+        horaFin: datos.horaFin,
+        cupoMax: Number(datos.cupos),
       }
     : null;
   const preview = usePrevisualizacionLote(establecimientoId, actividadId, lote);
   const aCrear = preview.plan?.aCrear.length ?? 0;
-  const desde = valores.desde ?? "";
+  const desde = useWatch({ control: form.control, name: "desde" }) ?? "";
 
   async function crear(v: LoteForm) {
     setRechazo(null);
@@ -370,18 +370,20 @@ export function LoteDrawer({
                 "Definí el rango y los días"
               )}
             </span>
-            <div className="flex gap-2.5">
-              <Button variant="neutral" onClick={cerrar} disabled={guardando}>
-                <X className="size-4" /> Cancelar
-              </Button>
-              {/* Con el formulario incompleto se deja enviar: así RHF marca qué falta. */}
-              <Button type="submit" disabled={guardando || (lote !== null && aCrear === 0)}>
-                {guardando ? (
-                  <><Loader className="spin size-4" /> Creando…</>
-                ) : (
-                  <><Check className="size-4" /> Crear{aCrear > 0 && ` ${aCrear} ${aCrear === 1 ? "día" : "días"}`}</>
-                )}
-              </Button>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex gap-2.5">
+                <Button variant="neutral" onClick={cerrar} disabled={guardando}>
+                  <X className="size-4" /> Cancelar
+                </Button>
+                <Button type="submit" disabled={guardando || faltan > 0 || aCrear === 0}>
+                  {guardando ? (
+                    <><Loader className="spin size-4" /> Creando…</>
+                  ) : (
+                    <><Check className="size-4" /> Crear{aCrear > 0 && ` ${aCrear} ${aCrear === 1 ? "día" : "días"}`}</>
+                  )}
+                </Button>
+              </div>
+              <FaltanCampos faltan={faltan} para="crear los días" onVerQueFalta={verQueFalta} />
             </div>
           </PieDialogo>
         </form>
