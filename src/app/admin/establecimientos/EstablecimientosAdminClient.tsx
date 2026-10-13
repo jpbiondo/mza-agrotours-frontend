@@ -1,14 +1,19 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  AlertCircle, AlertTriangle, Ban, CalendarCheck, Check, ChevronRight, Clock, Grape,
+  AlertTriangle, Ban, CalendarCheck, Check, ChevronRight, Clock, Grape,
   List as ListIcon, Loader, MapPin, RotateCcw, Search, SearchX, User, Warehouse,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { ActionBtn, Alert, Button, Card, EstadoBadge, IconCircle, Modal, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { TextArea } from "@/components/ui/text-area";
 import { TextField } from "@/components/ui/text-field";
 import { estabInitials } from "@/data/admin";
 import { fmtFecha, fmtFechaHora } from "@/lib/format";
@@ -18,10 +23,9 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import { useEstablecimientosAdmin, useModerarEstablecimiento } from "@/hooks/useEstablecimientosAdmin";
 import type { AdminEstab, EstadoAdminEstab } from "@/types/admin";
+import { MOTIVO_MAX, suspensionEstabSchema, type SuspensionEstabForm } from "./schema";
 
 const SIN_GESTION = "Necesitás el permiso de gestión de establecimientos";
-const MOTIVO_MIN = 15;
-const MOTIVO_MAX = 280;
 
 /**
  * Errores de dominio de la moderación. Los tres primeros son carreras contra
@@ -313,16 +317,16 @@ function SuspenderModal({
   onCancel: () => void;
   onConfirm: (motivo: string) => void;
 }) {
-  const [motivo, setMotivo] = useState("");
-  const [intentado, setIntentado] = useState(false);
-
-  const limpio = motivo.trim();
-  const err = !limpio
-    ? "Escribí el motivo de la suspensión."
-    : limpio.length < MOTIVO_MIN
-      ? `El motivo debe tener al menos ${MOTIVO_MIN} caracteres.`
-      : "";
-  const mostrarErr = intentado && !!err;
+  const form = useForm<SuspensionEstabForm>({
+    resolver: zodResolver(suspensionEstabSchema),
+    defaultValues: { motivo: "" },
+    mode: "onTouched",
+  });
+  const motivo = useWatch({ control: form.control, name: "motivo" });
+  const { faltan } = useCamposFaltantes(form, suspensionEstabSchema);
+  const suspender = form.handleSubmit((v) => onConfirm(v.motivo));
+  const { setFocus } = form;
+  useEffect(() => { setFocus("motivo"); }, [setFocus]);
 
   return (
     <Modal onClose={onCancel} dismissable={!busy}>
@@ -349,39 +353,38 @@ function SuspenderModal({
         vencimiento. Se mantiene hasta que un administrador la reactive manualmente.
       </Alert>
 
-      <label
-        htmlFor="susp-motivo"
-        className="mt-[18px] mb-2 block font-display text-[15.5px] font-semibold text-fg-1"
-      >
-        Motivo de la suspensión <span className="text-danger">*</span>
-      </label>
-      {/* Sin primitivo de textarea todavía: usa la clase del design system. */}
-      <textarea
-        id="susp-motivo"
-        rows={4}
-        autoFocus
-        maxLength={MOTIVO_MAX}
-        value={motivo}
-        onChange={(e) => setMotivo(e.target.value)}
-        aria-invalid={mostrarErr || undefined}
-        aria-describedby="susp-motivo-ayuda"
-        placeholder="Ej. Reiteradas cancelaciones sin reembolso a los visitantes."
-        className={cn("textarea min-h-[96px] text-[15px]", mostrarErr && "err")}
-      />
-      <div className="mt-[7px] flex items-center justify-between gap-3">
-        {mostrarErr ? (
-          <span className="err-msg text-[12.5px]">
-            <AlertCircle className="size-[15px] text-danger" /> {err}
-          </span>
-        ) : (
-          <span id="susp-motivo-ayuda" className="text-xs text-fg-3">
-            Quedará registrado junto con la fecha.
-          </span>
-        )}
-        <span className="shrink-0 font-mono text-xs text-fg-3">
-          {motivo.length}/{MOTIVO_MAX}
-        </span>
-      </div>
+      <Form {...form}>
+        <FormField
+          control={form.control}
+          name="motivo"
+          render={({ field, fieldState }) => (
+            <FormItem className="mt-[18px] gap-2">
+              <FormLabel required className="font-display text-[15.5px] font-semibold">
+                Motivo de la suspensión
+              </FormLabel>
+              <FormControl>
+                <TextArea
+                  {...field}
+                  rows={4}
+                  maxLength={MOTIVO_MAX}
+                  placeholder="Ej. Reiteradas cancelaciones sin reembolso a los visitantes."
+                  className="min-h-[96px] text-[15px]"
+                />
+              </FormControl>
+              <div className="flex items-center justify-between gap-3">
+                {fieldState.error ? (
+                  <FormMessage />
+                ) : (
+                  <span className="text-xs text-fg-3">Quedará registrado junto con la fecha.</span>
+                )}
+                <span className="shrink-0 font-mono text-xs text-fg-3">
+                  {motivo.length}/{MOTIVO_MAX}
+                </span>
+              </div>
+            </FormItem>
+          )}
+        />
+      </Form>
 
       {error && <Alert className="mt-4">{error}</Alert>}
 
@@ -389,18 +392,12 @@ function SuspenderModal({
         <Button variant="neutral" onClick={onCancel} disabled={busy}>
           Cancelar
         </Button>
-        <Button
-          variant="danger"
-          disabled={busy}
-          onClick={() => {
-            setIntentado(true);
-            if (!err) onConfirm(limpio);
-          }}
-        >
+        <Button variant="danger" disabled={busy || faltan > 0} onClick={suspender}>
           {busy ? <Loader className="size-[17px] spin" /> : <Ban className="size-[17px]" />}
           Suspender establecimiento
         </Button>
       </div>
+      <FaltanCampos faltan={faltan} para="suspender" className="mt-2" />
     </Modal>
   );
 }

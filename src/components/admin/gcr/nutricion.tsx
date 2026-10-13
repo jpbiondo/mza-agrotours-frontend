@@ -91,18 +91,13 @@ export function erroresNutricion(porcion: string, filas: FilaNutricional[]): Err
   return errores;
 }
 
-/** `true` si hay algo que corregir: lo usa el formulario antes de guardar. */
-export function hayErroresNutricion(e: ErroresNutricion): boolean {
-  return !!e.porcion || !!e.global || e.filas.some(Boolean);
-}
-
 /**
  * Editor de la información nutricional de un cultivo: la porción sobre la que
  * se informan los valores y la tabla de nutrientes. Es lo que después ve el
  * visitante en la ficha pública del cultivo.
  *
- * Los errores los calcula `erroresNutricion` y los muestra recién cuando se
- * intentó guardar, igual que el resto del formulario.
+ * Las reglas están en `erroresNutricion`, que el schema del cultivo traduce a
+ * issues; el formulario le pasa de vuelta los que RHF ya marcó.
  */
 export function GcrNutricionEditor({
   porcion,
