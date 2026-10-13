@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Alert, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { TextField } from "@/components/ui/text-field";
 import { TextArea } from "@/components/ui/text-area";
 import {
@@ -189,6 +190,7 @@ function Formulario({ onCancelar, onReportada }: { onCancelar: () => void; onRep
   });
   const titulo = useWatch({ control: form.control, name: "titulo" });
   const desc = useWatch({ control: form.control, name: "desc" });
+  const { faltan, verQueFalta } = useCamposFaltantes(form, incidenciaSchema);
 
   async function enviar(datos: IncidenciaForm) {
     setError(null);
@@ -292,13 +294,16 @@ function Formulario({ onCancelar, onReportada }: { onCancelar: () => void; onRep
                 <Info className="size-[15px]" />
                 Los campos con <span className="font-bold text-danger">*</span> son obligatorios
               </span>
-              <div className="flex gap-3">
-                <Button variant="neutral" onClick={onCancelar} disabled={enviando}>
-                  <X className="size-[17px]" /> Cancelar
-                </Button>
-                <Button type="submit" disabled={enviando}>
-                  {enviando ? <Loader className="spin size-[17px]" /> : <Send className="size-[17px]" />} Reportar
-                </Button>
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex gap-3">
+                  <Button variant="neutral" onClick={onCancelar} disabled={enviando}>
+                    <X className="size-[17px]" /> Cancelar
+                  </Button>
+                  <Button type="submit" disabled={enviando || faltan > 0}>
+                    {enviando ? <Loader className="spin size-[17px]" /> : <Send className="size-[17px]" />} Reportar
+                  </Button>
+                </div>
+                <FaltanCampos faltan={faltan} para="reportar" onVerQueFalta={verQueFalta} />
               </div>
             </div>
           </Card>
