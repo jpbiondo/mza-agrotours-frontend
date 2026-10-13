@@ -10,6 +10,7 @@ import { Pagination } from "@/components/catalog/controls";
 import {
   ESTADO_META, ESTADO_OPTS, categoriaEtaria, precioCategoria, totalReserva, rangoEtario, type ProdTone,
 } from "@/data/panel-reservas";
+import { moneyAr } from "@/lib/format";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { useReservasRecibidas, useConfirmarReserva } from "@/hooks/useReservasRecibidas";
 import type { EstadoReservaProd, ReservaProd } from "@/types/panel-reservas";
@@ -31,10 +32,6 @@ const ESTADO_ICON: Record<string, React.ReactNode> = {
   "x-circle": <XCircle size={13} />,
   "check-circle-2": <CheckCircle2 size={13} />,
 };
-
-function money(n: number) {
-  return "$ " + n.toLocaleString("es-AR");
-}
 
 function EstadoPill({ estado }: { estado: EstadoReservaProd }) {
   const meta = ESTADO_META[estado];
@@ -73,7 +70,7 @@ function ReservaRow({ r, onConfirm, confirming }: { r: ReservaProd; onConfirm: (
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <div style={{ fontSize: 11, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 600 }}>Total</div>
-          <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 17, color: "var(--green-800)" }}>{money(total)}</div>
+          <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 17, color: "var(--green-800)" }}>{moneyAr(total)}</div>
         </div>
         <ChevronDown size={20} color="var(--fg-3)" style={{ flexShrink: 0, transition: "transform .2s", transform: open ? "rotate(180deg)" : "none" }} />
       </button>
@@ -102,7 +99,7 @@ function ReservaRow({ r, onConfirm, confirming }: { r: ReservaProd; onConfirm: (
                       <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{categoriaEtaria(p.edad)} · {p.edad} años</div>
                     </div>
                   </div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 13.5, fontWeight: 600, color: sub > 0 ? "var(--fg-1)" : "var(--green-800)" }}>{sub > 0 ? money(sub) : "Sin cargo"}</div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 13.5, fontWeight: 600, color: sub > 0 ? "var(--fg-1)" : "var(--green-800)" }}>{sub > 0 ? moneyAr(sub) : "Sin cargo"}</div>
                 </div>
               );
             })}
@@ -197,7 +194,7 @@ export default function ReservasRecibidasClient() {
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
             <Metric icon={<Inbox size={16} color="var(--green-600)" />} label="Reservas recibidas" value={String(metrics.total)} />
             <Metric icon={<Users size={16} color="var(--green-600)" />} label="Personas confirmadas" value={String(metrics.personas)} />
-            <Metric icon={<Banknote size={16} color="var(--green-600)" />} label="Ingreso estimado" value={money(metrics.ingreso)} />
+            <Metric icon={<Banknote size={16} color="var(--green-600)" />} label="Ingreso estimado" value={moneyAr(metrics.ingreso)} />
           </div>
         )}
 

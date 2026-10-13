@@ -1,6 +1,7 @@
 /** Formato de moneda argentino: 12500 → "$ 12.500". */
 export function moneyAr(n: number): string {
-  return "$ " + Number(n).toLocaleString("es-AR");
+  // Espacio no separable: si no, en una card angosta el "$" queda solo en una línea y el monto en la siguiente.
+  return "$ " + Number(n).toLocaleString("es-AR");
 }
 
 /** Fecha y hora: ISO → "18/06/2026 · 08:42". */
