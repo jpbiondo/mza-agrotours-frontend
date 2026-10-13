@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm, useWatch, type FieldPath } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  AlertCircle, ArrowLeft, ArrowRight, Ban, CalendarDays, Check, FileText, HelpCircle,
+  ArrowLeft, ArrowRight, Ban, CalendarDays, Check, FileText, HelpCircle,
   Info, ListChecks, Loader, MapPin, Save, Send, Users, X,
 } from "lucide-react";
 import { Alert, Button, Card, Toast } from "@/components/ui";
@@ -11,8 +13,14 @@ import type { ToastData } from "@/components/ui";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import {
-  PASOS, bloqueoDeTarifas, erroresDeActividad, huecosDeEdad, pasoDelError, soloDigitos,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+} from "@/components/ui/form";
+import {
+  PASOS, actividadAltaSchema, aErroresPlanosDeForm, erroresDeActividad, huecosDeEdad,
+  pasoDelError, soloDigitos,
 } from "@/lib/actividad-form";
+import type { ErroresActividad } from "@/lib/actividad-form";
+import { cn } from "@/lib/utils";
 import { UPLOAD_FOTOS } from "@/data/actividad-form";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useFotosActividad } from "@/hooks/useFotosActividad";
@@ -23,7 +31,7 @@ import { DisponibilidadEditor } from "./actividad/DisponibilidadEditor";
 import { FaqEditor, ListaEditable } from "./actividad/ListaEditable";
 import { Stepper } from "./actividad/Stepper";
 import { TarifasEditor } from "./actividad/TarifasEditor";
-import { ErrorMsg, FieldLabel } from "./actividad/campos";
+import { CAMPO, FieldLabel } from "./actividad/campos";
 
 /** Errores de dominio del alta. El resto cae en el genérico. */
 const ERROR_ALTA: Record<string, string> = {
@@ -42,6 +50,28 @@ function mensajeAlta(code?: string): string {
 }
 
 const ICONO_PASO = [FileText, ListChecks, Users, CalendarDays];
+const LABEL = "font-semibold";
+
+/**
+ * Errores del schema que no son de un campo sino de una combinación (ver
+ * `refinarTarifas` y `refinarDias`). RHF sólo actualiza el error del campo que
+ * cambió, así que estos no le llegan nunca sin un submit: se toman de la
+ * validación completa en cuanto el productor modifica el bloque.
+ */
+const SINTETICOS_TARIFAS = ["tarNone", "tarBase", "tarDup", "tarOverlap"];
+const SINTETICOS_DIAS = ["diasNone", "diasHoras", "diasOrden"];
+
+/** Los campos de cada paso, para marcarlos todos con "Ver qué falta". */
+const CAMPOS_DEL_PASO: Record<number, FieldPath<ActividadFormData>[]> = {
+  1: ["nombre", "descripcion", "cultivos"],
+  2: ["incluye", "noIncluye", "faqs"],
+  3: ["cupos", "tarifas"],
+  4: ["days", "fechaDesde", "fechaHasta"],
+};
+
+function elegir(e: ErroresActividad, claves: string[]): ErroresActividad {
+  return Object.fromEntries(claves.filter((k) => e[k]).map((k) => [k, e[k]]));
+}
 
 export default function ActivityForm({ initial }: { initial: ActividadFormData }) {
   const router = useRouter();
@@ -49,61 +79,93 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
   const establecimientoId = activo?.id ?? "";
   const listado = useRutaPanel()("actividades");
 
-  const [v, setV] = useState<ActividadFormData>(initial);
   const [paso, setPaso] = useState(1);
-  const [intentado, setIntentado] = useState(false);
-  const [tocados, setTocados] = useState<Set<string>>(() => new Set());
   const [done, setDone] = useState<EstadoGuardado | null>(null);
+  // Pasos donde se pidió "Ver qué falta". Sólo hace falta para los errores de
+  // combinación: los de campo los marca `trigger` y RHF los mantiene al día.
+  const [revisados, setRevisados] = useState<Set<number>>(() => new Set());
   const [errorAlta, setErrorAlta] = useState<string | null>(null);
 
   const { guardar, isLoading } = useGuardarActividad();
   const fotos = useFotosActividad(establecimientoId);
   const { cultivos: catalogo, isLoading: cargandoCultivos } = useTiposCultivo(true);
 
-  const set = <K extends keyof ActividadFormData>(k: K, val: ActividadFormData[K]) =>
-    setV((s) => ({ ...s, [k]: val }));
+  const form = useForm<ActividadFormData>({
+    resolver: zodResolver(actividadAltaSchema),
+    defaultValues: initial,
+    // `onChange` y no `onTouched`, como en la modificación: los rangos etarios
+    // se validan entre sí y esas contradicciones tienen que verse al tipear.
+    mode: "onChange",
+  });
+  const { control, formState } = form;
 
-  const errs = useMemo(() => erroresDeActividad(v), [v]);
-  const ver = (k: string) => (intentado || tocados.has(k) ? errs[k] : undefined);
-  const tocar = (k: string) => setTocados((t) => new Set(t).add(k));
+  // `defaultValues` trae el formulario completo, así que lo observado nunca
+  // tiene huecos aunque el tipo de `useWatch` lo deje parcial.
+  const valores = useWatch({ control }) as ActividadFormData;
 
-  const bloqueoTarifas = bloqueoDeTarifas(errs);
-  const huecos = huecosDeEdad(v.tarifas);
-  const cantidadErrores = Object.keys(errs).length;
+  // Todo lo que está mal, se haya tocado o no. Es lo que decide si se puede
+  // avanzar o guardar; lo que se pinta en rojo sale de RHF (`errs`, abajo).
+  const pendientes = useMemo(() => erroresDeActividad(valores), [valores]);
 
-  // Los pasos sólo se marcan en rojo después de intentar guardar: antes, un
-  // formulario recién abierto tendría los cuatro en error.
-  const pasosConError = useMemo(() => {
-    if (!intentado) return new Set<number>();
-    return new Set(Object.keys(errs).map(pasoDelError));
-  }, [errs, intentado]);
+  // Los editores compartidos piden los errores por clave plana; RHF los guarda
+  // anidados como los emitió el schema.
+  const tarifasModificadas = !!formState.dirtyFields.tarifas || revisados.has(3);
+  const diasModificados = !!formState.dirtyFields.days || revisados.has(4);
+  const errs = useMemo(
+    () => ({
+      ...aErroresPlanosDeForm(formState.errors, valores.tarifas),
+      ...(tarifasModificadas ? elegir(pendientes, SINTETICOS_TARIFAS) : {}),
+      ...(diasModificados ? elegir(pendientes, SINTETICOS_DIAS) : {}),
+    }),
+    [formState.errors, valores.tarifas, pendientes, tarifasModificadas, diasModificados],
+  );
+
+  const huecos = huecosDeEdad(valores.tarifas);
+
+  // Cuántos errores tiene cada paso. Se avanza de a uno y sólo con el paso en
+  // regla, así el productor se entera de lo que falta donde lo está cargando y
+  // no recién al final.
+  const erroresPorPaso = useMemo(() => {
+    const cuenta = new Map<number, number>();
+    for (const k of Object.keys(pendientes)) {
+      const n = pasoDelError(k);
+      cuenta.set(n, (cuenta.get(n) ?? 0) + 1);
+    }
+    return cuenta;
+  }, [pendientes]);
+  const erroresDelPaso = erroresPorPaso.get(paso) ?? 0;
+  // Hasta dónde deja llegar el stepper: el primer paso con errores. Volver
+  // siempre se puede.
+  const pasoMaximo = PASOS.find((p) => erroresPorPaso.has(p.n))?.n ?? PASOS.length;
 
   const irA = (n: number) => {
-    setPaso(Math.min(Math.max(n, 1), PASOS.length));
+    setPaso(Math.min(Math.max(n, 1), pasoMaximo));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  async function onSubmit(estado: EstadoGuardado) {
-    setIntentado(true);
-    setErrorAlta(null);
+  // Marca en rojo todo lo que falta en el paso, aunque no se haya tocado, y
+  // lleva el foco al primero. Los errores de combinación no pasan por
+  // `trigger`: quedarían fijos en `formState.errors` aunque se corrijan después.
+  const verQueFalta = () => {
+    setRevisados((r) => new Set(r).add(paso));
+    void form.trigger(CAMPOS_DEL_PASO[paso], { shouldFocus: true });
+  };
 
-    if (cantidadErrores > 0) {
-      // Al primer paso que tenga algo mal, no al que estabas mirando.
-      irA(Math.min(...Object.keys(errs).map(pasoDelError)));
-      return;
-    }
+  const enviar = (estado: EstadoGuardado) =>
+    form.handleSubmit(async (data) => {
+      setErrorAlta(null);
 
-    // Las fotos ya están en el bucket: viaja la lista de keys, y su orden es el
-    // que el productor dejó en la grilla.
-    const res = await guardar(establecimientoId, v, estado, fotos.claims);
-    if (!res.ok) {
-      setErrorAlta(mensajeAlta(res.code));
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-    setDone(estado);
-    setTimeout(() => router.push(listado), 1400);
-  }
+      // Las fotos ya están en el bucket: viaja la lista de keys, y su orden es el
+      // que el productor dejó en la grilla.
+      const res = await guardar(establecimientoId, data, estado, fotos.claims);
+      if (!res.ok) {
+        setErrorAlta(mensajeAlta(res.code));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      setDone(estado);
+      setTimeout(() => router.push(listado), 1400);
+    });
 
   const IconoPaso = ICONO_PASO[paso - 1];
   const metaPaso = PASOS[paso - 1];
@@ -111,7 +173,12 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
   // No se guarda con una foto a medio subir —su key todavía no existe— ni con
   // una fallada: publicar ahora la perdería sin avisar.
   const noSePuedeGuardar =
-    guardando || !establecimientoId || !!bloqueoTarifas || fotos.subiendo || fotos.conError > 0;
+    guardando ||
+    !establecimientoId ||
+    Object.keys(pendientes).length > 0 ||
+    fotos.subiendo ||
+    fotos.conError > 0;
+  const motivoBloqueo = erroresDelPaso > 0 ? "Completá los campos de este paso para seguir." : undefined;
 
   const toast: ToastData | null = done
     ? {
@@ -120,7 +187,7 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
           done === "publicado"
             ? "Actividad publicada correctamente."
             : "Borrador guardado correctamente.",
-        sub: `«${v.nombre}»`,
+        sub: `«${valores.nombre}»`,
       }
     : null;
 
@@ -160,19 +227,9 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
         )}
         {errorAlta && <Alert className="mb-5">{errorAlta}</Alert>}
 
-        {intentado && cantidadErrores > 0 && (
-          <div className="mb-5 flex items-center gap-2.5 rounded-md border border-danger bg-danger-fill px-4 py-3 text-sm font-medium text-danger-fg">
-            <AlertCircle className="size-[18px] shrink-0 text-danger" />
-            <span>
-              Revisá los campos marcados en rojo.{" "}
-              {cantidadErrores === 1 ? "Hay 1 campo" : `Hay ${cantidadErrores} campos`} que
-              necesita{cantidadErrores === 1 ? "" : "n"} atención. Tus datos se conservaron.
-            </span>
-          </div>
-        )}
-
+        <Form {...form}>
         <Card className="overflow-visible p-0">
-          <Stepper actual={paso} conError={pasosConError} onIr={irA} />
+          <Stepper actual={paso} maximo={pasoMaximo} onIr={irA} />
 
           <div className="p-6 sm:p-9">
             <div className="mb-[26px] flex items-center gap-3 border-b border-outline-variant pb-[18px]">
@@ -190,70 +247,83 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
             {/* ---------- Paso 1 · Información general ---------- */}
             {paso === 1 && (
               <div>
-                <div className="mb-[26px]">
-                  <FieldLabel required htmlFor="nombre">
-                    Nombre
-                  </FieldLabel>
-                  <input
-                    id="nombre"
-                    type="text"
-                    value={v.nombre}
-                    maxLength={80}
-                    placeholder="Ej. Cosecha de Malbec al amanecer"
-                    aria-invalid={!!ver("nombre") || undefined}
-                    onChange={(e) => set("nombre", e.target.value)}
-                    onBlur={() => tocar("nombre")}
-                    className="h-11 w-full rounded-md border border-input bg-surface px-3.5 text-base text-fg-1 outline-none transition-colors placeholder:text-fg-3 focus-visible:border-green-800 focus-visible:ring-3 focus-visible:ring-green-800/20 aria-invalid:border-danger aria-invalid:bg-danger-fill"
-                  />
-                  <div className="mt-1.5 flex items-center justify-between gap-3">
-                    <ErrorMsg className="mt-0">{ver("nombre")}</ErrorMsg>
-                    <span className="ml-auto shrink-0 font-mono text-[11.5px] text-fg-3">
-                      {v.nombre.length}/80
-                    </span>
-                  </div>
-                </div>
+                <FormField
+                  control={control}
+                  name="nombre"
+                  render={({ field }) => (
+                    <FormItem className="mb-[26px] gap-1.5">
+                      <FormLabel required className={LABEL}>
+                        Nombre
+                      </FormLabel>
+                      <FormControl>
+                        <input
+                          {...field}
+                          type="text"
+                          maxLength={80}
+                          placeholder="Ej. Cosecha de Malbec al amanecer"
+                          className={CAMPO}
+                        />
+                      </FormControl>
+                      <div className="flex items-center justify-between gap-3">
+                        <FormMessage />
+                        <span className="ml-auto shrink-0 font-mono text-[11.5px] text-fg-3">
+                          {field.value.length}/80
+                        </span>
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
-                <div className="mb-[26px]">
-                  <FieldLabel required htmlFor="descripcion">
-                    Descripción
-                  </FieldLabel>
-                  <textarea
-                    id="descripcion"
-                    value={v.descripcion}
-                    maxLength={2000}
-                    rows={4}
-                    placeholder="Contales a los visitantes qué van a vivir: la cosecha, la familia productora, los aromas del viñedo…"
-                    aria-invalid={!!ver("descripcion") || undefined}
-                    onChange={(e) => set("descripcion", e.target.value)}
-                    onBlur={() => tocar("descripcion")}
-                    className="min-h-[110px] w-full resize-y rounded-md border border-input bg-surface px-3.5 py-2.5 text-base leading-normal text-fg-1 outline-none transition-colors placeholder:text-fg-3 focus-visible:border-green-800 focus-visible:ring-3 focus-visible:ring-green-800/20 aria-invalid:border-danger aria-invalid:bg-danger-fill"
-                  />
-                  <div className="mt-1.5 flex items-center justify-between gap-3">
-                    <ErrorMsg className="mt-0">{ver("descripcion")}</ErrorMsg>
-                    <span className="ml-auto shrink-0 font-mono text-[11.5px] text-fg-3">
-                      {v.descripcion.length}/2000
-                    </span>
-                  </div>
-                </div>
+                <FormField
+                  control={control}
+                  name="descripcion"
+                  render={({ field }) => (
+                    <FormItem className="mb-[26px] gap-1.5">
+                      <FormLabel required className={LABEL}>
+                        Descripción
+                      </FormLabel>
+                      <FormControl>
+                        <textarea
+                          {...field}
+                          maxLength={2000}
+                          rows={4}
+                          placeholder="Contales a los visitantes qué van a vivir: la cosecha, la familia productora, los aromas del viñedo…"
+                          className={cn(CAMPO, "h-auto min-h-[110px] resize-y py-2.5 leading-normal")}
+                        />
+                      </FormControl>
+                      <div className="flex items-center justify-between gap-3">
+                        <FormMessage />
+                        <span className="ml-auto shrink-0 font-mono text-[11.5px] text-fg-3">
+                          {field.value.length}/2000
+                        </span>
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
-                <div>
-                  <FieldLabel required>Cultivos asociados</FieldLabel>
-                  <MultiSelect
-                    aria-label="Cultivos asociados"
-                    options={catalogo.map((c) => ({ id: c.id, label: c.nombre }))}
-                    value={v.cultivos}
-                    isLoading={cargandoCultivos}
-                    loadingText="Cargando cultivos…"
-                    emptyText="No hay cultivos cargados en el catálogo."
-                    placeholder="Seleccioná los cultivos"
-                    error={!!ver("cultivos")}
-                    onChange={(ids) => {
-                      set("cultivos", ids);
-                      tocar("cultivos");
-                    }}
-                  />
-                  <ErrorMsg>{ver("cultivos")}</ErrorMsg>
-                </div>
+                <FormField
+                  control={control}
+                  name="cultivos"
+                  render={({ field, fieldState }) => (
+                    <FormItem className="gap-1.5">
+                      <FormLabel required className={LABEL}>
+                        Cultivos asociados
+                      </FormLabel>
+                      <MultiSelect
+                        aria-label="Cultivos asociados"
+                        options={catalogo.map((c) => ({ id: c.id, label: c.nombre }))}
+                        value={field.value}
+                        isLoading={cargandoCultivos}
+                        loadingText="Cargando cultivos…"
+                        emptyText="No hay cultivos cargados en el catálogo."
+                        placeholder="Seleccioná los cultivos"
+                        error={!!fieldState.error}
+                        onChange={field.onChange}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="mt-[26px]">
                   <FieldLabel>Imágenes</FieldLabel>
@@ -272,39 +342,57 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
             {/* ---------- Paso 2 · Detalles de la experiencia ---------- */}
             {paso === 2 && (
               <div>
-                <ListaEditable
-                  title="Qué incluye"
-                  icon={<Check className="size-4" />}
-                  tone="green"
-                  items={v.incluye}
-                  onChange={(items) => set("incluye", items)}
-                  placeholder="Ej. Degustación de vinos de la finca"
-                  addLabel="Agregar ítem"
-                  clave="inc"
-                  errs={errs}
-                  intentado={intentado}
+                <FormField
+                  control={control}
+                  name="incluye"
+                  render={({ field }) => (
+                    <ListaEditable
+                      title="Qué incluye"
+                      icon={<Check className="size-4" />}
+                      tone="green"
+                      items={field.value}
+                      onChange={field.onChange}
+                      placeholder="Ej. Degustación de vinos de la finca"
+                      addLabel="Agregar ítem"
+                      clave="inc"
+                      errs={errs}
+                      intentado
+                    />
+                  )}
                 />
-                <ListaEditable
-                  title="Qué NO incluye"
-                  icon={<Ban className="size-4" />}
-                  tone="danger"
-                  items={v.noIncluye}
-                  onChange={(items) => set("noIncluye", items)}
-                  placeholder="Ej. Traslado hasta el establecimiento"
-                  addLabel="Agregar ítem"
-                  clave="ninc"
-                  errs={errs}
-                  intentado={intentado}
+                <FormField
+                  control={control}
+                  name="noIncluye"
+                  render={({ field }) => (
+                    <ListaEditable
+                      title="Qué NO incluye"
+                      icon={<Ban className="size-4" />}
+                      tone="danger"
+                      items={field.value}
+                      onChange={field.onChange}
+                      placeholder="Ej. Traslado hasta el establecimiento"
+                      addLabel="Agregar ítem"
+                      clave="ninc"
+                      errs={errs}
+                      intentado
+                    />
+                  )}
                 />
 
                 <div className="mt-1 mb-7 h-px bg-outline-variant" />
 
-                <FaqEditor
-                  icon={<HelpCircle className="size-4" />}
-                  faqs={v.faqs}
-                  onChange={(faqs) => set("faqs", faqs)}
-                  errs={errs}
-                  intentado={intentado}
+                <FormField
+                  control={control}
+                  name="faqs"
+                  render={({ field }) => (
+                    <FaqEditor
+                      icon={<HelpCircle className="size-4" />}
+                      faqs={field.value}
+                      onChange={field.onChange}
+                      errs={errs}
+                      intentado
+                    />
+                  )}
                 />
               </div>
             )}
@@ -312,29 +400,35 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
             {/* ---------- Paso 3 · Participantes y tarifas ---------- */}
             {paso === 3 && (
               <div>
-                <div className="mb-[26px] max-w-[220px]">
-                  <FieldLabel required htmlFor="cupos">
-                    Cupos máximos
-                  </FieldLabel>
-                  <input
-                    id="cupos"
-                    type="text"
-                    inputMode="numeric"
-                    value={v.cupos}
-                    placeholder="Ej. 20"
-                    aria-invalid={!!ver("cupos") || undefined}
-                    onChange={(e) => set("cupos", soloDigitos(e.target.value))}
-                    onBlur={() => tocar("cupos")}
-                    className="h-11 w-full rounded-md border border-input bg-surface px-3.5 text-base text-fg-1 outline-none transition-colors placeholder:text-fg-3 focus-visible:border-green-800 focus-visible:ring-3 focus-visible:ring-green-800/20 aria-invalid:border-danger aria-invalid:bg-danger-fill"
-                  />
-                  <ErrorMsg>{ver("cupos")}</ErrorMsg>
-                </div>
+                <FormField
+                  control={control}
+                  name="cupos"
+                  render={({ field }) => (
+                    <FormItem className="mb-[26px] max-w-[220px] gap-1.5">
+                      <FormLabel required className={LABEL}>
+                        Cupos máximos
+                      </FormLabel>
+                      <FormControl>
+                        <input
+                          {...field}
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Ej. 20"
+                          onChange={(e) => field.onChange(soloDigitos(e.target.value))}
+                          className={CAMPO}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <TarifasEditor
-                  filas={v.tarifas}
-                  onChange={(filas) => set("tarifas", filas)}
-                  errs={errs}
-                  intentado={intentado}
+                <FormField
+                  control={control}
+                  name="tarifas"
+                  render={({ field }) => (
+                    <TarifasEditor filas={field.value} onChange={field.onChange} errs={errs} intentado />
+                  )}
                 />
 
                 {huecos.length > 0 && (
@@ -351,14 +445,26 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
 
             {/* ---------- Paso 4 · Disponibilidad ---------- */}
             {paso === 4 && (
-              <DisponibilidadEditor
-                days={v.days}
-                onDays={(days) => set("days", days)}
-                fechaDesde={v.fechaDesde}
-                fechaHasta={v.fechaHasta}
-                onFechas={(desde, hasta) => setV((s) => ({ ...s, fechaDesde: desde, fechaHasta: hasta }))}
-                errs={errs}
-                intentado={intentado}
+              <FormField
+                control={control}
+                name="days"
+                render={({ field }) => (
+                  <DisponibilidadEditor
+                    days={field.value}
+                    onDays={field.onChange}
+                    fechaDesde={valores.fechaDesde}
+                    fechaHasta={valores.fechaHasta}
+                    // Las dos juntas: la de fin se valida contra la de inicio,
+                    // así que cambiar una tiene que revalidar la otra.
+                    onFechas={(desde, hasta) => {
+                      const opciones = { shouldValidate: true, shouldDirty: true } as const;
+                      form.setValue("fechaDesde", desde, opciones);
+                      form.setValue("fechaHasta", hasta, opciones);
+                    }}
+                    errs={errs}
+                    intentado
+                  />
+                )}
               />
             )}
           </div>
@@ -388,8 +494,8 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
                 {paso < PASOS.length ? (
                   <Button
                     onClick={() => irA(paso + 1)}
-                    disabled={paso === 3 && !!bloqueoTarifas}
-                    title={paso === 3 && bloqueoTarifas ? bloqueoTarifas : undefined}
+                    disabled={erroresDelPaso > 0}
+                    title={motivoBloqueo}
                   >
                     Siguiente <ArrowRight className="size-4" />
                   </Button>
@@ -398,8 +504,8 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
                     <Button
                       variant="neutral"
                       disabled={noSePuedeGuardar}
-                      title={bloqueoTarifas ?? undefined}
-                      onClick={() => onSubmit("borrador")}
+                      title={motivoBloqueo}
+                      onClick={enviar("borrador")}
                     >
                       {done === "borrador" ? (
                         <>
@@ -413,8 +519,8 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
                     </Button>
                     <Button
                       disabled={noSePuedeGuardar}
-                      title={bloqueoTarifas ?? undefined}
-                      onClick={() => onSubmit("publicado")}
+                      title={motivoBloqueo}
+                      onClick={enviar("publicado")}
                     >
                       {isLoading ? (
                         <>
@@ -433,20 +539,23 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
                   </>
                 )}
               </div>
-              {/* Sólo en el último paso: en el 3 el editor de tarifas ya tiene
-                  el mismo aviso arriba, y repetirlo acá lo dice tres veces. */}
-              {paso === PASOS.length && bloqueoTarifas && (
-                // Sin `.err-msg`: esa clase va sin capa en globals.css y su
-                // font-size le gana a `text-xs`, además de centrar un texto
-                // que acá puede ocupar dos renglones.
-                <span className="flex max-w-[420px] items-start justify-end gap-1.5 text-right text-xs font-medium text-danger-fg">
-                  <AlertCircle className="mt-px size-3 shrink-0 text-danger" />
-                  {bloqueoTarifas}
+              {erroresDelPaso > 0 && (
+                <span className="flex items-center justify-end gap-1.5 text-xs font-medium text-fg-3">
+                  {erroresDelPaso === 1 ? "Falta 1 campo" : `Faltan ${erroresDelPaso} campos`} para
+                  {paso < PASOS.length ? " seguir." : " guardar."}
+                  <button
+                    type="button"
+                    onClick={verQueFalta}
+                    className="cursor-pointer font-semibold text-green-800 underline underline-offset-2"
+                  >
+                    Ver qué falta
+                  </button>
                 </span>
               )}
             </div>
           </div>
         </Card>
+        </Form>
       </div>
 
       {toast && <Toast {...toast} />}
