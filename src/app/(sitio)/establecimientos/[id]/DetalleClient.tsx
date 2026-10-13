@@ -50,19 +50,20 @@ function ActividadCard({ act }: { act: ActividadOfrecida }) {
             </span>
           ))}
         </div>
-        <div style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid var(--cream-tert)", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
+        <div style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid var(--cream-tert)", display: "flex", flexDirection: "column", gap: 8 }}>
           <div>
             <div className="t-label" style={{ marginBottom: 2 }}>Desde</div>
             {act.precioDesde === null ? (
               <span style={{ fontSize: 14, fontWeight: 600, color: "var(--fg-3)" }}>A consultar</span>
             ) : (
-              <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 4, whiteSpace: "nowrap" }}>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 17, fontWeight: 700, color: "var(--fg-1)" }}>{moneyAr(act.precioDesde)}</span>
                 <span style={{ fontSize: 12, color: "var(--fg-3)" }}>/ adulto</span>
               </div>
             )}
           </div>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--green-800)", whiteSpace: "nowrap" }}>
+          {/* En su propia línea: con 3 cards por fila no entra al lado del precio. */}
+          <span style={{ alignSelf: "flex-end", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--green-800)", whiteSpace: "nowrap" }}>
             Ver detalle <ArrowRight size={15} />
           </span>
         </div>
@@ -174,7 +175,7 @@ function Detalle({ est }: { est: EstablecimientoPublico }) {
             {est.actividades.length === 0 ? (
               <Vacio>Este establecimiento todavía no publicó actividades.</Vacio>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 18 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(230px, 100%), 1fr))", gap: 18 }}>
                 {est.actividades.map((act) => <ActividadCard key={act.id} act={act} />)}
               </div>
             )}
