@@ -2,12 +2,17 @@
 
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Utensils, Sprout, Users, List as ListIcon, Clock, Pencil, Trash2, Loader, Eye,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { ActionBtn, Alert, Card, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { TextArea } from "@/components/ui/text-area";
 import { TextField } from "@/components/ui/text-field";
 import { gcrRecetaInitials } from "@/data/gestionCr";
 
@@ -34,6 +39,7 @@ import {
 import { GcrImagePicker } from "@/components/admin/gcr/image-picker";
 import { LIMITES_IMAGEN_RECETA } from "@/data/gestionCr";
 import { useImagenUnica } from "@/hooks/useImagenUnica";
+import { recetaSchema, type RecetaForm as RecetaFormValues } from "./schema";
 
 /** Alta: una fila en blanco de cada lista y los valores más frecuentes. */
 const RECETA_VACIA: DatosReceta = {
@@ -49,12 +55,6 @@ const RECETA_VACIA: DatosReceta = {
 };
 
 const DIFICULTADES: DificultadId[] = ["FACIL", "MEDIA", "DIFICIL"];
-
-/**
- * Caracteres que acepta el nombre del lado del backend (`@SinCaracteresEspeciales`):
- * letras con acentos, números, espacios, guion medio y guion bajo.
- */
-const NOMBRE_VALIDO = /^[a-zA-Z0-9áéíóúüÁÉÍÓÚÜñÑ _-]*$/;
 
 /** Motivo de los botones apagados cuando falta GESTIONAR_RECETAS. */
 const SIN_GESTION = "Necesitás el permiso de gestión de recetas";
@@ -245,68 +245,52 @@ function RecetaForm({
   onCancel: () => void;
   onSave: (datos: DatosReceta) => void;
 }) {
-  const [nombre, setNombre] = useState(initial.nombre);
-  const [cultivosIds, setCultivosIds] = useState<string[]>(initial.cultivosIds);
-  const [dificultad, setDificultad] = useState<DificultadId>(initial.dificultad);
-  // Los dos números se editan como texto: un input vacío no es un 0.
-  const [tiempo, setTiempo] = useState(initial.tiempoMinsAprox > 0 ? String(initial.tiempoMinsAprox) : "");
-  const [porciones, setPorciones] = useState(initial.porciones > 0 ? String(initial.porciones) : "");
-  const [descripcion, setDescripcion] = useState(initial.descripcion);
+  // `existingNames` llega como un array nuevo en cada render de la pantalla;
+  // el schema se rearma sólo cuando cambia su contenido.
+  const ocupados = existingNames.join("\n");
+  const schema = useMemo(() => recetaSchema(ocupados ? ocupados.split("\n") : []), [ocupados]);
+
+  const form = useForm<RecetaFormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      nombre: initial.nombre,
+      cultivosIds: initial.cultivosIds,
+      dificultad: initial.dificultad,
+      // Los dos números se editan como texto: un input vacío no es un 0.
+      porciones: initial.porciones > 0 ? String(initial.porciones) : "",
+      tiempo: initial.tiempoMinsAprox > 0 ? String(initial.tiempoMinsAprox) : "",
+      descripcion: initial.descripcion,
+      ingredientes: initial.ingredientes.length > 0 ? initial.ingredientes : [""],
+      pasos: initial.pasos.length > 0 ? initial.pasos : [""],
+    },
+    // `onChange` y no `onTouched`: un nombre que ya existe se avisa mientras se
+    // escribe, no recién al salir del campo.
+    mode: "onChange",
+  });
+  const { control } = form;
+  const { faltan, verQueFalta } = useCamposFaltantes(form, schema);
+  const nombre = useWatch({ control, name: "nombre" });
+  const descripcion = useWatch({ control, name: "descripcion" });
+  const minutos = Number(useWatch({ control, name: "tiempo" }));
   // El formulario monta recién con el detalle cargado, así que alcanza con
   // pasarle la imagen inicial una vez.
   const imagen = useImagenUnica(PRESIGN_RECETA, LIMITES_IMAGEN_RECETA, initial.foto);
-  const [ingredientes, setIngredientes] = useState<string[]>(
-    initial.ingredientes.length > 0 ? initial.ingredientes : [""],
-  );
-  const [pasos, setPasos] = useState<string[]>(initial.pasos.length > 0 ? initial.pasos : [""]);
-  const [attempted, setAttempted] = useState(false);
 
-  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
-  const isDup = nombre.trim().length > 0 && existingNames.map(norm).includes(norm(nombre));
-  const errNombre = !nombre.trim()
-    ? "Ingresá el nombre de la receta."
-    : nombre.trim().length > 100
-      ? "El nombre no puede superar los 100 caracteres."
-      : !NOMBRE_VALIDO.test(nombre)
-        ? "Usá solo letras, números, espacios, guiones y guiones bajos."
-        : isDup
-          ? "Ya existe una receta con ese nombre. Elegí otro."
-          : "";
-  const errCultivos = cultivosIds.length === 0 ? "Asociá al menos un cultivo." : "";
-  const minutos = Number(tiempo);
-  const errTiempo = !tiempo || !Number.isInteger(minutos) || minutos < 1
-    ? "Ingresá el tiempo en minutos (mayor a 0)."
-    : "";
-  const porcNum = Number(porciones);
-  const errPorciones = !porciones || !Number.isInteger(porcNum) || porcNum < 1
-    ? "Ingresá una cantidad mayor a 0."
-    : "";
-  const errDesc = !descripcion.trim() ? "Escribí una breve descripción." : "";
-  // El backend pide al menos un ingrediente y un paso (`@NotEmpty`).
-  const ingLimpios = ingredientes.map((x) => x.trim()).filter(Boolean);
-  const pasosLimpios = pasos.map((x) => x.trim()).filter(Boolean);
-  const errIngredientes = ingLimpios.length === 0 ? "Cargá al menos un ingrediente." : "";
-  const errPasos = pasosLimpios.length === 0 ? "Cargá al menos un paso." : "";
-  // El duplicado se avisa mientras se escribe; el resto, recién al guardar.
-  const showNombre = (attempted && errNombre) || (isDup ? errNombre : "");
-  const showDesc = attempted && errDesc;
-
-  function handleSave() {
-    setAttempted(true);
-    if (errNombre || errCultivos || errTiempo || errPorciones || errDesc || errIngredientes || errPasos) return;
+  const limpiar = (xs: string[]) => xs.map((x) => x.trim()).filter(Boolean);
+  const guardar = form.handleSubmit((v) =>
     onSave({
-      nombre: nombre.trim(),
-      cultivosIds,
-      dificultad,
-      tiempoMinsAprox: minutos,
-      porciones: porcNum,
-      descripcion: descripcion.trim(),
-      ingredientes: ingLimpios,
-      pasos: pasosLimpios,
+      nombre: v.nombre,
+      cultivosIds: v.cultivosIds,
+      dificultad: v.dificultad,
+      tiempoMinsAprox: Number(v.tiempo),
+      porciones: Number(v.porciones),
+      descripcion: v.descripcion,
+      ingredientes: limpiar(v.ingredientes),
+      pasos: limpiar(v.pasos),
       // Ya está en el bucket: lo que viaja es la key.
       foto: imagen.claim && { ...imagen.claim, downloadUrl: imagen.imagen?.previewUrl ?? "" },
-    });
-  }
+    }),
+  );
 
   return (
     <>
@@ -321,118 +305,158 @@ function RecetaForm({
         onCancel={onCancel}
       />
 
+      <Form {...form}>
       <div className="flex min-h-0 flex-1 flex-col gap-[22px] overflow-y-auto px-[26px] py-[22px]">
-        <div>
-          <GcrFieldLabel required>Nombre de la receta</GcrFieldLabel>
-          <TextField
-            value={nombre}
-            maxLength={100}
-            onChange={setNombre}
-            placeholder="Ej. Tarta rústica de uva Malbec"
-            aria-invalid={!!showNombre}
-          />
-          <div className="mt-[7px] flex items-center justify-between gap-3">
-            {showNombre ? <GcrErr msg={errNombre} /> : <span />}
-            <span className="shrink-0 font-mono text-xs text-fg-3">{nombre.length}/100</span>
-          </div>
-        </div>
-
-        <div>
-          <GcrFieldLabel required style={{ marginBottom: 4 }}>
-            Cultivos asociados
-          </GcrFieldLabel>
-          <p className="mb-3 text-[13.5px] leading-relaxed text-fg-2">
-            Elegí uno o más cultivos con los que se prepara esta receta.
-          </p>
-          {cultivosCargando ? (
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 4 }, (_, i) => (
-                <Skeleton key={i} className="h-9 w-[130px] rounded-full" />
-              ))}
-            </div>
-          ) : cultivos.length === 0 ? (
-            <Alert tone="warning">
-              Todavía no hay cultivos en el catálogo. Cargá uno antes de crear la receta.
-            </Alert>
-          ) : (
-            <GcrCultivoMultiSelect cultivos={cultivos} selected={cultivosIds} onChange={setCultivosIds} />
-          )}
-          {attempted && errCultivos && (
-            <div className="mt-2.5">
-              <GcrErr msg={errCultivos} />
-            </div>
-          )}
-        </div>
-        <div>
-            <GcrFieldLabel>Dificultad</GcrFieldLabel>
-            <Segmented
-              value={dificultad}
-              onChange={setDificultad}
-              options={DIFICULTADES.map((d) => ({ value: d, label: gcrDificultadLabel(d) }))}
-            />
-        </div>
-        <div className="grid grid-cols-1 gap-[18px] min-[560px]:grid-cols-2">
-          
-          <div>
-            <GcrFieldLabel required>Porciones</GcrFieldLabel>
-            <TextField
-              value={porciones}
-              inputMode="numeric"
-              maxLength={3}
-              onChange={(v) => setPorciones(v.replace(/[^0-9]/g, ""))}
-              placeholder="4"
-              aria-invalid={!!(attempted && errPorciones)}
-            />
-            {attempted && errPorciones && (
-              <div className="mt-[7px]">
-                <GcrErr msg={errPorciones} />
+        <FormField
+          control={control}
+          name="nombre"
+          render={({ field }) => (
+            <FormItem className="gap-2">
+              <FormLabel required className="font-display text-[15.5px] font-semibold">
+                Nombre de la receta
+              </FormLabel>
+              <FormControl>
+                <TextField {...field} maxLength={100} placeholder="Ej. Tarta rústica de uva Malbec" />
+              </FormControl>
+              <div className="flex items-center justify-between gap-3">
+                <FormMessage />
+                <span className="ml-auto shrink-0 font-mono text-xs text-fg-3">{nombre.length}/100</span>
               </div>
-            )}
-          </div>
-          <div>
-            <GcrFieldLabel required>Tiempo de preparación</GcrFieldLabel>
-            <TextField
-              value={tiempo}
-              inputMode="numeric"
-              maxLength={4}
-              onChange={(v) => setTiempo(v.replace(/[^0-9]/g, ""))}
-              placeholder="75"
-              rightSlot={<span className="pr-1.5 text-[13px] text-fg-3">min</span>}
-              aria-invalid={!!(attempted && errTiempo)}
-            />
-            <div className="mt-[7px] flex items-center justify-between gap-3">
-              {attempted && errTiempo ? <GcrErr msg={errTiempo} /> : <span />}
-              {/* La duración (Rápida / Media / Larga) la deduce el backend de
-                  este número, así que acá sólo se confirma cómo se va a leer. */}
-              <span className="shrink-0 font-mono text-xs text-fg-3">
-                {minutos > 0 ? comoTiempo(minutos) : "—"}
-              </span>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="cultivosIds"
+          render={({ field, fieldState }) => (
+            <div>
+              <GcrFieldLabel required style={{ marginBottom: 4 }}>
+                Cultivos asociados
+              </GcrFieldLabel>
+              <p className="mb-3 text-[13.5px] leading-relaxed text-fg-2">
+                Elegí uno o más cultivos con los que se prepara esta receta.
+              </p>
+              {cultivosCargando ? (
+                <div className="flex flex-wrap gap-2">
+                  {Array.from({ length: 4 }, (_, i) => (
+                    <Skeleton key={i} className="h-9 w-[130px] rounded-full" />
+                  ))}
+                </div>
+              ) : cultivos.length === 0 ? (
+                <Alert tone="warning">
+                  Todavía no hay cultivos en el catálogo. Cargá uno antes de crear la receta.
+                </Alert>
+              ) : (
+                <GcrCultivoMultiSelect cultivos={cultivos} selected={field.value} onChange={field.onChange} />
+              )}
+              {fieldState.error?.message && (
+                <div className="mt-2.5">
+                  <GcrErr msg={fieldState.error.message} />
+                </div>
+              )}
             </div>
-          </div>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="dificultad"
+          render={({ field }) => (
+            <div>
+              <GcrFieldLabel>Dificultad</GcrFieldLabel>
+              <Segmented
+                value={field.value}
+                onChange={field.onChange}
+                options={DIFICULTADES.map((d) => ({ value: d, label: gcrDificultadLabel(d) }))}
+              />
+            </div>
+          )}
+        />
+
+        <div className="grid grid-cols-1 gap-[18px] min-[560px]:grid-cols-2">
+          <FormField
+            control={control}
+            name="porciones"
+            render={({ field }) => (
+              <FormItem className="gap-2">
+                <FormLabel required className="font-display text-[15.5px] font-semibold">
+                  Porciones
+                </FormLabel>
+                <FormControl>
+                  <TextField
+                    {...field}
+                    inputMode="numeric"
+                    maxLength={3}
+                    onChange={(v) => field.onChange(v.replace(/[^0-9]/g, ""))}
+                    placeholder="4"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="tiempo"
+            render={({ field }) => (
+              <FormItem className="gap-2">
+                <FormLabel required className="font-display text-[15.5px] font-semibold">
+                  Tiempo de preparación
+                </FormLabel>
+                <FormControl>
+                  <TextField
+                    {...field}
+                    inputMode="numeric"
+                    maxLength={4}
+                    onChange={(v) => field.onChange(v.replace(/[^0-9]/g, ""))}
+                    placeholder="75"
+                    rightSlot={<span className="pr-1.5 text-[13px] text-fg-3">min</span>}
+                  />
+                </FormControl>
+                <div className="flex items-center justify-between gap-3">
+                  <FormMessage />
+                  {/* La duración (Rápida / Media / Larga) la deduce el backend de
+                      este número, así que acá sólo se confirma cómo se va a leer. */}
+                  <span className="ml-auto shrink-0 font-mono text-xs text-fg-3">
+                    {minutos > 0 ? comoTiempo(minutos) : "—"}
+                  </span>
+                </div>
+              </FormItem>
+            )}
+          />
         </div>
 
-        <div>
-          <GcrFieldLabel required>Descripción</GcrFieldLabel>
-          <textarea
-            rows={3}
-            maxLength={500}
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Contá en una o dos líneas de qué se trata la receta."
-            className={cn("textarea", showDesc && "err")}
-          />
-          <div className="mt-[7px] flex items-center justify-between gap-3">
-            {showDesc ? <GcrErr msg={errDesc} /> : <span />}
-            <span
-              className={cn(
-                "shrink-0 font-mono text-xs",
-                descripcion.length >= 500 ? "text-danger" : "text-fg-3",
-              )}
-            >
-              {descripcion.length}/500
-            </span>
-          </div>
-        </div>
+        <FormField
+          control={control}
+          name="descripcion"
+          render={({ field }) => (
+            <FormItem className="gap-2">
+              <FormLabel required className="font-display text-[15.5px] font-semibold">
+                Descripción
+              </FormLabel>
+              <FormControl>
+                <TextArea
+                  {...field}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Contá en una o dos líneas de qué se trata la receta."
+                />
+              </FormControl>
+              <div className="flex items-center justify-between gap-3">
+                <FormMessage />
+                <span
+                  className={cn(
+                    "ml-auto shrink-0 font-mono text-xs",
+                    descripcion.length >= 500 ? "text-danger" : "text-fg-3",
+                  )}
+                >
+                  {descripcion.length}/500
+                </span>
+              </div>
+            </FormItem>
+          )}
+        />
 
         <div>
           <GcrFieldLabel style={{ marginBottom: 4 }}>Imagen representativa</GcrFieldLabel>
@@ -443,52 +467,73 @@ function RecetaForm({
           <GcrImagePicker imagen={imagen} limites={LIMITES_IMAGEN_RECETA} />
         </div>
 
-        <div>
-          <GcrFieldLabel required style={{ marginBottom: 12 }}>
-            Ingredientes
-          </GcrFieldLabel>
-          <GcrListEditor
-            items={ingredientes}
-            onChange={setIngredientes}
-            placeholder="Ej. 250 g de harina 0000"
-            addLabel="Agregar ingrediente"
-            maxLength={100}
-          />
-          {attempted && errIngredientes && (
-            <div className="mt-[7px]">
-              <GcrErr msg={errIngredientes} />
+        <FormField
+          control={control}
+          name="ingredientes"
+          render={({ field, fieldState }) => (
+            <div>
+              <GcrFieldLabel required style={{ marginBottom: 12 }}>
+                Ingredientes
+              </GcrFieldLabel>
+              <GcrListEditor
+                items={field.value}
+                onChange={field.onChange}
+                placeholder="Ej. 250 g de harina 0000"
+                addLabel="Agregar ingrediente"
+                maxLength={100}
+              />
+              {fieldState.error?.message && (
+                <div className="mt-[7px]">
+                  <GcrErr msg={fieldState.error.message} />
+                </div>
+              )}
             </div>
           )}
-        </div>
+        />
 
-        <div>
-          <GcrFieldLabel required style={{ marginBottom: 12 }}>
-            Pasos de preparación
-          </GcrFieldLabel>
-          <GcrListEditor
-            items={pasos}
-            onChange={setPasos}
-            placeholder="Describí el paso"
-            addLabel="Agregar paso"
-            maxLength={200}
-            numbered
-          />
-          {attempted && errPasos && (
-            <div className="mt-[7px]">
-              <GcrErr msg={errPasos} />
+        <FormField
+          control={control}
+          name="pasos"
+          render={({ field, fieldState }) => (
+            <div>
+              <GcrFieldLabel required style={{ marginBottom: 12 }}>
+                Pasos de preparación
+              </GcrFieldLabel>
+              <GcrListEditor
+                items={field.value}
+                onChange={field.onChange}
+                placeholder="Describí el paso"
+                addLabel="Agregar paso"
+                maxLength={200}
+                numbered
+              />
+              {fieldState.error?.message && (
+                <div className="mt-[7px]">
+                  <GcrErr msg={fieldState.error.message} />
+                </div>
+              )}
             </div>
           )}
-        </div>
+        />
       </div>
+      </Form>
 
       <GcrFormFooter
         onCancel={onCancel}
-        onSave={handleSave}
+        onSave={guardar}
         saveLabel={editando ? "Guardar cambios" : "Agregar receta"}
         saveIcon={busy ? <Loader className="spin size-[17px]" /> : editando ? undefined : <Utensils className="size-[17px]" />}
         // Con la imagen a medio subir su key todavía no existe: guardar ahora
         // la perdería sin avisar.
         busy={busy || imagen.subiendo}
+        saveDisabled={faltan > 0}
+        aviso={
+          <FaltanCampos
+            faltan={faltan}
+            para={editando ? "guardar" : "agregar la receta"}
+            onVerQueFalta={verQueFalta}
+          />
+        }
         error={error}
       />
     </>
