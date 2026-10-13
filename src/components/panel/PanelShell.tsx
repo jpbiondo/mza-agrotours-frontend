@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3, Grape, CalendarCheck, MessageSquare, Home, ShieldCheck,
   ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound, Users, ReceiptText,
-  FileText,
+  FileText, TriangleAlert, CircleHelp, BookOpen,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -29,7 +29,16 @@ interface NavItem {
   icon: LucideIcon;
   label: string;
   /** Sección del panel, que se arma sobre el establecimiento activo (`""` es su raíz). */
-  seccion: string;
+  seccion?: string;
+  /** Ruta fija fuera del panel; pisa a `seccion`. */
+  href?: string;
+  /** Se abre en otra pestaña (p. ej. un PDF). */
+  nuevaPestana?: boolean;
+  /**
+   * Sigue disponible con el acceso suspendido: soporte es justamente a donde
+   * tiene que poder ir quien quedó bloqueado.
+   */
+  siempreDisponible?: boolean;
   badge?: number;
   /**
    * Sin este permiso en el establecimiento activo el ítem no se muestra. Es
@@ -68,10 +77,21 @@ const SIDEBAR: Row[] = [
     permiso: PermisoProductor.LEER_PRODUCTOR,
   },
   { id: "roles", icon: ShieldCheck, label: "Roles y permisos", seccion: "roles", soloLider: true },
+  // Soporte vive en el espacio del visitante: es el mismo para todas las cuentas.
+  { section: "Soporte" },
+  { id: "incidencias", icon: TriangleAlert, label: "Reportar incidencia", href: "/incidencias", siempreDisponible: true },
+  { id: "faq", icon: CircleHelp, label: "Preguntas frecuentes", href: "/ayuda", siempreDisponible: true },
+  {
+    // TODO: el widget del asistente se sacó (c329994); hasta que vuelva, el
+    // ítem entrega directo el manual del productor.
+    id: "manuales", icon: BookOpen, label: "Asistente y manuales",
+    href: "/manuales/Manual del productor.pdf", nuevaPestana: true, siempreDisponible: true,
+  },
 ];
 
 /** A dónde lleva un ítem estando en `establecimientoId`. */
 function hrefDe(row: NavItem, establecimientoId: string): string {
+  if (row.href) return row.href;
   return row.seccion ? rutaPanel(establecimientoId, row.seccion) : rutaPanel(establecimientoId);
 }
 
@@ -352,6 +372,14 @@ function NavRow({
     </>
   );
 
+  if (row.nuevaPestana) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={clase}>
+        {contenido}
+      </a>
+    );
+  }
+
   if (bloqueado) {
     return (
       <span aria-disabled className={clase} title={BLOQUEADO_TITULO}>
@@ -573,7 +601,7 @@ export default function PanelShell({ children }: { children: ReactNode }) {
                   row={row}
                   href={hrefDe(row, activo.id)}
                   activo={active === row.id}
-                  bloqueado={bloqueado}
+                  bloqueado={bloqueado && !row.siempreDisponible}
                 />
               ),
             )}
