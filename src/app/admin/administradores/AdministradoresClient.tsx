@@ -838,7 +838,7 @@ const TD: React.CSSProperties = { padding: "14px 18px" };
  * Las dos primeras van sin ancho: se reparten lo que sobra, que es lo que
  * conviene para nombres y correos de largo variable.
  */
-const ANCHOS = [undefined, undefined, 140, 200, 290];
+const ANCHOS = [undefined, undefined, 140, 250, 290];
 
 function Tabla({ children }: { children: React.ReactNode }) {
   return (
@@ -849,7 +849,7 @@ function Tabla({ children }: { children: React.ReactNode }) {
             width: "100%",
             borderCollapse: "collapse",
             tableLayout: "fixed",
-            minWidth: 1040,
+            minWidth: 1090,
           }}
         >
           <colgroup>
@@ -1280,23 +1280,15 @@ function Inner() {
                       {p.identificacion}
                     </td>
                     <td style={{ padding: "14px 18px" }}>
+                      {/* Hasta el ancho de la columna: con `table-fixed` un rol largo en
+                          `nowrap` se desbordaba sobre la de Acciones. Se corta y
+                          el nombre completo queda en el title. */}
                       <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 8,
-                          background: "var(--green-050)",
-                          border: "1px solid var(--green-300)",
-                          borderRadius: "var(--radius-pill)",
-                          padding: "5px 11px",
-                          fontSize: 13,
-                          color: "var(--green-800)",
-                          fontWeight: 600,
-                          whiteSpace: "nowrap",
-                        }}
+                        title={p.nombreRol}
+                        className="inline-flex max-w-full items-center gap-2 rounded-pill border border-green-300 bg-green-050 px-2.5 py-[5px] text-[13px] font-semibold text-green-800"
                       >
-                        <ShieldCheck size={14} color="var(--green-700)" />{" "}
-                        {p.nombreRol}
+                        <ShieldCheck className="size-3.5 shrink-0 text-green-700" />
+                        <span className="truncate">{p.nombreRol}</span>
                       </span>
                     </td>
                     <td style={{ padding: "14px 18px" }}>
