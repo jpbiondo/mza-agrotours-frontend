@@ -19,7 +19,6 @@ import {
   Warehouse,
   Sprout,
   Utensils,
-  UsersRound,
   SlidersHorizontal,
   HandCoins,
   Landmark,
@@ -108,12 +107,6 @@ const NAV: NavEntry[] = [
     permiso: PermisoAdmin.LEER_RECETAS,
   },
   { section: "Parámetros" },
-  {
-    id: "rangos",
-    iconC: UsersRound,
-    label: "Gestión del rango etario",
-    href: "/admin/rangos",
-  },
   {
     id: "parametros",
     iconC: SlidersHorizontal,
