@@ -1,4 +1,4 @@
-import type { AdminEstab, AdminPerson, AdminRole, PermGroup, RegisteredUser } from "@/types/admin";
+import type { AdminRole, PermGroup, RegisteredUser } from "@/types/admin";
 
 /* ---- Árbol de permisos del administrador del sistema ------------------- */
 export const ADMIN_PERM_GROUPS: PermGroup[] = [
@@ -54,27 +54,6 @@ export const ADMIN_REGISTERED_USERS: RegisteredUser[] = [
   { email: "martin.olguin@mendozaagrotours.gob.ar", nombre: "Martín Olguín", dni: "27.330.118" },
   { email: "valentina.rios@mendozaagrotours.gob.ar", nombre: "Valentina Ríos", dni: "34.789.255" },
   { email: "lucas.medina@mendozaagrotours.gob.ar", nombre: "Lucas Medina", dni: "32.107.643" },
-];
-
-export const ADMIN_SEED_PEOPLE: AdminPerson[] = [
-  { id: "a1", nombre: "Diego Ferreyra", email: "diego.ferreyra@mendozaagrotours.gob.ar", dni: "26.118.940", rolId: "ar1", estado: "activo", lider: true },
-  { id: "a2", nombre: "Paula Bianchi", email: "paula.bianchi@mendozaagrotours.gob.ar", dni: "31.504.221", rolId: "ar2", estado: "activo" },
-  { id: "a3", nombre: "Rodrigo Salas", email: "rodrigo.salas@mendozaagrotours.gob.ar", dni: "29.870.115", rolId: "ar2", estado: "activo" },
-  { id: "a4", nombre: "Florencia Aguirre", email: "florencia.aguirre@mendozaagrotours.gob.ar", dni: "33.221.768", rolId: "ar3", estado: "activo" },
-  { id: "a5", nombre: "Tomás Peralta", email: "tomas.peralta@mendozaagrotours.gob.ar", dni: "28.945.302", rolId: "ar4", estado: "activo" },
-];
-
-/**
- * Sólo lo usa el mock del resumen de /admin: la pantalla de establecimientos ya
- * va contra `GET /admin/establecimientos`.
- */
-export const ADMIN_SEED_ESTAB: AdminEstab[] = [
-  { id: "e1", nombre: "Finca La Escondida", productorLider: "Lucía Funes", departamento: "Luján de Cuyo", fechaAlta: "2024-03-12T09:00:00", actividades: 8, reservas: 142, estado: "activo", motivoEstado: "", fechaEstado: null, ejecutorEstado: "" },
-  { id: "e2", nombre: "Finca Los Álamos", productorLider: "Mateo Quiroga", departamento: "Maipú", fechaAlta: "2024-07-04T09:00:00", actividades: 5, reservas: 87, estado: "activo", motivoEstado: "", fechaEstado: null, ejecutorEstado: "" },
-  { id: "e3", nombre: "Bodega Viento Sur", productorLider: "Sofía Iglesias", departamento: "Tunuyán", fechaAlta: "2024-01-21T09:00:00", actividades: 11, reservas: 203, estado: "activo", motivoEstado: "", fechaEstado: null, ejecutorEstado: "" },
-  { id: "e4", nombre: "Finca El Cerezal", productorLider: "Joaquín Méndez", departamento: "San Rafael", fechaAlta: "2025-09-15T09:00:00", actividades: 3, reservas: 19, estado: "suspendido", motivoEstado: "Reiteradas cancelaciones sin reembolso a los visitantes. Suspendido hasta regularizar la situación.", fechaEstado: "2026-06-10T16:30:00", ejecutorEstado: "Paula Bianchi" },
-  { id: "e5", nombre: "Olivícola Don Aldo", productorLider: "Renata Vidal", departamento: "Maipú", fechaAlta: "2024-11-30T09:00:00", actividades: 4, reservas: 56, estado: "activo", motivoEstado: "", fechaEstado: null, ejecutorEstado: "" },
-  { id: "e6", nombre: "Finca Sol de Agosto", productorLider: "Ignacio Sosa", departamento: "Tupungato", fechaAlta: "2026-02-02T09:00:00", actividades: 2, reservas: 8, estado: "activo", motivoEstado: "", fechaEstado: null, ejecutorEstado: "" },
 ];
 
 export function admInitials(nombre: string): string {
