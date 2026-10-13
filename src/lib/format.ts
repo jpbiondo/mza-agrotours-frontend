@@ -77,3 +77,9 @@ export function fmtCodigoReserva(id: string): string {
 export function fmtPuntaje(n: number): string {
   return n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
+
+/** Porcentaje con signo, con el menos tipográfico: 8 → "+8%", -3 → "−3%". */
+export function fmtPctConSigno(n: number): string {
+  const signo = n > 0 ? "+" : n < 0 ? "−" : "";
+  return signo + Math.abs(n).toLocaleString("es-AR", { maximumFractionDigits: 0 }) + "%";
+}

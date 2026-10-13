@@ -1,31 +1,62 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
-  Users, Banknote, CalendarX, TrendingUp, CheckCircle2, Info, Download, X, Loader,
-  FileText, FileSpreadsheet, Table2, AlertOctagon, Check,
-  Grape, Sprout, Scissors, Wheat, Apple,
+  Users, Banknote, CalendarX, TrendingUp, TrendingDown, CheckCircle2, Info, Download, X, Loader,
+  FileText, FileSpreadsheet, Table2, BarChart3, Grape, Sprout, Wheat, Apple,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
+import { SinPermiso } from "@/components/GuardRol";
 import { Donut, BarChart, OccupancyBar } from "@/components/panel/charts";
-import { PERIODOS, periodoMeta, fmtMoney, fmtSignedPct } from "@/data/estadisticas";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { Toast, type ToastData } from "@/components/ui/Toast";
+import { PERIODOS, labelPeriodo } from "@/data/estadisticas";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { useEstadisticas, useExportarReporte, type ExportOpts } from "@/hooks/useEstadisticas";
-import type { ActividadPerf, Periodo } from "@/types/estadisticas";
+import { colorDe } from "@/lib/color";
+import { fmtFecha, fmtPctConSigno, moneyAr } from "@/lib/format";
+import { TipoPermiso } from "@/lib/permisos";
+import { ROL_PRODUCTOR_LIDER, tieneRol } from "@/lib/roles";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/authStore";
+import type { ActividadPerf, Periodo, RangoFechas } from "@/types/estadisticas";
+import EmptyEstablecimiento from "../../EmptyEstablecimiento";
 
-const ICONS: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
-  grape: Grape, sprout: Sprout, scissors: Scissors, wheat: Wheat, apple: Apple,
-};
+const SIN_ACCESO =
+  "Sólo el Productor Líder puede ver las estadísticas del establecimiento. Pedíselas al Productor Líder de la finca.";
 
-type ToastData = { tone: "success" | "danger"; title: string; sub: string } | null;
+/** El backend no manda ícono: se elige por el cultivo, con un brote si no se reconoce. */
+function iconoDe(cultivo: string): LucideIcon {
+  const t = cultivo.toLowerCase();
+  if (/uva|vid|viñ|malbec|bonarda|syrah|cabernet|torront/.test(t)) return Grape;
+  if (/durazn|ciruel|manzan|pera|cerez|damasc|membrill|frut/.test(t)) return Apple;
+  if (/trigo|ma[ií]z|cebada|cereal|avena/.test(t)) return Wheat;
+  return Sprout;
+}
+
+const rango = (r: RangoFechas) => `${fmtFecha(r.desde)} – ${fmtFecha(r.hasta)}`;
 
 function PeriodSelect({ value, onChange }: { value: Periodo; onChange: (v: Periodo) => void }) {
   return (
-    <div style={{ display: "inline-flex", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius)", padding: 4, gap: 2 }}>
+    <div role="radiogroup" aria-label="Período" className="inline-flex gap-0.5 rounded-md border border-outline-variant bg-surface p-1">
       {PERIODOS.map((p) => {
         const on = p.value === value;
         return (
-          <button key={p.value} type="button" onClick={() => onChange(p.value)} style={{ padding: "8px 14px", border: "none", background: on ? "var(--green-800)" : "transparent", color: on ? "var(--fg-on-dark)" : "var(--fg-2)", borderRadius: "calc(var(--radius) - 2px)", fontFamily: "var(--font-sans)", fontSize: 13.5, fontWeight: on ? 600 : 500, cursor: "pointer", boxShadow: on ? "inset 0 -2px 0 var(--green-900)" : "none" }}>
+          <button
+            key={p.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(p.value)}
+            className={cn(
+              "cursor-pointer rounded-[calc(var(--radius-md)-2px)] border-none px-3.5 py-2 font-sans text-[13.5px] transition-colors duration-150",
+              on ? "bg-green-800 font-semibold text-fg-on-dark shadow-[inset_0_-2px_0_var(--green-900)]" : "bg-transparent font-medium text-fg-2 hover:bg-cream-tert",
+            )}
+          >
             {p.label}
           </button>
         );
@@ -34,152 +65,172 @@ function PeriodSelect({ value, onChange }: { value: Periodo; onChange: (v: Perio
   );
 }
 
-function KpiCard({ title, icon, footer, footerTone = "neutral", children }: { title: string; icon: React.ReactNode; footer: React.ReactNode; footerTone?: "neutral" | "success"; children: React.ReactNode }) {
-  const footerColor = footerTone === "success" ? "var(--success-fg)" : "var(--fg-2)";
+const TONO_PIE = { neutral: "text-fg-2", success: "text-success-fg", danger: "text-danger-fg" };
+
+function KpiCard({ title, icon: Icon, footer, footerTone = "neutral", children }: {
+  title: string;
+  icon: LucideIcon;
+  footer: React.ReactNode;
+  footerTone?: keyof typeof TONO_PIE;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="card" style={{ padding: 24, display: "flex", flexDirection: "column", minHeight: 200 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <div className="t-label" style={{ margin: 0 }}>{title}</div>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--green-050)", display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
+    <Card className="flex min-h-[200px] flex-col p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="t-label m-0">{title}</h2>
+        <span className="flex size-8 items-center justify-center rounded-lg bg-green-050"><Icon size={16} className="text-green-800" /></span>
       </div>
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>
-      <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--cream-tert)", fontSize: 13, color: footerColor, lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>{footer}</div>
-    </div>
+      <div className="flex flex-1 items-center justify-center">{children}</div>
+      <div className={cn("mt-4 flex items-center gap-1.5 border-t border-cream-tert pt-3.5 text-[13px] leading-[1.4]", TONO_PIE[footerTone])}>{footer}</div>
+    </Card>
   );
 }
 
 function ActivitiesTable({ rows, onExport }: { rows: ActividadPerf[]; onExport: () => void }) {
   return (
-    <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", borderBottom: "1px solid var(--outline-variant)" }}>
+    <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant px-6 py-5">
         <div>
-          <h2 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>Performance por actividad</h2>
-          <p style={{ margin: "4px 0 0", color: "var(--fg-3)", fontSize: 13 }}>Ranking de ocupación de tus experiencias en el período seleccionado.</p>
+          <h2 className="m-0 font-display text-xl font-bold text-fg-1">Performance por actividad</h2>
+          <p className="mt-1 mb-0 text-[13px] text-fg-3">Ranking de ocupación de tus experiencias en el período seleccionado.</p>
         </div>
-        <button type="button" className="btn btn-neutral btn-sm" onClick={onExport} style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><Download size={15} /> Exportar</button>
+        <Button variant="neutral" size="sm" onClick={onExport} disabled={rows.length === 0}><Download size={15} /> Exportar</Button>
       </div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-          <thead>
-            <tr style={{ textAlign: "left", color: "var(--fg-3)", fontSize: 11.5, textTransform: "uppercase", letterSpacing: ".05em", borderBottom: "1px solid var(--cream-tert)" }}>
-              <th style={{ padding: "12px 24px", fontWeight: 600 }}>Nombre actividad</th>
-              <th style={{ padding: "12px 12px", fontWeight: 600, textAlign: "right" }}>Cupos</th>
-              <th style={{ padding: "12px 12px", fontWeight: 600, textAlign: "right" }}>Reservas</th>
-              <th style={{ padding: "12px 12px", fontWeight: 600, textAlign: "right" }}>Ingresos</th>
-              <th style={{ padding: "12px 24px", fontWeight: 600, width: 240 }}>Ocupación</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((a) => {
-              const IconC = ICONS[a.icon] ?? Grape;
-              return (
-                <tr key={a.id} style={{ borderBottom: "1px solid var(--cream-tert)" }}>
-                  <td style={{ padding: "14px 24px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: a.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><IconC size={18} color="rgba(255,255,255,.92)" /></div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, color: "var(--fg-1)", fontSize: 14 }}>{a.nombre}</div>
-                        <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 2 }}>{a.cultivo}</div>
+
+      {rows.length === 0 ? (
+        <div className="px-6 py-14 text-center text-fg-3">
+          <BarChart3 size={28} className="mx-auto text-fg-3" />
+          <p className="mt-3 mb-0 text-sm">No hay actividades vigentes en este período.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-cream-tert text-left text-[11.5px] tracking-[.05em] text-fg-3 uppercase">
+                <th className="px-6 py-3 font-semibold">Nombre actividad</th>
+                <th className="w-[120px] px-3 py-3 text-right font-semibold">Cupos totales</th>
+                <th className="w-[100px] px-3 py-3 text-right font-semibold">Reservas</th>
+                <th className="w-[150px] px-3 py-3 text-right font-semibold">Ingresos del período</th>
+                <th className="w-[240px] px-6 py-3 font-semibold">Ocupación</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((a) => {
+                const Icono = iconoDe(a.cultivo || a.nombre);
+                const color = colorDe(a.nombre);
+                return (
+                  <tr key={a.id} className="border-b border-cream-tert last:border-b-0">
+                    <td className="px-6 py-3.5">
+                      <div className="flex items-center gap-3">
+                        {/* El color es un dato derivado del nombre: va inline, como en los cultivos. */}
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full" style={{ background: color }}>
+                          <Icono size={18} className="text-white/90" />
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-fg-1">{a.nombre}</div>
+                          {a.cultivo && <div className="mt-0.5 text-xs text-fg-3">{a.cultivo}</div>}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: "14px 12px", textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: 500, color: "var(--fg-2)" }}>{a.cupos}</td>
-                  <td style={{ padding: "14px 12px", textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: 500, color: "var(--fg-2)" }}>{a.reservas}</td>
-                  <td style={{ padding: "14px 12px", textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--fg-1)" }}>{fmtMoney(a.ingresos)}</td>
-                  <td style={{ padding: "14px 24px" }}><OccupancyBar value={a.ocupacion} color={a.color} /></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+                    </td>
+                    <td className="px-3 py-3.5 text-right font-mono font-medium text-fg-2">{a.cupos}</td>
+                    <td className="px-3 py-3.5 text-right font-mono font-medium text-fg-2">{a.reservas}</td>
+                    <td className="px-3 py-3.5 text-right font-mono font-semibold whitespace-nowrap text-fg-1">{moneyAr(a.ingresos)}</td>
+                    <td className="px-6 py-3.5"><OccupancyBar value={a.ocupacion} color={color} /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }
+
+const ALCANCES: { id: ExportOpts["scope"]; label: string; sub: string }[] = [
+  { id: "performance", label: "Performance por actividad", sub: "Tabla con cupos, reservas y % de ocupación" },
+  { id: "completo", label: "Reporte completo", sub: "Incluye KPIs, gráfico mensual y tabla" },
+];
+
+const FORMATOS: { id: ExportOpts["format"]; label: string; sub: string; Icon: LucideIcon }[] = [
+  { id: "pdf", label: "PDF", sub: "Reporte con formato y gráficos", Icon: FileText },
+  { id: "csv", label: "CSV", sub: "Datos tabulares, separado por comas", Icon: FileSpreadsheet },
+  { id: "xlsx", label: "Excel", sub: "Hoja de cálculo .xlsx", Icon: Table2 },
+];
+
+/** Recuadro elegible del modal: borde de 2px cuando está activo, sin que el contenido salte. */
+const opcion = (on: boolean) =>
+  cn(
+    "cursor-pointer rounded-md border-solid text-left",
+    on ? "m-0 border-2 border-green-800 bg-green-050" : "m-px border border-outline-variant bg-surface hover:border-sand",
+  );
 
 function ExportModal({ busy, onClose, onConfirm }: { busy: boolean; onClose: () => void; onConfirm: (o: ExportOpts) => void }) {
   const [format, setFormat] = useState<ExportOpts["format"]>("pdf");
   const [scope, setScope] = useState<ExportOpts["scope"]>("performance");
 
+  // TODO: `Modal` no maneja Escape; se va cuando pase al Dialog de Base UI.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !busy) onClose(); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const formats = [
-    { id: "pdf" as const, label: "PDF", sub: "Reporte con formato y gráficos", icon: <FileText size={20} /> },
-    { id: "csv" as const, label: "CSV", sub: "Datos tabulares, separado por comas", icon: <FileSpreadsheet size={20} /> },
-    { id: "xlsx" as const, label: "Excel", sub: "Hoja de cálculo .xlsx", icon: <Table2 size={20} /> },
-  ];
+  }, [busy, onClose]);
 
   return (
-    <div onMouseDown={onClose} style={{ position: "fixed", inset: 0, background: "rgba(42,38,32,.45)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, backdropFilter: "blur(2px)" }}>
-      <div className="pop" onMouseDown={(e) => e.stopPropagation()} style={{ position: "relative", background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--outline-variant)", boxShadow: "var(--shadow-pop)", width: 520, maxWidth: "100%", padding: "28px 28px 24px" }}>
-        <button type="button" onClick={onClose} aria-label="Cerrar" style={{ position: "absolute", top: 14, right: 14, width: 32, height: 32, borderRadius: "var(--radius)", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={18} color="var(--fg-2)" /></button>
-        <h3 style={{ margin: "0 0 8px", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 22, color: "var(--fg-1)" }}>Exportar reporte</h3>
-        <p style={{ margin: "0 0 22px", fontSize: 14, color: "var(--fg-2)", lineHeight: 1.5 }}>Vas a descargar los datos de performance del período seleccionado. Elegí qué incluir y en qué formato.</p>
+    <Modal onClose={onClose} dismissable={!busy} className="w-[520px]">
+      <button type="button" onClick={onClose} disabled={busy} aria-label="Cerrar" className="absolute top-3.5 right-3.5 flex size-8 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-fg-2 hover:bg-cream-tert"><X size={18} /></button>
+      <h3 className="mt-0 mb-2 font-display text-[22px] leading-tight font-semibold text-fg-1">Exportar reporte</h3>
+      <p className="mt-0 mb-[22px] text-sm leading-normal text-fg-2">Vas a descargar los datos de performance del período seleccionado. Elegí qué incluir y en qué formato.</p>
 
-        <div className="t-label" style={{ marginBottom: 10 }}>Contenido</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
-          {[
-            { id: "performance" as const, label: "Performance por actividad", sub: "Tabla con cupos, reservas y % de ocupación" },
-            { id: "completo" as const, label: "Reporte completo", sub: "Incluye KPIs, gráfico mensual y tabla" },
-          ].map((s) => {
-            const on = scope === s.id;
-            return (
-              <label key={s.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: 14, border: `${on ? 2 : 1}px solid ${on ? "var(--green-800)" : "var(--outline-variant)"}`, background: on ? "var(--green-050)" : "var(--surface)", borderRadius: "var(--radius)", cursor: "pointer", margin: on ? 0 : 1 }}>
-                <input type="radio" name="scope" checked={on} onChange={() => setScope(s.id)} style={{ marginTop: 3, accentColor: "var(--green-800)" }} />
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: "var(--fg-1)" }}>{s.label}</div>
-                  <div style={{ fontSize: 12.5, color: "var(--fg-3)", marginTop: 2 }}>{s.sub}</div>
-                </div>
-              </label>
-            );
-          })}
-        </div>
-
-        <div className="t-label" style={{ marginBottom: 10 }}>Formato</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 26 }}>
-          {formats.map((f) => {
-            const on = format === f.id;
-            return (
-              <button key={f.id} type="button" onClick={() => setFormat(f.id)} style={{ padding: "14px 12px", border: `${on ? 2 : 1}px solid ${on ? "var(--green-800)" : "var(--outline-variant)"}`, background: on ? "var(--green-050)" : "var(--surface)", borderRadius: "var(--radius)", cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-start", margin: on ? 0 : 1 }}>
-                <span style={{ color: on ? "var(--green-800)" : "var(--fg-2)" }}>{f.icon}</span>
-                <div style={{ fontWeight: 600, fontSize: 14, color: "var(--fg-1)" }}>{f.label}</div>
-                <div style={{ fontSize: 11.5, color: "var(--fg-3)", lineHeight: 1.3 }}>{f.sub}</div>
-              </button>
-            );
-          })}
-        </div>
-
-        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-          <button type="button" className="btn btn-neutral" onClick={onClose} disabled={busy}>Cancelar</button>
-          <button type="button" className="btn btn-primary" onClick={() => onConfirm({ format, scope })} disabled={busy}>
-            {busy ? <><Loader size={17} className="spin" /> Generando…</> : <><Download size={17} /> Descargar</>}
-          </button>
-        </div>
+      <div className="t-label mb-2.5">Contenido</div>
+      <div className="mb-6 flex flex-col gap-2">
+        {ALCANCES.map((s) => {
+          const on = scope === s.id;
+          return (
+            <label key={s.id} className={cn(opcion(on), "flex items-start gap-3 p-3.5")}>
+              <input type="radio" name="scope" checked={on} onChange={() => setScope(s.id)} className="mt-[3px] accent-green-800" />
+              <span>
+                <span className="block text-sm font-semibold text-fg-1">{s.label}</span>
+                <span className="mt-0.5 block text-[12.5px] text-fg-3">{s.sub}</span>
+              </span>
+            </label>
+          );
+        })}
       </div>
-    </div>
+
+      <div className="t-label mb-2.5">Formato</div>
+      <div role="radiogroup" aria-label="Formato" className="mb-[26px] grid grid-cols-3 gap-2">
+        {FORMATOS.map(({ id, label, sub, Icon }) => {
+          const on = format === id;
+          return (
+            <button key={id} type="button" role="radio" aria-checked={on} onClick={() => setFormat(id)} className={cn(opcion(on), "flex flex-col items-start gap-1.5 px-3 py-3.5 font-sans")}>
+              <Icon size={20} className={on ? "text-green-800" : "text-fg-2"} />
+              <span className="text-sm font-semibold text-fg-1">{label}</span>
+              <span className="text-[11.5px] leading-[1.3] text-fg-3">{sub}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-end gap-3">
+        <Button variant="neutral" onClick={onClose} disabled={busy}>Cancelar</Button>
+        <Button onClick={() => onConfirm({ format, scope })} disabled={busy}>
+          {busy ? <><Loader size={17} className="spin" /> Generando…</> : <><Download size={17} /> Descargar</>}
+        </Button>
+      </div>
+    </Modal>
   );
 }
 
-function ToastView({ toast, onClose }: { toast: ToastData; onClose: () => void }) {
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(onClose, 4400);
-    return () => clearTimeout(t);
-  }, [toast, onClose]);
-  if (!toast) return null;
-  const danger = toast.tone === "danger";
+/** Misma forma que el contenido, para que nada salte cuando llegan los números. */
+function EstadisticasSkeleton() {
   return (
-    <div className="pop" style={{ position: "fixed", right: 24, bottom: 24, zIndex: 110, display: "flex", alignItems: "flex-start", gap: 13, background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius)", boxShadow: "var(--shadow-pop)", padding: "16px 18px", width: 380, maxWidth: "calc(100vw - 48px)" }}>
-      <div style={{ width: 30, height: 30, borderRadius: "50%", background: danger ? "var(--danger)" : "var(--success)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{danger ? <AlertOctagon size={18} color="#fff" /> : <Check size={18} color="#fff" />}</div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 14.5, color: "var(--fg-1)", lineHeight: 1.3 }}>{toast.title}</div>
-        <div style={{ fontSize: 13, color: "var(--fg-2)", marginTop: 4, lineHeight: 1.4 }}>{toast.sub}</div>
+    <div aria-busy aria-label="Cargando estadísticas…">
+      <div className="mb-6 grid grid-cols-1 gap-5 min-[961px]:grid-cols-[1.05fr_1fr_1fr]">
+        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[262px] rounded-lg" />)}
       </div>
-      <button type="button" onClick={onClose} aria-label="Cerrar" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 2 }}><X size={15} color="var(--fg-3)" /></button>
+      <Skeleton className="mb-6 h-[352px] rounded-lg" />
+      <Skeleton className="h-[360px] rounded-lg" />
     </div>
   );
 }
@@ -187,89 +238,137 @@ function ToastView({ toast, onClose }: { toast: ToastData; onClose: () => void }
 export default function EstadisticasClient() {
   // El establecimiento activo lo elige el switcher del shell.
   const { activo } = useEstablecimientos();
-  const fincaId = activo?.id ?? "";
-  const { data, isLoading, error, reload } = useEstadisticas(fincaId);
-  const { exportar, isLoading: exporting } = useExportarReporte();
-  const [period, setPeriod] = useState<Periodo>("6m");
-  const [exportOpen, setExportOpen] = useState(false);
-  const [toast, setToast] = useState<ToastData>(null);
+  const establecimientoId = activo?.id ?? "";
+  const accesos = useAuthStore((s) => s.accesos);
+  // El backend sólo se las da al titular del establecimiento, que es su Productor Líder.
+  const esLider = tieneRol(accesos, ROL_PRODUCTOR_LIDER, { tipoPermiso: TipoPermiso.PRODUCTOR, establecimientoId });
 
-  const meta = periodoMeta(period);
+  const [period, setPeriod] = useState<Periodo>("6m");
+  const { data, isLoading, error, reload } = useEstadisticas(esLider ? establecimientoId : "", period);
+  const { exportar, isLoading: exporting } = useExportarReporte();
+  const [exportOpen, setExportOpen] = useState(false);
+  const [toast, setToast] = useState<ToastData | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4200);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  if (!activo) return <EmptyEstablecimiento />;
+  if (!esLider) return <SinPermiso motivo={SIN_ACCESO} />;
 
   async function onConfirmExport(opts: ExportOpts) {
-    await exportar(opts);
+    if (!data) return;
+    const { ok } = await exportar(opts, data, period, {
+      establecimiento: activo?.nombre || "Establecimiento",
+      periodo: labelPeriodo(period),
+    });
     setExportOpen(false);
-    setToast({ tone: "success", title: `Reporte generado en ${opts.format.toUpperCase()}`, sub: opts.scope === "completo" ? "Se descargó el reporte completo con KPIs, gráfico y tabla." : "Se descargó la tabla de performance por actividad." });
+    setToast(ok
+      ? {
+          tone: "success",
+          title: `Reporte generado en ${opts.format.toUpperCase()}`,
+          sub: opts.scope === "completo" ? "Se descargó el reporte completo con KPIs, gráfico y tabla." : "Se descargó la tabla de performance por actividad.",
+        }
+      : { tone: "danger", title: "No se pudo generar el reporte", sub: "Intentá nuevamente en unos minutos. Si el problema persiste, contactá a soporte." });
   }
 
+  const label = labelPeriodo(period);
+
   return (
-    <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
-
-      <main style={{ maxWidth: 1240, margin: "0 auto", padding: "32px 28px 80px" }}>
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 20, marginBottom: 32 }}>
-          <div>
-            <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 32, color: "var(--fg-1)", margin: 0, letterSpacing: "-.01em" }}>Estadísticas y reportes</h1>
-            <p style={{ margin: "6px 0 0", color: "var(--fg-2)", fontSize: 15 }}>Desempeño de tus experiencias en <strong style={{ color: "var(--fg-1)" }}>{meta.label.toLowerCase()}</strong> · {meta.sub}</p>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <PeriodSelect value={period} onChange={setPeriod} />
-            <button type="button" className="btn btn-primary" onClick={() => setExportOpen(true)}><Download size={17} /> Exportar reporte</button>
-          </div>
+    <div className="mx-auto max-w-[1240px] px-7 pt-8 pb-20">
+      {/* La cabecera no depende de los datos: se pinta desde el primer frame. */}
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <h1 className="m-0 font-display text-[32px] font-bold tracking-[-0.01em] text-fg-1">Estadísticas y reportes</h1>
+          <p className="mt-1.5 mb-0 text-[15px] text-fg-2">
+            Desempeño de tus experiencias en <strong className="text-fg-1">{label.toLowerCase()}</strong>
+            {data?.actual.desde && <> · del {fmtFecha(data.actual.desde)} al {fmtFecha(data.actual.hasta)}</>}
+          </p>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <PeriodSelect value={period} onChange={setPeriod} />
+          <Button onClick={() => setExportOpen(true)} disabled={!data}><Download size={17} /> Exportar reporte</Button>
+        </div>
+      </div>
 
-        <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando estadísticas…" pad={100}>
-          {(() => {
-          if (!data) return null;
-          const kpis = data.kpisByPeriod[period];
-          const series = data.seriesByPeriod[period];
+      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<EstadisticasSkeleton />}>
+        {data && (() => {
+          const { kpis, serie, actual, anterior } = data;
+          const sube = (kpis.beneficiosDelta ?? 0) >= 0;
           return (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "1.05fr 1fr 1fr", gap: 20, marginBottom: 24 }} className="stats-kpi-grid">
-                <KpiCard title="Ocupación" icon={<Users size={16} color="var(--green-800)" />} footerTone="success" footer={<><CheckCircle2 size={14} color="var(--success-fg)" /> {kpis.ocupacionFilled} de {kpis.ocupacionTotal} cupos reservados</>}>
+              <div className="mb-6 grid grid-cols-1 gap-5 min-[961px]:grid-cols-[1.05fr_1fr_1fr]">
+                <KpiCard
+                  title="Ocupación"
+                  icon={Users}
+                  footerTone={kpis.ocupacionFilled > 0 ? "success" : "neutral"}
+                  footer={kpis.ocupacionTotal === 0
+                    ? "Sin cupos ofertados en el período."
+                    : kpis.ocupacionFilled === 0
+                      ? "Sin reservas en el período."
+                      : <><CheckCircle2 size={14} className="shrink-0" /> {kpis.ocupacionFilled} de {kpis.ocupacionTotal} cupos reservados</>}
+                >
                   <Donut value={kpis.ocupacionPct} size={150} stroke={16} />
                 </KpiCard>
 
-                <KpiCard title="Beneficios totales" icon={<Banknote size={16} color="var(--green-800)" />} footerTone="success" footer={<><TrendingUp size={14} color="var(--success-fg)" /><span><strong>{fmtSignedPct(kpis.beneficiosDelta)}</strong> vs. período anterior <span style={{ color: "var(--fg-3)" }}>({meta.rangoAnterior})</span></span></>}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 40, color: "var(--fg-1)", lineHeight: 1, letterSpacing: "-0.01em" }}>{fmtMoney(kpis.beneficios)}</div>
-                    <div style={{ marginTop: 8, fontSize: 12.5, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>Pesos argentinos · neto</div>
-                    <div style={{ marginTop: 4, fontSize: 12, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>{meta.rangoActual}</div>
+                <KpiCard
+                  title="Beneficios totales"
+                  icon={Banknote}
+                  footerTone={kpis.beneficiosDelta == null ? "neutral" : sube ? "success" : "danger"}
+                  footer={kpis.beneficiosDelta == null
+                    ? kpis.beneficios === 0
+                      ? "Sin ingresos registrados."
+                      : <><Info size={14} className="shrink-0" /> Sin ingresos en el período anterior para comparar.</>
+                    : <>
+                        {sube ? <TrendingUp size={14} className="shrink-0" /> : <TrendingDown size={14} className="shrink-0" />}
+                        <span><strong>{fmtPctConSigno(kpis.beneficiosDelta)}</strong> respecto del período anterior{anterior && <span className="text-fg-3"> ({rango(anterior)})</span>}</span>
+                      </>}
+                >
+                  <div className="text-center">
+                    <div className="font-display text-[40px] leading-none font-bold tracking-[-0.01em] text-fg-1">{moneyAr(kpis.beneficios)}</div>
+                    <div className="mt-2 font-mono text-[12.5px] text-fg-3">Pesos argentinos · neto</div>
+                    {actual.desde && <div className="mt-1 font-mono text-xs text-fg-3">{rango(actual)}</div>}
                   </div>
                 </KpiCard>
 
-                <KpiCard title="Cancelaciones" icon={<CalendarX size={16} color="var(--green-800)" />} footer={<><Info size={14} color="var(--fg-2)" /> {kpis.cancelacionCount} reservas canceladas</>}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 56, color: "var(--fg-1)", lineHeight: 1, letterSpacing: "-0.02em" }}>{kpis.cancelacionPct}<span style={{ fontSize: "0.5em", color: "var(--fg-2)", marginLeft: 2 }}>%</span></div>
-                    <div style={{ marginTop: 8, fontSize: 12.5, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>sobre el total de reservas</div>
+                <KpiCard
+                  title="Cancelaciones"
+                  icon={CalendarX}
+                  footer={kpis.cancelacionCount === 0
+                    ? "Sin cancelaciones."
+                    : <><Info size={14} className="shrink-0" /> {kpis.cancelacionCount} {kpis.cancelacionCount === 1 ? "reserva cancelada" : "reservas canceladas"}</>}
+                >
+                  <div className="text-center">
+                    <div className="font-display text-[56px] leading-none font-bold tracking-[-0.02em] text-fg-1">{kpis.cancelacionPct}<span className="ml-0.5 text-[0.5em] text-fg-2">%</span></div>
+                    <div className="mt-2 font-mono text-[12.5px] text-fg-3">sobre el total de reservas</div>
                   </div>
                 </KpiCard>
               </div>
 
-              <div className="card" style={{ padding: 24, marginBottom: 24 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18, gap: 16, flexWrap: "wrap" }}>
+              <Card className="mb-6 p-6">
+                <div className="mb-[18px] flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h2 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--fg-1)" }}>{series.title}</h2>
-                    <p style={{ margin: "4px 0 0", color: "var(--fg-3)", fontSize: 13 }}>{series.sub}</p>
+                    <h2 className="m-0 font-display text-xl font-bold text-fg-1">{serie.title || "Reservas totales"}</h2>
+                    {serie.sub && <p className="mt-1 mb-0 text-[13px] text-fg-3">{serie.sub}</p>}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 12.5, color: "var(--fg-2)", flexWrap: "wrap" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ display: "inline-block", width: 12, height: 12, background: "#EAF1E2", border: "1.5px solid var(--green-600)", borderRadius: 3 }} /> Reservas confirmadas</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-3)" }}>$</span> Ganancia del período</div>
+                  <div className="flex flex-wrap items-center gap-4 text-[12.5px] text-fg-2">
+                    <div className="flex items-center gap-1.5"><span className="inline-block size-3 rounded-[3px] border-[1.5px] border-green-600 bg-[#EAF1E2]" /> Reservas confirmadas</div>
+                    <div className="flex items-center gap-1.5"><span className="font-mono text-xs text-fg-3">$</span> Ganancia del período</div>
                   </div>
                 </div>
-                <BarChart data={series.bars} height={260} />
-              </div>
+                <BarChart data={serie.bars} height={260} />
+              </Card>
 
               <ActivitiesTable rows={data.actividades} onExport={() => setExportOpen(true)} />
             </>
           );
         })()}
-        </AsyncBoundary>
-      </main>
+      </AsyncBoundary>
 
       {exportOpen && <ExportModal busy={exporting} onClose={() => setExportOpen(false)} onConfirm={onConfirmExport} />}
-      <ToastView toast={toast} onClose={() => setToast(null)} />
-
-      <style>{`@media (max-width: 860px) { .stats-kpi-grid { grid-template-columns: 1fr !important; } }`}</style>
+      {toast && <Toast {...toast} />}
     </div>
   );
 }
