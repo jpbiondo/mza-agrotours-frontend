@@ -48,7 +48,7 @@ type Row = { section: string } | NavItem;
  */
 const SIDEBAR: Row[] = [
   { id: "panel", icon: Home, label: "Panel", seccion: "" },
-  { id: "estadisticas", icon: BarChart3, label: "Estadísticas", seccion: "estadisticas" },
+  { id: "estadisticas", icon: BarChart3, label: "Estadísticas", seccion: "estadisticas", soloLider: true },
   { id: "datos", icon: FileText, label: "Datos del establecimiento", seccion: "datos", soloLider: true },
   { section: "Actividades" },
   {

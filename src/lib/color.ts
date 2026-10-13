@@ -24,7 +24,8 @@ function normalizar(v: string): string {
     .replace(/[̀-ͯ]/g, "");
 }
 
-export function gradienteDe(nombre: string): string {
+/** Índice estable en `[0, n)` a partir del nombre. */
+function indiceDe(nombre: string, n: number): number {
   const t = normalizar(nombre);
   // FNV-1a: barato y con buena dispersión para cadenas cortas.
   let h = 0x811c9dc5;
@@ -32,5 +33,20 @@ export function gradienteDe(nombre: string): string {
     h ^= t.charCodeAt(i);
     h = Math.imul(h, 0x01000193);
   }
-  return GRADIENTES[Math.abs(h) % GRADIENTES.length];
+  return Math.abs(h) % n;
+}
+
+export function gradienteDe(nombre: string): string {
+  return GRADIENTES[indiceDe(nombre, GRADIENTES.length)];
+}
+
+/**
+ * Colores lisos de la paleta de la tierra (vino, oliva, corteza, ocre,
+ * durazno), para el avatar y la barra de una actividad en las estadísticas.
+ * Mismo criterio que el degradé: estable por nombre.
+ */
+const COLORES = ["#A33A2C", "#6B7C3A", "#805533", "#C77F2A", "#D67A55", "#3A6B7A"];
+
+export function colorDe(nombre: string): string {
+  return COLORES[indiceDe(nombre, COLORES.length)];
 }

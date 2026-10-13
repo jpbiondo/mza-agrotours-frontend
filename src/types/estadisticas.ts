@@ -2,10 +2,15 @@ export type Periodo = "30d" | "6m" | "12m";
 
 export interface Kpis {
   ocupacionPct: number;
+  /** Cupos reservados (reservas pagadas o finalizadas) en el rango. */
   ocupacionFilled: number;
+  /** Cupos ofertados en el rango. */
   ocupacionTotal: number;
+  /** Lo que le queda al productor de las reservas confirmadas, en pesos. */
   beneficios: number;
-  beneficiosDelta: number;
+  /** Variación contra el período anterior; `null` si el anterior no tuvo ingresos y no hay contra qué comparar. */
+  beneficiosDelta: number | null;
+  /** Canceladas sobre gestionadas (confirmadas + canceladas). */
   cancelacionPct: number;
   cancelacionCount: number;
 }
@@ -25,25 +30,25 @@ export interface Serie {
 export interface ActividadPerf {
   id: string;
   nombre: string;
+  /** Los cultivos de la actividad, ya unidos con coma. */
   cultivo: string;
   cupos: number;
   reservas: number;
   ocupacion: number;
   ingresos: number;
-  color: string;
-  icon: string;
 }
 
-export interface PeriodoMeta {
-  value: Periodo;
-  label: string;
-  sub: string;
-  rangoActual: string;
-  rangoAnterior: string;
+/** Rango de días, los dos extremos incluidos, como `LocalDate` ISO ("2026-10-12"). */
+export interface RangoFechas {
+  desde: string;
+  hasta: string;
 }
 
 export interface Estadisticas {
-  kpisByPeriod: Record<Periodo, Kpis>;
-  seriesByPeriod: Record<Periodo, Serie>;
+  actual: RangoFechas;
+  /** El rango contra el que se compara el beneficio; `null` si el backend no lo mandó. */
+  anterior: RangoFechas | null;
+  kpis: Kpis;
+  serie: Serie;
   actividades: ActividadPerf[];
 }
