@@ -15,7 +15,7 @@ import { refrescarCalendario, useInfoParaReservar } from "@/hooks/useInfoParaRes
 import { useReserva , type RealizarReservaRequest } from "@/hooks/useCheckout";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import TravelersList from "./Travelers";
-import { SuccessModal, CancelToast } from "./Resultados";
+import { CancelToast } from "./Resultados";
 import { AvisoBloqueado, BloqueoCupos, type EstadoBloqueo } from "./Bloqueo";
 import { Alert, EstadoBadge } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -179,7 +179,6 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
 
   const [bloqueo, setBloqueo] = useState<EstadoBloqueo>({ estado: "libre" });
   const [errorReserva, setErrorReserva] = useState<string | null>(null);
-  const [okOpen, setOkOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [cancelando, setCancelando] = useState(false);
 
@@ -412,14 +411,12 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
               fecha={selLabel}
               visitantes={totalRows}
               onConfirmar={onConfirm}
-              onPagar={() => setOkOpen(true)}
               onCancelar={() => liberar("Cancelaste la reserva. Los cupos se liberaron.")}
             />
           </div>
         </div>
       </div>
 
-      <SuccessModal open={okOpen} onClose={() => setOkOpen(false)} />
       <CancelToast open={toast !== null} message={toast ?? ""} onClose={() => setToast(null)} />
     </div>
   );

@@ -1,22 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarCheck, CheckCircle2, Loader, Lock, Pencil, Ticket, Wallet } from "lucide-react";
+import { CalendarCheck, CheckCircle2, Loader, Lock, Pencil, Ticket } from "lucide-react";
+import PagarConMercadoPago from "@/components/reserva/PagarConMercadoPago";
 import { Button, buttonClasses } from "@/components/ui";
-
-/**
- * Checkout Pro de Mercado Pago para una preferencia. Se va por redirección y no
- * con el Wallet brick porque la preferencia la crea el backend con el token del
- * establecimiento (split de marketplace): el brick tendría que leerla con la
- * public key de ese vendedor, y la de Agrotours recibe un 401. La redirección
- * corre en el dominio de Mercado Pago y no necesita ninguna key.
- *
- * TODO backend: que `POST /reserva/reservar` devuelva el `initPoint` de la
- * preferencia, así esta URL no se arma a mano en el front.
- */
-function urlCheckout(preferenceId: string): string {
-  return `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${encodeURIComponent(preferenceId)}`;
-}
 
 /**
  * Dónde está la reserva respecto de los cupos.
@@ -40,7 +27,7 @@ export type EstadoBloqueo =
  */
 export function BloqueoCupos({
   bloqueo, confirmando, cancelando, confirmable, fecha, visitantes,
-  onConfirmar, onPagar, onCancelar,
+  onConfirmar, onCancelar,
 }: {
   bloqueo: EstadoBloqueo;
   confirmando: boolean;
@@ -49,8 +36,6 @@ export function BloqueoCupos({
   fecha: string | null;
   visitantes: number;
   onConfirmar: () => void;
-  /** Se llama al tocar "Pagar con Mercado Pago", cuando se abre el checkout en otra pestaña. */
-  onPagar: () => void;
   onCancelar: () => void;
 }) {
   if (bloqueo.estado === "retenida") {
@@ -70,18 +55,7 @@ export function BloqueoCupos({
           </p>
           <div className="mt-2 font-mono text-[11.5px] text-fg-3">{bloqueo.codigo} · pendiente de pago</div>
         </div>
-        <a
-          href={urlCheckout(bloqueo.preferenceId)}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={onPagar}
-          className={buttonClasses({
-            size: "lg",
-            className: "w-full bg-info shadow-[inset_0_-2px_0_var(--info-fg)] hover:bg-info-fg active:bg-info-fg",
-          })}
-        >
-          <Wallet size={20} aria-hidden /> Pagar con Mercado Pago
-        </a>
+        <PagarConMercadoPago preferenceId={bloqueo.preferenceId} size="lg" className="w-full" />
         <Button variant="ghost" className="w-full" onClick={onCancelar} disabled={cancelando}>
           {cancelando && <Loader size={16} className="spin" aria-hidden />}
           Cancelar y liberar cupos
