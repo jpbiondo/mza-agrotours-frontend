@@ -1,29 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, Check, Lightbulb, Loader, X } from "lucide-react";
 import { Alert, Button } from "@/components/ui";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
+import {
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+} from "@/components/ui/form";
+import { TextArea } from "@/components/ui/text-area";
 import { TextField } from "@/components/ui/text-field";
 import { genId } from "@/lib/id";
 import { cn } from "@/lib/utils";
 import type { GrupoPermiso, RolDetalle } from "@/types/roles";
 import { PermGroupEditor } from "./permisos-ui";
+import { rolSchema, type RolForm } from "./schema";
 import type { TextosRoles } from "./textos";
+
+const LABEL = "font-display text-base font-semibold";
 
 function ErrMsg({ children }: { children: ReactNode }) {
   return (
     <div className="err-msg">
       <AlertCircle className="size-[15px] text-danger" /> {children}
     </div>
-  );
-}
-
-function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: ReactNode }) {
-  return (
-    <label htmlFor={htmlFor} className="block font-display text-base font-semibold text-fg-1">
-      {children} <span className="text-danger">*</span>
-    </label>
   );
 }
 
@@ -54,198 +56,210 @@ export function RoleForm({
 }) {
   const { maxNombre } = textos.form;
   const editing = !!initial;
-  const [nombre, setNombre] = useState(initial?.nombre ?? "");
-  const [descripcion, setDescripcion] = useState(initial?.descripcion ?? "");
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(initial?.permisos ?? []));
-  const [attempted, setAttempted] = useState(false);
 
-  const togglePerm = (codigo: string) =>
-    setSelected((prev) => {
-      const n = new Set(prev);
-      if (n.has(codigo)) n.delete(codigo);
-      else n.add(codigo);
-      return n;
-    });
+  // `existingNames` llega como un array nuevo en cada render de la pantalla;
+  // el schema se rearma sólo cuando cambia su contenido.
+  const ocupados = existingNames.join("\n");
+  const schema = useMemo(() => rolSchema(maxNombre, ocupados ? ocupados.split("\n") : []), [maxNombre, ocupados]);
 
-  const toggleGroup = (group: GrupoPermiso) =>
-    setSelected((prev) => {
-      const n = new Set(prev);
-      const codigos = group.permisos.map((p) => p.codigo);
-      if (codigos.every((c) => n.has(c))) codigos.forEach((c) => n.delete(c));
-      else codigos.forEach((c) => n.add(c));
-      return n;
-    });
+  const form = useForm<RolForm>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      nombre: initial?.nombre ?? "",
+      descripcion: initial?.descripcion ?? "",
+      permisos: initial?.permisos ?? [],
+    },
+    // `onChange` y no `onTouched`: un nombre que ya existe se avisa mientras se
+    // escribe, no recién al salir del campo.
+    mode: "onChange",
+  });
+  const { control } = form;
+  const { faltan, verQueFalta } = useCamposFaltantes(form, schema);
+  const nombre = useWatch({ control, name: "nombre" });
+  const descripcion = useWatch({ control, name: "descripcion" });
 
-  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
-  const isDup = nombre.trim().length >= 3 && existingNames.map(norm).includes(norm(nombre));
-  const errNombre = !nombre.trim()
-    ? "Escribí un nombre para el rol."
-    : nombre.trim().length < 3
-      ? "El nombre debe tener al menos 3 letras."
-      : nombre.trim().length > maxNombre
-        ? `El nombre no puede superar los ${maxNombre} caracteres.`
-        : isDup
-          ? "Ya existe un rol con ese nombre. Elegí otro."
-          : "";
-  const errDesc = !descripcion.trim()
-    ? "Escribí una descripción para el rol."
-    : descripcion.trim().length > 200
-      ? "La descripción no puede superar los 200 caracteres."
-      : "";
-  const errPerms = selected.size === 0 ? "Marcá al menos un permiso para el rol." : "";
-  // El nombre duplicado se avisa mientras se escribe; el resto, recién al guardar.
-  const showNombre = (attempted && errNombre) || (isDup ? errNombre : "");
-  const showDesc = attempted ? errDesc : "";
-
-  function handleSave() {
-    setAttempted(true);
-    if (errNombre || errDesc || errPerms) return;
+  const guardar = form.handleSubmit((v) =>
     onSave({
       id: initial?.id ?? genId("rol"),
-      nombre: nombre.trim(),
-      descripcion: descripcion.trim(),
-      permisos: Array.from(selected),
+      nombre: v.nombre,
+      descripcion: v.descripcion,
+      permisos: v.permisos,
       cantidadUsuarios: initial?.cantidadUsuarios ?? 0,
       esProtegido: initial?.esProtegido ?? false,
-    });
-  }
+    }),
+  );
 
   return (
-    <div className="flex max-h-[calc(100vh-80px)] flex-col">
-      <div className="flex items-start justify-between gap-4 border-b border-outline-variant px-[26px] py-[22px]">
-        <div>
-          <div className="t-label mb-1.5">{editing ? "Editar rol" : "Nuevo rol"}</div>
-          <h2 className="font-display text-2xl font-bold text-fg-1">
-            {editing ? nombre || "Editar rol" : textos.form.tituloCrear}
-          </h2>
-          <p className="mt-1.5 text-sm text-fg-2">
-            {editing
-              ? "Modificá el nombre, la descripción o los permisos del rol."
-              : textos.form.bajadaCrear}
-          </p>
+    <Form {...form}>
+      <div className="flex max-h-[calc(100vh-80px)] flex-col">
+        <div className="flex items-start justify-between gap-4 border-b border-outline-variant px-[26px] py-[22px]">
+          <div>
+            <div className="t-label mb-1.5">{editing ? "Editar rol" : "Nuevo rol"}</div>
+            <h2 className="font-display text-2xl font-bold text-fg-1">
+              {editing ? nombre || "Editar rol" : textos.form.tituloCrear}
+            </h2>
+            <p className="mt-1.5 text-sm text-fg-2">
+              {editing
+                ? "Modificá el nombre, la descripción o los permisos del rol."
+                : textos.form.bajadaCrear}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Cerrar"
+            className="flex size-[42px] shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface"
+          >
+            <X className="size-5 text-fg-2" />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onCancel}
-          aria-label="Cerrar"
-          className="flex size-[42px] shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface"
-        >
-          <X className="size-5 text-fg-2" />
-        </button>
-      </div>
 
-      <div className="flex flex-col gap-5 overflow-y-auto px-[26px] py-[22px]">
-        <div className="field">
-          <FieldLabel htmlFor="rol-nombre">Nombre del rol</FieldLabel>
-          <TextField
-            id="rol-nombre"
-            value={nombre}
-            onChange={setNombre}
-            maxLength={maxNombre}
-            placeholder={textos.form.nombrePlaceholder}
-            aria-invalid={showNombre !== ""}
-          />
-          <div className="flex items-center justify-between gap-3">
-            {showNombre ? (
-              <ErrMsg>{errNombre}</ErrMsg>
-            ) : (
-              <p className="text-[12.5px] text-fg-3">{textos.form.nombreAyuda}</p>
+        <div className="flex flex-col gap-5 overflow-y-auto px-[26px] py-[22px]">
+          <FormField
+            control={control}
+            name="nombre"
+            render={({ field, fieldState }) => (
+              <FormItem className="gap-2">
+                <FormLabel required className={LABEL}>
+                  Nombre del rol
+                </FormLabel>
+                <FormControl>
+                  <TextField {...field} maxLength={maxNombre} placeholder={textos.form.nombrePlaceholder} />
+                </FormControl>
+                <div className="flex items-center justify-between gap-3">
+                  {fieldState.error ? (
+                    <FormMessage />
+                  ) : (
+                    <p className="text-[12.5px] text-fg-3">{textos.form.nombreAyuda}</p>
+                  )}
+                  <span
+                    className={cn(
+                      "shrink-0 font-mono text-xs",
+                      nombre.length > maxNombre ? "text-danger" : "text-fg-3",
+                    )}
+                  >
+                    {nombre.length}/{maxNombre}
+                  </span>
+                </div>
+              </FormItem>
             )}
-            <span
-              className={cn(
-                "shrink-0 font-mono text-xs",
-                nombre.length > maxNombre ? "text-danger" : "text-fg-3",
-              )}
-            >
-              {nombre.length}/{maxNombre}
-            </span>
-          </div>
-        </div>
-
-        <div className="field">
-          <FieldLabel htmlFor="rol-desc">Descripción</FieldLabel>
-          {/* Sin primitivo de textarea todavía: usa la clase del design system. */}
-          <textarea
-            id="rol-desc"
-            maxLength={200}
-            rows={3}
-            placeholder={textos.form.descPlaceholder}
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            className={cn("textarea", showDesc && "err")}
           />
-          <div className="flex items-center justify-between gap-3">
-            {showDesc ? <ErrMsg>{errDesc}</ErrMsg> : <span />}
-            <span
-              className={cn(
-                "shrink-0 font-mono text-xs",
-                descripcion.length > 200 ? "text-danger" : "text-fg-3",
-              )}
-            >
-              {descripcion.length}/200
-            </span>
-          </div>
-        </div>
 
-        <div>
-          <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
-            <span className="font-display text-base font-semibold text-fg-1">
-              Permisos <span className="text-danger">*</span>
-            </span>
-            <span
-              className={cn(
-                "text-[13.5px] font-semibold",
-                selected.size ? "text-green-800" : "text-fg-3",
-              )}
-            >
-              {selected.size} {selected.size === 1 ? "permiso seleccionado" : "permisos seleccionados"}
-            </span>
-          </div>
-
-          <div className="mb-3.5 flex items-center gap-2.5 rounded-md bg-info-fill px-3.5 py-2.5 text-[13.5px] leading-snug text-info-fg">
-            <Lightbulb className="size-[17px] shrink-0 text-info" />
-            <span>
-              Marcá el título de un grupo para activar <strong>todos</strong> sus permisos de una
-              vez. Después destildá los que no necesites.
-            </span>
-          </div>
-
-          {attempted && errPerms && (
-            <div className="mb-3">
-              <ErrMsg>{errPerms}</ErrMsg>
-            </div>
-          )}
-
-          <div className="flex flex-col gap-3.5">
-            {grupos.length === 0 ? (
-              <p className="text-sm text-fg-2">No hay permisos definidos en el sistema todavía.</p>
-            ) : (
-              grupos.map((g) => (
-                <PermGroupEditor
-                  key={g.nombre}
-                  group={g}
-                  selected={selected}
-                  onToggleGroup={toggleGroup}
-                  onTogglePerm={togglePerm}
-                />
-              ))
+          <FormField
+            control={control}
+            name="descripcion"
+            render={({ field }) => (
+              <FormItem className="gap-2">
+                <FormLabel required className={LABEL}>
+                  Descripción
+                </FormLabel>
+                <FormControl>
+                  <TextArea {...field} maxLength={200} rows={3} placeholder={textos.form.descPlaceholder} />
+                </FormControl>
+                <div className="flex items-center justify-between gap-3">
+                  <FormMessage />
+                  <span
+                    className={cn(
+                      "ml-auto shrink-0 font-mono text-xs",
+                      descripcion.length > 200 ? "text-danger" : "text-fg-3",
+                    )}
+                  >
+                    {descripcion.length}/200
+                  </span>
+                </div>
+              </FormItem>
             )}
-          </div>
-        </div>
-      </div>
+          />
 
-      <div className="border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-        {error && <Alert className="mb-3">{error}</Alert>}
-        <div className="flex justify-end gap-3">
-          <Button variant="neutral" onClick={onCancel} disabled={busy}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={busy}>
-            {busy ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />}
-            {editing ? "Guardar cambios" : "Crear rol"}
-          </Button>
+          <FormField
+            control={control}
+            name="permisos"
+            render={({ field, fieldState }) => {
+              const selected = new Set(field.value);
+              const togglePerm = (codigo: string) =>
+                field.onChange(
+                  selected.has(codigo) ? field.value.filter((c) => c !== codigo) : [...field.value, codigo],
+                );
+              const toggleGroup = (group: GrupoPermiso) => {
+                const codigos = group.permisos.map((p) => p.codigo);
+                field.onChange(
+                  codigos.every((c) => selected.has(c))
+                    ? field.value.filter((c) => !codigos.includes(c))
+                    : [...field.value, ...codigos.filter((c) => !selected.has(c))],
+                );
+              };
+
+              return (
+                <div>
+                  <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
+                    <span className="font-display text-base font-semibold text-fg-1">
+                      Permisos <span className="text-danger">*</span>
+                    </span>
+                    <span
+                      className={cn(
+                        "text-[13.5px] font-semibold",
+                        selected.size ? "text-green-800" : "text-fg-3",
+                      )}
+                    >
+                      {selected.size}{" "}
+                      {selected.size === 1 ? "permiso seleccionado" : "permisos seleccionados"}
+                    </span>
+                  </div>
+
+                  <div className="mb-3.5 flex items-center gap-2.5 rounded-md bg-info-fill px-3.5 py-2.5 text-[13.5px] leading-snug text-info-fg">
+                    <Lightbulb className="size-[17px] shrink-0 text-info" />
+                    <span>
+                      Marcá el título de un grupo para activar <strong>todos</strong> sus permisos de
+                      una vez. Después destildá los que no necesites.
+                    </span>
+                  </div>
+
+                  {fieldState.error && (
+                    <div className="mb-3">
+                      <ErrMsg>{fieldState.error.message}</ErrMsg>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-3.5">
+                    {grupos.length === 0 ? (
+                      <p className="text-sm text-fg-2">No hay permisos definidos en el sistema todavía.</p>
+                    ) : (
+                      grupos.map((g) => (
+                        <PermGroupEditor
+                          key={g.nombre}
+                          group={g}
+                          selected={selected}
+                          onToggleGroup={toggleGroup}
+                          onTogglePerm={togglePerm}
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            }}
+          />
+        </div>
+
+        <div className="border-t border-outline-variant bg-cream-tert px-[26px] py-4">
+          {error && <Alert className="mb-3">{error}</Alert>}
+          <div className="flex justify-end gap-3">
+            <Button variant="neutral" onClick={onCancel} disabled={busy}>
+              Cancelar
+            </Button>
+            <Button onClick={guardar} disabled={busy || faltan > 0}>
+              {busy ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />}
+              {editing ? "Guardar cambios" : "Crear rol"}
+            </Button>
+          </div>
+          <FaltanCampos
+            faltan={faltan}
+            para={editing ? "guardar" : "crear el rol"}
+            onVerQueFalta={verQueFalta}
+            className="mt-2"
+          />
         </div>
       </div>
-    </div>
+    </Form>
   );
 }

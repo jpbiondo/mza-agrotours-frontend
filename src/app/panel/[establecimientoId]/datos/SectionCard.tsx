@@ -20,6 +20,7 @@ export function SectionCard({
   saving,
   locked,
   aside,
+  aviso,
   children,
 }: {
   title: string;
@@ -34,6 +35,8 @@ export function SectionCard({
   locked?: boolean;
   /** Reemplaza los botones del encabezado en las secciones `locked`. */
   aside?: ReactNode;
+  /** Va debajo de los botones mientras se edita, p. ej. qué falta para guardar. */
+  aviso?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -59,29 +62,32 @@ export function SectionCard({
             <Pencil className="size-[15px]" /> Editar
           </Button>
         ) : (
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-sm"
-              onClick={onCancel}
-              disabled={saving}
-            >
-              <X className="size-[15px]" /> Cancelar
-            </Button>
-            <Button
-              size="sm"
-              className="text-sm"
-              onClick={onSave}
-              disabled={!canSave || saving}
-            >
-              {saving ? (
-                <Loader className="spin size-[15px]" />
-              ) : (
-                <Check className="size-[15px]" />
-              )}
-              Guardar cambios
-            </Button>
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-sm"
+                onClick={onCancel}
+                disabled={saving}
+              >
+                <X className="size-[15px]" /> Cancelar
+              </Button>
+              <Button
+                size="sm"
+                className="text-sm"
+                onClick={onSave}
+                disabled={!canSave || saving}
+              >
+                {saving ? (
+                  <Loader className="spin size-[15px]" />
+                ) : (
+                  <Check className="size-[15px]" />
+                )}
+                Guardar cambios
+              </Button>
+            </div>
+            {aviso}
           </div>
         )}
       </header>
