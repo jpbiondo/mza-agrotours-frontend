@@ -83,3 +83,16 @@ export function fmtPctConSigno(n: number): string {
   const signo = n > 0 ? "+" : n < 0 ? "−" : "";
   return signo + Math.abs(n).toLocaleString("es-AR", { maximumFractionDigits: 0 }) + "%";
 }
+
+/**
+ * Recorta un texto a `max` caracteres sin partir una palabra, con "…" al
+ * final. Si entra entero lo devuelve igual. → recortar("Muy linda la visita", 12) = "Muy linda…"
+ */
+export function recortar(texto: string, max: number): string {
+  if (texto.length <= max) return texto;
+  const corte = texto.slice(0, max);
+  const ultimoEspacio = corte.search(/\s\S*$/);
+  // Una palabra más larga que medio límite se corta al ras en vez de dejar casi nada.
+  const base = ultimoEspacio > max / 2 ? corte.slice(0, ultimoEspacio) : corte;
+  return base.replace(/[\s.,;:!?¡¿-]+$/, "") + "…";
+}
