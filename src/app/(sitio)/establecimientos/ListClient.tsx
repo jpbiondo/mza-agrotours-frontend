@@ -2,82 +2,24 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Sprout, MapPin, ChevronRight, RotateCcw, Building2, CalendarDays, ArrowRight, SearchX, Search } from "lucide-react";
+import { Sprout, MapPin, ChevronRight, RotateCcw, Building2, SearchX, Search } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import Photo, { seedDeId } from "@/components/landing/Photo";
-import { FilterSelect, MultiFilterSelect, Pagination, ActiveFilterPill, CropChip, SearchField } from "@/components/catalog/controls";
-import { Skeleton } from "@/components/ui";
+import EstablecimientoCard, { EstablecimientoCardSkeleton } from "@/components/catalog/EstablecimientoCard";
+import { FilterSelect, MultiFilterSelect, Pagination, ActiveFilterPill, SearchField } from "@/components/catalog/controls";
 import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
 import { useCatalogoEstablecimientos, useFiltroCultivos, useFiltroDepartamentos } from "@/hooks/useCatalogoEstablecimientos";
-import type { EstablecimientoResumen, FilterOption } from "@/types/catalogo";
+import type { FilterOption } from "@/types/catalogo";
 
 const PAGE_SIZE = 8;
 
 /** Misma grilla para las tarjetas y para el skeleton, así nada salta al llegar los datos. */
 const GRILLA = "grid gap-[22px] grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
 
-function EstablecimientoCard({ est, cultivosIds }: { est: EstablecimientoResumen; cultivosIds: string[] }) {
-  return (
-    <Link href={`/establecimientos/${est.id}`} className="card-hover" style={{ textDecoration: "none", display: "flex", flexDirection: "column", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-      <div style={{ position: "relative" }}>
-        {/* Decorativa: el nombre de la finca ya está en el encabezado de al lado.
-            Sin portada cargada queda el degradado por seed. */}
-        <Photo seed={seedDeId(est.id)} height={150} radius={0} src={est.foto?.url} alt="" />
-        {est.departamento && (
-          <span style={{ position: "absolute", top: 12, left: 12, display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(251,249,248,.95)", borderRadius: "var(--radius-pill)", padding: "5px 11px", boxShadow: "0 2px 8px rgba(45,90,39,.16)" }}>
-            <MapPin size={13} color="var(--brown-700)" />
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--fg-1)" }}>{est.departamento.nombre}</span>
-          </span>
-        )}
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: 18, gap: 11 }}>
-        <div>
-          <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18.5, color: "var(--fg-1)", lineHeight: 1.25 }}>{est.nombre}</h3>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--fg-3)", fontSize: 13, marginTop: 5 }}>
-            <Building2 size={14} color="var(--fg-3)" />
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{est.razonSocial}</span>
-          </div>
-        </div>
-
-        <p style={{ margin: 0, color: est.descripcion ? "var(--fg-2)" : "var(--fg-3)", fontSize: 14, lineHeight: 1.55, fontStyle: est.descripcion ? "normal" : "italic", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
-          {est.descripcion || "Todavía no cargó una descripción."}
-        </p>
-
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {est.cultivos.map((c) => <CropChip key={c.id} active={cultivosIds.includes(c.id)}>{c.nombre}</CropChip>)}
-        </div>
-
-        <div style={{ marginTop: "auto", paddingTop: 14, borderTop: "1px solid var(--cream-tert)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "var(--fg-3)" }}>
-            <CalendarDays size={13} color="var(--brown-700)" />
-            {est.cantidadActividades} {est.cantidadActividades === 1 ? "actividad" : "actividades"}
-          </span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 600, color: "var(--green-800)" }}>
-            Ver establecimiento <ArrowRight size={16} />
-          </span>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-/** Mismo alto y misma grilla que las tarjetas, para que nada salte al llegar los datos. */
+/** Misma grilla que las tarjetas, para que nada salte al llegar los datos. */
 function GrillaSkeleton() {
   return (
     <div className={GRILLA}>
-      {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-          <Skeleton className="h-[150px] rounded-none" />
-          <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 11 }}>
-            <Skeleton className="h-5 w-3/5" />
-            <Skeleton className="h-3.5 w-2/5" />
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-4/5" />
-            <Skeleton className="h-6 w-1/3 rounded-full" />
-          </div>
-        </div>
-      ))}
+      {Array.from({ length: 6 }, (_, i) => <EstablecimientoCardSkeleton key={i} />)}
     </div>
   );
 }
@@ -241,11 +183,6 @@ export default function ListClient() {
           </>
         )}
       </AsyncBoundary>
-
-      <style>{`
-        .card-hover { transition: box-shadow .16s, border-color .16s, transform .16s; }
-        .card-hover:hover { box-shadow: var(--shadow-hover); border-color: var(--sand); transform: translateY(-2px); }
-      `}</style>
     </div>
   );
 }
