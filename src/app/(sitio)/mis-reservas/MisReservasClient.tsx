@@ -43,7 +43,7 @@ function ReservaCard({ r }: { r: ReservaResumen }) {
   return (
     <Link
       href={`/mis-reservas/${r.id}`}
-      className="flex items-stretch overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline transition-[box-shadow,border-color,transform] duration-150 hover:-translate-y-0.5 hover:border-sand hover:shadow-[var(--shadow-hover)]"
+      className="flex items-stretch overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline transition-[box-shadow,border-color,transform] duration-300 ease-out hover:-translate-y-0.5 hover:border-sand hover:shadow-(--shadow-hover)"
     >
       {/* TODO backend: ListarReservaDTO todavía no trae fotos; mientras, el degradado por id. */}
       <div className="hidden w-[220px] shrink-0 sm:block">
