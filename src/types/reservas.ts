@@ -39,6 +39,12 @@ export interface ReservaDetalle extends ReservaResumen {
   asistentes: AsistenteReserva[];
   /** El visitante ya la valoró: sólo se valora una vez. */
   calificada: boolean;
+  /**
+   * El checkout de Mercado Pago de una reserva Pendiente, para reintentar el
+   * pago. `null` si la reserva no lo trae (el pago no pasa por Mercado Pago, o
+   * el backend todavía no lo expone).
+   */
+  checkout: { preferenceId: string; vence: Date } | null;
 }
 
 /** Qué pasaría si se cancela ahora (GET /reserva/cancelarReservaCondicion). */
