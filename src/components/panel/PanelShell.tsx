@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, BarChart3, Grape, CalendarCheck, MessageSquare, Home, ShieldCheck,
+  BarChart3, Grape, CalendarCheck, MessageSquare, Home, ShieldCheck,
   ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound, Users, ReceiptText,
   FileText,
 } from "lucide-react";
