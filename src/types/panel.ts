@@ -1,46 +1,51 @@
-export interface Finca {
+/** Lo que el inicio del panel marca para resolver en el establecimiento activo. */
+export interface PendientesPanel {
+  /** Reembolsos que Mercado Pago no pudo hacer y esperan al productor. */
+  reembolsos: number;
+  /** Cuándo se pidió el más antiguo; `null` sin reembolsos pendientes. */
+  reembolsoMasAntiguo: Date | null;
+  /** Actividades en borrador (sin contar las dadas de baja). */
+  borradores: number;
+  mercadoPagoVinculado: boolean;
+  /** Vencimiento del token de la cuenta vinculada; `null` sin cuenta. */
+  mercadoPagoTokenExpira: Date | null;
+}
+
+export interface ReservaProxima {
   id: string;
-  nombre: string;
-  location: string;
-  role: string;
-  pend: number;
+  actividadId: string;
+  actividadDiaId: string;
+  inicio: Date | null;
+  actividad: string;
+  visitante: string;
+  personas: number;
 }
 
-export type StatTone = "success" | "neutral";
-
-export interface PanelStat {
-  /** Clave de ícono lucide resuelta en el componente. */
-  icon: "calendar-check" | "users" | "grape" | "banknote";
-  label: string;
-  value: string;
-  delta?: string;
-  tone?: StatTone;
-}
-
-export type ReservaTone = "success" | "warning" | "info" | "danger";
-
-export interface PanelReserva {
-  codigo: string;
-  experiencia: string;
+/** Reservas de un mismo día, ya ordenadas por hora. */
+export interface DiaReservas {
+  /** "AAAA-MM-DD". */
   fecha: string;
-  cupos: string;
-  estado: string;
-  tone: ReservaTone;
+  reservas: ReservaProxima[];
 }
 
-export type CultivoState = "harvest" | "growing" | "rest";
-
-export interface PanelCultivo {
-  nombre: string;
-  finca: string;
-  state: CultivoState;
-  label: string;
+export interface ReseniaReciente {
+  puntaje: number;
+  texto: string;
+  fecha: Date | null;
+  visitante: string;
+  actividad: string;
 }
 
-export interface DashboardData {
-  saludoNombre: string;
-  fincaNombre: string;
-  stats: PanelStat[];
-  reservas: PanelReserva[];
-  cultivos: PanelCultivo[];
+export interface ReseniasPanel {
+  /** `null` si todavía no hay reseñas. */
+  promedio: number | null;
+  total: number;
+  ultimas: ReseniaReciente[];
+}
+
+export interface ResumenPanel {
+  pendientes: PendientesPanel;
+  /** Próximos 3 días; sólo los días que tienen reservas. */
+  proximas: DiaReservas[];
+  resenias: ReseniasPanel;
 }
