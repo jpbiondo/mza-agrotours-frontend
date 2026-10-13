@@ -2,84 +2,24 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import {
-  Sprout, MapPin, ChevronRight, RotateCcw, Warehouse, ArrowRight, SearchX, Search, CalendarDays,
-} from "lucide-react";
+import { Sprout, MapPin, ChevronRight, RotateCcw, SearchX, Search, CalendarDays } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import Photo, { seedDeId } from "@/components/landing/Photo";
-import { FilterSelect, MultiFilterSelect, Pagination, ActiveFilterPill, CropChip, SearchField } from "@/components/catalog/controls";
-import { Skeleton } from "@/components/ui";
+import ActividadCard, { ActividadCardSkeleton } from "@/components/catalog/ActividadCard";
+import { FilterSelect, MultiFilterSelect, Pagination, ActiveFilterPill, SearchField } from "@/components/catalog/controls";
 import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
 import { useCatalogoActividades, useFiltroCultivosActividad, useFiltroDepartamentosActividad } from "@/hooks/useCatalogoActividades";
-import { moneyAr } from "@/lib/format";
-import type { ActividadResumen, FilterOption } from "@/types/catalogo";
+import type { FilterOption } from "@/types/catalogo";
 
 const PAGE_SIZE = 9;
 
 /** Misma grilla para las tarjetas y para el skeleton, así nada salta al llegar los datos. */
 const GRILLA = "grid gap-6 grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
 
-/* ---- Tarjeta de actividad ---------------------------------------------- */
-function CatalogCard({ act, cultivosIds }: { act: ActividadResumen; cultivosIds: string[] }) {
-  return (
-    <Link href={`/explorar/${act.id}`} className="card-hover" style={{ textDecoration: "none", display: "flex", flexDirection: "column", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-      <div style={{ position: "relative" }}>
-        {/* Sin foto cargada queda el degradado del propio id, estable entre pantallas. */}
-        <Photo seed={seedDeId(act.id)} height={180} radius={0} src={act.fotoPortada?.url} alt={act.fotoPortada ? act.nombre : ""} />
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: 18, gap: 12 }}>
-        {act.nombreDepartamento && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--fg-3)", fontSize: 13 }}>
-            <MapPin size={14} color="var(--brown-700)" />
-            <span style={{ fontWeight: 500, color: "var(--fg-2)" }}>{act.nombreDepartamento}, Mendoza</span>
-          </div>
-        )}
-        <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18.5, color: "var(--fg-1)", lineHeight: 1.25 }}>{act.nombre}</h3>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--fg-3)", fontSize: 13 }}>
-          <Warehouse size={14} color="var(--fg-3)" />
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{act.nombreEstablecimiento}</span>
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {act.cultivos.map((c) => <CropChip key={c.id} active={cultivosIds.includes(c.id)}>{c.nombre}</CropChip>)}
-        </div>
-        <div style={{ marginTop: "auto", paddingTop: 14, borderTop: "1px solid var(--cream-tert)", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ minWidth: 0 }}>
-            <div className="t-label" style={{ marginBottom: 2 }}>Desde</div>
-            {/* Sin precio publicado todavía no hay monto que mostrar. */}
-            {act.precioRegular === null ? (
-              <span style={{ fontSize: 14.5, fontWeight: 600, color: "var(--fg-3)" }}>A consultar</span>
-            ) : (
-              <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 19, fontWeight: 700, color: "var(--fg-1)" }}>{moneyAr(act.precioRegular)}</span>
-                <span style={{ fontSize: 12.5, color: "var(--fg-3)" }}>/ persona</span>
-              </div>
-            )}
-          </div>
-          <span className="btn btn-primary btn-sm" style={{ flexShrink: 0, whiteSpace: "nowrap" }}>
-            Ver detalle <ArrowRight size={16} />
-          </span>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-/** Mismo alto y misma grilla que las tarjetas, para que nada salte al llegar los datos. */
+/** Misma grilla que las tarjetas, para que nada salte al llegar los datos. */
 function GrillaSkeleton() {
   return (
     <div className={GRILLA}>
-      {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-          <Skeleton className="h-[180px] rounded-none" />
-          <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
-            <Skeleton className="h-3.5 w-2/5" />
-            <Skeleton className="h-5 w-4/5" />
-            <Skeleton className="h-3.5 w-3/5" />
-            <Skeleton className="h-6 w-1/3 rounded-full" />
-          </div>
-        </div>
-      ))}
+      {Array.from({ length: 6 }, (_, i) => <ActividadCardSkeleton key={i} />)}
     </div>
   );
 }
@@ -235,7 +175,7 @@ export default function CatalogClient() {
             ) : (
               <>
                 <div className={GRILLA}>
-                  {(data?.items ?? []).map((act) => <CatalogCard key={act.id} act={act} cultivosIds={cultivosIds} />)}
+                  {(data?.items ?? []).map((act) => <ActividadCard key={act.id} act={act} cultivosIds={cultivosIds} />)}
                 </div>
                 {/* El backend numera desde 0 y la paginación desde 1. */}
                 <Pagination page={page + 1} pages={data?.totalPages ?? 1} onPage={(n) => setPage(n - 1)} />
@@ -244,11 +184,6 @@ export default function CatalogClient() {
           </>
         )}
       </AsyncBoundary>
-
-      <style>{`
-        .card-hover { transition: box-shadow .16s, border-color .16s, transform .16s; }
-        .card-hover:hover { box-shadow: var(--shadow-hover); border-color: var(--sand); transform: translateY(-2px); }
-      `}</style>
     </div>
   );
 }
