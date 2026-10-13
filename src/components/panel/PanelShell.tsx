@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, BarChart3, Grape, CalendarCheck, MessageSquare, Home, Sprout, ShieldCheck,
+  BarChart3, Grape, CalendarCheck, MessageSquare, Home, ShieldCheck,
   ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound, Users, ReceiptText,
+  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -18,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { PermisoProductor, TipoPermiso } from "@/lib/permisos";
 import { RAIZ_PANEL, rutaPanel } from "@/lib/rutasPanel";
-import { tienePermiso } from "@/lib/roles";
+import { ROL_PRODUCTOR_LIDER, tienePermiso, tieneRol } from "@/lib/roles";
 import type { EstablecimientoAcceso } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import { useEstablecimientoStore } from "@/stores/establecimientoStore";
@@ -27,12 +28,8 @@ interface NavItem {
   id: string;
   icon: LucideIcon;
   label: string;
-  /**
-   * Sección del panel, que se arma sobre el establecimiento activo (`""` es
-   * su raíz). Con `href` en cambio es un link fijo fuera del panel.
-   */
-  seccion?: string;
-  href?: string;
+  /** Sección del panel, que se arma sobre el establecimiento activo (`""` es su raíz). */
+  seccion: string;
   badge?: number;
   /**
    * Sin este permiso en el establecimiento activo el ítem no se muestra. Es
@@ -40,16 +37,24 @@ interface NavItem {
    * tiene su guard.
    */
   permiso?: PermisoProductor;
+  /** Sólo para el Productor Líder del establecimiento activo, con el mismo criterio que su pantalla. */
+  soloLider?: boolean;
 }
 type Row = { section: string } | NavItem;
 
-/** Navegación del panel del productor, mapeada a las rutas reales del repo. */
+/**
+ * Navegación del panel del productor, mapeada a las rutas reales del repo. El
+ * primer grupo va sin rótulo: es la vista rápida del establecimiento.
+ */
 const SIDEBAR: Row[] = [
-  { section: "Análisis" },
-  { id: "panel", icon: LayoutDashboard, label: "Panel", seccion: "" },
+  { id: "panel", icon: Home, label: "Panel", seccion: "" },
   { id: "estadisticas", icon: BarChart3, label: "Estadísticas", seccion: "estadisticas" },
-  { section: "Operación" },
-  { id: "actividades", icon: Grape, label: "Experiencias", seccion: "actividades" },
+  { id: "datos", icon: FileText, label: "Datos del establecimiento", seccion: "datos", soloLider: true },
+  { section: "Actividades" },
+  {
+    id: "actividades", icon: Grape, label: "Actividades", seccion: "actividades",
+    permiso: PermisoProductor.GESTIONAR_ACTIVIDAD,
+  },
   { id: "reservas", icon: CalendarCheck, label: "Reservas", seccion: "reservas" },
   {
     id: "reembolsos", icon: ReceiptText, label: "Reembolsos pendientes", seccion: "reembolsos",
@@ -57,17 +62,16 @@ const SIDEBAR: Row[] = [
   },
   { section: "Mensajes" },
   { id: "chats", icon: MessageSquare, label: "Chats", seccion: "chats", badge: 3 },
-  { section: "Establecimiento" },
-  { id: "datos", icon: Home, label: "Datos del establecimiento", seccion: "datos" },
-  { id: "productores", icon: Users, label: "Productores", seccion: "productores" },
-  { id: "cultivos", icon: Sprout, label: "Cultivos", href: "/cultivos" },
-  { section: "Configuración" },
-  { id: "roles", icon: ShieldCheck, label: "Roles y permisos", seccion: "roles" },
+  { section: "Equipo" },
+  {
+    id: "productores", icon: Users, label: "Productores", seccion: "productores",
+    permiso: PermisoProductor.LEER_PRODUCTOR,
+  },
+  { id: "roles", icon: ShieldCheck, label: "Roles y permisos", seccion: "roles", soloLider: true },
 ];
 
 /** A dónde lleva un ítem estando en `establecimientoId`. */
 function hrefDe(row: NavItem, establecimientoId: string): string {
-  if (row.href) return row.href;
   return row.seccion ? rutaPanel(establecimientoId, row.seccion) : rutaPanel(establecimientoId);
 }
 
@@ -375,7 +379,11 @@ function AccountBar({
   establecimientoId: string | null;
 }) {
   const nombre = useAuthStore((s) => s.nombre);
+  const hidratado = useAuthStore((s) => s.hasHydrated);
   const iniciales = admInitials(nombre ?? "");
+  // Sin nombre después de rehidratar es la primera visita, con el perfil todavía
+  // en camino. El rol además espera al establecimiento activo.
+  const cargando = !hidratado || !nombre;
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-2.5 border-b border-outline-variant bg-surface px-3.5 shell:gap-3 shell:px-7">
@@ -411,21 +419,32 @@ function AccountBar({
 
       <div className="hidden h-7 w-px bg-outline-variant shell:block" />
 
-      {/* Ancho fijo: el nombre llega recién al rehidratar y con ancho automático
-          la campana se corría al aparecer. Donde el diseño pone el nombre del
-          establecimiento va el rol de la cuenta en él. */}
-      <div className="hidden w-[170px] text-right leading-tight shell:block">
-        <div className="truncate text-[12.5px] text-fg-3">{rol}</div>
-        <div className="truncate text-[13.5px] font-semibold text-fg-1">{nombre ?? ""}</div>
+      {/* Donde el diseño pone el nombre del establecimiento va el rol de la
+          cuenta en él. Mientras carga, barras del alto de cada línea. */}
+      <div className="hidden text-right leading-tight shell:block">
+        {cargando || !rol ? (
+          <Skeleton className="ml-auto h-3 w-24 my-0.5" />
+        ) : (
+          <div className="truncate text-[12.5px] text-fg-3">{rol}</div>
+        )}
+        {cargando ? (
+          <Skeleton className="ml-auto mt-1 h-3.5 w-32" />
+        ) : (
+          <div className="truncate text-[13.5px] font-semibold text-fg-1">{nombre}</div>
+        )}
       </div>
 
-      <Link
-        href="/cuenta"
-        aria-label={nombre ? `Mi cuenta: ${nombre}` : "Mi cuenta"}
-        className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-full bg-brown-700 text-[13px] font-semibold text-white no-underline shadow-[inset_0_-2px_0_var(--brown-800)]"
-      >
-        {iniciales || <UserRound className="size-[18px]" />}
-      </Link>
+      {cargando ? (
+        <Skeleton className="size-[38px] shrink-0 rounded-full" />
+      ) : (
+        <Link
+          href="/cuenta"
+          aria-label={`Mi cuenta: ${nombre}`}
+          className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-full bg-brown-700 text-[13px] font-semibold text-white no-underline shadow-[inset_0_-2px_0_var(--brown-800)]"
+        >
+          {iniciales || <UserRound className="size-[18px]" />}
+        </Link>
+      )}
     </header>
   );
 }
@@ -441,11 +460,22 @@ export default function PanelShell({ children }: { children: ReactNode }) {
   const { lista, activo, elegir, listo } = useEstablecimientos();
   const active = idActivo(pathname, activo?.id ?? null);
   const accesos = useAuthStore((s) => s.accesos);
-  const visibles = activo
-    ? SIDEBAR.filter((row) =>
-        "section" in row || !row.permiso ||
-        tienePermiso(accesos, row.permiso, { tipoPermiso: TipoPermiso.PRODUCTOR, establecimientoId: activo.id }))
-    : [];
+  const visibles = useMemo(() => {
+    if (!activo) return [];
+    const ambito = { tipoPermiso: TipoPermiso.PRODUCTOR, establecimientoId: activo.id };
+    const conPermiso = SIDEBAR.filter((row) =>
+      "section" in row || (
+        (!row.permiso || tienePermiso(accesos, row.permiso, ambito)) &&
+        (!row.soloLider || tieneRol(accesos, ROL_PRODUCTOR_LIDER, ambito))
+      ));
+    // Igual que en AdminShell: si se filtraron todos los ítems de una sección,
+    // su rótulo quedaría suelto, así que se conserva sólo cuando lo sigue un ítem.
+    return conPermiso.filter((row, i) => {
+      if (!("section" in row)) return true;
+      const siguiente = conPermiso[i + 1];
+      return !!siguiente && !("section" in siguiente);
+    });
+  }, [activo, accesos]);
 
   const bloqueado = listo && !!activo?.suspension;
 
@@ -528,7 +558,7 @@ export default function PanelShell({ children }: { children: ReactNode }) {
         {/* Sin establecimiento no hay nada que navegar: la pantalla es el prompt
             de alta. Al elegir una sección el cajón se cierra solo. */}
         {activo && (
-          <nav className="flex-1 overflow-y-auto pb-4" onClick={cerrar}>
+          <nav className="flex-1 overflow-y-auto pt-2 pb-4" onClick={cerrar}>
             {visibles.map((row, i) =>
               "section" in row ? (
                 <div

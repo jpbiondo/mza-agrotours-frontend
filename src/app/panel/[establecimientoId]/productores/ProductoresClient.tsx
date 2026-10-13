@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import {
   AlertCircle,
   BadgeCheck,
@@ -636,6 +637,7 @@ function SuspenderForm({
     defaultValues: { motivo: "", hasta: "" },
     mode: "onTouched",
   });
+  const { faltan, verQueFalta } = useCamposFaltantes(form, suspensionSchema);
 
   const hasta = useWatch({ control: form.control, name: "hasta" });
   const dias = diasHasta(hasta || null);
@@ -747,7 +749,7 @@ function SuspenderForm({
             <Button variant="neutral" onClick={onCancel} disabled={acciones.moderando}>
               Cancelar
             </Button>
-            <Button type="submit" variant="danger" disabled={acciones.moderando}>
+            <Button type="submit" variant="danger" disabled={acciones.moderando || faltan > 0}>
               {acciones.moderando ? (
                 <Loader className="spin size-[17px]" />
               ) : (
@@ -756,6 +758,7 @@ function SuspenderForm({
               Suspender productor
             </Button>
           </div>
+          <FaltanCampos faltan={faltan} para="suspender" onVerQueFalta={verQueFalta} className="mt-2" />
         </div>
       </form>
     </Form>
@@ -779,6 +782,7 @@ function LevantarForm({
     defaultValues: { motivo: "" },
     mode: "onTouched",
   });
+  const { faltan } = useCamposFaltantes(form, levantarSchema);
 
   async function onValid(data: LevantarFormValues) {
     setSubmitError(null);
@@ -877,7 +881,7 @@ function LevantarForm({
             <Button variant="neutral" onClick={onCancel} disabled={acciones.moderando}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={acciones.moderando}>
+            <Button type="submit" disabled={acciones.moderando || faltan > 0}>
               {acciones.moderando ? (
                 <Loader className="spin size-[17px]" />
               ) : (
@@ -886,6 +890,7 @@ function LevantarForm({
               Levantar suspensión
             </Button>
           </div>
+          <FaltanCampos faltan={faltan} para="levantarla" className="mt-2" />
         </div>
       </form>
     </Form>
@@ -922,15 +927,15 @@ const COLUMNAS = [
  *   la derecha, lo que sobraba se desbordaba hacia la izquierda, encima del
  *   pill de estado.
  */
-const ANCHOS = [undefined, undefined, "w-[130px]", "w-[190px]", "w-[230px]", "w-[420px]"];
+const ANCHOS = [undefined, undefined, "w-[130px]", "w-[240px]", "w-[230px]", "w-[420px]"];
 
 function Tabla({ children }: { children: ReactNode }) {
   return (
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
-        {/* El mínimo es la suma de las columnas fijas (970) más lo que necesitan
+        {/* El mínimo es la suma de las columnas fijas (1020) más lo que necesitan
             nombre y correo para no quedar apretados. Por debajo, scroll lateral. */}
-        <table className="w-full min-w-[1410px] table-fixed border-collapse">
+        <table className="w-full min-w-[1460px] table-fixed border-collapse">
           <colgroup>
             {ANCHOS.map((w, i) => (
               <col key={i} className={w} />
@@ -1209,8 +1214,15 @@ function Pantalla({
                       )}
                     </td>
                     <td className="px-[18px] py-3.5">
-                      <span className="inline-flex items-center gap-2 rounded-pill border border-green-300 bg-green-050 px-2.5 py-[5px] text-[13px] font-semibold whitespace-nowrap text-green-800">
-                        <ShieldCheck className="size-3.5 text-green-700" /> {p.nombreRol}
+                      {/* Hasta el ancho de la columna: con `table-fixed` un rol largo en
+                          `nowrap` se desbordaba sobre la de Estado. Se corta y
+                          el nombre completo queda en el title. */}
+                      <span
+                        title={p.nombreRol}
+                        className="inline-flex max-w-full items-center gap-2 rounded-pill border border-green-300 bg-green-050 px-2.5 py-[5px] text-[13px] font-semibold text-green-800"
+                      >
+                        <ShieldCheck className="size-3.5 shrink-0 text-green-700" />
+                        <span className="truncate">{p.nombreRol}</span>
                       </span>
                     </td>
                     <td className="px-[18px] py-3.5">

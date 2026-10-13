@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, ArrowLeft, Banknote, Check, CreditCard, Hash, Loader, X } from "lucide-react";
 import { Alert, Button, Modal } from "@/components/ui";
 import { DatePicker, hoyISO } from "@/components/ui/date-picker";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { TextField } from "@/components/ui/text-field";
 import { TimePicker } from "@/components/ui/time-picker";
@@ -45,6 +46,7 @@ export function RegistrarPagoModal({ reembolso, onRegistrado, onDesactualizado, 
   });
   const metodo = useWatch({ control: form.control, name: "metodo" });
   const idExterno = useWatch({ control: form.control, name: "idExterno" });
+  const { faltan, verQueFalta } = useCamposFaltantes(form, pagoSchema);
 
   const cerrar = () => { if (!guardando) onCerrar(); };
 
@@ -223,13 +225,16 @@ export function RegistrarPagoModal({ reembolso, onRegistrado, onDesactualizado, 
               {rechazo && <Alert>{rechazo}</Alert>}
             </div>
 
-            <div className="flex shrink-0 flex-wrap justify-end gap-3 border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-              <Button variant="neutral" onClick={cerrar}>
-                <X className="size-[17px]" /> Cancelar
-              </Button>
-              <Button type="submit">
-                <Banknote className="size-[17px]" /> Continuar
-              </Button>
+            <div className="shrink-0 border-t border-outline-variant bg-cream-tert px-[26px] py-4">
+              <div className="flex flex-wrap justify-end gap-3">
+                <Button variant="neutral" onClick={cerrar}>
+                  <X className="size-[17px]" /> Cancelar
+                </Button>
+                <Button type="submit" disabled={faltan > 0}>
+                  <Banknote className="size-[17px]" /> Continuar
+                </Button>
+              </div>
+              <FaltanCampos faltan={faltan} para="continuar" onVerQueFalta={verQueFalta} className="mt-2" />
             </div>
           </form>
         </Form>

@@ -36,6 +36,7 @@ import NotificationBell from "@/components/notifications/NotificationBell";
 import { admInitials } from "@/data/admin";
 import { PermisoAdmin, TipoPermiso } from "@/lib/permisos";
 import { nombreRol, tienePermiso } from "@/lib/roles";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -245,7 +246,11 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const nombre = useAuthStore((s) => s.nombre);
+  const hidratado = useAuthStore((s) => s.hasHydrated);
   const accesos = useAuthStore((s) => s.accesos);
+  // Sin nombre después de rehidratar es la primera visita, con el perfil todavía
+  // en camino.
+  const cargando = !hidratado || !nombre;
   // El rol que se muestra es el de administración: una misma cuenta puede ser
   // además productora o visitante, y acá esos no vienen al caso.
   const rol = nombreRol(accesos, TipoPermiso.ADMIN);
@@ -325,29 +330,43 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
 
         <div className="hidden h-7 w-px bg-outline-variant shell:block" />
 
-        {/* Ancho fijo, no `max-w`: el nombre llega recién al rehidratar, y con
-            ancho automático la campana y el chip se corrían al aparecer. */}
+        {/* Mientras carga, barras del alto de cada línea. */}
         <div className="hidden max-w-[220px] text-right leading-tight shell:block">
-          <div className="truncate text-[13.5px] font-semibold text-fg-1">
-            {nombre ?? ""}
-          </div>
-          <div className="mt-0.5 truncate text-[11.5px] text-fg-3">{rol}</div>
+          {cargando ? (
+            <>
+              <Skeleton className="ml-auto h-3.5 w-32" />
+              <Skeleton className="ml-auto mt-1.5 h-3 w-24" />
+            </>
+          ) : (
+            <>
+              <div className="truncate text-[13.5px] font-semibold text-fg-1">
+                {nombre}
+              </div>
+              <div className="mt-0.5 truncate text-[11.5px] text-fg-3">
+                {rol}
+              </div>
+            </>
+          )}
         </div>
 
         <div ref={ref} className="relative">
-          <button
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded={open}
-            aria-label={nombre ? `Mi cuenta: ${nombre}` : "Mi cuenta"}
-            onClick={() => setOpen((v) => !v)}
-            className={cn(
-              "flex size-[38px] cursor-pointer items-center justify-center rounded-full bg-brown-700 text-[13px] font-semibold text-white shadow-[inset_0_-2px_0_var(--brown-800)]",
-              open && "outline-2 outline-offset-2 outline-green-800",
-            )}
-          >
-            {iniciales || <UserRound className="size-[18px]" />}
-          </button>
+          {cargando ? (
+            <Skeleton className="size-[38px] rounded-full" />
+          ) : (
+            <button
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={open}
+              aria-label={nombre ? `Mi cuenta: ${nombre}` : "Mi cuenta"}
+              onClick={() => setOpen((v) => !v)}
+              className={cn(
+                "flex size-[38px] cursor-pointer items-center justify-center rounded-full bg-brown-700 text-[13px] font-semibold text-white shadow-[inset_0_-2px_0_var(--brown-800)]",
+                open && "outline-2 outline-offset-2 outline-green-800",
+              )}
+            >
+              {iniciales || <UserRound className="size-[18px]" />}
+            </button>
+          )}
           {open && (
             <div
               role="menu"

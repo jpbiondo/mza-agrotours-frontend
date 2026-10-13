@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Home,
   MapPin,
@@ -25,13 +27,17 @@ import {
   Toast,
 } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
-import { TextField } from "@/components/ui/text-field";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import {
-  validarDescripcion,
-  validarEmail,
-  validarNombre,
-  validarTelefono,
-} from "@/data/datos";
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { TextArea } from "@/components/ui/text-area";
+import { TextField } from "@/components/ui/text-field";
 import { TipoPermiso } from "@/lib/permisos";
 import { ROL_PRODUCTOR_LIDER, tieneRol } from "@/lib/roles";
 import { cn } from "@/lib/utils";
@@ -45,6 +51,12 @@ import { useFotoPortada } from "@/hooks/useFotoPortada";
 import { CobrosCard } from "./CobrosCard";
 import EliminarEstablecimientoFlow from "./EliminarEstablecimientoFlow";
 import { PortadaCard } from "./PortadaCard";
+import {
+  contactoSchema,
+  identidadSchema,
+  type ContactoForm,
+  type IdentidadForm,
+} from "./schema";
 import { SectionCard } from "./SectionCard";
 import type { EstablecimientoDatos, FotoPortada } from "@/types/datos";
 
@@ -92,97 +104,226 @@ function ReadRow({
   );
 }
 
-/** Campo de edición. `disabled` marca los datos que no se pueden tocar. */
-function Campo({
-  label,
-  value,
-  onChange,
-  type = "text",
-  area,
-  hint,
-  disabled,
-  error,
-  maxLength,
-  count,
-  required,
-}: {
-  label: string;
-  value: string;
-  onChange?: (v: string) => void;
-  type?: string;
-  area?: boolean;
-  hint?: string;
-  disabled?: boolean;
-  error?: string | null;
-  maxLength?: number;
-  count?: number;
-  required?: boolean;
-}) {
+/** Dato que se muestra en el modo edición pero no se puede tocar (CUIT, razón social). */
+function CampoBloqueado({ label, value }: { label: string; value: string }) {
   const id = `campo-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="field">
-      <div className="flex items-baseline justify-between gap-3">
-        <label
-          htmlFor={id}
-          className="font-display text-base font-semibold text-fg-1"
-        >
-          {label}
-          {/* aria-hidden: el asterisco es decorativo, lo obligatorio lo dice el
-              mensaje de error. Mismo patrón que el FormLabel de ui/form.tsx. */}
-          {required && (
-            <span aria-hidden className="ml-[3px] text-danger">
-              *
-            </span>
-          )}
-        </label>
-        {count != null && (
-          <span
-            className={cn(
-              "font-mono text-xs",
-              value.length > count ? "text-danger" : "text-fg-3",
-            )}
-          >
-            {value.length} / {count}
-          </span>
-        )}
+      <label htmlFor={id} className="font-display text-base font-semibold text-fg-1">
+        {label}
+      </label>
+      <TextField id={id} value={value} onChange={() => {}} disabled />
+      <div className="flex items-center gap-1.5 text-xs text-fg-3">
+        <Lock className="size-3" /> Este dato no puede modificarse
       </div>
-
-      {area ? (
-        <textarea
-          id={id}
-          value={value}
-          disabled={disabled}
-          maxLength={maxLength}
-          rows={4}
-          onChange={(e) => onChange?.(e.target.value)}
-          className={cn(
-            "textarea min-h-[110px]",
-            error && "err",
-            disabled && "bg-cream-tert text-fg-2",
-          )}
-        />
-      ) : (
-        <TextField
-          id={id}
-          type={type}
-          value={value}
-          maxLength={maxLength}
-          onChange={(v) => onChange?.(v)}
-          aria-invalid={!!error}
-          disabled={disabled}
-        />
-      )}
-
-      {disabled && (
-        <div className="flex items-center gap-1.5 text-xs text-fg-3">
-          <Lock className="size-3" /> Este dato no puede modificarse
-        </div>
-      )}
-      {!disabled && hint && !error && (
-        <div className="text-[12.5px] text-fg-3">{hint}</div>
-      )}
-      {error && <div className="err-msg">{error}</div>}
     </div>
+  );
+}
+
+const LABEL = "font-display text-base font-semibold";
+
+/** Ayuda debajo del campo; cuando hay error, el mensaje ocupa su lugar. */
+function Ayuda({ hay, children }: { hay: boolean; children: string }) {
+  return hay ? <FormMessage /> : <div className="text-[12.5px] text-fg-3">{children}</div>;
+}
+
+/* ---- Secciones editables ------------------------------------------------
+   Cada una tiene su formulario: se guardan por separado y una sola puede estar
+   abierta. Al abrirla se recarga con lo último que devolvió el servidor. */
+
+type GuardarSeccion = (
+  cambios: Partial<EstablecimientoDatos>,
+  codigoPropio?: string,
+) => Promise<{ ok: boolean; code?: string }>;
+
+interface SeccionProps {
+  datos: EstablecimientoDatos;
+  editando: boolean;
+  saving: boolean;
+  onEditar: () => void;
+  onCancelar: () => void;
+  guardarSeccion: GuardarSeccion;
+}
+
+/** Identidad: nombre y descripción se editan; CUIT y razón social no. */
+function SeccionIdentidad({ datos, editando, saving, onEditar, onCancelar, guardarSeccion }: SeccionProps) {
+  const valoresDe = (d: EstablecimientoDatos): IdentidadForm => ({
+    nombre: d.nombre,
+    descripcion: d.descripcion,
+  });
+  const form = useForm<IdentidadForm>({
+    resolver: zodResolver(identidadSchema),
+    defaultValues: valoresDe(datos),
+    mode: "onTouched",
+  });
+  const { faltan, verQueFalta } = useCamposFaltantes(form, identidadSchema);
+  const descripcion = useWatch({ control: form.control, name: "descripcion" });
+
+  const guardar = form.handleSubmit(async (v) => {
+    // El nombre duplicado es un problema de ese campo, no de la pantalla: se
+    // muestra abajo del input y la sección queda abierta para corregirlo.
+    const res = await guardarSeccion(v, NOMBRE_DUPLICADO);
+    if (res.code === NOMBRE_DUPLICADO) {
+      form.setError("nombre", { message: mensajeGuardar(NOMBRE_DUPLICADO) }, { shouldFocus: true });
+    }
+  });
+
+  return (
+    <SectionCard
+      title="Identidad de la finca"
+      icon={<Home className="size-4 text-green-800" />}
+      isEditing={editando}
+      saving={saving}
+      canSave={form.formState.isDirty && faltan === 0}
+      onEdit={() => {
+        form.reset(valoresDe(datos));
+        onEditar();
+      }}
+      onCancel={onCancelar}
+      onSave={guardar}
+      aviso={<FaltanCampos faltan={faltan} onVerQueFalta={verQueFalta} />}
+    >
+      {!editando ? (
+        <>
+          <ReadRow label="Nombre" value={datos.nombre} />
+          <ReadRow label="CUIT" value={datos.cuit} mono />
+          <ReadRow label="Razón social" value={datos.razonSocial} />
+          <div className="pt-3.5">
+            <div className="t-label mb-2">Descripción</div>
+            <p className="text-[14.5px] leading-relaxed text-pretty text-fg-1">
+              {datos.descripcion || "—"}
+            </p>
+          </div>
+        </>
+      ) : (
+        <Form {...form}>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="nombre"
+              render={({ field, fieldState }) => (
+                <FormItem className="gap-2 sm:col-span-2">
+                  <FormLabel required className={LABEL}>
+                    Nombre del establecimiento
+                  </FormLabel>
+                  <FormControl>
+                    <TextField {...field} maxLength={100} />
+                  </FormControl>
+                  <Ayuda hay={!!fieldState.error}>
+                    Hasta 100 caracteres, sin caracteres especiales. Así lo ven los visitantes en el sitio público.
+                  </Ayuda>
+                </FormItem>
+              )}
+            />
+            <CampoBloqueado label="CUIT" value={datos.cuit} />
+            <CampoBloqueado label="Razón social" value={datos.razonSocial} />
+            <FormField
+              control={form.control}
+              name="descripcion"
+              render={({ field, fieldState }) => (
+                <FormItem className="gap-2 sm:col-span-2">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <FormLabel required className={LABEL}>
+                      Descripción
+                    </FormLabel>
+                    <span
+                      className={cn(
+                        "font-mono text-xs",
+                        descripcion.length > 2000 ? "text-danger" : "text-fg-3",
+                      )}
+                    >
+                      {descripcion.length} / 2000
+                    </span>
+                  </div>
+                  <FormControl>
+                    <TextArea {...field} maxLength={2000} rows={4} className="min-h-[110px]" />
+                  </FormControl>
+                  <Ayuda hay={!!fieldState.error}>Hasta 2000 caracteres.</Ayuda>
+                </FormItem>
+              )}
+            />
+          </div>
+        </Form>
+      )}
+    </SectionCard>
+  );
+}
+
+function SeccionContacto({ datos, editando, saving, onEditar, onCancelar, guardarSeccion }: SeccionProps) {
+  const valoresDe = (d: EstablecimientoDatos): ContactoForm => ({
+    telefono: d.telefono,
+    email: d.email,
+  });
+  const form = useForm<ContactoForm>({
+    resolver: zodResolver(contactoSchema),
+    defaultValues: valoresDe(datos),
+    mode: "onTouched",
+  });
+  const { faltan, verQueFalta } = useCamposFaltantes(form, contactoSchema);
+
+  const guardar = form.handleSubmit(async (v) => {
+    await guardarSeccion(v);
+  });
+
+  return (
+    <SectionCard
+      title="Contacto"
+      icon={<Phone className="size-4 text-green-800" />}
+      isEditing={editando}
+      saving={saving}
+      canSave={form.formState.isDirty && faltan === 0}
+      onEdit={() => {
+        form.reset(valoresDe(datos));
+        onEditar();
+      }}
+      onCancel={onCancelar}
+      onSave={guardar}
+      aviso={<FaltanCampos faltan={faltan} onVerQueFalta={verQueFalta} />}
+    >
+      {!editando ? (
+        <>
+          <ReadRow label="Teléfono" value={datos.telefono} mono />
+          <ReadRow label="Email" value={datos.email} />
+        </>
+      ) : (
+        <Form {...form}>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="telefono"
+              render={({ field, fieldState }) => (
+                <FormItem className="gap-2">
+                  <FormLabel className={LABEL}>Teléfono</FormLabel>
+                  <FormControl>
+                    <TextField
+                      {...field}
+                      maxLength={20}
+                      onChange={(v) => field.onChange(v.replace(/[^\d+]/g, "").slice(0, 16))}
+                    />
+                  </FormControl>
+                  <Ayuda hay={!!fieldState.error}>
+                    Ingresá tu número en formato internacional, sin espacios: primero un + y luego 8 a 15 dígitos (el código de país va incluido).
+                  </Ayuda>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field, fieldState }) => (
+                <FormItem className="gap-2">
+                  <FormLabel className={LABEL}>Email</FormLabel>
+                  <FormControl>
+                    <TextField {...field} type="email" maxLength={100} />
+                  </FormControl>
+                  <Ayuda hay={!!fieldState.error}>Hasta 100 caracteres.</Ayuda>
+                </FormItem>
+              )}
+            />
+          </div>
+        </Form>
+      )}
+    </SectionCard>
   );
 }
 
@@ -293,20 +434,6 @@ function Inner({
   const [toast, setToast] = useState<ToastData | null>(null);
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
 
-  // Borradores por sección.
-  const [nombre, setNombre] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [identidadErr, setIdentidadErr] = useState<{
-    nombre?: string | null;
-    descripcion?: string | null;
-  }>({});
-  const [telefono, setTelefono] = useState("");
-  const [email, setEmail] = useState("");
-  const [contactoErr, setContactoErr] = useState<{
-    telefono?: string | null;
-    email?: string | null;
-  }>({});
-
   function notificar(title: string) {
     setToast({ tone: "success", title });
     setTimeout(() => setToast((t) => (t?.title === title ? null : t)), 3400);
@@ -338,12 +465,6 @@ function Inner({
 
   function abrir(seccion: Seccion) {
     setErrorGuardar(null);
-    setNombre(datos.nombre);
-    setDescripcion(datos.descripcion);
-    setIdentidadErr({});
-    setTelefono(datos.telefono);
-    setEmail(datos.email);
-    setContactoErr({});
     setEditando(seccion);
   }
 
@@ -405,84 +526,14 @@ function Inner({
 
       {errorGuardar && <Alert className="mb-5">{errorGuardar}</Alert>}
 
-      {/* Identidad: nombre y descripción se editan; CUIT y razón social no. */}
-      <SectionCard
-        title="Identidad de la finca"
-        icon={<Home className="size-4 text-green-800" />}
-        isEditing={editando === "identidad"}
+      <SeccionIdentidad
+        datos={datos}
+        editando={editando === "identidad"}
         saving={saving}
-        canSave={nombre !== datos.nombre || descripcion !== datos.descripcion}
-        onEdit={() => abrir("identidad")}
-        onCancel={() => setEditando(null)}
-        onSave={async () => {
-          const ne = validarNombre(nombre);
-          const de = validarDescripcion(descripcion);
-          if (ne || de) {
-            setIdentidadErr({ nombre: ne, descripcion: de });
-            return;
-          }
-          // El nombre duplicado es un problema de ese campo, no de la pantalla:
-          // se muestra abajo del input y la sección queda abierta para corregirlo.
-          const res = await guardarSeccion(
-            { nombre: nombre.trim(), descripcion },
-            NOMBRE_DUPLICADO,
-          );
-          if (res.code === NOMBRE_DUPLICADO) {
-            setIdentidadErr({ nombre: mensajeGuardar(NOMBRE_DUPLICADO) });
-          }
-        }}
-      >
-        {editando !== "identidad" ? (
-          <>
-            <ReadRow label="Nombre" value={datos.nombre} />
-            <ReadRow label="CUIT" value={datos.cuit} mono />
-            <ReadRow label="Razón social" value={datos.razonSocial} />
-            <div className="pt-3.5">
-              <div className="t-label mb-2">Descripción</div>
-              <p className="text-[14.5px] leading-relaxed text-pretty text-fg-1">
-                {datos.descripcion || "—"}
-              </p>
-            </div>
-          </>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <Campo
-                required
-                label="Nombre del establecimiento"
-                value={nombre}
-                maxLength={100}
-                error={identidadErr.nombre}
-                hint="Hasta 100 caracteres, sin caracteres especiales. Así lo ven los visitantes en el sitio público."
-                onChange={(v) => {
-                  setNombre(v);
-                  if (identidadErr.nombre)
-                    setIdentidadErr((e) => ({ ...e, nombre: null }));
-                }}
-              />
-            </div>
-            <Campo label="CUIT" value={datos.cuit} disabled />
-            <Campo label="Razón social" value={datos.razonSocial} disabled />
-            <div className="sm:col-span-2">
-              <Campo
-                area
-                required
-                label="Descripción"
-                value={descripcion}
-                count={2000}
-                maxLength={2000}
-                error={identidadErr.descripcion}
-                hint="Hasta 2000 caracteres."
-                onChange={(v) => {
-                  setDescripcion(v);
-                  if (identidadErr.descripcion)
-                    setIdentidadErr((e) => ({ ...e, descripcion: null }));
-                }}
-              />
-            </div>
-          </div>
-        )}
-      </SectionCard>
+        onEditar={() => abrir("identidad")}
+        onCancelar={() => setEditando(null)}
+        guardarSeccion={guardarSeccion}
+      />
 
       <PortadaCard foto={fotoPortada} onGuardar={guardarPortada} guardando={saving} />
 
@@ -503,59 +554,14 @@ function Inner({
         </div>
       </SectionCard>
 
-      <SectionCard
-        title="Contacto"
-        icon={<Phone className="size-4 text-green-800" />}
-        isEditing={editando === "contacto"}
+      <SeccionContacto
+        datos={datos}
+        editando={editando === "contacto"}
         saving={saving}
-        canSave={telefono !== datos.telefono || email !== datos.email}
-        onEdit={() => abrir("contacto")}
-        onCancel={() => setEditando(null)}
-        onSave={() => {
-          const te = validarTelefono(telefono);
-          const me = validarEmail(email);
-          if (te || me) {
-            setContactoErr({ telefono: te, email: me });
-            return;
-          }
-          guardarSeccion({ telefono: telefono.trim(), email: email.trim() });
-        }}
-      >
-        {editando !== "contacto" ? (
-          <>
-            <ReadRow label="Teléfono" value={datos.telefono} mono />
-            <ReadRow label="Email" value={datos.email} />
-          </>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <Campo
-              label="Teléfono"
-              value={telefono}
-              maxLength={20}
-              error={contactoErr.telefono}
-              hint="Ingresá tu número en formato internacional, sin espacios: primero un + y luego 8 a 15 dígitos (el código de país va incluido)."
-              onChange={(v) => {
-                setTelefono(v.replace(/[^\d+]/g, "").slice(0, 16));
-                if (contactoErr.telefono)
-                  setContactoErr((e) => ({ ...e, telefono: null }));
-              }}
-            />
-            <Campo
-              type="email"
-              label="Email"
-              value={email}
-              maxLength={100}
-              error={contactoErr.email}
-              hint="Hasta 100 caracteres."
-              onChange={(v) => {
-                setEmail(v);
-                if (contactoErr.email)
-                  setContactoErr((e) => ({ ...e, email: null }));
-              }}
-            />
-          </div>
-        )}
-      </SectionCard>
+        onEditar={() => abrir("contacto")}
+        onCancelar={() => setEditando(null)}
+        guardarSeccion={guardarSeccion}
+      />
 
       <CobrosCard establecimientoId={datos.id} />
 

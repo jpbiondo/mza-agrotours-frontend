@@ -120,6 +120,8 @@ export function GcrFormFooter({
   saveLabel,
   saveIcon,
   busy,
+  saveDisabled,
+  aviso,
   error,
 }: {
   onCancel: () => void;
@@ -127,6 +129,10 @@ export function GcrFormFooter({
   saveLabel: string;
   saveIcon?: React.ReactNode;
   busy?: boolean;
+  /** Además de `busy`: p. ej. mientras al formulario le falte algo. */
+  saveDisabled?: boolean;
+  /** Va debajo de los botones, p. ej. `<FaltanCampos>`. */
+  aviso?: React.ReactNode;
   /** Rechazo del backend: el panel queda abierto con lo cargado. */
   error?: string | null;
 }) {
@@ -137,10 +143,11 @@ export function GcrFormFooter({
         <Button variant="neutral" onClick={onCancel} disabled={busy}>
           Cancelar
         </Button>
-        <Button onClick={onSave} disabled={busy}>
+        <Button onClick={onSave} disabled={busy || saveDisabled}>
           {saveIcon ?? <Check className="size-[17px]" />} {saveLabel}
         </Button>
       </div>
+      {aviso && <div className="mt-2">{aviso}</div>}
     </div>
   );
 }

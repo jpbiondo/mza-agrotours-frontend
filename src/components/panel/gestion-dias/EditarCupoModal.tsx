@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { AlertTriangle, Check, Clock, Info, Loader, RotateCcw, Users, X } from "lucide-react";
 import { Alert, Button, Modal } from "@/components/ui";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -34,11 +35,13 @@ export function EditarCupoModal({
   const reservados = dia.pagadas + dia.pendientes;
   const [rechazo, setRechazo] = useState<string | null>(null);
 
+  const schema = cupoDiaSchema(reservados);
   const form = useForm<CupoDiaForm>({
-    resolver: zodResolver(cupoDiaSchema(reservados)),
+    resolver: zodResolver(schema),
     mode: "onTouched",
     defaultValues: { cupos: String(dia.cupoMax) },
   });
+  const { faltan } = useCamposFaltantes(form, schema);
   const cupos = useWatch({ control: form.control, name: "cupos" });
   const sinCambios = Number(cupos) === dia.cupoMax;
 
@@ -136,13 +139,16 @@ export function EditarCupoModal({
             <span className="flex items-center gap-1.5 text-xs text-fg-3">
               <Info className="size-[13px]" /> El cambio de cupo sólo se aplica a este día.
             </span>
-            <div className="flex gap-2.5">
-              <Button variant="neutral" onClick={cerrar} disabled={guardando}>
-                <X className="size-4" /> Cancelar
-              </Button>
-              <Button type="submit" disabled={guardando || sinCambios}>
-                {guardando ? <><Loader className="spin size-4" /> Guardando…</> : <><Check className="size-4" /> Guardar cambios</>}
-              </Button>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex gap-2.5">
+                <Button variant="neutral" onClick={cerrar} disabled={guardando}>
+                  <X className="size-4" /> Cancelar
+                </Button>
+                <Button type="submit" disabled={guardando || sinCambios || faltan > 0}>
+                  {guardando ? <><Loader className="spin size-4" /> Guardando…</> : <><Check className="size-4" /> Guardar cambios</>}
+                </Button>
+              </div>
+              <FaltanCampos faltan={faltan} />
             </div>
           </PieDialogo>
         </form>

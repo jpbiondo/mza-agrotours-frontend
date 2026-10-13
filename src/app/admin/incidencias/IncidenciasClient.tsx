@@ -11,6 +11,7 @@ import {
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Pagination } from "@/components/catalog/controls";
 import { Alert, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { TextArea } from "@/components/ui/text-area";
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
@@ -140,6 +141,7 @@ function GestionarForm({ detalle, puedeGestionar, busy, error, onCancel, onGuard
   const motivo = useWatch({ control: form.control, name: "motivo" });
   const requiereMotivo = giEsTerminal(estado);
   const cambio = estado !== detalle.estado;
+  const { faltan } = useCamposFaltantes(form, gestionSchema);
   // Se fija al elegir un estado de cierre, no en cada render: es una vista previa
   // de la fecha de fin, y el backend pone la real al guardar.
   const [cierre, setCierre] = useState<string | null>(null);
@@ -286,15 +288,19 @@ function GestionarForm({ detalle, puedeGestionar, busy, error, onCancel, onGuard
           {error && <Alert>{error}</Alert>}
         </div>
 
-        <div className="flex shrink-0 justify-end gap-3 border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-          <Button variant="neutral" onClick={onCancel} disabled={busy}>
-            <X className="size-[17px]" /> {puedeGestionar ? "Cancelar" : "Cerrar"}
-          </Button>
-          {puedeGestionar && (
-            <Button type="submit" disabled={cerrada || !cambio || busy}>
-              {busy ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />} Guardar
+        <div className="shrink-0 border-t border-outline-variant bg-cream-tert px-[26px] py-4">
+          <div className="flex justify-end gap-3">
+            <Button variant="neutral" onClick={onCancel} disabled={busy}>
+              <X className="size-[17px]" /> {puedeGestionar ? "Cancelar" : "Cerrar"}
             </Button>
-          )}
+            {puedeGestionar && (
+              <Button type="submit" disabled={cerrada || !cambio || busy || faltan > 0}>
+                {busy ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />} Guardar
+              </Button>
+            )}
+          </div>
+          {/* Sin cambio de estado no hay nada que completar: el botón ya está apagado por eso. */}
+          {puedeGestionar && cambio && <FaltanCampos faltan={faltan} className="mt-2" />}
         </div>
       </form>
     </Form>

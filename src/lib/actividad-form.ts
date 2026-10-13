@@ -287,10 +287,10 @@ export function aErroresPlanosDeForm(errors: unknown, tarifas: TarifaFila[]): Er
   return e;
 }
 
-/* ---- Validación del alta -------------------------------------------------
-   `ActivityForm` no usa react-hook-form (es un asistente de cuatro pasos que
-   pinta los errores en cada tecla), así que corre el schema a mano y consume el
-   mismo mapa plano. */
+/* ---- Validación completa del alta ----------------------------------------
+   Todos los errores del alta, se hayan tocado los campos o no. `ActivityForm`
+   pinta los de react-hook-form, pero para decidir si se puede pasar de paso
+   necesita también los de lo que todavía no se tocó, que RHF no informa. */
 
 export function erroresDeActividad(v: ActividadFormData): ErroresActividad {
   const res = actividadAltaSchema.safeParse(v);

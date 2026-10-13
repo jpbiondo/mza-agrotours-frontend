@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { CalendarPlus, Loader, X } from "lucide-react";
 import { Alert, Button, Modal } from "@/components/ui";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -40,6 +41,7 @@ export function AbrirDiaModal({
       cupos: cupoBase > 0 ? String(cupoBase) : "",
     },
   });
+  const { faltan, verQueFalta } = useCamposFaltantes(form, abrirDiaSchema);
 
   async function abrir(v: AbrirDiaForm) {
     setRechazo(null);
@@ -115,12 +117,17 @@ export function AbrirDiaModal({
           </div>
 
           <PieDialogo className="justify-end">
-            <Button variant="neutral" onClick={cerrar} disabled={guardando}>
-              <X className="size-4" /> Cancelar
-            </Button>
-            <Button type="submit" disabled={guardando}>
-              {guardando ? <><Loader className="spin size-4" /> Abriendo…</> : <><CalendarPlus className="size-4" /> Abrir día</>}
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex gap-2.5">
+                <Button variant="neutral" onClick={cerrar} disabled={guardando}>
+                  <X className="size-4" /> Cancelar
+                </Button>
+                <Button type="submit" disabled={guardando || faltan > 0}>
+                  {guardando ? <><Loader className="spin size-4" /> Abriendo…</> : <><CalendarPlus className="size-4" /> Abrir día</>}
+                </Button>
+              </div>
+              <FaltanCampos faltan={faltan} para="abrir el día" onVerQueFalta={verQueFalta} />
+            </div>
           </PieDialogo>
         </form>
       </Form>

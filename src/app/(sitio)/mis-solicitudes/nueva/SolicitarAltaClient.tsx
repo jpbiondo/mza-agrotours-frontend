@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Loader,
 } from "lucide-react";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { TextField } from "@/components/ui/text-field";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Uploader } from "@/components/ui/uploader";
@@ -217,6 +218,14 @@ export default function SolicitarAltaClient() {
     defaultValues: SOLICITAR_ALTA_INICIAL,
     mode: "onTouched",
   });
+  // Los archivos de prueba se validan fuera del schema, así que se suman aparte
+  // al conteo y al "Ver qué falta".
+  const camposFaltantes = useCamposFaltantes(form, solicitarAltaSchema);
+  const faltan = camposFaltantes.faltan + (validarArchivos(files) ? 1 : 0);
+  const verQueFalta = () => {
+    setFilesError(validarArchivos(files));
+    camposFaltantes.verQueFalta();
+  };
 
   const dirty = !submitted && (files.length > 0 || form.formState.isDirty);
 
@@ -620,7 +629,7 @@ export default function SolicitarAltaClient() {
                   <Button
                     type="submit"
                     variant="primary"
-                    disabled={form.formState.isSubmitting || enviando}
+                    disabled={form.formState.isSubmitting || enviando || faltan > 0}
                   >
                     {/* Las pruebas se suben dentro del envío, antes de crear la
                         solicitud: es la parte que más tarda de las dos. */}
@@ -633,6 +642,12 @@ export default function SolicitarAltaClient() {
                     )}
                   </Button>
                 </div>
+                <FaltanCampos
+                  faltan={faltan}
+                  para="enviar la solicitud"
+                  onVerQueFalta={verQueFalta}
+                  className="mt-2"
+                />
               </div>
             </form>
           </Form>

@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader, MapPin, Send, Star, Users, X } from "lucide-react";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import { Button, Modal } from "@/components/ui";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { StarRating } from "@/components/ui/star-rating";
 import { TextArea } from "@/components/ui/text-area";
@@ -49,6 +50,7 @@ export default function ValorarModal({
   });
   const puntaje = useWatch({ control: form.control, name: "puntaje" });
   const resenia = useWatch({ control: form.control, name: "resenia" });
+  const { faltan } = useCamposFaltantes(form, valoracionSchema);
 
   async function onValid(data: ValoracionForm) {
     const r = await valorar(data.puntaje, data.resenia);
@@ -146,7 +148,7 @@ export default function ValorarModal({
           </div>
 
           <div className="mt-4 flex gap-3 border-t border-cream-tert px-6 pt-4 pb-[18px]">
-            <Button type="submit" className="flex-1" disabled={enviando}>
+            <Button type="submit" className="flex-1" disabled={enviando || faltan > 0}>
               {enviando ? <Loader size={16} className="spin" aria-hidden /> : <Send size={16} aria-hidden />}
               {enviando ? "Enviando…" : "Enviar"}
             </Button>
@@ -154,6 +156,8 @@ export default function ValorarModal({
               Cancelar
             </Button>
           </div>
+          {/* Lo obligatorio es la calificación, que está a la vista: sin "Ver qué falta". */}
+          <FaltanCampos faltan={faltan} para="enviar" className="-mt-2 justify-start px-6 pb-[18px]" />
         </form>
       </Form>
     </Modal>
