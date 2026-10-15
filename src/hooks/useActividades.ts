@@ -22,7 +22,7 @@ interface ActividadBackend {
   precioRegular?: unknown;
   diasYHorasDisponibles?: unknown;
   cultivos?: unknown;
-  cantidadReservasAsociadas?: unknown;
+  reservasPagadas?: unknown;
   puedeCambiarEstado?: unknown;
 }
 
@@ -80,7 +80,7 @@ function aActividad(a: ActividadBackend): ActividadProd {
     precio: Number(a.precioRegular) || 0,
     estado: aEstado(a.estado),
     dias: aDias(a.diasYHorasDisponibles),
-    reservasAsociadas: Number(a.cantidadReservasAsociadas) || 0,
+    reservasPagadas: Number(a.reservasPagadas) || 0,
     // Si no viene se deja intentar: el backend valida igual y rechaza con código.
     puedeCambiarEstado: typeof a.puedeCambiarEstado === "boolean" ? a.puedeCambiarEstado : true,
   };
