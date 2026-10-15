@@ -15,6 +15,8 @@ export interface ResumenDia {
   actividadId: string;
   nombre: string;
   estadoDia: EstadoDia;
+  /** Por qué el día está en su estado actual. Sólo tiene sentido si está cancelado o reprogramado. */
+  motivoEstado: string;
   cultivos: CultivoRef[];
   establecimiento: string;
   departamento: string;
