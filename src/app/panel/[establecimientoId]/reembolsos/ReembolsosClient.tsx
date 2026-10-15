@@ -224,9 +224,14 @@ function Detalle({ reembolso, error, reembolsando, onCerrar, onReembolsar }: {
                 {reembolso.fechaPedido ? fmtDiaLargo(reembolso.fechaPedido) : "—"}
               </Dato>
               <Dato label="Monto a devolver" grande mono>{moneyAr(reembolso.monto)}</Dato>
-
-              {error && <Alert className="mt-4">{error}</Alert>}
             </SheetBody>
+
+            {/* Fuera del cuerpo, que scrollea: así se ve sin bajar, junto al botón que lo disparó. */}
+            {error && (
+              <div role="alert" className="shrink-0 border-t border-cream-tert px-6 py-4">
+                <Alert>{error}</Alert>
+              </div>
+            )}
 
             <footer className="flex shrink-0 justify-between gap-3 border-t border-cream-tert bg-cream-bg px-6 py-4">
               <Button variant="ghost" onClick={onCerrar} disabled={reembolsando}>Cancelar</Button>

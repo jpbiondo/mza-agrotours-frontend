@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { ApiError, apiFetch, comoEnvelope, comoPagina, type Pagina } from "@/lib/api";
 import { aNumero, objetos } from "@/hooks/useGestionDias";
 import { useLecturaConToken, type UseAsyncConToken } from "@/hooks/useLecturaConToken";
+import { conToken } from "@/lib/sesion";
 import { aCultivos } from "@/hooks/useTiposCultivo";
 import type { EstadoDia } from "@/types/gestion-dias";
 import type { ConteoEstados, EstadoReservaDia, ReservaDia, ResumenDia } from "@/types/reservas-dia";
@@ -16,6 +18,7 @@ interface ResumenBackend {
   id?: string;
   nombre?: string;
   estadoDia?: unknown;
+  motivoEstadoDia?: unknown;
   cultivos?: unknown;
   nombreEstablecimiento?: string;
   nombreDepartamento?: string;
@@ -94,6 +97,7 @@ function aResumen(r: ResumenBackend): ResumenDia {
     actividadId: r.id ?? "",
     nombre: r.nombre ?? "",
     estadoDia: aEstadoDia(r.estadoDia),
+    motivoEstado: typeof r.motivoEstadoDia === "string" ? r.motivoEstadoDia.trim() : "",
     cultivos: aCultivos(r.cultivos),
     establecimiento: r.nombreEstablecimiento ?? "",
     departamento: r.nombreDepartamento ?? "",
@@ -207,4 +211,47 @@ export function useEstadosReservaDia(
     },
     SIN_SESION,
   );
+}
+
+/* ---- Escrituras --------------------------------------------------------- */
+
+export interface ResultadoCancelarDia {
+  ok: boolean;
+  code?: string;
+}
+
+/**
+ * DELETE .../dias/{diaId}: cancela el día con su motivo. El backend cancela
+ * además las reservas vigentes y emite el reembolso de las pagadas.
+ *
+ * El motivo viaja como texto plano: el endpoint lo recibe como
+ * `@RequestBody String`, y en JSON se guardaría con las comillas.
+ */
+export function useCancelarDia(establecimientoId: string, actividadId: string, diaId: string) {
+  const [cancelando, setCancelando] = useState(false);
+
+  async function cancelar(motivo: string): Promise<ResultadoCancelarDia> {
+    setCancelando(true);
+    try {
+      const r = await conToken((token) =>
+        apiFetch<unknown>(diaPath(establecimientoId, actividadId, diaId), {
+          method: "DELETE",
+          token,
+          headers: { "Content-Type": "text/plain;charset=UTF-8" },
+          body: motivo,
+        }),
+      );
+      const env = comoEnvelope<unknown>(r);
+      return env.ok ? { ok: true } : { ok: false, code: env.code };
+    } catch (e) {
+      if (e instanceof ApiError) return { ok: false, code: e.code };
+      // 2xx sin cuerpo: el día se canceló.
+      if (e instanceof SyntaxError) return { ok: true };
+      return { ok: false };
+    } finally {
+      setCancelando(false);
+    }
+  }
+
+  return { cancelar, cancelando };
 }

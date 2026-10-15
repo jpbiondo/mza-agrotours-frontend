@@ -56,6 +56,8 @@ const MENSAJE_ERROR: Record<string, string> = {
   "A.fechaAnteriorAHoy": "La fecha no puede ser anterior a hoy.",
   "A.fechaFueraDeVentana": "La fecha supera la ventana en la que se pueden abrir días.",
   "A.horarioInvalido": "La hora de fin tiene que ser posterior a la de inicio.",
+  "A.diaFinalizado": "Ese día ya está cancelado o finalizado: no admite cambios. Actualizamos la pantalla.",
+  actividadDiaNotFound: "No encontramos ese día de la actividad. Puede que ya no exista.",
   "E.suspendido": SUSPENDIDO_DIAS,
 };
 
