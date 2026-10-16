@@ -428,8 +428,12 @@ function Detalle({ a }: { a: ActividadPublica }) {
           <Block>
             <SectionTitle>El establecimiento</SectionTitle>
             <div className="card" style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-              <div style={{ width: 56, height: 56, borderRadius: 12, background: "var(--green-800)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, flexShrink: 0 }}>
-                {iniciales(a.establecimiento.nombre)}
+              {/* Sin portada cargada, el monograma. */}
+              <div className="inline-flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-green-800 font-display text-xl font-bold text-white">
+                {a.establecimiento.foto
+                  // eslint-disable-next-line @next/next/no-img-element -- el host del object storage no está en `images.remotePatterns`, igual que en Photo.
+                  ? <img src={a.establecimiento.foto.url} alt="" className="size-full object-cover" />
+                  : iniciales(a.establecimiento.nombre)}
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: "var(--fg-1)", margin: 0 }}>{a.establecimiento.nombre}</h3>

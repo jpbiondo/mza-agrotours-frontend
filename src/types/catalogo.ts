@@ -132,6 +132,8 @@ export interface EstablecimientoDeActividad {
   nombre: string;
   departamento: string;
   descripcion: string;
+  /** Portada del establecimiento; `null` si no tiene. */
+  foto: FotoRef | null;
 }
 
 /** GET /actividades/{id}. Los textos vacíos son campos sin cargar. */
