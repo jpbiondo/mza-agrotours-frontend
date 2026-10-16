@@ -68,6 +68,7 @@ interface ActividadBackend {
   nombreEstablecimiento?: string;
   nombreDepartamento?: string;
   precioRegular?: unknown;
+  fotoPortada?: unknown;
 }
 
 interface DetalleBackend {
@@ -207,6 +208,7 @@ function aActividad(a: ActividadBackend): ActividadDeCultivo {
     establecimiento: aTexto(a.nombreEstablecimiento),
     departamento: aTexto(a.nombreDepartamento),
     precio: aNumeroOpcional(a.precioRegular),
+    foto: aFoto(a.fotoPortada),
   };
 }
 
