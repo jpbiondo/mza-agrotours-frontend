@@ -5,7 +5,7 @@ import { useLecturaConToken, type UseAsyncConToken } from "@/hooks/useLecturaCon
 import { conToken } from "@/lib/sesion";
 import { aCultivos } from "@/hooks/useTiposCultivo";
 import type { EstadoDia } from "@/types/gestion-dias";
-import type { ConteoEstados, EstadoReservaDia, ReservaDia, ResumenDia } from "@/types/reservas-dia";
+import type { ConteoEstados, EstadoReservaDia, Reprogramacion, ReservaDia, ResumenDia } from "@/types/reservas-dia";
 
 function diaPath(establecimientoId: string, actividadId: string, diaId: string): string {
   return `/establecimientos/${encodeURIComponent(establecimientoId)}/actividades/${encodeURIComponent(actividadId)}/dias/${encodeURIComponent(diaId)}`;
@@ -215,9 +215,23 @@ export function useEstadosReservaDia(
 
 /* ---- Escrituras --------------------------------------------------------- */
 
-export interface ResultadoCancelarDia {
+export interface ResultadoDia {
   ok: boolean;
   code?: string;
+}
+
+/** Una escritura sobre el día. Las dos responden 200 sin cuerpo. */
+async function escribirDia(path: string, init: { method: string; body: string; headers?: Record<string, string> }): Promise<ResultadoDia> {
+  try {
+    const r = await conToken((token) => apiFetch<unknown>(path, { ...init, token }));
+    const env = comoEnvelope<unknown>(r);
+    return env.ok ? { ok: true } : { ok: false, code: env.code };
+  } catch (e) {
+    if (e instanceof ApiError) return { ok: false, code: e.code };
+    // 2xx sin cuerpo: el cambio se hizo.
+    if (e instanceof SyntaxError) return { ok: true };
+    return { ok: false };
+  }
 }
 
 /**
@@ -230,28 +244,46 @@ export interface ResultadoCancelarDia {
 export function useCancelarDia(establecimientoId: string, actividadId: string, diaId: string) {
   const [cancelando, setCancelando] = useState(false);
 
-  async function cancelar(motivo: string): Promise<ResultadoCancelarDia> {
+  async function cancelar(motivo: string): Promise<ResultadoDia> {
     setCancelando(true);
     try {
-      const r = await conToken((token) =>
-        apiFetch<unknown>(diaPath(establecimientoId, actividadId, diaId), {
-          method: "DELETE",
-          token,
-          headers: { "Content-Type": "text/plain;charset=UTF-8" },
-          body: motivo,
-        }),
-      );
-      const env = comoEnvelope<unknown>(r);
-      return env.ok ? { ok: true } : { ok: false, code: env.code };
-    } catch (e) {
-      if (e instanceof ApiError) return { ok: false, code: e.code };
-      // 2xx sin cuerpo: el día se canceló.
-      if (e instanceof SyntaxError) return { ok: true };
-      return { ok: false };
+      return await escribirDia(diaPath(establecimientoId, actividadId, diaId), {
+        method: "DELETE",
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
+        body: motivo,
+      });
     } finally {
       setCancelando(false);
     }
   }
 
   return { cancelar, cancelando };
+}
+
+/**
+ * POST .../dias/{diaId}/reprogramar: mueve el día a otra fecha u horario. El
+ * backend rechaza con `A.diaNoReprogramable` tanto un día que no está activo
+ * como una fecha fuera de los 120 días del pago más antiguo o ya ocupada.
+ */
+export function useReprogramarDia(establecimientoId: string, actividadId: string, diaId: string) {
+  const [reprogramando, setReprogramando] = useState(false);
+
+  async function reprogramar(r: Reprogramacion): Promise<ResultadoDia> {
+    setReprogramando(true);
+    try {
+      return await escribirDia(`${diaPath(establecimientoId, actividadId, diaId)}/reprogramar`, {
+        method: "POST",
+        // El inicio viaja como `LocalDateTime` y el fin como `LocalTime`: el día termina la misma fecha.
+        body: JSON.stringify({
+          motivo: r.motivo,
+          fechaHoraInicioReprogramada: `${r.fecha}T${r.horaInicio}:00`,
+          horaFinReprogramada: r.horaFin,
+        }),
+      });
+    } finally {
+      setReprogramando(false);
+    }
+  }
+
+  return { reprogramar, reprogramando };
 }

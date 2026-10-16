@@ -9,6 +9,7 @@ import {
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Pagination } from "@/components/catalog/controls";
 import { Alert, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
+import { buttonClasses } from "@/components/ui/Button";
 import type { ToastData } from "@/components/ui";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { hoyISO } from "@/components/ui/date-picker";
@@ -286,16 +287,20 @@ function CabeceraSkeleton() {
   );
 }
 
-/** Barra de acciones sobre el día. Reprogramar todavía no tiene endpoint. */
+/** Barra de acciones sobre el día: reprogramarlo o cancelarlo. */
 function AccionesDia({
-  resumen, temporalidad, onCancelar,
+  resumen, temporalidad, reprogramar, onCancelar,
 }: {
   resumen: ResumenDia;
   temporalidad: Temporalidad;
+  /** Ruta de la pantalla de reprogramación. */
+  reprogramar: string;
   onCancelar: () => void;
 }) {
   const cancelado = resumen.estadoDia === "cancelada";
   const cerrado = cancelado || temporalidad === "pasada" || resumen.estadoDia === "finalizada";
+  // El backend sólo reprograma un día activo: uno ya reprogramado o cancelado no.
+  const reprogramable = !cerrado && resumen.estadoDia === "activa";
   const fecha = <strong className="text-fg-1">{fechaCorta(resumen.fecha)}</strong>;
 
   return (
@@ -308,11 +313,16 @@ function AccionesDia({
               : <>Gestioná la jornada del {fecha}</>}
         </span>
       </div>
-      {/* TODO backend: no hay endpoint para reprogramar un día. */}
       <div className="flex flex-wrap gap-2.5">
-        <Button variant="neutral" disabled title={cerrado ? undefined : "Próximamente"}>
-          <CalendarClock className="size-[17px]" /> Reprogramar actividad del día
-        </Button>
+        {reprogramable ? (
+          <Link href={reprogramar} className={buttonClasses({ variant: "neutral" })}>
+            <CalendarClock className="size-[17px]" /> Reprogramar actividad del día
+          </Link>
+        ) : (
+          <Button variant="neutral" disabled>
+            <CalendarClock className="size-[17px]" /> Reprogramar actividad del día
+          </Button>
+        )}
         <Button
           variant="neutral"
           onClick={onCancelar}
@@ -521,7 +531,12 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
                 </div>
               </div>
 
-              <AccionesDia resumen={r} temporalidad={temporalidad} onCancelar={() => setModalCancelar(true)} />
+              <AccionesDia
+                resumen={r}
+                temporalidad={temporalidad}
+                reprogramar={ruta("actividades", actividadId, "calendario", diaId, "reprogramar")}
+                onCancelar={() => setModalCancelar(true)}
+              />
 
               <BannerEstadoDia resumen={r} />
 
