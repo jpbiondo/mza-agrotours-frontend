@@ -248,6 +248,9 @@ export function LoteDrawer({
                 <FormField
                   control={form.control}
                   name="desde"
+                  // El error de "ningún día cae en el rango" vive en `dias`:
+                  // cambiar las fechas lo tiene que recalcular.
+                  rules={{ deps: ["dias"] }}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel required>Desde</FormLabel>
@@ -261,6 +264,7 @@ export function LoteDrawer({
                 <FormField
                   control={form.control}
                   name="hasta"
+                  rules={{ deps: ["dias"] }}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel required>Hasta</FormLabel>

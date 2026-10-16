@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { DIAS } from "@/data/actividad-form";
+import { rangoSinDiasElegidos } from "@/lib/gestion-dias";
 import type { ActividadFormData, DiaCfg, DiaKey, TarifaFila } from "@/types/actividad-form";
+import type { DiaSemana } from "@/types/gestion-dias";
 
 /**
  * Validaciones del formulario de actividad, en zod y en un solo lugar: las
@@ -225,6 +227,13 @@ export const actividadAltaSchema = z
     if (!v.fechaHasta) err(["fechaHasta"], "La fecha hasta es requerida");
     else if (v.fechaDesde && v.fechaHasta < v.fechaDesde)
       err(["fechaHasta"], "La fecha de fin no puede ser anterior al inicio");
+
+    // Es de la combinación días + vigencia, no de un campo: se arregla tocando
+    // cualquiera de los dos.
+    const elegidos = DIAS.filter((d) => (v.days as Record<DiaKey, DiaCfg>)[d.key].on)
+      .map((d) => d.key.toUpperCase() as DiaSemana);
+    const sinDias = rangoSinDiasElegidos(v.fechaDesde, v.fechaHasta, elegidos);
+    if (sinDias) err(["diasRango"], sinDias);
   });
 
 /* ---- De los issues a las claves planas ------------------------------------
