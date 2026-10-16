@@ -60,7 +60,7 @@ const LABEL = "font-semibold";
  * validación completa en cuanto el productor modifica el bloque.
  */
 const SINTETICOS_TARIFAS = ["tarNone", "tarBase", "tarDup", "tarOverlap"];
-const SINTETICOS_DIAS = ["diasNone", "diasHoras", "diasOrden"];
+const SINTETICOS_DIAS = ["diasNone", "diasHoras", "diasOrden", "diasRango"];
 
 /** Los campos de cada paso, para marcarlos todos con "Ver qué falta". */
 const CAMPOS_DEL_PASO: Record<number, FieldPath<ActividadFormData>[]> = {

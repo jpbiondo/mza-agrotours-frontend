@@ -26,6 +26,33 @@ export function diaSemanaDe(iso: FechaISO): DiaSemana {
   return ORDEN_DIAS[(deISO(iso).getDay() + 6) % 7];
 }
 
+/**
+ * Los días de la semana que caen entre `desde` y `hasta`, ambos incluidos. Con
+ * una semana o más de rango están todos.
+ */
+export function diasSemanaEnRango(desde: FechaISO, hasta: FechaISO): Set<DiaSemana> {
+  const d = deISO(desde);
+  const fin = deISO(hasta);
+  const dias = new Set<DiaSemana>();
+  while (d <= fin && dias.size < 7) {
+    dias.add(ORDEN_DIAS[(d.getDay() + 6) % 7]);
+    d.setDate(d.getDate() + 1);
+  }
+  return dias;
+}
+
+/**
+ * Error de un rango que no contiene ninguno de los días de la semana elegidos,
+ * o `null` si alguno cae adentro. El backend lo rechaza con un
+ * `validacionNegocio` genérico, así que se avisa antes de mandar.
+ */
+export function rangoSinDiasElegidos(desde: FechaISO, hasta: FechaISO, dias: readonly DiaSemana[]): string | null {
+  if (!desde || !hasta || hasta < desde || dias.length === 0) return null;
+  const enRango = diasSemanaEnRango(desde, hasta);
+  if (dias.some((d) => enRango.has(d))) return null;
+  return `Ninguno de los días de la semana elegidos cae entre el ${fechaCorta(desde)} y el ${fechaCorta(hasta)}. Ampliá el rango o elegí otros días.`;
+}
+
 export function nombreMes(mes0: number): string {
   return MESES[mes0];
 }

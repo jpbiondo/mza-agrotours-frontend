@@ -204,6 +204,13 @@ export function DisponibilidadEditor({
           </div>
         </div>
 
+        {errs.diasRango && (
+          <div className="err-msg mt-3">
+            <AlertCircle className="size-[14px] shrink-0 text-danger" />
+            {errs.diasRango}
+          </div>
+        )}
+
         <div className="mt-4 flex items-center gap-2 rounded-md bg-info-fill px-3.5 py-2.5 text-[13px] text-info-fg">
           <Info className="size-[15px] shrink-0 text-info" />
           <span>

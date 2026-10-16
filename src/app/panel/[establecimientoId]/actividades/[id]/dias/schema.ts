@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { rangoSinDiasElegidos } from "@/lib/gestion-dias";
 import type { DiaSemana } from "@/types/gestion-dias";
 
 /* Los cupos se editan como texto —el input sólo deja escribir dígitos— y se
@@ -47,7 +48,8 @@ export type AbrirDiaForm = z.infer<typeof abrirDiaSchema>;
 /**
  * Lote de días. La ventana de fechas (desde hoy hasta la fecha máxima) la
  * acota el propio selector, y las fechas que ya tienen día las descarta el
- * backend en la previsualización, así que acá sólo va lo que se sabe sin red.
+ * backend en la previsualización, así que acá sólo va lo que se sabe sin red:
+ * entre eso, que el rango contenga alguno de los días de la semana elegidos.
  */
 export const loteSchema = z
   .object({
@@ -63,6 +65,10 @@ export const loteSchema = z
     if (v.desde && v.hasta && v.hasta < v.desde) {
       ctx.addIssue({ code: "custom", path: ["hasta"], message: "La fecha hasta no puede ser anterior a la fecha desde." });
     }
+    // Va en `dias` y no en las fechas: se arregla tanto eligiendo otro día como
+    // ampliando el rango, y el selector de días está justo abajo.
+    const sinDias = rangoSinDiasElegidos(v.desde, v.hasta, v.dias);
+    if (sinDias) ctx.addIssue({ code: "custom", path: ["dias"], message: sinDias });
     horarioValido(v, ctx);
   });
 
