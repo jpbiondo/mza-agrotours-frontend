@@ -162,8 +162,10 @@ function ReprogramarSkeleton() {
 /* ---- Formulario --------------------------------------------------------- */
 
 function Formulario({
-  resumen, diaId, min, max, pagoMasAntiguo, mes, onMes, dias, volver, onListo, reprogramar, reprogramando,
+  resumen, diaId, min, max, pagoMasAntiguo, mes, onMes, dias, volver, onListo, onCalendarioViejo, reprogramar,
+  reprogramando,
 }: {
+  onCalendarioViejo: () => void;
   resumen: ResumenDia;
   diaId: string;
   min: FechaISO;
@@ -178,7 +180,7 @@ function Formulario({
   reprogramar: (r: Reprogramacion) => Promise<{ ok: boolean; code?: string }>;
   reprogramando: boolean;
 }) {
-  const schema = reprogramarSchema({ fecha: resumen.fecha, min, max });
+  const schema = reprogramarSchema({ fecha: resumen.fecha, horaInicio: resumen.horaInicio, min, max });
   const form = useForm<ReprogramarForm>({
     resolver: zodResolver(schema),
     // onChange: el aviso de «fin antes que inicio» se cruza entre dos campos y
@@ -207,7 +209,11 @@ function Formulario({
     if (!aConfirmar) return;
     const r = await reprogramar(aConfirmar);
     if (r.ok) onListo(aConfirmar);
-    else setRechazo(mensajeErrorDias(r.code));
+    else {
+      // Alguien ocupó la fecha mientras se elegía: se trae el mes de nuevo para que se vea.
+      if (r.code === "A.diaFechaOcupada") onCalendarioViejo();
+      setRechazo(mensajeErrorDias(r.code));
+    }
   }
 
   return (
@@ -218,7 +224,8 @@ function Formulario({
             <Seccion>
               <div className="t-label">1 · Nueva fecha y horario</div>
               <p className="mt-1.5 text-[13.5px] text-fg-2">
-                Por defecto queda seleccionado el día actual. Elegí otra fecha disponible o cambiá solo el horario.
+                Por defecto queda seleccionado el día actual. Elegí una fecha posterior disponible o cambiá solo el
+                horario: el día se puede postergar, no adelantar.
               </p>
 
               <div className="mt-[18px] flex flex-wrap gap-8">
@@ -456,7 +463,8 @@ export default function ReprogramarClient({ actividadId, diaId }: { actividadId:
                 <Formulario
                   resumen={r}
                   diaId={diaId}
-                  min={hoy}
+                  // El backend no deja adelantar el día: el piso es su propia fecha (que no pasó, o no sería reprogramable).
+                  min={r.fecha}
                   max={max}
                   pagoMasAntiguo={pagoMasAntiguo}
                   mes={mes}
@@ -464,6 +472,7 @@ export default function ReprogramarClient({ actividadId, diaId }: { actividadId:
                   dias={cal.data?.calendario.dias ?? null}
                   volver={volver}
                   onListo={setListo}
+                  onCalendarioViejo={cal.reload}
                   reprogramar={reprogramar}
                   reprogramando={reprogramando}
                 />

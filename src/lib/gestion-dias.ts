@@ -59,7 +59,7 @@ const MENSAJE_ERROR: Record<string, string> = {
   "A.diaFinalizado": "Ese día ya está cancelado o finalizado: no admite cambios. Actualizamos la pantalla.",
   "A.diaNoReprogramable":
     "No se puede reprogramar a esa fecha: el día ya no está activo, la fecha supera los 120 días desde el pago más antiguo o ya tiene otro día programado.",
-  "A.fechaInvalidaReprogramacion": "La hora de fin tiene que ser posterior a la de inicio.",
+  "A.fechaInvalidaReprogramacion": "El día sólo se puede postergar: el nuevo inicio no puede ser anterior al que ya tenía.",
   validationError: "Revisá los datos: el nuevo inicio tiene que ser futuro y el motivo no puede superar los 200 caracteres.",
   actividadDiaNotFound: "No encontramos ese día de la actividad. Puede que ya no exista.",
   "E.suspendido": SUSPENDIDO_DIAS,
