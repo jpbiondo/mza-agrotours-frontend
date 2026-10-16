@@ -6,7 +6,7 @@ import { useLecturaConToken, type UseAsyncConToken } from "@/hooks/useLecturaCon
 import { hoyISO, sumarDiasISO } from "@/components/ui/date-picker";
 import { ORDEN_DIAS } from "@/lib/gestion-dias";
 import type {
-  AltaDia, AltaLote, CalendarioGestion, ConfiguracionDias, DiaProgramado, DiaSemana,
+  AltaDia, AltaLote, CalendarioGestion, CalendarioReprogramacion, ConfiguracionDias, DiaProgramado, DiaSemana,
   EstadoDia, HorarioVigencia, PlanLote, Tarifa, VigenciaMes,
 } from "@/types/gestion-dias";
 
@@ -197,6 +197,46 @@ export function useCalendarioGestion(
       const env = comoEnvelope<CalendarioBackend>(r);
       if (!env.ok || !env.data) throw new Error(env.code ?? "No pudimos cargar el calendario");
       return aCalendario(env.data);
+    },
+    SIN_SESION,
+  );
+}
+
+interface CalendarioReprogramacionBackend {
+  fechaHoraPagoReservaMasAntigua?: unknown;
+  calendarioGestionDiasResponse?: CalendarioBackend;
+}
+
+/**
+ * GET .../dias/{diaId}/calendario-reprogramacion?mes&anio: el mismo calendario
+ * del mes y, si el día tiene reservas pagadas, la fecha del pago más antiguo,
+ * que es de donde se cuentan los 120 días hasta los que se puede mover.
+ */
+export function useCalendarioReprogramacion(
+  establecimientoId: string,
+  actividadId: string,
+  diaId: string,
+  anio: number,
+  mes: number,
+): UseAsyncConToken<CalendarioReprogramacion> {
+  const qs = new URLSearchParams({ mes: String(mes), anio: String(anio) });
+  const clave = establecimientoId && actividadId && diaId ? `repro|${establecimientoId}|${actividadId}|${diaId}|${qs}` : "";
+
+  return useLecturaConToken<CalendarioReprogramacion>(
+    clave,
+    async (token) => {
+      const r = await apiFetch<unknown>(
+        `${diasPath(establecimientoId, actividadId)}/${encodeURIComponent(diaId)}/calendario-reprogramacion?${qs}`,
+        { token },
+      );
+      const env = comoEnvelope<CalendarioReprogramacionBackend>(r);
+      if (!env.ok || !env.data) throw new Error(env.code ?? "No pudimos cargar el calendario");
+      const pago = env.data.fechaHoraPagoReservaMasAntigua;
+      return {
+        calendario: aCalendario(env.data.calendarioGestionDiasResponse ?? {}),
+        // `LocalDateTime` viaja como "2026-06-04T10:30:00": alcanza con la fecha.
+        pagoMasAntiguo: typeof pago === "string" ? aFecha(pago.slice(0, 10)) : null,
+      };
     },
     SIN_SESION,
   );

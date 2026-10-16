@@ -14,7 +14,7 @@ import { CropChip, EstadoActividadBadge, IconoActividad } from "@/components/pan
 import { BarraCupos, CalendarioMensual, type Celda, type ItemLeyenda } from "@/components/panel/gestion-dias/CalendarioMensual";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useCalendarioActividad } from "@/hooks/useCalendarioActividad";
-import { fechaLarga } from "@/lib/gestion-dias";
+import { claveMes, fechaLarga, moverMes, type Mes } from "@/lib/gestion-dias";
 import { cn } from "@/lib/utils";
 import type { DiaHorario } from "@/types/actividad-prod";
 import type { DiaProgramado, FechaISO } from "@/types/gestion-dias";
@@ -32,15 +32,6 @@ const LEYENDA: ItemLeyenda[] = [
   { muestra: "bg-warning", label: "En espera de pago" },
   { muestra: "border border-dashed border-outline-variant", label: "No se dicta" },
 ];
-
-type Mes = { anio: number; mes0: number };
-
-const claveMes = ({ anio, mes0 }: Mes) => `${anio}-${String(mes0 + 1).padStart(2, "0")}`;
-
-function moverMes({ anio, mes0 }: Mes, delta: number): Mes {
-  const d = new Date(anio, mes0 + delta, 1);
-  return { anio: d.getFullYear(), mes0: d.getMonth() };
-}
 
 /** Un día ya dictado: sus pagadas pasan a contarse como finalizadas y no quedan cupos en espera. */
 const esPasado = (d: DiaProgramado, hoy: FechaISO) => d.estado === "finalizada" || d.fecha < hoy;

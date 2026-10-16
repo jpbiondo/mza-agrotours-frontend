@@ -84,3 +84,10 @@ export interface PlanLote {
   aCrear: FechaISO[];
   descartadas: FechaISO[];
 }
+
+/** El calendario del mes para elegir a dónde mover un día. */
+export interface CalendarioReprogramacion {
+  calendario: CalendarioGestion;
+  /** Fecha del pago más antiguo del día; `null` si no tiene reservas pagadas. */
+  pagoMasAntiguo: FechaISO | null;
+}

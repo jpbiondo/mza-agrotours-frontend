@@ -49,3 +49,12 @@ export interface ReservaDia {
 
 /** Cuántas reservas del día hay en cada estado (sólo los que tienen alguna). */
 export type ConteoEstados = Partial<Record<EstadoReservaDia, number>>;
+
+/** Nueva fecha y horario de un día. Con «sólo la hora» la fecha es la que ya tenía. */
+export interface Reprogramacion {
+  fecha: FechaISO;
+  /** "HH:MM" */
+  horaInicio: string;
+  horaFin: string;
+  motivo: string;
+}

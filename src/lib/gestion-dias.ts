@@ -57,6 +57,10 @@ const MENSAJE_ERROR: Record<string, string> = {
   "A.fechaFueraDeVentana": "La fecha supera la ventana en la que se pueden abrir días.",
   "A.horarioInvalido": "La hora de fin tiene que ser posterior a la de inicio.",
   "A.diaFinalizado": "Ese día ya está cancelado o finalizado: no admite cambios. Actualizamos la pantalla.",
+  "A.diaNoReprogramable":
+    "No se puede reprogramar a esa fecha: el día ya no está activo, la fecha supera los 120 días desde el pago más antiguo o ya tiene otro día programado.",
+  "A.fechaInvalidaReprogramacion": "El día sólo se puede postergar: el nuevo inicio no puede ser anterior al que ya tenía.",
+  validationError: "Revisá los datos: el nuevo inicio tiene que ser futuro y el motivo no puede superar los 200 caracteres.",
   actividadDiaNotFound: "No encontramos ese día de la actividad. Puede que ya no exista.",
   "E.suspendido": SUSPENDIDO_DIAS,
 };
@@ -69,4 +73,20 @@ export function mensajeErrorDias(code: string | null | undefined): string {
 /** "JUN" para el bloque de fecha de los diálogos. */
 export function mesCorto(iso: FechaISO): string {
   return MESES[deISO(iso).getMonth()].slice(0, 3).toUpperCase();
+}
+
+/* ---- Navegación por meses ------------------------------------------------ */
+
+/** Un mes del calendario; `mes0` va de 0 a 11, como en `Date`. */
+export type Mes = { anio: number; mes0: number };
+
+/** "YYYY-MM" del mes de una fecha: compara bien como texto. */
+export const mesDe = (iso: FechaISO) => iso.slice(0, 7);
+
+/** "YYYY-MM" de un mes, para comparar con `mesDe`. */
+export const claveMes = ({ anio, mes0 }: Mes) => `${anio}-${String(mes0 + 1).padStart(2, "0")}`;
+
+export function moverMes({ anio, mes0 }: Mes, delta: number): Mes {
+  const d = new Date(anio, mes0 + delta, 1);
+  return { anio: d.getFullYear(), mes0: d.getMonth() };
 }
