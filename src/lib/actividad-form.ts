@@ -184,9 +184,15 @@ function refinarDias(days: Record<DiaKey, DiaCfg>, ctx: Ctx) {
 
 /* ---- Schemas ------------------------------------------------------------- */
 
+/** La misma regex con la que el backend valida el nombre de la actividad. */
+const NOMBRE_VALIDO = /^[a-zA-Z0-9áéíóúüÁÉÍÓÚÜñÑ _-]*$/;
+
 /** Lo que comparten el alta y la modificación. */
 export const camposComunes = {
-  nombre: textoRequerido(5, "El nombre es requerido"),
+  nombre: textoRequerido(5, "El nombre es requerido").regex(
+    NOMBRE_VALIDO,
+    "El nombre sólo puede tener letras, números, espacios, guiones (-) y guiones bajos (_)",
+  ),
   descripcion: textoRequerido(20, "La descripción es requerida"),
   cultivos: z.array(z.string()).min(1, "El tipo de cultivo es requerido"),
   tarifas: z.array(tarifaFilaSchema),
