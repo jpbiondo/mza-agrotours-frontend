@@ -1,14 +1,243 @@
-import { useAsync } from "@/hooks/useAsync";
-import { DEUDAS_SEED } from "@/data/deudas";
-import type { Deuda } from "@/types/deudas";
+import { useCallback, useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../../firebase.config";
+import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
+import { leerFechaLocal } from "@/lib/format";
+import type { Deuda, DeudaDetalle, EstadoDeuda, EstadoHistorialDeuda } from "@/types/deudas";
 
-/** Lista las deudas de productores. Reemplazar el mock por fetch. */
-export function useDeudas() {
-  return useAsync<Deuda[]>(mockFetch);
+/** Item crudo de GET /admin/deudas. Opcionales por defensivo. */
+interface DeudaBackend {
+  id?: string | null;
+  fechaCreacionDeuda?: unknown;
+  establecimientoDeudorNombre?: string | null;
+  montoTotal?: unknown;
+  montoDevuelto?: unknown;
+  estado?: string | null;
 }
 
-// MOCK — reemplazar por fetch("/api/admin/deudas")
-async function mockFetch(): Promise<Deuda[]> {
-  await new Promise<void>((res) => setTimeout(res, 500));
-  return DEUDAS_SEED.map((d) => ({ ...d }));
+/** El enum del backend, por su nombre crudo. */
+const ESTADO: Record<string, EstadoDeuda> = {
+  SIN_DEVOLVER: "sin_devolver",
+  DEVOLUCION_PARCIAL: "parcial",
+  DEVOLUCION_TOTAL: "total",
+  ACUERDO_MEDIO: "acuerdo",
+};
+
+function aEstado(v: unknown): EstadoDeuda | undefined {
+  return typeof v === "string" ? ESTADO[v.trim()] : undefined;
+}
+
+function aNumero(v: unknown): number {
+  // BigDecimal puede venir como número o como string según la config de Jackson.
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : 0;
+}
+
+function aDeuda(d: DeudaBackend, i: number, estado: EstadoDeuda): Deuda {
+  return {
+    id: d.id ?? `sin-id-${i}`,
+    fecha: leerFechaLocal(d.fechaCreacionDeuda),
+    deudor: d.establecimientoDeudorNombre?.trim() ?? "",
+    montoTotal: aNumero(d.montoTotal),
+    montoDevuelto: aNumero(d.montoDevuelto),
+    estado,
+  };
+}
+
+interface UseDeudasReturn {
+  /**
+   * Siempre definido: `[]` significa "cargó y no hay ninguna". En el orden del
+   * backend —la más vieja primero—; no reordenar.
+   */
+  deudas: Deuda[];
+  isLoading: boolean;
+  error: string | null;
+  reload: () => void;
+}
+
+/** Deudas de todos los establecimientos (GET /admin/deudas). */
+export function useDeudas(): UseDeudasReturn {
+  const [nonce, setNonce] = useState(0);
+  /** Lo cargado junto con el nonce que lo pidió: mientras no coincida, está cargando. */
+  const [cargado, setCargado] = useState<{
+    clave: number;
+    deudas: Deuda[];
+    error: string | null;
+  } | null>(null);
+
+  const alDia = cargado?.clave === nonce;
+
+  useEffect(() => {
+    let active = true;
+
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!active) return;
+      const fin = (datos: Partial<{ deudas: Deuda[]; error: string }>) =>
+        setCargado({ clave: nonce, deudas: [], error: null, ...datos });
+
+      if (!user) {
+        fin({ error: "Necesitás iniciar sesión para ver las deudas" });
+        return;
+      }
+      try {
+        const token = await user.getIdToken();
+        const res = await apiFetch<unknown>("/admin/deudas", { token });
+        if (!active) return;
+        const env = comoEnvelope<DeudaBackend[]>(res);
+        if (!env.ok) {
+          fin({ error: env.code ?? "No pudimos cargar las deudas" });
+          return;
+        }
+        // Envelope ok sin `data` es lista vacía, no error.
+        const lista = Array.isArray(env.data) ? env.data : [];
+        const deudas: Deuda[] = [];
+        lista.forEach((d, i) => {
+          // Un estado que no conocemos no tiene badge ni filtro: se saltea.
+          const estado = d && typeof d === "object" ? aEstado(d.estado) : undefined;
+          if (estado) deudas.push(aDeuda(d, i, estado));
+        });
+        fin({ deudas });
+      } catch (e) {
+        if (!active) return;
+        if (e instanceof ApiError && e.status === 403) {
+          fin({ error: "No tenés permiso para ver las deudas" });
+          return;
+        }
+        fin({ error: e instanceof Error ? e.message : "Error inesperado" });
+      }
+    });
+
+    return () => {
+      active = false;
+      unsub();
+    };
+  }, [nonce]);
+
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
+
+  return {
+    deudas: alDia ? cargado.deudas : [],
+    isLoading: !alDia,
+    error: alDia ? cargado.error : null,
+    reload,
+  };
+}
+
+/* ---- Detalle ------------------------------------------------------------ */
+
+interface EstadoHistorialBackend {
+  nombre?: string | null;
+  fechaHoraInicio?: unknown;
+  fechaHoraFin?: unknown;
+  montoDevueltoTransaccion?: unknown;
+  motivo?: string | null;
+}
+
+/** Detalle crudo de GET /admin/deudas/{id}. El estado actual es el último del historial. */
+interface DeudaDetalleBackend extends Omit<DeudaBackend, "estado"> {
+  estados?: unknown;
+}
+
+/** En el orden en que vienen, del más viejo al más nuevo: no reordenar. */
+function aHistorial(v: unknown): EstadoHistorialDeuda[] {
+  if (!Array.isArray(v)) return [];
+  const historial: EstadoHistorialDeuda[] = [];
+  for (const e of v as EstadoHistorialBackend[]) {
+    const estado = e && typeof e === "object" ? aEstado(e.nombre) : undefined;
+    if (!estado) continue;
+    historial.push({
+      estado,
+      desde: leerFechaLocal(e.fechaHoraInicio),
+      hasta: leerFechaLocal(e.fechaHoraFin),
+      montoTransaccion: aNumero(e.montoDevueltoTransaccion),
+      motivo: typeof e.motivo === "string" ? e.motivo.trim() : "",
+    });
+  }
+  return historial;
+}
+
+function aDetalle(d: DeudaDetalleBackend): DeudaDetalle | null {
+  const historial = aHistorial(d.estados);
+  const actual = historial.at(-1);
+  // Sin un estado legible no hay con qué pintar la cabecera.
+  if (!actual) return null;
+  return { ...aDeuda(d, 0, actual.estado), historial };
+}
+
+interface UseDeudaReturn {
+  deuda: DeudaDetalle | null;
+  isLoading: boolean;
+  error: string | null;
+  /** La deuda no existe o el id está mal formado. La pantalla no los distingue. */
+  notFound: boolean;
+  reload: () => void;
+}
+
+/** Detalle de una deuda con su historial de estados (GET /admin/deudas/{id}). */
+export function useDeuda(id: string): UseDeudaReturn {
+  const [nonce, setNonce] = useState(0);
+  const [cargado, setCargado] = useState<{
+    clave: string;
+    deuda: DeudaDetalle | null;
+    error: string | null;
+    notFound: boolean;
+  } | null>(null);
+
+  // Clave con el id: al pasar de una deuda a otra no se ve un frame la anterior.
+  const clave = `${nonce}|${id}`;
+  const alDia = cargado?.clave === clave;
+
+  useEffect(() => {
+    let active = true;
+
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!active) return;
+      const fin = (datos: Partial<{ deuda: DeudaDetalle; error: string; notFound: boolean }>) =>
+        setCargado({ clave, deuda: null, error: null, notFound: false, ...datos });
+
+      if (!user) {
+        fin({ error: "Necesitás iniciar sesión para ver la deuda" });
+        return;
+      }
+      try {
+        const token = await user.getIdToken();
+        const res = await apiFetch<unknown>(`/admin/deudas/${encodeURIComponent(id)}`, { token });
+        if (!active) return;
+        const env = comoEnvelope<DeudaDetalleBackend>(res);
+        if (!env.ok) {
+          fin(env.code === "entityNotFound" ? { notFound: true } : { error: env.code ?? "No pudimos cargar la deuda" });
+          return;
+        }
+        const deuda = env.data && typeof env.data === "object" ? aDetalle(env.data) : null;
+        fin(deuda ? { deuda } : { notFound: true });
+      } catch (e) {
+        if (!active) return;
+        // 400 es un uuid mal formado: para quien pegó el link, es lo mismo que no existir.
+        if (e instanceof ApiError && (e.status === 404 || e.status === 400 || e.code === "entityNotFound")) {
+          fin({ notFound: true });
+          return;
+        }
+        if (e instanceof ApiError && e.status === 403) {
+          fin({ error: "No tenés permiso para ver las deudas" });
+          return;
+        }
+        fin({ error: e instanceof Error ? e.message : "Error inesperado" });
+      }
+    });
+
+    return () => {
+      active = false;
+      unsub();
+    };
+  }, [clave, id]);
+
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
+
+  return {
+    deuda: alDia ? cargado.deuda : null,
+    isLoading: !alDia,
+    error: alDia ? cargado.error : null,
+    notFound: alDia ? cargado.notFound : false,
+    reload,
+  };
 }

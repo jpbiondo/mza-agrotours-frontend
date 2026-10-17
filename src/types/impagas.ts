@@ -18,6 +18,11 @@ export interface Reembolso {
   establecimiento: string;
   /** Productor líder del establecimiento; vacío si no tiene titular. */
   productorLider: string;
+  /**
+   * La deuda que generó el reembolso al cubrirlo el sistema. `null` en un impago
+   * y en los cubiertos antes de que existieran las deudas.
+   */
+  deudaId: string | null;
 }
 
 /** A quién llamar o escribirle para resolver el reembolso. Vacío si no vino. */

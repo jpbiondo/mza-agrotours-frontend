@@ -118,7 +118,7 @@ const NAV: NavEntry[] = [
   {
     id: "impagas",
     iconC: HandCoins,
-    label: "Reservas impagas",
+    label: "Reembolsos impagos",
     href: "/admin/impagas",
     permiso: PermisoAdmin.LEER_REEMBOLSOS,
   },
@@ -127,6 +127,7 @@ const NAV: NavEntry[] = [
     iconC: Landmark,
     label: "Deudas de productores",
     href: "/admin/deudas",
+    permiso: PermisoAdmin.LEER_DEUDAS,
   },
   { section: "Soporte" },
   {

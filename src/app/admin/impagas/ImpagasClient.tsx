@@ -7,8 +7,11 @@ import AsyncBoundary from "@/components/AsyncBoundary";
 import { Button, EstadoBadge, Skeleton, buttonClasses } from "@/components/ui";
 import { ESTADO_META } from "@/data/impagas";
 import { fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
+import { PermisoAdmin } from "@/lib/permisos";
+import { tienePermiso } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useImpagas } from "@/hooks/useImpagas";
+import { useAuthStore } from "@/stores/authStore";
 import type { EstadoReembolso, Reembolso } from "@/types/impagas";
 
 type FilterId = "todos" | EstadoReembolso;
@@ -44,7 +47,7 @@ function FechaHora({ d }: { d: Date | null }) {
 
 const TH = "border-b border-outline-variant px-4 py-[13px] text-left text-[11px] font-semibold tracking-[.06em] whitespace-nowrap text-fg-2 uppercase";
 
-function Fila({ r }: { r: Reembolso }) {
+function Fila({ r, puedeVerDeudas }: { r: Reembolso; puedeVerDeudas: boolean }) {
   const meta = ESTADO_META[r.estado];
   return (
     <tr className="border-b border-cream-tert last:border-b-0">
@@ -72,9 +75,21 @@ function Fila({ r }: { r: Reembolso }) {
           >
             <ReceiptText size={15} /> Detalle
           </Link>
-          {/* TODO: "Ir a deuda" se wirea en su propia US; por ahora no hace nada. */}
-          {r.estado === "sistema" && (
-            <Button size="sm" className="whitespace-nowrap"><Landmark size={15} /> Ir a deuda</Button>
+          {/* Sin LEER_DEUDAS la deuda no se puede abrir: el botón ni aparece. */}
+          {r.estado === "sistema" && puedeVerDeudas && (
+            r.deudaId ? (
+              <Link
+                href={`/admin/deudas/${encodeURIComponent(r.deudaId)}`}
+                className={buttonClasses({ size: "sm", className: "whitespace-nowrap" })}
+              >
+                <Landmark size={15} /> Ir a deuda
+              </Link>
+            ) : (
+              // Cubiertos por el sistema antes de que existieran las deudas: no tienen una a la que ir.
+              <Button size="sm" className="whitespace-nowrap" disabled title="Este reembolso no tiene una deuda asociada.">
+                <Landmark size={15} /> Ir a deuda
+              </Button>
+            )
           )}
         </div>
       </td>
@@ -121,6 +136,8 @@ function Vacio({ buscando, filtrado }: { buscando: boolean; filtrado: boolean })
 
 export default function ImpagasClient() {
   const { reembolsos, isLoading, error, reload } = useImpagas();
+  const accesos = useAuthStore((s) => s.accesos);
+  const puedeVerDeudas = tienePermiso(accesos, PermisoAdmin.LEER_DEUDAS);
   const [filter, setFilter] = useState<FilterId>("todos");
   const [query, setQuery] = useState("");
 
@@ -150,10 +167,10 @@ export default function ImpagasClient() {
       <div className="mb-3.5 flex items-center gap-2.5 text-[13.5px] text-fg-3">
         <span>Deudas y reembolsos</span>
         <ChevronRight size={15} />
-        <span className="font-medium text-fg-2">Reservas impagas</span>
+        <span className="font-medium text-fg-2">Reembolsos impagos</span>
       </div>
       <div className="mb-6">
-        <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">Reservas impagas</h1>
+        <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">Reembolsos impagos</h1>
         <p className="mt-2.5 max-w-[680px] text-[15.5px] leading-normal text-fg-2">
           Reembolsos que los productores no pagaron a los visitantes y que tiene que cubrir el sistema, junto con los que el sistema ya pagó.
         </p>
@@ -238,7 +255,7 @@ export default function ImpagasClient() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((r) => <Fila key={r.id} r={r} />)}
+                  {visible.map((r) => <Fila key={r.id} r={r} puedeVerDeudas={puedeVerDeudas} />)}
                 </tbody>
               </table>
             </div>
