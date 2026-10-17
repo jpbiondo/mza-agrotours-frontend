@@ -1,17 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, CheckCircle2, ChevronRight, Handshake, Landmark, ListTree, Search, SearchX, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronRight, Handshake, HandCoins, Landmark, ListTree, Search, SearchX, X } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { DeudaBadge } from "@/components/admin/DeudaBadge";
-import { Skeleton, buttonClasses } from "@/components/ui";
+import { Alert, Button, Skeleton, Toast, buttonClasses } from "@/components/ui";
 import { estabInitials } from "@/data/admin";
-import { DEUDA_ESTADO_META, DEUDA_ESTADOS_ORDEN, pendienteDe } from "@/data/deudas";
+import { DEUDA_ESTADO_META, DEUDA_ESTADOS_ORDEN, deudaResoluble, pendienteDe } from "@/data/deudas";
 import { fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
+import { PermisoAdmin } from "@/lib/permisos";
+import { tienePermiso } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useDeudas } from "@/hooks/useDeudas";
+import { useAuthStore } from "@/stores/authStore";
 import type { Deuda, EstadoDeuda } from "@/types/deudas";
+import { ResolverDeudaModal } from "./ResolverDeudaModal";
 
 type FilterId = "todos" | EstadoDeuda;
 
@@ -58,7 +62,11 @@ function Progreso({ d }: { d: Deuda }) {
 
 const TH = "border-b border-outline-variant px-4 py-[13px] text-left text-[11px] font-semibold tracking-[.06em] whitespace-nowrap text-fg-2 uppercase";
 
-function Fila({ d }: { d: Deuda }) {
+function Fila({ d, onResolver }: {
+  d: Deuda;
+  /** Sin GESTIONAR_DEUDAS no se pasa, y el botón no aparece. */
+  onResolver?: (d: Deuda) => void;
+}) {
   const pendiente = pendienteDe(d);
   return (
     <tr className="border-b border-cream-tert last:border-b-0">
@@ -80,13 +88,21 @@ function Fila({ d }: { d: Deuda }) {
         {d.estado === "acuerdo" && <div className="mt-0.5 text-[11.5px] text-fg-3">Saldada por acuerdo</div>}
       </td>
       <td className="p-4"><DeudaBadge estado={d.estado} /></td>
-      <td className="p-4 text-right">
-        <Link
-          href={`/admin/deudas/${encodeURIComponent(d.id)}`}
-          className={buttonClasses({ variant: "neutral", size: "sm", className: "whitespace-nowrap" })}
-        >
-          <ListTree size={15} /> Detalle
-        </Link>
+      <td className="p-4">
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link
+            href={`/admin/deudas/${encodeURIComponent(d.id)}`}
+            className={buttonClasses({ variant: "neutral", size: "sm", className: "whitespace-nowrap" })}
+          >
+            <ListTree size={15} /> Detalle
+          </Link>
+          {/* Las saldadas son finales: el backend las rechaza. */}
+          {onResolver && deudaResoluble(d.estado) && (
+            <Button size="sm" className="whitespace-nowrap" onClick={() => onResolver(d)}>
+              <HandCoins size={15} /> Resolver deuda
+            </Button>
+          )}
+        </div>
       </td>
     </tr>
   );
@@ -137,6 +153,37 @@ const FILTERS: { id: FilterId; label: string }[] = [
 
 export default function DeudasClient() {
   const { deudas, isLoading, error, reload } = useDeudas();
+  // LEER_DEUDAS ya lo exige el guard de la ruta; acá se distingue quién además puede resolverlas.
+  const accesos = useAuthStore((s) => s.accesos);
+  const puedeGestionar = tienePermiso(accesos, PermisoAdmin.GESTIONAR_DEUDAS);
+  const [resolviendo, setResolviendo] = useState<Deuda | null>(null);
+  /** Por qué la lista se recargó por su cuenta: queda a la vista hasta la próxima acción. */
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4200);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  function abrirResolver(d: Deuda) {
+    setAviso(null);
+    setResolviendo(d);
+  }
+
+  // La fila no trae el detalle: se vuelve a pedir la lista para ver el estado nuevo.
+  function onResuelta() {
+    setResolviendo(null);
+    reload();
+    setToast("Cambio de estado registrado.");
+  }
+
+  function onDesactualizado(mensaje: string) {
+    setResolviendo(null);
+    setAviso(mensaje);
+    reload();
+  }
   const [filter, setFilter] = useState<FilterId>("todos");
   const [query, setQuery] = useState("");
 
@@ -229,6 +276,8 @@ export default function DeudasClient() {
         </div>
       </div>
 
+      {aviso && <Alert tone="warning" className="mb-4">{aviso}</Alert>}
+
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<TablaSkeleton />} pad={72}>
         {visible.length === 0 ? (
           <Vacio buscando={!!query.trim()} filtrado={deudas.length > 0} />
@@ -248,13 +297,23 @@ export default function DeudasClient() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((d) => <Fila key={d.id} d={d} />)}
+                  {visible.map((d) => <Fila key={d.id} d={d} onResolver={puedeGestionar ? abrirResolver : undefined} />)}
                 </tbody>
               </table>
             </div>
           </div>
         )}
       </AsyncBoundary>
+
+      {resolviendo && (
+        <ResolverDeudaModal
+          deuda={resolviendo}
+          onResuelta={onResuelta}
+          onDesactualizado={onDesactualizado}
+          onCerrar={() => setResolviendo(null)}
+        />
+      )}
+      {toast && <Toast tone="success" title={toast} />}
     </div>
   );
 }

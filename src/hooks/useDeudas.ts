@@ -2,8 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
-import { leerFechaLocal } from "@/lib/format";
-import type { Deuda, DeudaDetalle, EstadoDeuda, EstadoHistorialDeuda } from "@/types/deudas";
+import { aFechaLocal, leerFechaLocal } from "@/lib/format";
+import { conToken } from "@/lib/sesion";
+import type {
+  DatosResolverDeuda, Deuda, DeudaDetalle, EstadoDeuda, EstadoHistorialDeuda, PagoDeuda, TipoResolucionDeuda,
+} from "@/types/deudas";
 
 /** Item crudo de GET /admin/deudas. Opcionales por defensivo. */
 interface DeudaBackend {
@@ -131,6 +134,30 @@ interface EstadoHistorialBackend {
   fechaHoraFin?: unknown;
   montoDevueltoTransaccion?: unknown;
   motivo?: string | null;
+  pago?: PagoBackend | null;
+}
+
+interface PagoBackend {
+  idPago?: string | null;
+  fechaHoraPago?: unknown;
+  idPagoExterno?: string | null;
+  monto?: unknown;
+  metodoPago?: string | null;
+  fechaHoraCarga?: unknown;
+  administrador?: string | null;
+}
+
+function aPago(p: PagoBackend | null | undefined): PagoDeuda | null {
+  if (!p || typeof p !== "object") return null;
+  return {
+    id: p.idPago ?? "",
+    monto: aNumero(p.monto),
+    fecha: leerFechaLocal(p.fechaHoraPago),
+    metodo: p.metodoPago?.trim() ?? "",
+    idExterno: p.idPagoExterno?.trim() ?? "",
+    fechaCarga: leerFechaLocal(p.fechaHoraCarga),
+    administrador: p.administrador?.trim() ?? "",
+  };
 }
 
 /** Detalle crudo de GET /admin/deudas/{id}. El estado actual es el último del historial. */
@@ -151,6 +178,7 @@ function aHistorial(v: unknown): EstadoHistorialDeuda[] {
       hasta: leerFechaLocal(e.fechaHoraFin),
       montoTransaccion: aNumero(e.montoDevueltoTransaccion),
       motivo: typeof e.motivo === "string" ? e.motivo.trim() : "",
+      pago: aPago(e.pago),
     });
   }
   return historial;
@@ -171,6 +199,8 @@ interface UseDeudaReturn {
   /** La deuda no existe o el id está mal formado. La pantalla no los distingue. */
   notFound: boolean;
   reload: () => void;
+  /** Pisa el detalle con uno que ya devolvió una escritura, sin volver a pedirlo. */
+  reemplazar: (d: DeudaDetalle) => void;
 }
 
 /** Detalle de una deuda con su historial de estados (GET /admin/deudas/{id}). */
@@ -232,6 +262,11 @@ export function useDeuda(id: string): UseDeudaReturn {
   }, [clave, id]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
+  // Con la clave vigente: queda al día sin disparar el efecto.
+  const reemplazar = useCallback(
+    (deuda: DeudaDetalle) => setCargado({ clave, deuda, error: null, notFound: false }),
+    [clave],
+  );
 
   return {
     deuda: alDia ? cargado.deuda : null,
@@ -239,5 +274,106 @@ export function useDeuda(id: string): UseDeudaReturn {
     error: alDia ? cargado.error : null,
     notFound: alDia ? cargado.notFound : false,
     reload,
+    reemplazar,
   };
+}
+
+/* ---- Resolver una deuda ------------------------------------------------- */
+
+const TIPO: Record<TipoResolucionDeuda, string> = {
+  devolucion: "DEVOLUCION",
+  acuerdo: "ACUERDO_MEDIO",
+};
+
+/** Campos que puede rechazar el backend → los del formulario. */
+export type CampoResolverDeuda = "motivo" | "fecha" | "monto" | "metodo" | "idExterno";
+
+const CAMPO: Record<string, CampoResolverDeuda> = {
+  motivo: "motivo",
+  "pago.fechaHoraPago": "fecha",
+  "pago.monto": "monto",
+  "pago.metodoPago": "metodo",
+  "pago.idPagoExterno": "idExterno",
+};
+
+export interface ResultadoResolverDeuda {
+  ok: boolean;
+  /** Sólo si `ok`: el detalle ya actualizado, o `null` si vino sin un detalle legible. */
+  deuda?: DeudaDetalle | null;
+  code?: string;
+  status?: number;
+  /** El `message` del backend, si vino. */
+  mensaje?: string;
+  /** En `validationError`: el mensaje de cada campo que rechazó. */
+  errores?: Partial<Record<CampoResolverDeuda, string>>;
+  /** Mensajes de `validationError` de campos que el formulario no tiene. */
+  otros?: string[];
+}
+
+function comoRechazo(status: number | undefined, body: unknown): ResultadoResolverDeuda {
+  const b = (body ?? {}) as { code?: unknown; message?: unknown; data?: unknown };
+  const code = typeof b.code === "string" ? b.code : undefined;
+  const r: ResultadoResolverDeuda = {
+    ok: false,
+    code,
+    status,
+    mensaje: typeof b.message === "string" && b.message.trim() ? b.message.trim() : undefined,
+  };
+  if (code === "validationError" && b.data && typeof b.data === "object") {
+    const errores: ResultadoResolverDeuda["errores"] = {};
+    const otros: string[] = [];
+    for (const [campo, msg] of Object.entries(b.data as Record<string, unknown>)) {
+      if (typeof msg !== "string" || !msg.trim()) continue;
+      const nuestro = CAMPO[campo];
+      if (nuestro) errores[nuestro] = msg.trim();
+      else otros.push(msg.trim());
+    }
+    r.errores = errores;
+    r.otros = otros;
+  }
+  return r;
+}
+
+/**
+ * Registra una devolución o un acuerdo medio sobre una deuda
+ * (POST /admin/deudas/{id}/cambio-estado). Devuelve el detalle ya con el
+ * estado nuevo para pisar el de la pantalla sin volver a pedirlo.
+ */
+export function useResolverDeuda() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function resolver(id: string, datos: DatosResolverDeuda): Promise<ResultadoResolverDeuda> {
+    setIsLoading(true);
+    try {
+      const res = await conToken((token) =>
+        apiFetch<unknown>(`/admin/deudas/${encodeURIComponent(id)}/cambio-estado`, {
+          method: "POST",
+          token,
+          body: JSON.stringify({
+            tipo: TIPO[datos.tipo],
+            motivo: datos.motivo,
+            pago: datos.pago && {
+              fechaHoraPago: aFechaLocal(datos.pago.fecha),
+              monto: datos.pago.monto,
+              metodoPago: datos.pago.metodo,
+              idPagoExterno: datos.pago.idExterno,
+            },
+          }),
+        }),
+      );
+      const env = comoEnvelope<DeudaDetalleBackend>(res);
+      if (!env.ok) return comoRechazo(undefined, res);
+      return { ok: true, deuda: env.data && typeof env.data === "object" ? aDetalle(env.data) : null };
+    } catch (e) {
+      if (e instanceof ApiError) return comoRechazo(e.status, e.body);
+      // `apiFetch` sólo llega a res.json() con un 2xx: un error de parseo es un
+      // cambio registrado y contestado sin cuerpo.
+      if (e instanceof SyntaxError) return { ok: true, deuda: null };
+      return { ok: false };
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return { resolver, isLoading };
 }

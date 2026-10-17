@@ -17,6 +17,11 @@ export function deudaSaldada(estado: EstadoDeuda): boolean {
   return estado === "total" || estado === "acuerdo";
 }
 
+/** Sólo una deuda abierta admite una devolución o un acuerdo; las saldadas el backend las rechaza con 409. */
+export function deudaResoluble(estado: EstadoDeuda): boolean {
+  return estado === "sin_devolver" || estado === "parcial";
+}
+
 /** Lo que todavía se debe: 0 en una deuda saldada, aunque lo devuelto no llegue al total. */
 export function pendienteDe(d: Pick<Deuda, "estado" | "montoTotal" | "montoDevuelto">): number {
   return deudaSaldada(d.estado) ? 0 : Math.max(0, d.montoTotal - d.montoDevuelto);

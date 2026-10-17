@@ -14,6 +14,13 @@ interface NumberFieldProps {
   stepper?: boolean;
   /** Tope inferior del botón −. No valida lo que se escribe a mano: eso es del esquema. */
   min?: number;
+  /**
+   * Con un valor, acepta además una coma y hasta esa cantidad de decimales
+   * (montos). Va coma y no punto, como se escribe acá: el punto es de miles y
+   * no se deja escribir, para que "4.000" no se lea como 4. No se combina con `stepper`.
+   */
+  decimales?: number;
+  placeholder?: string;
   disabled?: boolean;
   className?: string;
   "aria-invalid"?: boolean;
@@ -23,13 +30,20 @@ interface NumberFieldProps {
 const BOTON =
   "flex w-[42px] shrink-0 items-center justify-center border border-sand bg-cream-tert text-fg-2 transition-colors hover:bg-outline-variantdisabled:cursor-not-allowed disabled:opacity-40";
 
+/** Deja sólo lo que el campo admite: dígitos y, con `decimales`, una coma con hasta esa cantidad detrás. */
+function limpiar(valor: string, decimales: number): string {
+  if (!decimales) return valor.replace(/\D/g, "");
+  const [entero, ...resto] = valor.replace(/[^\d,]/g, "").split(",");
+  return resto.length ? `${entero},${resto.join("").slice(0, decimales)}` : entero;
+}
+
 /**
- * Entero no negativo sobre el <Input> de shadcn: sólo deja escribir dígitos y,
- * con `stepper`, suma un − y un + pegados al campo.
+ * Número no negativo sobre el <Input> de shadcn: sólo deja escribir dígitos (y
+ * la coma decimal, con `decimales`) y, con `stepper`, suma un − y un + pegados al campo.
  * Reenvía ref/onBlur/id/aria-* al input para integrarse con `<FormControl>`.
  */
 export function NumberField({
-  id, name, value, onChange, onBlur, ref, stepper, min = 0, disabled, className,
+  id, name, value, onChange, onBlur, ref, stepper, min = 0, decimales = 0, placeholder, disabled, className,
   "aria-invalid": ariaInvalid, "aria-describedby": describedBy,
 }: NumberFieldProps) {
   const n = value === "" ? NaN : Number(value);
@@ -40,13 +54,14 @@ export function NumberField({
       ref={ref}
       id={id}
       name={name}
-      inputMode="numeric"
+      inputMode={decimales ? "decimal" : "numeric"}
+      placeholder={placeholder}
       autoComplete="off"
       value={value}
       disabled={disabled}
       aria-invalid={ariaInvalid}
       aria-describedby={describedBy}
-      onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
+      onChange={(e) => onChange(limpiar(e.target.value, decimales))}
       onBlur={onBlur}
       className={cn(
         "h-11 bg-surface font-mono text-base font-semibold",

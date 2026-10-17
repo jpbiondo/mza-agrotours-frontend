@@ -55,6 +55,22 @@ export function leerFechaLocal(v: unknown): Date | null {
   return new Date(+y, +mo - 1, +d, +h, +mi, s ? +s : 0);
 }
 
+/** Al revés que `leerFechaLocal`: el `LocalDateTime` sin zona que espera el backend → "2026-10-12T14:30:00". */
+export function aFechaLocal(d: Date): string {
+  return (
+    `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}` +
+    `T${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`
+  );
+}
+
+/** "YYYY-MM-DD" + "HH:MM" de un DatePicker y un TimePicker, en hora local; `null` si alguno no tiene forma. */
+export function fechaHoraLocal(fecha: string, hora: string): Date | null {
+  const f = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha);
+  const h = /^(\d{2}):(\d{2})$/.exec(hora);
+  if (!f || !h) return null;
+  return new Date(+f[1], +f[2] - 1, +f[3], +h[1], +h[2]);
+}
+
 const MESES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",

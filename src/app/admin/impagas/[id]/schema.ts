@@ -1,15 +1,8 @@
 import { z } from "zod";
+import { fechaHoraLocal } from "@/lib/format";
 
 /** Tope de `metodoPago` e `idPagoExterno` en el DTO del backend. */
 export const TEXTO_MAX = 64;
-
-/** "YYYY-MM-DD" + "HH:MM" en hora local; `null` si alguno no tiene forma. */
-export function fechaHoraLocal(fecha: string, hora: string): Date | null {
-  const f = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha);
-  const h = /^(\d{2}):(\d{2})$/.exec(hora);
-  if (!f || !h) return null;
-  return new Date(+f[1], +f[2] - 1, +f[3], +h[1], +h[2]);
-}
 
 const texto = (vacio: string) =>
   z

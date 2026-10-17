@@ -11,10 +11,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { TextField } from "@/components/ui/text-field";
 import { TimePicker } from "@/components/ui/time-picker";
 import { useRegistrarPagoReembolso } from "@/hooks/useImpagas";
-import { fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
+import { fechaHoraLocal, fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ReembolsoDetalle } from "@/types/impagas";
-import { TEXTO_MAX, fechaHoraLocal, pagoSchema, type PagoForm } from "./schema";
+import { TEXTO_MAX, pagoSchema, type PagoForm } from "./schema";
 
 /** Los campos del formulario en los que puede caer un `validationError` del backend. */
 const CAMPO_FORM = { fecha: "fecha", metodo: "metodo", idExterno: "idExterno" } as const;
