@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
-  Search, X, ChevronDown, CalendarDays, Clock, Users, Check, Loader, Inbox,
+  Search, X, ChevronDown, CalendarDays, Clock, Users, Inbox,
   CreditCard, RotateCcw, XCircle, CheckCircle2, Banknote, UserCheck,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
@@ -12,7 +12,7 @@ import {
 } from "@/data/panel-reservas";
 import { moneyAr } from "@/lib/format";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
-import { useReservasRecibidas, useConfirmarReserva } from "@/hooks/useReservasRecibidas";
+import { useReservasRecibidas } from "@/hooks/useReservasRecibidas";
 import type { EstadoReservaProd, ReservaProd } from "@/types/panel-reservas";
 
 const PAGE_SIZE = 8;
@@ -43,7 +43,7 @@ function EstadoPill({ estado }: { estado: EstadoReservaProd }) {
   );
 }
 
-function ReservaRow({ r, onConfirm, confirming }: { r: ReservaProd; onConfirm: (id: string) => void; confirming: boolean }) {
+function ReservaRow({ r }: { r: ReservaProd }) {
   const [open, setOpen] = useState(false);
   const total = totalReserva(r);
   const rango = rangoEtario(r.participantes);
@@ -104,14 +104,6 @@ function ReservaRow({ r, onConfirm, confirming }: { r: ReservaProd; onConfirm: (
               );
             })}
           </div>
-
-          {r.estado === "pendiente" && (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-              <button type="button" className="btn btn-primary" disabled={confirming} onClick={() => onConfirm(r.id)}>
-                {confirming ? (<><Loader size={16} className="spin" /> Confirmando…</>) : (<><Check size={17} /> Confirmar reserva</>)}
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -132,17 +124,12 @@ export default function ReservasRecibidasClient() {
   const { activo } = useEstablecimientos();
   const fincaId = activo?.id ?? "";
   const { data, isLoading, error, reload } = useReservasRecibidas(fincaId);
-  const { confirmar, pendingId } = useConfirmarReserva();
 
-  const [overrides, setOverrides] = useState<Record<string, EstadoReservaProd>>({});
   const [filtro, setFiltro] = useState<"todos" | EstadoReservaProd>("todos");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
-  const reservas = useMemo(
-    () => (data ?? []).map((r) => (overrides[r.id] ? { ...r, estado: overrides[r.id] } : r)),
-    [data, overrides],
-  );
+  const reservas = useMemo(() => data ?? [], [data]);
 
   const afterSearch = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -175,11 +162,6 @@ export default function ReservasRecibidasClient() {
   const pages = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE));
   const pageSafe = Math.min(page, pages);
   const visibles = filtradas.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE);
-
-  async function onConfirm(id: string) {
-    await confirmar(id);
-    setOverrides((o) => ({ ...o, [id]: "pagada" }));
-  }
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream-bg)" }}>
@@ -249,7 +231,7 @@ export default function ReservasRecibidasClient() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {visibles.map((r) => (
-                <ReservaRow key={r.id} r={r} onConfirm={onConfirm} confirming={pendingId === r.id} />
+                <ReservaRow key={r.id} r={r} />
               ))}
             </div>
             <Pagination page={pageSafe} pages={pages} onPage={setPage} />

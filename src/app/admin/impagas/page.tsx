@@ -4,7 +4,7 @@ import { PermisoAdmin } from "@/lib/permisos";
 import ImpagasClient from "./ImpagasClient";
 
 export const metadata: Metadata = {
-  title: "Reservas impagas · Administración · Mendoza AgroTours",
+  title: "Reembolsos impagos · Administración · Mendoza AgroTours",
   description: "Reembolsos que los productores deben a los visitantes.",
 };
 

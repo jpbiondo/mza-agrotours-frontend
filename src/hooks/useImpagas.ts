@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
-import { leerFechaLocal } from "@/lib/format";
+import { aFechaLocal, leerFechaLocal } from "@/lib/format";
 import { conToken } from "@/lib/sesion";
 import type {
   ContactoReembolso, DatosPagoReembolso, EstadoReembolso, PagoReembolsoSistema, PersonaReembolso, Reembolso,
@@ -18,6 +18,8 @@ interface ReembolsoBackend {
   fechaHoraEstado?: unknown;
   nombreEstablecimiento?: string | null;
   nombreProductorLider?: string | null;
+  /** Sólo en REEMBOLSADO_SISTEMA; `null` en los cubiertos antes de que existieran las deudas. */
+  idDeuda?: string | null;
 }
 
 /** El enum del backend, por su nombre crudo. */
@@ -44,6 +46,8 @@ function aReembolso(r: ReembolsoBackend, i: number): Reembolso | null {
     fechaEstado: leerFechaLocal(r.fechaHoraEstado),
     establecimiento: r.nombreEstablecimiento ?? "",
     productorLider: r.nombreProductorLider ?? "",
+    // Un impago todavía no generó deuda, aunque viniera un id.
+    deudaId: estado === "sistema" ? r.idDeuda?.trim() || null : null,
   };
 }
 
@@ -290,16 +294,6 @@ export function useReembolso(id: string): UseReembolsoReturn {
 }
 
 /* ---- Registrar el pago de un impago ------------------------------------- */
-
-const p2 = (n: number) => String(n).padStart(2, "0");
-
-/** `LocalDateTime` sin zona, que es lo que espera el backend: "2026-10-12T14:30:00". */
-function aFechaLocal(d: Date): string {
-  return (
-    `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}` +
-    `T${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`
-  );
-}
 
 /** Campos del DTO del backend → los del formulario. */
 const CAMPO: Record<string, keyof DatosPagoReembolso> = {
