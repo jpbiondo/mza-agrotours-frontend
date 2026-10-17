@@ -46,6 +46,10 @@ export const PermisoAdmin = {
   LEER_REEMBOLSOS: "LEER_REEMBOLSOS",
   /** Registrar el pago con el que un administrador cubrió un reembolso impago. */
   GESTIONAR_REEMBOLSOS: "GESTIONAR_REEMBOLSOS",
+  /** Ver las deudas que los establecimientos tienen con la plataforma. */
+  LEER_DEUDAS: "LEER_DEUDAS",
+  /** Registrar devoluciones de una deuda. Todavía no tiene endpoints. */
+  GESTIONAR_DEUDAS: "GESTIONAR_DEUDAS",
 } as const;
 
 export type PermisoAdmin = (typeof PermisoAdmin)[keyof typeof PermisoAdmin];

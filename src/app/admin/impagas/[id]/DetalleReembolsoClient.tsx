@@ -185,7 +185,7 @@ function NoEncontrado() {
         No existe, o ya se resolvió y dejó de estar impago o cubierto por el sistema.
       </p>
       <Link href="/admin/impagas" className={buttonClasses({ variant: "neutral", className: "mt-5" })}>
-        <ArrowLeft size={16} /> Volver a reservas impagas
+        <ArrowLeft size={16} /> Volver a reembolsos impagos
       </Link>
     </div>
   );
@@ -245,7 +245,7 @@ export default function DetalleReembolsoClient({ id }: { id: string }) {
       <div className="mb-3.5 flex flex-wrap items-center gap-2.5 text-[13.5px] text-fg-3">
         <span>Deudas y reembolsos</span>
         <ChevronRight size={15} />
-        <Link href="/admin/impagas" className="text-fg-3 no-underline hover:underline">Reservas impagas</Link>
+        <Link href="/admin/impagas" className="text-fg-3 no-underline hover:underline">Reembolsos impagos</Link>
         <ChevronRight size={15} />
         <span className="font-medium text-fg-2">Detalle</span>
       </div>

@@ -18,6 +18,8 @@ interface ReembolsoBackend {
   fechaHoraEstado?: unknown;
   nombreEstablecimiento?: string | null;
   nombreProductorLider?: string | null;
+  /** Sólo en REEMBOLSADO_SISTEMA; `null` en los cubiertos antes de que existieran las deudas. */
+  idDeuda?: string | null;
 }
 
 /** El enum del backend, por su nombre crudo. */
@@ -44,6 +46,8 @@ function aReembolso(r: ReembolsoBackend, i: number): Reembolso | null {
     fechaEstado: leerFechaLocal(r.fechaHoraEstado),
     establecimiento: r.nombreEstablecimiento ?? "",
     productorLider: r.nombreProductorLider ?? "",
+    // Un impago todavía no generó deuda, aunque viniera un id.
+    deudaId: estado === "sistema" ? r.idDeuda?.trim() || null : null,
   };
 }
 
