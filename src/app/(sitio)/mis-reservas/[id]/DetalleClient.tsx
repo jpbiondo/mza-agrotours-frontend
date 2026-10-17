@@ -50,8 +50,8 @@ function Cabecera({ r, onCancelar }: { r: ReservaDetalle; onCancelar?: () => voi
   return (
     <div className="mb-6 overflow-hidden rounded-lg border border-outline-variant bg-surface">
       <div className="relative">
-        {/* TODO backend: ConsultarReservaDTO todavía no trae fotos; mientras, el degradado por actividad. */}
-        <Photo seed={seedDeId(r.actividadId || r.id)} height={150} radius={0} />
+        {/* Sin portada cargada queda el degradado por actividad. */}
+        <Photo seed={seedDeId(r.actividadId || r.id)} height={150} radius={0} src={r.foto?.url} alt="" />
         <span className="absolute top-3.5 left-4 max-w-[calc(100%-32px)] truncate rounded-full bg-black/35 px-2.5 py-1 font-mono text-xs tracking-[.04em] text-white">
           {r.id}
         </span>

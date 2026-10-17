@@ -38,6 +38,8 @@ export interface ActividadDeCultivo {
   establecimiento: string;
   departamento: string;
   precio: number | null;
+  /** Portada de la actividad; `null` si no tiene fotos. */
+  foto: FotoRef | null;
 }
 
 /**

@@ -45,9 +45,9 @@ function ReservaCard({ r }: { r: ReservaResumen }) {
       href={`/mis-reservas/${r.id}`}
       className="flex items-stretch overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline transition-[box-shadow,border-color,transform] duration-300 ease-out hover:-translate-y-0.5 hover:border-sand hover:shadow-(--shadow-hover)"
     >
-      {/* TODO backend: ListarReservaDTO todavía no trae fotos; mientras, el degradado por id. */}
+      {/* Sin portada cargada queda el degradado por actividad. */}
       <div className="hidden w-[220px] shrink-0 sm:block">
-        <Photo seed={seedDeId(r.actividadId || r.id)} height="100%" radius={0} />
+        <Photo seed={seedDeId(r.actividadId || r.id)} height="100%" radius={0} src={r.foto?.url} alt="" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2.5 px-[22px] py-[18px]">
         <div className="flex items-start justify-between gap-3">

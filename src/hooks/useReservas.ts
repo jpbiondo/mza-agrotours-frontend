@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
+import { aFoto } from "@/hooks/useCatalogoActividades";
 import { ApiError, apiFetch, comoEnvelope } from "@/lib/api";
 import { leerFechaLocal } from "@/lib/format";
 import { conToken } from "@/lib/sesion";
@@ -27,6 +28,8 @@ interface ReservaBackend {
   idActividad?: string | null;
   nombreEstablecimiento?: string | null;
   ubicacionEstablecimiento?: string | null;
+  /** DTOFotosResponse: la primera foto de la actividad por `orden`. */
+  fotoPortada?: unknown;
 }
 
 function aNumero(v: unknown): number {
@@ -48,6 +51,7 @@ function aResumen(r: ReservaBackend, i: number): ReservaResumen {
     personas: aNumero(r.cantPersonas),
     total: aNumero(r.totalReserva),
     estado: (r.estadoReserva ?? "").trim(),
+    foto: aFoto(r.fotoPortada),
   };
 }
 

@@ -134,12 +134,13 @@ function aFotos(v: unknown): FotoRef[] {
 }
 
 function aEstablecimiento(v: unknown): EstablecimientoDeActividad {
-  const e = (v ?? {}) as { id?: unknown; nombre?: unknown; departamento?: unknown; descripcion?: unknown };
+  const e = (v ?? {}) as { id?: unknown; nombre?: unknown; departamento?: unknown; descripcion?: unknown; foto?: unknown };
   return {
     id: aTexto(e.id),
     nombre: aTexto(e.nombre),
     departamento: aTexto(e.departamento),
     descripcion: aTexto(e.descripcion),
+    foto: aFoto(e.foto),
   };
 }
 

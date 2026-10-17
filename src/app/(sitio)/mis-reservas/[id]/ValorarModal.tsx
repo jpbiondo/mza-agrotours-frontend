@@ -84,7 +84,7 @@ export default function ValorarModal({
           <div className="overflow-y-auto px-6 pt-5 pb-1">
             <div className="flex items-center gap-4">
               <div className="size-[76px] shrink-0 overflow-hidden rounded-xl">
-                <Photo seed={seedDeId(reserva.actividadId || reserva.id)} height={76} radius={0} />
+                <Photo seed={seedDeId(reserva.actividadId || reserva.id)} height={76} radius={0} src={reserva.foto?.url} alt="" />
               </div>
               <div className="min-w-0">
                 <h3 className="font-display text-[19px] leading-[1.22] font-bold text-fg-1">

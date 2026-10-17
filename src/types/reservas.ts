@@ -1,3 +1,5 @@
+import type { FotoRef } from "@/types/catalogo";
+
 /**
  * Agrupa los estados del backend para los filtros de "Mis reservas": `activa`
  * es la que todavía va a ocurrir (Pendiente, Pagada). Las expiradas el backend
@@ -21,6 +23,8 @@ export interface ReservaResumen {
   total: number;
   /** Nombre del estado tal como lo manda el backend ("Pagada", "Cancelada con reembolso"…). */
   estado: string;
+  /** Portada de la actividad; `null` si no tiene fotos. */
+  foto: FotoRef | null;
 }
 
 /** Una persona de la reserva (un renglón de `detalleDTOs`). */

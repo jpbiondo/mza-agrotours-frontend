@@ -146,8 +146,8 @@ function ActividadCard({ actividad }: { actividad: ActividadDeCultivo }) {
       href={`/explorar/${actividad.id}`}
       className={cn("flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline", TARJETA_HOVER)}
     >
-      {/* TODO backend: el detalle todavía no manda imágenes de las actividades. */}
-      <Photo seed={seedDeId(actividad.id)} height={130} radius={0} />
+      {/* Sin portada cargada queda el degradado por seed. */}
+      <Photo seed={seedDeId(actividad.id)} height={130} radius={0} src={actividad.foto?.url} alt="" />
       <div className="flex flex-1 flex-col gap-[7px] p-4">
         <h4 className="m-0 font-display text-[15.5px] leading-tight font-semibold text-fg-1">{actividad.titulo}</h4>
         {ubicacion && (

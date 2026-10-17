@@ -32,7 +32,7 @@ function ActividadCard({ act }: { act: ActividadOfrecida }) {
   return (
     <Link href={`/explorar/${act.id}`} className="card-hover" style={{ display: "flex", flexDirection: "column", textDecoration: "none", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
       <div style={{ position: "relative" }}>
-        <Photo seed={seedDeId(act.id)} height={150} radius={0} />
+        <Photo seed={seedDeId(act.id)} height={150} radius={0} src={act.foto?.url} alt="" />
         {/* Sin reseñas todavía no hay puntuación que mostrar. */}
         {act.puntuacion !== null && (
           <span style={{ position: "absolute", top: 12, right: 12, display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(251,249,248,.95)", borderRadius: "var(--radius-pill)", padding: "5px 11px", boxShadow: "0 2px 8px rgba(45,90,39,.16)" }}>

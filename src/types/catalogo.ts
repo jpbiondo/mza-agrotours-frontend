@@ -49,6 +49,8 @@ export interface ActividadOfrecida {
   precioDesde: number | null;
   /** `null` es "todavía sin reseñas". */
   puntuacion: number | null;
+  /** Portada de la actividad; `null` si no tiene fotos. */
+  foto: FotoRef | null;
 }
 
 /** GET /establecimientos/{id}/detalle. Los textos vacíos son campos sin cargar. */
@@ -130,6 +132,8 @@ export interface EstablecimientoDeActividad {
   nombre: string;
   departamento: string;
   descripcion: string;
+  /** Portada del establecimiento; `null` si no tiene. */
+  foto: FotoRef | null;
 }
 
 /** GET /actividades/{id}. Los textos vacíos son campos sin cargar. */

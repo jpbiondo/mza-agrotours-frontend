@@ -46,6 +46,7 @@ interface ActividadBackend {
   cultivos?: unknown;
   precioDesde?: unknown;
   puntuacion?: unknown;
+  fotoPortada?: unknown;
 }
 
 /** El detalle nombra el departamento como texto, no como objeto. */
@@ -131,6 +132,7 @@ function aActividad(a: ActividadBackend): ActividadOfrecida {
     cultivos: aNombresCultivo(a.cultivos),
     precioDesde: aNumeroOpcional(a.precioDesde),
     puntuacion: aNumeroOpcional(a.puntuacion),
+    foto: aFoto(a.fotoPortada),
   };
 }
 
