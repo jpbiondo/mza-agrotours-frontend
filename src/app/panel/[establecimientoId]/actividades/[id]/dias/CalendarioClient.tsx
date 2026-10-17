@@ -19,7 +19,9 @@ import { VigenciasMes } from "@/components/panel/gestion-dias/piezas";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useCalendarioGestion, useConfiguracionDias, useGestionDiasAcciones } from "@/hooks/useGestionDias";
 import { moneyAr } from "@/lib/format";
-import { ORDEN_DIAS, SUSPENDIDO_DIAS, diaSemanaDe, fechaCorta, mensajeErrorDias } from "@/lib/gestion-dias";
+import {
+  ORDEN_DIAS, SUSPENDIDO_DIAS, claveMes, diaSemanaDe, fechaCorta, mensajeErrorDias, mesDe, moverMes, type Mes,
+} from "@/lib/gestion-dias";
 import type { AltaDia, AltaLote, CalendarioGestion, DiaProgramado, DiaSemana, FechaISO } from "@/types/gestion-dias";
 
 /** Si el backend no manda la ventana, es la misma que usa él. */
@@ -29,17 +31,6 @@ const DE_BAJA = "La actividad está dada de baja: su calendario queda de consult
 
 /** Códigos que significan que el calendario que ve el productor quedó viejo. */
 const CALENDARIO_VIEJO = new Set(["A.diaFechaOcupada", "A.diaNoModificable", "A.diaYaComenzo", "A.cupoMenorAReservados"]);
-
-type Mes = { anio: number; mes0: number };
-
-/** "YYYY-MM" del mes de una fecha: compara bien como texto. */
-const mesDe = (iso: FechaISO) => iso.slice(0, 7);
-const claveMes = ({ anio, mes0 }: Mes) => `${anio}-${String(mes0 + 1).padStart(2, "0")}`;
-
-function moverMes({ anio, mes0 }: Mes, delta: number): Mes {
-  const d = new Date(anio, mes0 + delta, 1);
-  return { anio: d.getFullYear(), mes0: d.getMonth() };
-}
 
 /** Un día activo o reprogramado que todavía no empezó: es el único al que se le cambia el cupo. */
 function esModificable(d: DiaProgramado, ahora: string): boolean {

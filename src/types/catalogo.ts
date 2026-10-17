@@ -1,60 +1,7 @@
 import type { CultivoRef } from "@/types/datos";
 
-export interface Actividad {
-  id: string;
-  nombre: string;
-  finca: string;
-  depto: string;
-  cultivos: string[];
-  rating: number;
-  resenias: number;
-  precioAdulto: number;
-  tipo: string;
-  tag: string | null;
-  seed: number;
-}
-
-export interface Ubicacion {
-  calle: string;
-  localidad: string;
-  provincia: string;
-  zona: string;
-}
-
-export interface Contacto {
-  email: string;
-  telefono: string;
-  web: string;
-  instagram: string;
-  facebook: string;
-}
-
-export interface ImagenEst {
-  seed: number;
-  caption: string;
-}
-
-export interface Establecimiento {
-  id: string;
-  nombre: string;
-  razonSocial: string;
-  depto: string;
-  vigente: boolean;
-  seed: number;
-  cultivos: string[];
-  descripcion: string;
-  descripcionLarga: string;
-  ubicacion: Ubicacion;
-  contacto: Contacto;
-  imagenes: ImagenEst[];
-  /** IDs de actividades de @/data/actividades. */
-  actividades: string[];
-}
-
-/* ---- Catálogo público de establecimientos (backend real) ------------------
-   Vocabulario propio de las pantallas de visitante. Convive con
-   `Establecimiento` de arriba, que todavía alimenta la landing y /explorar
-   desde los mocks de `@/data/establecimientos`. */
+/* ---- Catálogo público de establecimientos ---------------------------------
+   Vocabulario propio de las pantallas de visitante. */
 
 /** Departamento tal como lo nombra el catálogo. */
 export interface DepartamentoRef {
@@ -62,7 +9,7 @@ export interface DepartamentoRef {
   nombre: string;
 }
 
-/** Item de GET /establecimientos/catalogo. */
+/** Item de GET /establecimientos/catalogo y de /establecimientos/destacados. */
 export interface EstablecimientoResumen {
   id: string;
   nombre: string;
@@ -102,6 +49,8 @@ export interface ActividadOfrecida {
   precioDesde: number | null;
   /** `null` es "todavía sin reseñas". */
   puntuacion: number | null;
+  /** Portada de la actividad; `null` si no tiene fotos. */
+  foto: FotoRef | null;
 }
 
 /** GET /establecimientos/{id}/detalle. Los textos vacíos son campos sin cargar. */
@@ -120,9 +69,8 @@ export interface EstablecimientoPublico {
   foto: FotoRef | null;
 }
 
-/* ---- Catálogo público de actividades (backend real) -----------------------
-   Lo que ven las pantallas de `/explorar`. Convive con `Actividad` de arriba,
-   que todavía alimenta la landing desde los mocks de `@/data/actividades`. */
+/* ---- Catálogo público de actividades --------------------------------------
+   Lo que ven las pantallas de `/explorar` y las destacadas de la landing. */
 
 /** Archivo de object storage: la forma de `fotoPortada` y de cada `foto`. */
 export interface FotoRef {
@@ -132,7 +80,7 @@ export interface FotoRef {
   url: string;
 }
 
-/** Item de GET /actividades/explorar. */
+/** Item de GET /actividades/explorar y de /actividades/destacadas. */
 export interface ActividadResumen {
   id: string;
   nombre: string;
@@ -184,6 +132,8 @@ export interface EstablecimientoDeActividad {
   nombre: string;
   departamento: string;
   descripcion: string;
+  /** Portada del establecimiento; `null` si no tiene. */
+  foto: FotoRef | null;
 }
 
 /** GET /actividades/{id}. Los textos vacíos son campos sin cargar. */

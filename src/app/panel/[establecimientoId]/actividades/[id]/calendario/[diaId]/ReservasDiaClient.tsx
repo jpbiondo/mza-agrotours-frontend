@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Banknote, CalendarClock, CalendarDays, CalendarX, CheckCircle2, Clock, CreditCard, FilterX, MapPin,
@@ -8,14 +8,17 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Pagination } from "@/components/catalog/controls";
-import { Alert, Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { Alert, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
+import { buttonClasses } from "@/components/ui/Button";
+import type { ToastData } from "@/components/ui";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { hoyISO } from "@/components/ui/date-picker";
 import { CropChip, IconoActividad } from "@/components/panel/actividad/identidad";
+import { CancelarDiaModal } from "@/components/panel/gestion-dias/CancelarDiaModal";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
-import { useEstadosReservaDia, useReservasDia, useResumenDia } from "@/hooks/useReservasDia";
+import { useCancelarDia, useEstadosReservaDia, useReservasDia, useResumenDia } from "@/hooks/useReservasDia";
 import { fmtCodigoReserva, moneyAr } from "@/lib/format";
-import { fechaCorta, fechaLarga } from "@/lib/gestion-dias";
+import { fechaCorta, fechaLarga, mensajeErrorDias } from "@/lib/gestion-dias";
 import { cn } from "@/lib/utils";
 import type { ConteoEstados, EstadoReservaDia, ReservaDia, ResumenDia } from "@/types/reservas-dia";
 
@@ -284,10 +287,20 @@ function CabeceraSkeleton() {
   );
 }
 
-/** Barra de acciones sobre el día. Cancelar y reprogramar todavía no tienen endpoint. */
-function AccionesDia({ resumen, temporalidad }: { resumen: ResumenDia; temporalidad: Temporalidad }) {
+/** Barra de acciones sobre el día: reprogramarlo o cancelarlo. */
+function AccionesDia({
+  resumen, temporalidad, reprogramar, onCancelar,
+}: {
+  resumen: ResumenDia;
+  temporalidad: Temporalidad;
+  /** Ruta de la pantalla de reprogramación. */
+  reprogramar: string;
+  onCancelar: () => void;
+}) {
   const cancelado = resumen.estadoDia === "cancelada";
   const cerrado = cancelado || temporalidad === "pasada" || resumen.estadoDia === "finalizada";
+  // El backend sólo reprograma un día activo: uno ya reprogramado o cancelado no.
+  const reprogramable = !cerrado && resumen.estadoDia === "activa";
   const fecha = <strong className="text-fg-1">{fechaCorta(resumen.fecha)}</strong>;
 
   return (
@@ -300,19 +313,74 @@ function AccionesDia({ resumen, temporalidad }: { resumen: ResumenDia; temporali
               : <>Gestioná la jornada del {fecha}</>}
         </span>
       </div>
-      {/* TODO backend: no hay endpoints para reprogramar ni cancelar un día. */}
       <div className="flex flex-wrap gap-2.5">
-        <Button variant="neutral" disabled title={cerrado ? undefined : "Próximamente"}>
-          <CalendarClock className="size-[17px]" /> Reprogramar actividad del día
-        </Button>
+        {reprogramable ? (
+          <Link href={reprogramar} className={buttonClasses({ variant: "neutral" })}>
+            <CalendarClock className="size-[17px]" /> Reprogramar actividad del día
+          </Link>
+        ) : (
+          <Button variant="neutral" disabled>
+            <CalendarClock className="size-[17px]" /> Reprogramar actividad del día
+          </Button>
+        )}
         <Button
           variant="neutral"
-          disabled
-          title={cerrado ? undefined : "Próximamente"}
-          className="border-danger text-danger-fg shadow-[inset_0_-2px_0_var(--danger-fill)]"
+          onClick={onCancelar}
+          disabled={cerrado}
+          className="border-danger text-danger-fg shadow-[inset_0_-2px_0_var(--danger-fill)] hover:border-danger hover:bg-danger-fill"
         >
           <CalendarX className="size-[17px]" /> Cancelar actividad del día
         </Button>
+      </div>
+    </div>
+  );
+}
+
+const BANNER_ESTADO: Partial<Record<ResumenDia["estadoDia"], {
+  titulo: string; badge: string; tono: "danger" | "warning"; etiqueta: string; borde: string; fondo: string; icono: React.ReactNode;
+}>> = {
+  cancelada: {
+    titulo: "Actividad del día cancelada",
+    badge: "Cancelada",
+    tono: "danger",
+    etiqueta: "Motivo de la cancelación",
+    borde: "border-danger",
+    fondo: "bg-danger-fill",
+    icono: <CalendarX className="size-5 text-danger" />,
+  },
+  reprogramada: {
+    titulo: "Actividad del día reprogramada",
+    badge: "Reprogramada",
+    tono: "warning",
+    etiqueta: "Motivo de la reprogramación",
+    borde: "border-warning",
+    fondo: "bg-warning-fill",
+    icono: <CalendarClock className="size-5 text-warning-fg" />,
+  },
+};
+
+/** Aviso del estado del día con su motivo. Sólo para cancelado y reprogramado. */
+function BannerEstadoDia({ resumen }: { resumen: ResumenDia }) {
+  const meta = BANNER_ESTADO[resumen.estadoDia];
+  if (!meta) return null;
+  return (
+    <div className={cn("mb-7 flex items-start gap-3.5 rounded-lg border px-5 py-4", meta.borde, meta.fondo)}>
+      <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-full border bg-surface", meta.borde)}>
+        {meta.icono}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <strong className={cn("text-[15px]", meta.tono === "danger" ? "text-danger-fg" : "text-warning-fg")}>
+            {meta.titulo}
+          </strong>
+          <EstadoBadge tone={meta.tono}>{meta.badge}</EstadoBadge>
+        </div>
+        {resumen.motivoEstado && (
+          <>
+            <div className="t-label mt-3 mb-1">{meta.etiqueta}</div>
+            <p className="text-[14.5px] leading-normal break-words text-fg-1">{resumen.motivoEstado}</p>
+          </>
+        )}
       </div>
     </div>
   );
@@ -331,6 +399,16 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
   const resumen = useResumenDia(establecimientoId, actividadId, diaId);
   const reservas = useReservasDia(establecimientoId, actividadId, diaId, { estado, page, size: PAGE_SIZE });
   const estados = useEstadosReservaDia(establecimientoId, actividadId, diaId);
+  const { cancelar, cancelando } = useCancelarDia(establecimientoId, actividadId, diaId);
+
+  const [modalCancelar, setModalCancelar] = useState(false);
+  const [toast, setToast] = useState<ToastData | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5200);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const r = resumen.data;
   const hoy = hoyISO();
@@ -343,6 +421,30 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
   function filtrar(e: EstadoReservaDia | null) {
     setEstado(e);
     setPage(0);
+  }
+
+  async function confirmarCancelacion(motivo: string): Promise<string | null> {
+    // Se toma antes de recargar: después de cancelar ya no quedan pagadas.
+    const pagadas = estados.data?.pagada ?? 0;
+    const res = await cancelar(motivo);
+    if (!res.ok) {
+      // Si ya estaba finalizado o no existe, lo que se ve quedó viejo.
+      if (res.code) resumen.reload();
+      return mensajeErrorDias(res.code);
+    }
+    setModalCancelar(false);
+    filtrar(null);
+    resumen.reload();
+    reservas.reload();
+    estados.reload();
+    setToast({
+      tone: "success",
+      title: "La actividad de este día se canceló",
+      sub: pagadas > 0
+        ? `Se ${pagadas === 1 ? "emitió 1 reembolso automático" : `emitieron ${pagadas} reembolsos automáticos`} a los visitantes.`
+        : "No había reservas pagadas, así que no se generaron reembolsos.",
+    });
+    return null;
   }
 
   const cantidad = pagina?.totalElements ?? (estado ? estados.data?.[estado] : r?.totalReservas);
@@ -429,14 +531,14 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
                 </div>
               </div>
 
-              <AccionesDia resumen={r} temporalidad={temporalidad} />
+              <AccionesDia
+                resumen={r}
+                temporalidad={temporalidad}
+                reprogramar={ruta("actividades", actividadId, "calendario", diaId, "reprogramar")}
+                onCancelar={() => setModalCancelar(true)}
+              />
 
-              {r.estadoDia === "cancelada" && (
-                <Alert icon={<CalendarX className="size-[18px]" />} className="mb-7">
-                  <strong className="font-bold">Actividad del día cancelada.</strong> Las reservas pagadas pasaron a
-                  cancelada con reembolso.
-                </Alert>
-              )}
+              <BannerEstadoDia resumen={r} />
 
               <div className="mb-[18px] flex flex-wrap items-end justify-between gap-4">
                 <div>
@@ -481,6 +583,18 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
           )}
         </AsyncBoundary>
       </div>
+
+      {modalCancelar && r && (
+        <CancelarDiaModal
+          fecha={r.fecha}
+          pagadas={estados.data ? (estados.data.pagada ?? 0) : null}
+          cancelando={cancelando}
+          onConfirmar={confirmarCancelacion}
+          onCerrar={() => setModalCancelar(false)}
+        />
+      )}
+
+      {toast && <Toast {...toast} />}
     </div>
   );
 }

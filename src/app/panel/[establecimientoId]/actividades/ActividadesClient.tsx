@@ -78,7 +78,7 @@ function PublishToggle({
   const bloqueado = busy || disabled;
   // El backend ya avisa si se puede: sólo puede fallar al pasar a borrador.
   const sinBorrador = publicada && !act.puedeCambiarEstado;
-  const reservas = act.reservasAsociadas;
+  const reservas = act.reservasPagadas;
 
   const seg = (activo: boolean, deshabilitado: boolean) =>
     cn(
@@ -118,7 +118,7 @@ function PublishToggle({
       </div>
       {reservas > 0 && (
         <span className="text-[11.5px] text-fg-3">
-          {reservas} {reservas === 1 ? "reserva asociada" : "reservas asociadas"}
+          {reservas} {reservas === 1 ? "reserva pagada" : "reservas pagadas"}
         </span>
       )}
     </div>
@@ -139,6 +139,8 @@ function ActivityCard({
   // Una actividad dada de baja no se vuelve a tocar: queda de consulta, sin el
   // toggle de publicación ni las acciones que la modifican.
   const deBaja = act.estado === "dado_de_baja";
+  // Con reservas pagadas el backend rechaza la baja (las pendientes las expira): no se ofrece.
+  const conPagadas = act.reservasPagadas > 0;
 
   return (
     <Card className={cn("overflow-hidden p-0", deBaja && "opacity-70")}>
@@ -242,7 +244,16 @@ function ActivityCard({
           label="Ver reservas"
           href={ruta("actividades", act.id, "calendario")}
         />
-        {!deBaja && <CardAction icon={<Trash2 className="size-[15px] text-danger" />} label="Eliminar" danger onClick={onEliminar} />}
+        {!deBaja && (
+          <CardAction
+            icon={<Trash2 className="size-[15px] text-danger" />}
+            label="Eliminar"
+            danger
+            onClick={onEliminar}
+            disabled={conPagadas}
+            title={conPagadas ? "No se puede eliminar: tiene reservas pagadas" : undefined}
+          />
+        )}
       </div>
     </Card>
   );
@@ -396,8 +407,8 @@ export default function ActividadesClient() {
     const r = await darDeBaja(act.id);
     setToDelete(null);
     if (!r.ok) {
-      // El listado no distingue las reservas pagadas, así que el bloqueo recién
-      // se sabe acá: se cambia la confirmación por el aviso de qué hacer.
+      // El botón ya se deshabilita con reservas pagadas, pero alguien pudo pagar
+      // con el listado abierto: se cambia la confirmación por el aviso de qué hacer.
       if (r.code === "A.reservasPagadas") setBlocked(act);
       else setToast({
         tone: "danger",

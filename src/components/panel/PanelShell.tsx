@@ -16,6 +16,7 @@ import { EstadoBadge } from "@/components/ui/EstadoBadge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { admInitials } from "@/data/admin";
 import { cn } from "@/lib/utils";
+import { useChatsSinLeerEstablecimiento } from "@/hooks/useChats";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { PermisoProductor, TipoPermiso } from "@/lib/permisos";
 import { RAIZ_PANEL, rutaPanel } from "@/lib/rutasPanel";
@@ -30,7 +31,6 @@ interface NavItem {
   label: string;
   /** Sección del panel, que se arma sobre el establecimiento activo (`""` es su raíz). */
   seccion: string;
-  badge?: number;
   /**
    * Sin este permiso en el establecimiento activo el ítem no se muestra. Es
    * sólo para no ofrecer una pantalla que va a dar 403: la pantalla igual
@@ -61,7 +61,7 @@ const SIDEBAR: Row[] = [
     permiso: PermisoProductor.GESTIONAR_REEMBOLSOS_PENDIENTES,
   },
   { section: "Mensajes" },
-  { id: "chats", icon: MessageSquare, label: "Chats", seccion: "chats", badge: 3 },
+  { id: "chats", icon: MessageSquare, label: "Chats", seccion: "chats" },
   { section: "Equipo" },
   {
     id: "productores", icon: Users, label: "Productores", seccion: "productores",
@@ -320,11 +320,14 @@ function NavRow({
   href,
   activo,
   bloqueado,
+  badge,
 }: {
   row: NavItem;
   href: string;
   activo: boolean;
   bloqueado: boolean;
+  /** Con 0 o sin valor no se muestra. */
+  badge?: number;
 }) {
   const clase = cn(
     "mx-2 my-px flex items-center gap-3 rounded-md px-3 py-2.5 text-[13.5px] no-underline transition-colors",
@@ -339,14 +342,14 @@ function NavRow({
     <>
       <row.icon className="size-[17px] shrink-0" />
       <span className="min-w-0 flex-1 truncate">{row.label}</span>
-      {row.badge != null && (
+      {!!badge && (
         <span
           className={cn(
             "inline-flex h-[18px] min-w-[22px] items-center justify-center rounded-[9px] px-1.5 text-[11px] font-bold text-white",
             bloqueado ? "bg-fg-3" : activo ? "bg-green-800" : "bg-brown-700",
           )}
         >
-          {row.badge}
+          {badge}
         </span>
       )}
     </>
@@ -478,6 +481,7 @@ export default function PanelShell({ children }: { children: ReactNode }) {
   }, [activo, accesos]);
 
   const bloqueado = listo && !!activo?.suspension;
+  const chatsSinLeer = useChatsSinLeerEstablecimiento(activo?.id ?? null);
 
   // El store del último establecimiento usa skipHydration para que el primer
   // render del cliente coincida con el del servidor; se rehidrata acá, que es
@@ -574,6 +578,7 @@ export default function PanelShell({ children }: { children: ReactNode }) {
                   href={hrefDe(row, activo.id)}
                   activo={active === row.id}
                   bloqueado={bloqueado}
+                  badge={row.id === "chats" ? chatsSinLeer : undefined}
                 />
               ),
             )}

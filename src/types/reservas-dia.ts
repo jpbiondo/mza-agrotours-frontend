@@ -15,6 +15,8 @@ export interface ResumenDia {
   actividadId: string;
   nombre: string;
   estadoDia: EstadoDia;
+  /** Por qué el día está en su estado actual. Sólo tiene sentido si está cancelado o reprogramado. */
+  motivoEstado: string;
   cultivos: CultivoRef[];
   establecimiento: string;
   departamento: string;
@@ -47,3 +49,12 @@ export interface ReservaDia {
 
 /** Cuántas reservas del día hay en cada estado (sólo los que tienen alguna). */
 export type ConteoEstados = Partial<Record<EstadoReservaDia, number>>;
+
+/** Nueva fecha y horario de un día. Con «sólo la hora» la fecha es la que ya tenía. */
+export interface Reprogramacion {
+  fecha: FechaISO;
+  /** "HH:MM" */
+  horaInicio: string;
+  horaFin: string;
+  motivo: string;
+}

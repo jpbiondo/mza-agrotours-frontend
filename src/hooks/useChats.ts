@@ -291,6 +291,16 @@ export function useChatsEstablecimiento(establecimientoId: string | null): UseCh
   };
 }
 
+/**
+ * Cuántos chats del establecimiento tienen mensajes sin leer, en tiempo real.
+ * Sale del mismo inbox que la bandeja: el SDK comparte la escucha entre las
+ * dos, así que con la pantalla de chats abierta no se baja dos veces.
+ */
+export function useChatsSinLeerEstablecimiento(establecimientoId: string | null): number {
+  const { chats } = useChatsEstablecimiento(establecimientoId);
+  return chats.filter((c) => c.noLeidos > 0).length;
+}
+
 /** Pone en cero los no leídos del establecimiento en un chat. */
 export async function marcarChatLeidoEstablecimiento(establecimientoId: string, chatId: string): Promise<void> {
   try {

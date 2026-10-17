@@ -31,6 +31,7 @@ import type {
  */
 const BASE = "/actividades";
 const EXPLORAR = `${BASE}/explorar`;
+const DESTACADAS = `${BASE}/destacadas`;
 const FILTRO_CULTIVOS = `${BASE}/cultivos`;
 const FILTRO_DEPARTAMENTOS = `${BASE}/departamentos`;
 
@@ -133,12 +134,13 @@ function aFotos(v: unknown): FotoRef[] {
 }
 
 function aEstablecimiento(v: unknown): EstablecimientoDeActividad {
-  const e = (v ?? {}) as { id?: unknown; nombre?: unknown; departamento?: unknown; descripcion?: unknown };
+  const e = (v ?? {}) as { id?: unknown; nombre?: unknown; departamento?: unknown; descripcion?: unknown; foto?: unknown };
   return {
     id: aTexto(e.id),
     nombre: aTexto(e.nombre),
     departamento: aTexto(e.departamento),
     descripcion: aTexto(e.descripcion),
+    foto: aFoto(e.foto),
   };
 }
 
@@ -277,6 +279,20 @@ async function listarActividades(consulta: ConsultaActividades): Promise<Pagina<
   return { ...pagina, items: pagina.items.map(aResumen).filter((a) => a.id !== "") };
 }
 
+/**
+ * Destacadas de la landing: un array suelto (no una página) de hasta seis, con
+ * el mismo DTO que `/explorar`. El criterio de selección y el orden los decide
+ * el backend y van a cambiar, así que se respetan tal cual llegan.
+ */
+async function listarDestacadas(): Promise<ActividadResumen[]> {
+  const data = await leer<unknown>(DESTACADAS, "No pudimos cargar las actividades destacadas");
+  if (!Array.isArray(data)) return [];
+  return data
+    .filter((a): a is ResumenBackend => !!a && typeof a === "object")
+    .map(aResumen)
+    .filter((a) => a.id !== "");
+}
+
 async function verDetalle(id: string): Promise<ActividadPublica | null> {
   try {
     const data = await leer<DetalleBackend>(
@@ -320,6 +336,11 @@ export function useCatalogoActividades(
     consulta.page,
     consulta.size,
   ]);
+}
+
+/** Actividades destacadas de la landing (GET /actividades/destacadas), de 0 a 6. */
+export function useActividadesDestacadas(): AsyncState<ActividadResumen[]> {
+  return useAsync<ActividadResumen[]>(listarDestacadas);
 }
 
 /** Detalle de una actividad. `data` en `null` significa que no existe. */

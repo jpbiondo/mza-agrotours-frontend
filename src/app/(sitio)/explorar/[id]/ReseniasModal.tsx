@@ -162,7 +162,8 @@ export default function ReseniasModal({ a, onClose }: { a: ActividadPublica; onC
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {resenias.map((r, i) => <ReseniaCard key={i} r={r} />)}
+            {/* El filtro y el orden van en la key: si no, una reseña desplegada dejaría abierta la que cae en su lugar. */}
+            {resenias.map((r, i) => <ReseniaCard key={`${puntaje}-${orden}-${i}`} r={r} expandible />)}
             {primeraCarga && isLoading && Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-[104px] rounded-xl" />)}
           </div>
         )}

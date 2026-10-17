@@ -38,8 +38,8 @@ export interface ActividadProd {
   precio: number;
   estado: EstadoActividad;
   dias: DiaHorario[];
-  /** `cantidadReservasAsociadas`: reservas futuras pendientes o pagadas. */
-  reservasAsociadas: number;
+  /** Reservas pagadas. Las pendientes no cuentan: la baja las expira. */
+  reservasPagadas: number;
   /**
    * Si se puede alternar entre publicado y borrador. Lo decide el backend: no
    * se puede si está dada de baja, ni pasarla a borrador si tiene reservas.

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { DIAS } from "@/data/actividad-form";
+import { rangoSinDiasElegidos } from "@/lib/gestion-dias";
 import type { ActividadFormData, DiaCfg, DiaKey, TarifaFila } from "@/types/actividad-form";
+import type { DiaSemana } from "@/types/gestion-dias";
 
 /**
  * Validaciones del formulario de actividad, en zod y en un solo lugar: las
@@ -184,9 +186,15 @@ function refinarDias(days: Record<DiaKey, DiaCfg>, ctx: Ctx) {
 
 /* ---- Schemas ------------------------------------------------------------- */
 
+/** La misma regex con la que el backend valida el nombre de la actividad. */
+const NOMBRE_VALIDO = /^[a-zA-Z0-9áéíóúüÁÉÍÓÚÜñÑ _-]*$/;
+
 /** Lo que comparten el alta y la modificación. */
 export const camposComunes = {
-  nombre: textoRequerido(5, "El nombre es requerido"),
+  nombre: textoRequerido(5, "El nombre es requerido").regex(
+    NOMBRE_VALIDO,
+    "El nombre sólo puede tener letras, números, espacios, guiones (-) y guiones bajos (_)",
+  ),
   descripcion: textoRequerido(20, "La descripción es requerida"),
   cultivos: z.array(z.string()).min(1, "El tipo de cultivo es requerido"),
   tarifas: z.array(tarifaFilaSchema),
@@ -219,6 +227,13 @@ export const actividadAltaSchema = z
     if (!v.fechaHasta) err(["fechaHasta"], "La fecha hasta es requerida");
     else if (v.fechaDesde && v.fechaHasta < v.fechaDesde)
       err(["fechaHasta"], "La fecha de fin no puede ser anterior al inicio");
+
+    // Es de la combinación días + vigencia, no de un campo: se arregla tocando
+    // cualquiera de los dos.
+    const elegidos = DIAS.filter((d) => (v.days as Record<DiaKey, DiaCfg>)[d.key].on)
+      .map((d) => d.key.toUpperCase() as DiaSemana);
+    const sinDias = rangoSinDiasElegidos(v.fechaDesde, v.fechaHasta, elegidos);
+    if (sinDias) err(["diasRango"], sinDias);
   });
 
 /* ---- De los issues a las claves planas ------------------------------------

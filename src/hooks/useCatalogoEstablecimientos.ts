@@ -22,6 +22,7 @@ import type {
  */
 const BASE = "/establecimientos";
 const CATALOGO = `${BASE}/catalogo`;
+const DESTACADOS = `${BASE}/destacados`;
 const FILTRO_CULTIVOS = `${BASE}/filtros/cultivos`;
 const FILTRO_DEPARTAMENTOS = `${BASE}/filtros/departamentos`;
 
@@ -45,6 +46,7 @@ interface ActividadBackend {
   cultivos?: unknown;
   precioDesde?: unknown;
   puntuacion?: unknown;
+  fotoPortada?: unknown;
 }
 
 /** El detalle nombra el departamento como texto, no como objeto. */
@@ -130,6 +132,7 @@ function aActividad(a: ActividadBackend): ActividadOfrecida {
     cultivos: aNombresCultivo(a.cultivos),
     precioDesde: aNumeroOpcional(a.precioDesde),
     puntuacion: aNumeroOpcional(a.puntuacion),
+    foto: aFoto(a.fotoPortada),
   };
 }
 
@@ -199,6 +202,20 @@ async function listarCatalogo(consulta: ConsultaCatalogo): Promise<Pagina<Establ
   return { ...pagina, items: pagina.items.map(aResumen).filter((e) => e.id !== "") };
 }
 
+/**
+ * Destacados de la landing: un array suelto (no una página) de hasta seis, con
+ * el mismo DTO que el catálogo. El criterio de selección y el orden los decide
+ * el backend y van a cambiar, así que se respetan tal cual llegan.
+ */
+async function listarDestacados(): Promise<EstablecimientoResumen[]> {
+  const data = await leer<unknown>(DESTACADOS, "No pudimos cargar los establecimientos destacados");
+  if (!Array.isArray(data)) return [];
+  return data
+    .filter((e): e is ResumenBackend => !!e && typeof e === "object")
+    .map(aResumen)
+    .filter((e) => e.id !== "");
+}
+
 async function verDetalle(id: string): Promise<EstablecimientoPublico | null> {
   try {
     const data = await leer<DetalleBackend>(
@@ -240,6 +257,11 @@ export function useCatalogoEstablecimientos(
     consulta.page,
     consulta.size,
   ]);
+}
+
+/** Establecimientos destacados de la landing (GET /establecimientos/destacados), de 0 a 6. */
+export function useEstablecimientosDestacados(): AsyncState<EstablecimientoResumen[]> {
+  return useAsync<EstablecimientoResumen[]>(listarDestacados);
 }
 
 /** Detalle de un establecimiento. `data` en `null` significa que no existe. */
