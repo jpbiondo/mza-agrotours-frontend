@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { leerRetornoPago } from "@/lib/mercadoPago";
 import DetalleClient from "./DetalleClient";
 
 /* El detalle sale del backend en el cliente y con el token del visitante, así
@@ -8,10 +9,15 @@ export const metadata: Metadata = {
   description: "Revisá los datos de tu reserva, quiénes van y cuánto pagaste, y descargá el comprobante.",
 };
 
-export default async function DetalleReservaPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DetalleReservaPage({ params, searchParams }: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { id } = await params;
+  // `?pago=` lo pone /mercadopago/pago al volver del checkout.
+  const { pago } = await searchParams;
 
   return (
-    <DetalleClient id={id} />
+    <DetalleClient id={id} retornoPago={leerRetornoPago(Array.isArray(pago) ? pago[0] : pago)} />
   );
 }

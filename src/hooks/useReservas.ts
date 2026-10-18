@@ -146,6 +146,9 @@ interface ReservaDetalleBackend extends ReservaBackend {
   idEstablecimiento?: string | null;
   detalleDTOs?: unknown;
   calificada?: boolean | null;
+  /** TODO backend: ConsultarReservaDTO no los trae; los nombres son a confirmar. */
+  preferenceId?: string | null;
+  fechaHoraExpiracion?: unknown;
 }
 
 /** Renglón crudo de `detalleDTOs` (ConsultarReservaDetalleDTO). */
@@ -171,11 +174,14 @@ function aAsistentes(v: unknown): AsistenteReserva[] {
 }
 
 function aDetalle(r: ReservaDetalleBackend): ReservaDetalle {
+  // Sin vencimiento no se puede saber si el checkout todavía abre: no se ofrece.
+  const vence = leerFechaLocal(r.fechaHoraExpiracion);
   return {
     ...aResumen(r, 0),
     establecimientoId: r.idEstablecimiento ?? "",
     asistentes: aAsistentes(r.detalleDTOs),
     calificada: r.calificada === true,
+    checkout: r.preferenceId && vence ? { preferenceId: r.preferenceId, vence } : null,
   };
 }
 
@@ -189,10 +195,17 @@ function esCancelable(r: ReservaDetalle, ahora: number): boolean {
   return r.estado === "Pagada" && !!limite && limite.getTime() > ahora;
 }
 
+/** Se paga una reserva Pendiente cuyo checkout todavía no venció. */
+function esPagable(r: ReservaDetalle, ahora: number): boolean {
+  return r.estado === "Pendiente" && !!r.checkout && r.checkout.vence.getTime() > ahora;
+}
+
 interface UseReservaReturn {
   reserva: ReservaDetalle | null;
   /** Se calcula al llegar la reserva: `Date.now()` no puede ir en el render. */
   cancelable: boolean;
+  /** Ídem: muestra el botón para (re)abrir el checkout de Mercado Pago. */
+  pagable: boolean;
   isLoading: boolean;
   error: string | null;
   /**
@@ -203,15 +216,20 @@ interface UseReservaReturn {
   /** No hay sesión de Firebase: la pantalla debe redirigir a /acceso. */
   unauthenticated: boolean;
   reload: () => void;
+  /** Vuelve a pedir la reserva dejando la anterior a la vista mientras tanto (sin esqueleto). */
+  refrescar: () => void;
 }
 
 /** Detalle de una reserva del visitante en sesión (GET /reserva/get/{uuid}). */
 export function useReserva(id: string): UseReservaReturn {
   const [nonce, setNonce] = useState(0);
+  const [silencioso, setSilencioso] = useState(false);
   const [cargado, setCargado] = useState<{
     clave: string;
+    id: string;
     reserva: ReservaDetalle | null;
     cancelable: boolean;
+    pagable: boolean;
     error: string | null;
     notFound: boolean;
     unauthenticated: boolean;
@@ -220,6 +238,8 @@ export function useReserva(id: string): UseReservaReturn {
   // Clave con el id: al navegar de una reserva a otra no se ve un frame la anterior.
   const clave = `${nonce}|${id}`;
   const alDia = cargado?.clave === clave;
+  // Un `refrescar` deja a la vista lo último que llegó de esta misma reserva.
+  const vigente = alDia || (silencioso && cargado?.id === id);
 
   useEffect(() => {
     let active = true;
@@ -228,10 +248,12 @@ export function useReserva(id: string): UseReservaReturn {
       if (!active) return;
       const fin = (
         datos: Partial<{
-          reserva: ReservaDetalle; cancelable: boolean; error: string; notFound: boolean; unauthenticated: boolean;
+          reserva: ReservaDetalle; cancelable: boolean; pagable: boolean; error: string; notFound: boolean;
+          unauthenticated: boolean;
         }>,
       ) => setCargado({
-        clave, reserva: null, cancelable: false, error: null, notFound: false, unauthenticated: false, ...datos,
+        clave, id, reserva: null, cancelable: false, pagable: false, error: null, notFound: false,
+        unauthenticated: false, ...datos,
       });
 
       if (!user) {
@@ -253,7 +275,8 @@ export function useReserva(id: string): UseReservaReturn {
           return;
         }
         const reserva = aDetalle(env.data);
-        fin({ reserva, cancelable: esCancelable(reserva, Date.now()) });
+        const ahora = Date.now();
+        fin({ reserva, cancelable: esCancelable(reserva, ahora), pagable: esPagable(reserva, ahora) });
       } catch (e) {
         if (!active) return;
         if (e instanceof ApiError && (e.status === 404 || e.code === "notFound")) {
@@ -270,16 +293,26 @@ export function useReserva(id: string): UseReservaReturn {
     };
   }, [clave, id]);
 
-  const reload = useCallback(() => setNonce((n) => n + 1), []);
+  const reload = useCallback(() => {
+    setSilencioso(false);
+    setNonce((n) => n + 1);
+  }, []);
+  const refrescar = useCallback(() => {
+    setSilencioso(true);
+    setNonce((n) => n + 1);
+  }, []);
 
+  const datos = vigente ? cargado : null;
   return {
-    reserva: alDia ? cargado.reserva : null,
-    cancelable: alDia ? cargado.cancelable : false,
-    isLoading: !alDia,
-    error: alDia ? cargado.error : null,
-    notFound: alDia ? cargado.notFound : false,
-    unauthenticated: alDia ? cargado.unauthenticated : false,
+    reserva: datos?.reserva ?? null,
+    cancelable: datos?.cancelable ?? false,
+    pagable: datos?.pagable ?? false,
+    isLoading: !vigente,
+    error: datos?.error ?? null,
+    notFound: datos?.notFound ?? false,
+    unauthenticated: datos?.unauthenticated ?? false,
     reload,
+    refrescar,
   };
 }
 

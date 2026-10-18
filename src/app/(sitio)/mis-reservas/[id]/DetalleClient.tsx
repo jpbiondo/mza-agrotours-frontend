@@ -11,10 +11,12 @@ import Photo, { seedDeId } from "@/components/landing/Photo";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import ContactarEstablecimiento from "@/components/chat/ContactarEstablecimiento";
 import MapaEmbed, { consultaMapa, urlComoLlegar } from "@/components/MapaEmbed";
-import { Button, EstadoBadge, Skeleton, Toast, buttonClasses } from "@/components/ui";
+import PagarConMercadoPago from "@/components/reserva/PagarConMercadoPago";
+import { Alert, Button, EstadoBadge, Skeleton, Toast, buttonClasses } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { metaEstadoReserva } from "@/data/reservas";
-import { fmtDiaLocal, fmtFranja, moneyAr } from "@/lib/format";
+import { fmtDiaLocal, fmtFranja, fmtHoraLocal, moneyAr } from "@/lib/format";
+import type { RetornoPago } from "@/lib/mercadoPago";
 import { useReserva } from "@/hooks/useReservas";
 import type { ReservaDetalle } from "@/types/reservas";
 import { descargarComprobante } from "./comprobante";
@@ -45,7 +47,77 @@ function Bloque({ icon, title, children }: { icon: React.ReactNode; title: strin
   );
 }
 
-function Cabecera({ r, onCancelar }: { r: ReservaDetalle; onCancelar?: () => void }) {
+/**
+ * Cada cuánto y hasta cuándo se vuelve a pedir la reserva al volver del
+ * checkout. Sin webhook, el backend confirma los pagos una vez por minuto: dos
+ * minutos cubren una vuelta del scheduler con margen.
+ */
+const INTERVALO_CONSULTA_MS = 5000;
+const MAX_CONSULTAS = 24;
+
+/**
+ * Qué pasó con el pago al volver de Mercado Pago. El `?pago=` sólo dice desde
+ * qué resultado se volvió (y cualquiera lo puede escribir a mano): lo que se
+ * afirma sale del estado real de la reserva.
+ */
+function AvisoPago({ retorno, r, pagable, esperando }: {
+  retorno: RetornoPago;
+  r: ReservaDetalle;
+  pagable: boolean;
+  /** Todavía se está consultando si el backend registró el pago. */
+  esperando: boolean;
+}) {
+  let aviso: React.ReactNode = null;
+
+  if (r.estado === "Pagada") {
+    aviso = (
+      <Alert tone="success">
+        <strong>¡Pago confirmado!</strong> Tu reserva está lista. Te vamos a mandar un recordatorio cerca de la fecha de la actividad.
+      </Alert>
+    );
+  } else if (r.estado === "Expirada") {
+    aviso = (
+      <Alert>
+        <strong>La reserva venció antes de que se completara el pago</strong>, así que los cupos se liberaron.
+        {r.actividadId && (
+          <>
+            {" "}
+            <Link href={`/explorar/${r.actividadId}`} className="font-semibold text-danger-fg underline">Reservar de nuevo</Link>
+          </>
+        )}
+      </Alert>
+    );
+  } else if (r.estado === "Pendiente" && retorno === "rechazado") {
+    aviso = (
+      <Alert>
+        <strong>No se completó el pago.</strong>{" "}
+        {pagable && r.checkout
+          ? `Tus cupos siguen reservados hasta las ${fmtHoraLocal(r.checkout.vence)}: podés volver a intentarlo con «Pagar con Mercado Pago».`
+          : "Tus cupos quedan reservados unos minutos más; si no se paga, la reserva vence y se liberan."}
+      </Alert>
+    );
+  } else if (r.estado === "Pendiente") {
+    const aprobado = retorno === "aprobado";
+    aviso = (
+      <Alert tone="warning" icon={esperando ? <Loader size={18} className="spin" /> : undefined}>
+        {aprobado ? (
+          esperando ? (
+            <><strong>Estamos confirmando tu pago…</strong> Mercado Pago ya lo aprobó; en unos segundos tu reserva pasa a Pagada.</>
+          ) : (
+            <><strong>Mercado Pago aprobó tu pago</strong> y todavía lo estamos registrando. Volvé a entrar en unos minutos para ver tu reserva confirmada.</>
+          )
+        ) : (
+          <><strong>Tu pago está en proceso.</strong> Mercado Pago lo está revisando; cuando se acredite, la reserva pasa a Pagada.</>
+        )}
+      </Alert>
+    );
+  }
+
+  if (!aviso) return null;
+  return <div role="status" className="mb-6">{aviso}</div>;
+}
+
+function Cabecera({ r, onCancelar, pagable }: { r: ReservaDetalle; onCancelar?: () => void; pagable: boolean }) {
   const meta = metaEstadoReserva(r.estado);
   return (
     <div className="mb-6 overflow-hidden rounded-lg border border-outline-variant bg-surface">
@@ -81,6 +153,7 @@ function Cabecera({ r, onCancelar }: { r: ReservaDetalle; onCancelar?: () => voi
           </div>
         </div>
         <div className="flex flex-wrap items-start gap-2.5">
+          {pagable && r.checkout && <PagarConMercadoPago preferenceId={r.checkout.preferenceId} />}
           <button type="button" className="btn btn-neutral" onClick={() => descargarComprobante(r)}>
             <Download size={17} /> Descargar comprobante
           </button>
@@ -263,9 +336,25 @@ function NoEncontrada() {
   );
 }
 
-export default function DetalleClient({ id }: { id: string }) {
+export default function DetalleClient({ id, retornoPago }: { id: string; retornoPago: RetornoPago | null }) {
   const router = useRouter();
-  const { reserva, cancelable, isLoading, error, notFound, unauthenticated, reload } = useReserva(id);
+  const {
+    reserva, cancelable, pagable, isLoading, error, notFound, unauthenticated, reload, refrescar,
+  } = useReserva(id);
+  const [consultas, setConsultas] = useState(0);
+
+  // Al volver de un pago aprobado o en proceso, la reserva puede seguir
+  // Pendiente hasta que el backend lo registre: se vuelve a pedir sola.
+  const esperandoPago = retornoPago !== null && retornoPago !== "rechazado" && reserva?.estado === "Pendiente";
+  const esperando = esperandoPago && consultas < MAX_CONSULTAS;
+  useEffect(() => {
+    if (!esperando) return;
+    const t = setTimeout(() => {
+      setConsultas((n) => n + 1);
+      refrescar();
+    }, INTERVALO_CONSULTA_MS);
+    return () => clearTimeout(t);
+  }, [esperando, consultas, refrescar]);
   /** Copia de la reserva al abrir el modal: el reload posterior no debe desmontarlo ni cambiarle los datos. */
   const [aCancelar, setACancelar] = useState<ReservaDetalle | null>(null);
   const [valorando, setValorando] = useState(false);
@@ -327,7 +416,8 @@ export default function DetalleClient({ id }: { id: string }) {
           <NoEncontrada />
         ) : (
           <>
-            <Cabecera r={reserva} onCancelar={cancelable ? () => setACancelar(reserva) : undefined} />
+            {retornoPago && <AvisoPago retorno={retornoPago} r={reserva} pagable={pagable} esperando={esperando} />}
+            <Cabecera r={reserva} pagable={pagable} onCancelar={cancelable ? () => setACancelar(reserva) : undefined} />
             <div className={GRILLA}>
               <Asistentes r={reserva} />
               <div className="flex flex-col gap-6">
