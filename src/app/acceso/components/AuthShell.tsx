@@ -1,5 +1,4 @@
 "use client";
-
 import Image from "next/image";
 import { useState } from "react";
 import {
@@ -9,7 +8,6 @@ import {
   AlertTriangle,
   Info,
   Lock,
-  ArrowLeft,
 } from "lucide-react";
 import { TextField, EyeToggle } from "@/components/ui/text-field";
 
@@ -222,24 +220,5 @@ export function AuthLink({ onClick, href, children, strong }: { onClick?: () => 
     >
       {children}
     </a>
-  );
-}
-
-/* ---- Botón "volver" ---------------------------------------------------- */
-export function BackLink({ onClick, children = "Volver" }: { onClick?: () => void; children?: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: "inline-flex", alignItems: "center", gap: 7, background: "transparent",
-        border: "none", cursor: "pointer", color: "var(--fg-2)", fontSize: 14,
-        fontWeight: 500, marginBottom: 22, padding: 0,
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--green-800)")}
-      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--fg-2)")}
-    >
-      <ArrowLeft size={17} /> {children}
-    </button>
   );
 }
