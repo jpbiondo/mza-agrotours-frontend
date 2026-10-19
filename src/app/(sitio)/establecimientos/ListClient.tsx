@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Sprout, MapPin, ChevronRight, RotateCcw, Building2, SearchX, Search } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
+import { Button } from "@/components/ui";
 import EstablecimientoCard, { EstablecimientoCardSkeleton } from "@/components/catalog/EstablecimientoCard";
 import { FilterSelect, MultiFilterSelect, Pagination, ActiveFilterPill, SearchField } from "@/components/catalog/controls";
 import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
@@ -162,9 +163,9 @@ export default function ListClient() {
                 icon={<SearchX size={30} color="var(--fg-3)" />}
                 titulo="No encontramos establecimientos"
                 accion={
-                  <button type="button" className="btn btn-neutral" onClick={limpiarTodo}>
+                  <Button variant="neutral" onClick={limpiarTodo}>
                     <RotateCcw size={17} /> Limpiar todo
-                  </button>
+                  </Button>
                 }
               >
                 {busqueda !== ""
