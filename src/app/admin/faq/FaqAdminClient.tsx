@@ -1,14 +1,13 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ChevronRight, MessagesSquare, Plus, Search, X, HelpCircle, Pencil, Trash2, ChevronDown,
-  SearchX, RotateCcw, Check, Loader,
+  SearchX, RotateCcw, Check,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Modal, Skeleton, Toast } from "@/components/ui";
+import { ActionBtn, Alert, Button, IconButton, Modal, Skeleton, Toast } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { TextArea } from "@/components/ui/text-area";
 import { SimpleSelect } from "@/components/ui/simple-select";
@@ -84,24 +83,14 @@ function FaqFila({ item, term, open, onToggle, onEdit, onDelete }: {
 
         {/* Acciones de gestión */}
         <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            onClick={onEdit}
-            title="Editar"
-            aria-label={`Editar: ${item.q}`}
-            className={cn(ACCION, "hover:border-green-800 hover:bg-cream-tert")}
-          >
-            <Pencil className="size-4 text-green-800" />
-          </button>
-          <button
-            type="button"
+          <ActionBtn icon={<Pencil className="size-4" />} label="Editar" title={`Editar: ${item.q}`} onClick={onEdit} />
+          <ActionBtn
+            icon={<Trash2 className="size-4" />}
+            label="Eliminar"
+            tone="danger"
+            title={`Eliminar: ${item.q}`}
             onClick={onDelete}
-            title="Eliminar"
-            aria-label={`Eliminar: ${item.q}`}
-            className={cn(ACCION, "hover:border-danger hover:bg-danger-fill")}
-          >
-            <Trash2 className="size-4 text-danger-fg" />
-          </button>
+          />
           <button
             type="button"
             onClick={onToggle}
@@ -216,14 +205,9 @@ function FaqEditor({ item, busy, error, onCancel, onSave }: {
               </h2>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={cerrar}
-            aria-label="Cerrar"
-            className="flex size-[42px] shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface"
-          >
-            <X className="size-5 text-fg-2" />
-          </button>
+          <IconButton onClick={cerrar} aria-label="Cerrar">
+            <X />
+          </IconButton>
         </div>
 
         {/* Cuerpo */}
@@ -310,7 +294,7 @@ function FaqEditor({ item, busy, error, onCancel, onSave }: {
           onCancel={cerrar}
           onSave={form.handleSubmit(onSave)}
           saveLabel={esEdicion ? "Guardar cambios" : "Crear pregunta"}
-          saveIcon={busy ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />}
+          saveIcon={<Check className="size-[17px]" />}
           busy={busy}
           saveDisabled={faltan > 0}
           aviso={
@@ -362,8 +346,8 @@ function FaqEliminar({ item, busy, error, onCancel, onConfirm }: {
         <Button variant="neutral" onClick={onCancel} disabled={busy}>
           <X className="size-[17px]" /> Cancelar
         </Button>
-        <Button variant="danger" onClick={onConfirm} disabled={busy}>
-          {busy ? <Loader className="spin size-[17px]" /> : <Trash2 className="size-[17px]" />} Eliminar
+        <Button variant="danger" onClick={onConfirm} loading={busy}>
+          <Trash2 className="size-[17px]" /> Eliminar
         </Button>
       </div>
     </Modal>
@@ -575,7 +559,7 @@ export default function FaqAdminClient() {
             Mantené la base de conocimiento que consultan los usuarios. Cada entrada necesita una pregunta y su respuesta.
           </p>
         </div>
-        <Button size="lg" onClick={() => setEditor({ item: null })} disabled={isLoading || !!error}>
+        <Button onClick={() => setEditor({ item: null })} disabled={isLoading || !!error}>
           <Plus className="size-[18px]" /> Cargá una pregunta
         </Button>
       </div>
