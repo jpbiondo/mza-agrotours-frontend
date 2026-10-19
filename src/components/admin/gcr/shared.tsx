@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Search, SearchX, Trash2, X, Plus, Check, AlertCircle, ChevronRight, Gauge } from "lucide-react";
-import { Alert, Button, Card, IconCircle, Modal, Toast } from "@/components/ui";
+import { Alert, Button, Card, IconButton, IconCircle, Modal, Toast } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { GCR_MESES, GCR_ESTACIONES, GCR_EST_ORDEN } from "@/data/gestionCr";
 import { gradienteDe } from "@/lib/color";
@@ -58,7 +58,7 @@ export function GcrConfirmDelete({
         <Button variant="neutral" onClick={onCancel} disabled={busy}>
           No, volver
         </Button>
-        <Button variant="danger" onClick={onConfirm} disabled={busy}>
+        <Button variant="danger" onClick={onConfirm} loading={busy}>
           <Trash2 className="size-[17px]" /> Sí, eliminar
         </Button>
       </div>
@@ -102,14 +102,9 @@ export function GcrFormHeader({
         <h2 className="font-display text-2xl font-bold text-fg-1">{title}</h2>
         {sub && <p className="mt-1.5 max-w-[480px] text-sm leading-relaxed text-fg-2">{sub}</p>}
       </div>
-      <button
-        type="button"
-        onClick={onCancel}
-        aria-label="Cerrar"
-        className="flex size-[42px] shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface"
-      >
-        <X className="size-5 text-fg-2" />
-      </button>
+      <IconButton onClick={onCancel} aria-label="Cerrar">
+        <X />
+      </IconButton>
     </div>
   );
 }
@@ -143,7 +138,7 @@ export function GcrFormFooter({
         <Button variant="neutral" onClick={onCancel} disabled={busy}>
           Cancelar
         </Button>
-        <Button onClick={onSave} disabled={busy || saveDisabled}>
+        <Button onClick={onSave} disabled={saveDisabled} loading={busy}>
           {saveIcon ?? <Check className="size-[17px]" />} {saveLabel}
         </Button>
       </div>
@@ -519,7 +514,7 @@ export function GcrPageHead({
           <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">{title}</h1>
           <p className="mt-2.5 max-w-[680px] text-[15.5px] leading-relaxed text-fg-2">{desc}</p>
         </div>
-        <Button size="lg" onClick={onAction} disabled={accionDeshabilitada} title={accionTitulo}>
+        <Button onClick={onAction} disabled={accionDeshabilitada} title={accionTitulo}>
           <Plus className="size-[18px]" /> {actionLabel}
         </Button>
       </div>
