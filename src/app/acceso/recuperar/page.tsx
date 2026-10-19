@@ -9,6 +9,7 @@ import RecoverSentView from "./components/RecoverSentView";
 import RecoverResetForm from "./components/RecoverResetForm";
 import RecoverDoneView from "./components/RecoverDoneView";
 import { verificarResetCode } from "@/lib/passwordReset";
+import { Button } from "@/components/ui";
 
 type View = "email" | "sent" | "verifying" | "reset" | "invalid" | "done";
 
@@ -89,14 +90,13 @@ function RecuperarInner() {
             <p style={{ fontSize: 15, color: "var(--fg-2)", lineHeight: 1.55, margin: "12px 0 26px" }}>
               El enlace de recuperación expiró o ya fue usado. Solicitá uno nuevo para continuar.
             </p>
-            <button
-              type="button"
-              className="btn btn-primary btn-lg"
-              style={{ width: "100%", justifyContent: "center" }}
+            <Button
+              size="lg"
+              className="w-full"
               onClick={pedirNuevo}
             >
               Solicitar un nuevo enlace
-            </button>
+            </Button>
           </div>
         )}
         {view === "done" && <RecoverDoneView onBackLogin={goLogin} />}
