@@ -518,7 +518,7 @@ function Inner({
         </div>
         <Link
           href={`/establecimientos/${datos.id}`}
-          className={buttonClasses({ variant: "ghost", className: "shrink-0" })}
+          className={buttonClasses({ variant: "neutral", className: "shrink-0" })}
         >
           <ExternalLink className="size-4" /> Ver perfil público
         </Link>
@@ -604,9 +604,9 @@ function Inner({
         <Link
           href={ruta("actividades")}
           className={buttonClasses({
-            variant: "ghost",
+            variant: "neutral",
             size: "sm",
-            className: "mt-4.5 text-sm",
+            className: "mt-4.5",
           })}
         >
           <ArrowRight className="size-[15px]" /> Ver actividades
@@ -617,7 +617,7 @@ function Inner({
         {/* Ya dado de baja, no tiene sentido volver a abrir el flujo en los
             segundos que quedan hasta la salida. */}
         <Button
-          variant="danger"
+          variant="danger-outline"
           disabled={bajaHecha}
           onClick={() => setBajaAbierta(true)}
         >
