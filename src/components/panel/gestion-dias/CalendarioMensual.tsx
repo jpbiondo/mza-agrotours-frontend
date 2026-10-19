@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Lock, Plus } from "lucide-react";
-import { Skeleton } from "@/components/ui";
+import { IconButton, Skeleton } from "@/components/ui";
 import { MESES_LABEL, NOMBRES_DIA } from "@/data/calendario";
 import { cn } from "@/lib/utils";
 import type { DiaProgramado, FechaISO } from "@/types/gestion-dias";
@@ -156,9 +156,6 @@ const ALTO_CELDA = {
   amplia: "min-h-[62px] md:min-h-24",
 } as const;
 
-const NAV =
-  "flex size-9 items-center justify-center rounded-md border border-outline-variant bg-surface text-fg-1 shadow-[inset_0_-2px_0_var(--outline-variant)] transition-colors hover:bg-cream-tert disabled:cursor-not-allowed disabled:border-cream-tert disabled:bg-cream-tert disabled:text-fg-3 disabled:shadow-none";
-
 /**
  * Grilla mensual (semana desde el lunes). Cada pantalla arma sus celdas y
  * decide qué hace el click; mientras `cargando`, la grilla se reemplaza por un
@@ -190,15 +187,15 @@ export function CalendarioMensual({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <button type="button" onClick={onPrev} disabled={!puedePrev} aria-label="Mes anterior" className={NAV}>
-          <ChevronLeft className="size-[17px]" />
-        </button>
+        <IconButton onClick={onPrev} disabled={!puedePrev} aria-label="Mes anterior">
+          <ChevronLeft />
+        </IconButton>
         <div className="font-display text-lg font-bold text-fg-1" aria-live="polite">
           {MESES_LABEL[mes0]} {anio}
         </div>
-        <button type="button" onClick={onNext} disabled={!puedeNext} aria-label="Mes siguiente" className={NAV}>
-          <ChevronRight className="size-[17px]" />
-        </button>
+        <IconButton onClick={onNext} disabled={!puedeNext} aria-label="Mes siguiente">
+          <ChevronRight />
+        </IconButton>
       </div>
 
       <div className="mb-2 grid grid-cols-7 gap-1.5">
