@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Sprout, MapPin, ChevronRight, RotateCcw, SearchX, Search, CalendarDays } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
+import { Button } from "@/components/ui";
 import ActividadCard, { ActividadCardSkeleton } from "@/components/catalog/ActividadCard";
 import { FilterSelect, MultiFilterSelect, Pagination, ActiveFilterPill, SearchField } from "@/components/catalog/controls";
 import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
@@ -163,9 +164,9 @@ export default function CatalogClient() {
                 icon={<SearchX size={30} color="var(--fg-3)" />}
                 titulo="No encontramos experiencias"
                 accion={
-                  <button type="button" className="btn btn-neutral" onClick={limpiarTodo}>
+                  <Button variant="neutral" onClick={limpiarTodo}>
                     <RotateCcw size={17} /> Limpiar todo
-                  </button>
+                  </Button>
                 }
               >
                 {busqueda !== ""
