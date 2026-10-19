@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,7 +9,6 @@ import {
   MapPin,
   Mail,
   Phone,
-  ArrowLeft,
   Send,
   Check,
   Clock,
@@ -32,7 +30,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Button, Modal, SectionLabel } from "@/components/ui";
+import { BackLink, Button, Modal, SectionLabel } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
   REQUISITOS_DOC,
@@ -302,13 +300,9 @@ export default function SolicitarAltaClient() {
         <Confirmacion nombre={resultado.nombre} onIr={irA} />
       ) : (
         <div className="mx-auto max-w-[820px] px-7 pt-7 pb-24">
-          <button
-            type="button"
-            onClick={() => irA("/mis-solicitudes")}
-            className="mb-3.5 inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold text-green-800"
-          >
-            <ArrowLeft className="size-4" /> Volver a mis solicitudes
-          </button>
+          <BackLink onClick={() => irA("/mis-solicitudes")} className="mb-3.5">
+            Volver a mis solicitudes
+          </BackLink>
 
           <div className="mb-7">
             <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">
@@ -629,17 +623,12 @@ export default function SolicitarAltaClient() {
                   <Button
                     type="submit"
                     variant="primary"
-                    disabled={form.formState.isSubmitting || enviando || faltan > 0}
+                    disabled={faltan > 0}
+                    // Las pruebas se suben dentro del envío, antes de crear la
+                    // solicitud: es la parte que más tarda de las dos.
+                    loading={form.formState.isSubmitting || enviando}
                   >
-                    {/* Las pruebas se suben dentro del envío, antes de crear la
-                        solicitud: es la parte que más tarda de las dos. */}
-                    {enviando || form.formState.isSubmitting ? (
-                      "Enviando solicitud…"
-                    ) : (
-                      <>
-                        <Send className="size-[18px]" /> Enviar solicitud
-                      </>
-                    )}
+                    <Send className="size-[18px]" /> Enviar solicitud
                   </Button>
                 </div>
                 <FaltanCampos
