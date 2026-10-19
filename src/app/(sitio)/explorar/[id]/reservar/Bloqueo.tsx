@@ -1,7 +1,6 @@
 "use client";
-
 import Link from "next/link";
-import { CalendarCheck, CheckCircle2, Loader, Lock, Pencil, Ticket } from "lucide-react";
+import { CalendarCheck, CheckCircle2, Lock, Pencil, Ticket } from "lucide-react";
 import PagarConMercadoPago from "@/components/reserva/PagarConMercadoPago";
 import { Button, buttonClasses } from "@/components/ui";
 
@@ -56,8 +55,7 @@ export function BloqueoCupos({
           <div className="mt-2 font-mono text-[11.5px] text-fg-3">{bloqueo.codigo} · pendiente de pago</div>
         </div>
         <PagarConMercadoPago preferenceId={bloqueo.preferenceId} size="lg" className="w-full" />
-        <Button variant="ghost" className="w-full" onClick={onCancelar} disabled={cancelando}>
-          {cancelando && <Loader size={16} className="spin" aria-hidden />}
+        <Button variant="neutral" className="w-full" onClick={onCancelar} loading={cancelando}>
           Cancelar y liberar cupos
         </Button>
       </div>
@@ -84,12 +82,8 @@ export function BloqueoCupos({
   // El aviso de `conflicto` lo muestra la pantalla debajo del calendario.
   return (
     <>
-      <Button size="lg" className="mt-4 w-full" disabled={!confirmable || confirmando} onClick={onConfirmar}>
-        {confirmando ? (
-          <><Loader size={18} className="spin" aria-hidden /> Reservando tus cupos…</>
-        ) : (
-          <><CalendarCheck size={20} aria-hidden /> Confirmar reserva</>
-        )}
+      <Button size="lg" className="mt-4 w-full" disabled={!confirmable} loading={confirmando} onClick={onConfirmar}>
+        <CalendarCheck size={20} aria-hidden /> Confirmar reserva
       </Button>
       <p className="mt-2.5 mb-0 text-center text-[11.5px] leading-[1.45] text-fg-3">
         Al confirmar, guardamos tus cupos por unos minutos para que completes el pago con Mercado Pago.
