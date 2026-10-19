@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Check, Loader, LayoutDashboard } from "lucide-react";
 import { DESTINO_DEFAULT, type Destino } from "@/data/auth";
 import type { Cuenta } from "@/types/auth";
+import { Button } from "@/components/ui";
 
 const REDIRECT_MS = 2600;
 
@@ -53,14 +54,12 @@ export default function LoginSuccess({ cuenta, volver }: LoginSuccessProps) {
         <Loader size={16} className="spin" /> Redirigiendo…
       </div>
       <div>
-        <button
-          type="button"
+        <Button
+          size="lg"
           onClick={() => { window.location.href = dest.href; }}
-          className="btn btn-primary btn-lg"
-          style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
         >
           <LayoutDashboard size={18} /> Ir a {dest.label.toLowerCase()}
-        </button>
+        </Button>
       </div>
     </div>
   );
