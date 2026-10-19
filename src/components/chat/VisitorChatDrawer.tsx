@@ -7,7 +7,7 @@ import { auth } from "../../../firebase.config";
 import { ArrowLeft, ArrowRight, Grape, MessageCircle, MessageCircleOff, X } from "lucide-react";
 import { SkeletonFilasChat } from "@/components/chat/ChatSkeletons";
 import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
-import { buttonClasses } from "@/components/ui";
+import { IconButton, buttonClasses } from "@/components/ui";
 import { marcarChatLeido, partesDeChat, useIniciarChat, useInfoChatsUsuario, useMisChats } from "@/hooks/useChats";
 import { useChatDrawer, type ChatAbierto } from "@/stores/chatDrawerStore";
 import { cn } from "@/lib/utils";
@@ -62,14 +62,9 @@ function AvatarChat({ id, foto, size }: { id: string; foto: string | null; size:
 
 function BotonCerrar({ onClick }: { onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Cerrar"
-      className="inline-flex size-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-outline-variant bg-cream-bg text-fg-2 hover:bg-cream-tert"
-    >
-      <X size={18} />
-    </button>
+    <IconButton onClick={onClick} aria-label="Cerrar">
+      <X />
+    </IconButton>
   );
 }
 
