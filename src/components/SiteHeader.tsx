@@ -10,6 +10,7 @@ import AccountMenu from "@/components/AccountMenu";
 import MobileNav from "@/components/MobileNav";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
+import { buttonClasses } from "@/components/ui";
 
 export interface NavLink {
   id: string;
@@ -119,10 +120,10 @@ export default function SiteHeader({ navLinks = APP_LINKS, maxWidth = 1200 }: Si
               </>
             ) : (
               <>
-                <Link href="/acceso" className="btn btn-neutral btn-sm inline-flex items-center gap-2">
+                <Link href="/acceso" className={buttonClasses({ variant: "neutral", size: "sm" })}>
                   <LogIn className="size-4" /> Iniciar sesión
                 </Link>
-                <Link href="/registro" className="btn btn-primary btn-sm inline-flex items-center gap-2">
+                <Link href="/registro" className={buttonClasses({ size: "sm" })}>
                   <UserPlus className="size-4" /> Registrarse
                 </Link>
               </>
