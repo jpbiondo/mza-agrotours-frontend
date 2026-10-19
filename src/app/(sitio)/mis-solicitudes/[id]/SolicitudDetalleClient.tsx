@@ -1,15 +1,14 @@
 "use client";
-
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Loader, ArrowLeft, FileText, Image as ImageIcon, File as FileIcon,
+  Loader, FileText, Image as ImageIcon, File as FileIcon,
   CalendarDays, PlusCircle, FileSearch, Clock, CheckCircle2, XCircle,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { EstadoBadge, Skeleton } from "@/components/ui";
+import { BackLink, EstadoBadge, Skeleton, buttonClasses } from "@/components/ui";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { fmtFechaHora } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -292,7 +291,7 @@ function Detalle({ s }: { s: SolicitudDetalle }) {
       </Seccion>
 
       {s.estado === "rechazada" && (
-        <Link href={NUEVA_HREF} className="btn btn-primary mt-7 inline-flex no-underline">
+        <Link href={NUEVA_HREF} className={buttonClasses({ className: "mt-7" })}>
           <PlusCircle className="size-[17px]" /> Enviar una nueva solicitud
         </Link>
       )}
@@ -427,7 +426,7 @@ function NoEncontrada() {
         Puede que el enlace esté mal o que la solicitud no sea tuya. Revisá el listado de tus
         solicitudes.
       </p>
-      <Link href={LISTA_HREF} className="btn btn-primary mt-2 inline-flex no-underline">
+      <Link href={LISTA_HREF} className={buttonClasses({ className: "mt-2" })}>
         Ver mis solicitudes
       </Link>
     </div>
@@ -455,12 +454,9 @@ export default function SolicitudDetalleClient({ id }: { id: string }) {
 
   return (
     <div className="mx-auto max-w-[900px] px-7 pt-7 pb-24">
-      <Link
-        href={LISTA_HREF}
-        className="mb-3.5 inline-flex items-center gap-[7px] text-[13.5px] font-semibold text-green-800 no-underline"
-      >
-        <ArrowLeft className="size-4" /> Volver a mis solicitudes
-      </Link>
+      <BackLink href={LISTA_HREF} className="mb-3.5">
+        Volver a mis solicitudes
+      </BackLink>
 
       <AsyncBoundary
         loading={isLoading}
