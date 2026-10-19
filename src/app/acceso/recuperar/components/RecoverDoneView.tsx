@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { ShieldCheck, LogIn } from "lucide-react";
+import { Button } from "@/components/ui";
 
 const REDIRECT_MS = 3000;
 
@@ -28,14 +29,12 @@ export default function RecoverDoneView({ onBackLogin }: { onBackLogin: () => vo
       <p style={{ fontSize: 15, color: "var(--fg-2)", lineHeight: 1.55, margin: "12px 0 26px" }}>
         Ya podés iniciar sesión con tu nueva contraseña.
       </p>
-      <button
-        type="button"
+      <Button
+        size="lg"
         onClick={onBackLogin}
-        className="btn btn-primary btn-lg"
-        style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
       >
         <LogIn size={18} /> Ir a iniciar sesión
-      </button>
+      </Button>
     </div>
   );
 }
