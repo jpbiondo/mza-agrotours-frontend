@@ -139,7 +139,7 @@ Cada patrón tiene un único punto de entrada. Las pantallas existentes **todav�
 ### Botones
 
 **`Button`** · `components/ui/Button.tsx` (modificado)
-- `variant`: `"primary" | "neutral" | "danger" | "danger-outline" | "ghost"`. `ghost` está *deprecada*.
+- `variant`: `"primary" | "neutral" | "danger" | "danger-outline"`. `ghost` se eliminó al migrar sus usos a `neutral`.
 - `size`: `"sm" | "md" | "lg"`.
 - `loading?: boolean`: el spinner reemplaza al primer ícono, la etiqueta queda igual, se deshabilita y marca `aria-busy`.
 - `disabledReason?: string`: con `disabled`, muestra el motivo como texto debajo del botón y lo asocia con `aria-describedby`.
