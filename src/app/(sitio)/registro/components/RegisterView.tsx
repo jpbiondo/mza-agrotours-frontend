@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, CalendarCheck, Heart, Ticket } from "lucide-react";
+import { CalendarCheck, Heart, Ticket } from "lucide-react";
 import RegistroForm, { type ModoRegistro } from "./RegistroForm";
-import { Toast } from "@/components/ui";
+import { BackLink, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import type { FormData } from "@/types/registro";
 
@@ -66,13 +66,7 @@ export default function RegisterView({
       }
       className="mx-auto max-w-[1100px] px-7 pt-8 pb-[72px]"
     >
-      <button
-        type="button"
-        onClick={onBack}
-        className="mb-[22px] inline-flex cursor-pointer items-center gap-[7px] text-sm font-medium text-fg-2 hover:text-fg-1"
-      >
-        <ArrowLeft className="size-[17px]" /> Volver
-      </button>
+      <BackLink onClick={onBack} className="mb-[22px]" />
 
       <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[minmax(0,1fr)_420px]">
         {/* Form column */}
