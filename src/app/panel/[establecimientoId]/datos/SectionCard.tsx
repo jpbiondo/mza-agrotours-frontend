@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Check, Loader, Pencil, X } from "lucide-react";
+import { Check, Pencil, X } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 
 /**
@@ -54,9 +54,8 @@ export function SectionCard({
           aside
         ) : !isEditing ? (
           <Button
-            variant="ghost"
+            variant="neutral"
             size="sm"
-            className="text-sm"
             onClick={onEdit}
           >
             <Pencil className="size-[15px]" /> Editar
@@ -65,9 +64,8 @@ export function SectionCard({
           <div className="flex flex-col items-end gap-1.5">
             <div className="flex gap-2">
               <Button
-                variant="ghost"
+                variant="neutral"
                 size="sm"
-                className="text-sm"
                 onClick={onCancel}
                 disabled={saving}
               >
@@ -75,15 +73,11 @@ export function SectionCard({
               </Button>
               <Button
                 size="sm"
-                className="text-sm"
                 onClick={onSave}
-                disabled={!canSave || saving}
+                disabled={!canSave}
+                loading={saving}
               >
-                {saving ? (
-                  <Loader className="spin size-[15px]" />
-                ) : (
-                  <Check className="size-[15px]" />
-                )}
+                <Check className="size-[15px]" />
                 Guardar cambios
               </Button>
             </div>
