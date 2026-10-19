@@ -135,16 +135,10 @@ export default function LoginForm({ onSuccess, onRecover, notice }: LoginFormPro
             type="submit"
             variant="primary"
             size="lg"
-            disabled={form.formState.isSubmitting}
+            loading={form.formState.isSubmitting}
             className="mt-1 w-full"
           >
-            {form.formState.isSubmitting ? (
-              "Ingresando…"
-            ) : (
-              <>
-                <LogIn className="size-[18px]" /> Iniciar sesión
-              </>
-            )}
+            <LogIn className="size-[18px]" /> Iniciar sesión
           </Button>
         </form>
       </Form>
