@@ -1,9 +1,8 @@
 "use client";
-
 import { useState } from "react";
 import type { ReactNode } from "react";
 import {
-  Banknote, CalendarDays, Check, ChevronRight, Clock, Inbox, Loader, Receipt,
+  Banknote, CalendarDays, Check, ChevronRight, Clock, Inbox, Receipt,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
@@ -234,9 +233,9 @@ function Detalle({ reembolso, error, reembolsando, onCerrar, onReembolsar }: {
             )}
 
             <footer className="flex shrink-0 justify-between gap-3 border-t border-cream-tert bg-cream-bg px-6 py-4">
-              <Button variant="ghost" onClick={onCerrar} disabled={reembolsando}>Cancelar</Button>
-              <Button onClick={() => onReembolsar(reembolso)} disabled={reembolsando}>
-                {reembolsando ? <Loader className="spin size-4" /> : <Check className="size-4" />}
+              <Button variant="neutral" onClick={onCerrar} disabled={reembolsando}>Cancelar</Button>
+              <Button onClick={() => onReembolsar(reembolso)} loading={reembolsando}>
+                <Check className="size-4" />
                 Reembolsar
               </Button>
             </footer>
