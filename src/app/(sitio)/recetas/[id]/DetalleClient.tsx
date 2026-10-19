@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { Button, Card, Skeleton } from "@/components/ui";
+import { BackLink, Button, Card, Skeleton } from "@/components/ui";
 import { useRecetaDetalle } from "@/hooks/useCatalogoRecetas";
 import { cn } from "@/lib/utils";
 import type { CultivoDeReceta, DificultadId, RecetaDetalle } from "@/types/recetas";
@@ -266,9 +266,7 @@ export default function DetalleClient({ id }: { id: string }) {
         <span className="font-medium text-fg-2">{data?.nombre ?? "Detalle"}</span>
       </div>
 
-      <Link href="/recetas" className="mb-[18px] inline-flex items-center gap-[7px] text-sm font-semibold text-green-800 no-underline">
-        <ArrowLeft size={16} /> Volver a recetas
-      </Link>
+      <BackLink href="/recetas" className="mb-[18px]">Volver a recetas</BackLink>
 
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<DetalleSkeleton />}>
         {/* `data` en null es un id que no existe, no una falla de la lectura. */}
