@@ -1,9 +1,8 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import {
   ChevronRight, Pencil, X, Save, Info, ShieldCheck, Eye, EyeOff, Check, AlertCircle, AlertTriangle,
-  CheckCircle2, ArrowRight, ImageOff, Loader, Image as ImageIcon, Building2, Coins, Landmark, Percent,
+  CheckCircle2, ArrowRight, ImageOff, Image as ImageIcon, Building2, Coins, Landmark, Percent,
   CalendarPlus, Undo2, Timer, Store, Wallet, Settings2,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
@@ -11,6 +10,7 @@ import { PARAM_ADMIN, PARAM_FIELDS, PARAM_GROUPS, paramError, paramDisplay } fro
 import { admInitials } from "@/data/admin";
 import { useParametros, useConfirmarIdentidad, useGuardarParametros } from "@/hooks/useParametros";
 import type { ParametroKey, Parametros } from "@/types/parametros";
+import { Button } from "@/components/ui";
 
 const ICON: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
   image: ImageIcon, "building-2": Building2, coins: Coins, landmark: Landmark, percent: Percent,
@@ -132,8 +132,8 @@ function AuthModal({ busy, onCancel, onSubmit }: { busy: boolean; onCancel: () =
           </div>
         </div>
         <div style={{ padding: "14px 28px", borderTop: "1px solid var(--outline-variant)", background: "var(--cream-tert)", display: "flex", justifyContent: "flex-end", gap: 12 }}>
-          <button type="button" className="btn btn-neutral" onClick={onCancel} disabled={busy}>Cancelar</button>
-          <button type="button" className="btn btn-primary" onClick={submit} disabled={busy}>{busy ? <Loader size={17} className="spin" /> : <Check size={17} />} Confirmar</button>
+          <Button variant="neutral" onClick={onCancel} disabled={busy}>Cancelar</Button>
+          <Button onClick={submit} loading={busy}><Check size={17} /> Confirmar</Button>
         </div>
       </div>
     </div>
@@ -183,8 +183,8 @@ function ReviewModal({ draft, original, busy, onCancel, onConfirm }: { draft: Pa
           })}
         </div>
         <div style={{ padding: "14px 28px", borderTop: "1px solid var(--outline-variant)", background: "var(--cream-tert)", display: "flex", justifyContent: "flex-end", gap: 12, flexShrink: 0 }}>
-          <button type="button" className="btn btn-neutral" onClick={onCancel} disabled={busy}>Cancelar cambios</button>
-          <button type="button" className="btn btn-primary" onClick={onConfirm} disabled={busy}>{busy ? <Loader size={17} className="spin" /> : <Check size={17} />} Confirmar cambios</button>
+          <Button variant="neutral" onClick={onCancel} disabled={busy}>Cancelar cambios</Button>
+          <Button onClick={onConfirm} loading={busy}><Check size={17} /> Confirmar cambios</Button>
         </div>
       </div>
     </div>
@@ -244,11 +244,11 @@ function Inner({ initial }: { initial: Parametros }) {
           <p style={{ margin: "10px 0 0", color: "var(--fg-2)", fontSize: 15.5, lineHeight: 1.5, maxWidth: 640 }}>Información general del negocio y reglas de operación de la plataforma. Para modificarla, vas a tener que reconfirmar tu identidad.</p>
         </div>
         {!editing ? (
-          <button type="button" className="btn btn-primary btn-lg" onClick={() => setAuthOpen(true)}><Pencil size={18} /> Modificar parámetros</button>
+          <Button onClick={() => setAuthOpen(true)}><Pencil size={18} /> Modificar parámetros</Button>
         ) : (
           <div style={{ display: "flex", gap: 12, flexShrink: 0 }}>
-            <button type="button" className="btn btn-neutral btn-lg" onClick={cancelEdit} disabled={guardando}><X size={18} /> Cancelar cambios</button>
-            <button type="button" className="btn btn-primary btn-lg" onClick={askSave} disabled={guardando}><Save size={18} /> Guardar cambios</button>
+            <Button variant="neutral" onClick={cancelEdit} disabled={guardando}><X size={18} /> Cancelar cambios</Button>
+            <Button onClick={askSave} disabled={guardando}><Save size={18} /> Guardar cambios</Button>
           </div>
         )}
       </div>
