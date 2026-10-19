@@ -1,14 +1,13 @@
 "use client";
-
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft, ArrowRight, Ban, CalendarDays, Check, FileText, HelpCircle,
-  Info, ListChecks, Loader, MapPin, Save, Send, Users, X,
+  Info, ListChecks, MapPin, Save, Send, Users, X,
 } from "lucide-react";
-import { Alert, Button, Card, Toast } from "@/components/ui";
+import { Alert, BackLink, Button, Card, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { ImageUploader } from "@/components/ui/image-uploader";
@@ -195,14 +194,7 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
   return (
     <div className="min-h-screen bg-cream-bg">
       <div className="mx-auto max-w-[980px] px-7 pt-7 pb-16">
-        <Button
-          variant="neutral"
-          size="sm"
-          className="mb-4 text-sm"
-          onClick={() => router.push(listado)}
-        >
-          <ArrowLeft className="size-4" /> Volver al listado
-        </Button>
+        <BackLink href={listado} className="mb-4">Volver al listado</BackLink>
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -522,20 +514,10 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
                       disabled={noSePuedeGuardar}
                       title={motivoBloqueo}
                       onClick={enviar("publicado")}
+                      loading={isLoading}
                     >
-                      {isLoading ? (
-                        <>
-                          <Loader className="spin size-4" /> Guardando…
-                        </>
-                      ) : done === "publicado" ? (
-                        <>
-                          <Check className="size-4" /> Publicada
-                        </>
-                      ) : (
-                        <>
-                          <Send className="size-4" /> Publicar
-                        </>
-                      )}
+                      {done === "publicado" ? <Check className="size-4" /> : <Send className="size-4" />}
+                      {done === "publicado" ? "Publicada" : "Publicar"}
                     </Button>
                   </>
                 )}
