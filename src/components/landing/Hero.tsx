@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Sprout, UserPlus, Compass } from "lucide-react";
+import { buttonClasses } from "@/components/ui";
 
 const STATS = [
   { value: "+40", label: "Fincas y bodegas" },
@@ -71,10 +72,10 @@ export default function Hero() {
           </p>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link href="/explorar" className="btn btn-primary btn-lg" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Link href="/explorar" className={buttonClasses({ size: "lg" })}>
               <Compass size={18} /> Explorar experiencias
             </Link>
-            <Link href="/registro" className="btn btn-neutral btn-lg" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Link href="/registro" className={buttonClasses({ variant: "neutral", size: "lg" })}>
               <UserPlus size={18} /> Crear cuenta
             </Link>
           </div>
