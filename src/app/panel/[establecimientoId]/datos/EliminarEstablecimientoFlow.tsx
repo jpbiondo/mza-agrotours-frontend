@@ -186,7 +186,7 @@ export default function EliminarEstablecimientoFlow({
         </p>
 
         <div className="mt-6 flex justify-end gap-3">
-          <Button variant="ghost" onClick={onCancel}>
+          <Button variant="neutral" onClick={onCancel}>
             Cerrar
           </Button>
           <Button onClick={reintentar}>
@@ -235,19 +235,16 @@ export default function EliminarEstablecimientoFlow({
       {errorBaja && <Alert className="mt-4">{errorBaja}</Alert>}
 
       <div className="mt-6 flex justify-end gap-3">
-        <Button variant="ghost" onClick={onCancel} disabled={eliminando}>
+        <Button variant="neutral" onClick={onCancel} disabled={eliminando}>
           Cancelar
         </Button>
         <Button
           variant="danger"
           onClick={confirmar}
-          disabled={!confirmado || eliminando}
+          disabled={!confirmado}
+          loading={eliminando}
         >
-          {eliminando ? (
-            <Loader className="spin size-[17px]" />
-          ) : (
-            <Trash2 className="size-[17px]" />
-          )}
+          <Trash2 className="size-[17px]" />
           Eliminar establecimiento
         </Button>
       </div>
