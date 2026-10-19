@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
+import { conTokenDe } from "@/lib/sesion";
 
 export interface UseAsyncConToken<T> {
   data: T | null;
@@ -52,8 +53,7 @@ export function useLecturaConToken<T>(
         return;
       }
       try {
-        const token = await user.getIdToken();
-        const data = await pedirRef.current(token);
+        const data = await conTokenDe(user, (token) => pedirRef.current(token));
         if (active) {
           setRes({ clave: claveConNonce, data, error: null });
           setUltimo(data);
