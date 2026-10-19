@@ -2,11 +2,11 @@
 
 import { useEffect } from "react";
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShieldAlert } from "lucide-react";
+import { ForbiddenScreen } from "@/components/ui/StatusScreen";
 import type { Permiso } from "@/lib/permisos";
 import { tienePermiso, tieneTipoPermiso } from "@/lib/roles";
+import { rutaAcceso, rutaActual } from "@/lib/volver";
 import { useAuthStore } from "@/stores/authStore";
 import type { Rol } from "@/types/auth";
 
@@ -30,35 +30,19 @@ const SIN_PERMISO =
  * Se exporta para las pantallas que no pueden resolver el acceso en la ruta: los
  * permisos de PRODUCTOR valen por establecimiento, y cuál está activo lo sabe
  * recién el cliente, cuando rehidrata el store del switcher.
+ *
+ * @deprecated Es un alias de `<ForbiddenScreen>` (`components/ui/StatusScreen`);
+ * en código nuevo, usar ése.
  */
 export function SinPermiso({ motivo }: { motivo: string }) {
-  return (
-    <div className="mx-auto max-w-[640px] px-7 pt-16 pb-24">
-      <div className="flex flex-col items-center gap-3 rounded-lg border border-outline-variant bg-surface px-8 py-14 text-center">
-        <div className="flex size-16 items-center justify-center rounded-full bg-warning-fill">
-          <ShieldAlert className="size-7 text-warning-fg" />
-        </div>
-        <h1 className="font-display text-[24px] font-bold text-fg-1">
-          No tenés acceso a esta sección
-        </h1>
-        <p className="max-w-[440px] text-[14.5px] leading-relaxed text-fg-2">
-          {motivo}
-        </p>
-        <Link
-          href="/explorar"
-          className="btn btn-primary mt-2 inline-flex no-underline"
-        >
-          Volver al inicio
-        </Link>
-      </div>
-    </div>
-  );
+  return <ForbiddenScreen motivo={motivo} />;
 }
 
 /**
  * Deja pasar sólo si la cuenta en sesión tiene `rol` y, si se pide, el permiso
- * fino. Sin sesión redirige a /acceso; con sesión pero sin acceso muestra el
- * aviso sin sacar al usuario de la URL, para que entienda qué pasó.
+ * fino. Sin sesión redirige a /acceso con `?volver=`, para regresar acá después
+ * del login; con sesión pero sin acceso muestra el aviso sin sacar al usuario
+ * de la URL, para que entienda qué pasó.
  *
  * Es control de navegación, no de seguridad: los accesos salen del store
  * persistido y se pueden editar desde el navegador. La barrera real es que el
@@ -83,7 +67,9 @@ export default function GuardRol({
   const sinSesion = hasHydrated && !nombre;
 
   useEffect(() => {
-    if (sinSesion) router.replace("/acceso");
+    // La ruta se lee de `window` y no de `useSearchParams`: este guard vive en
+    // layouts que se prerenderizan, y ese hook exigiría un <Suspense> alrededor.
+    if (sinSesion) router.replace(rutaAcceso({ volver: rutaActual() }));
   }, [sinSesion, router]);
 
   // Los dos estados de espera no dibujan nada. Antes de rehidratar no se sabe
