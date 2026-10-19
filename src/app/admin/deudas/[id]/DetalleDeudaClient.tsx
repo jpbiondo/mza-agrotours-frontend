@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { DEUDA_ESTADO_ICON, DeudaBadge } from "@/components/admin/DeudaBadge";
-import { Alert, Button, Skeleton, Toast, buttonClasses } from "@/components/ui";
+import { Alert, BackLink, Button, Skeleton, Toast, buttonClasses } from "@/components/ui";
 import { estabInitials } from "@/data/admin";
 import { DEUDA_ESTADO_META, deudaResoluble, pendienteDe } from "@/data/deudas";
 import { fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
@@ -269,9 +269,7 @@ export default function DetalleDeudaClient({ id }: { id: string }) {
         <h1 className="flex items-center gap-3 font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">
           <Landmark size={28} className="text-brown-700" /> Detalle de la deuda
         </h1>
-        <Link href="/admin/deudas" className={buttonClasses({ variant: "neutral", size: "sm" })}>
-          <ArrowLeft size={15} /> Volver
-        </Link>
+        <BackLink href="/admin/deudas" />
       </div>
 
       {aviso && <Alert tone="warning" className="mb-6">{aviso}</Alert>}
