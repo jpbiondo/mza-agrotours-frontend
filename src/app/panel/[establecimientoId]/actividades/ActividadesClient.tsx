@@ -625,12 +625,8 @@ export default function ActividadesClient() {
             <Button variant="neutral" onClick={() => setToDelete(null)} disabled={pendingId === toDelete.id}>
               Cancelar
             </Button>
-            <Button variant="danger" onClick={() => confirmDelete(toDelete)} disabled={pendingId === toDelete.id}>
-              {pendingId === toDelete.id ? (
-                <><Loader className="spin size-4" /> Dando de baja…</>
-              ) : (
-                <><Check className="size-[17px]" /> Confirmar</>
-              )}
+            <Button variant="danger" onClick={() => confirmDelete(toDelete)} loading={pendingId === toDelete.id}>
+              <Check className="size-[17px]" /> Confirmar
             </Button>
           </div>
         </Modal>
