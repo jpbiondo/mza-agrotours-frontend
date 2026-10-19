@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader, AlertTriangle, RotateCcw } from "lucide-react";
+import { Cargando, PantallaDeFalla, useDetalleEnConsola } from "@/components/AsyncView";
+import { clasificarError } from "@/lib/errores";
 
 interface AsyncBoundaryProps {
   loading: boolean;
@@ -13,42 +14,34 @@ interface AsyncBoundaryProps {
    * contenido salte de lugar cuando llegan los datos.
    */
   skeleton?: React.ReactNode;
-  /** Vertical padding of the loading/error state (bigger for full pages). */
+  /** Aire vertical del spinner, en px (más grande en páginas enteras). */
   pad?: number;
   children: React.ReactNode;
 }
 
 /**
  * Estado compartido de carga / error para las lecturas asíncronas.
- * Muestra spinner (o el esqueleto que le pasen) mientras carga, un panel con
- * "Reintentar" ante un error, o el contenido cuando hay datos.
+ * Muestra spinner (o el esqueleto que le pasen) mientras carga, la pantalla de
+ * error que corresponda (`ErrorScreen`, `ForbiddenScreen` ante un 403,
+ * `NotFoundScreen` ante un 404), o el contenido cuando hay datos.
+ *
+ * El mensaje técnico del error ya no se pinta: se traduce con
+ * `clasificarError` y el detalle va a la consola. Un string que el hook
+ * redactó para el usuario se sigue mostrando.
+ *
+ * @deprecated Para pantallas nuevas, `<AsyncView>`: además resuelve el vacío y
+ * el "no encontrado". Éste queda para los usos existentes.
  */
-export default function AsyncBoundary({ loading, error, onRetry, loadingLabel = "Cargando…", skeleton, pad = 120, children }: AsyncBoundaryProps) {
+export default function AsyncBoundary({ loading, error, onRetry, loadingLabel, skeleton, pad = 120, children }: AsyncBoundaryProps) {
+  const falla = loading ? null : clasificarError(error);
+  useDetalleEnConsola(falla);
+
   if (loading) {
     if (skeleton) return <>{skeleton}</>;
-    return (
-      <div style={{ padding: `${pad}px 28px`, textAlign: "center", color: "var(--fg-3)" }}>
-        <Loader size={26} className="spin mx-auto" />
-        <div style={{ marginTop: 12, fontSize: 14 }}>{loadingLabel}</div>
-      </div>
-    );
+    return <Cargando label={loadingLabel} pad={pad >= 110 ? "lg" : pad >= 60 ? "md" : "sm"} />;
   }
 
-  if (error) {
-    return (
-      <div style={{ padding: `${pad}px 28px`, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <span style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--danger-fill)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-          <AlertTriangle size={26} color="var(--danger-fg)" />
-        </span>
-        <h2 style={{ margin: "0 0 8px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 19, color: "var(--fg-1)" }}>No pudimos cargar la información</h2>
-        <p style={{ margin: "0 auto 18px", maxWidth: 380, color: "var(--fg-2)", fontSize: 14.5, lineHeight: 1.5 }}>Ocurrió un problema al obtener los datos. Revisá tu conexión y volvé a intentarlo.</p>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-3)", marginBottom: 18 }}>{error}</div>
-        {onRetry && (
-          <button type="button" className="btn btn-primary" onClick={onRetry}><RotateCcw size={16} /> Reintentar</button>
-        )}
-      </div>
-    );
-  }
+  if (falla) return <PantallaDeFalla falla={falla} onRetry={onRetry} />;
 
   return <>{children}</>;
 }
