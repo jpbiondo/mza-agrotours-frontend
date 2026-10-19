@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Sprout, PlusCircle } from "lucide-react";
+import { buttonClasses } from "@/components/ui";
 
 /** Estado vacío del panel: el productor todavía no tiene un establecimiento. */
 export default function EmptyEstablecimiento() {
@@ -17,7 +18,7 @@ export default function EmptyEstablecimiento() {
         </p>
         <Link
           href="/mis-solicitudes/nueva"
-          className="btn btn-primary btn-lg mt-7 inline-flex"
+          className={buttonClasses({ size: "lg", className: "mt-7" })}
         >
           <PlusCircle className="size-[18px]" /> Solicitar alta de un establecimiento
         </Link>
