@@ -1,10 +1,9 @@
 "use client";
-
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
-import { AlertTriangle, Check, Clock, Info, Loader, RotateCcw, Users, X } from "lucide-react";
+import { AlertTriangle, Check, Clock, Info, RotateCcw, Users, X } from "lucide-react";
 import { Alert, Button, Modal } from "@/components/ui";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { NumberField } from "@/components/ui/number-field";
@@ -144,8 +143,8 @@ export function EditarCupoModal({
                 <Button variant="neutral" onClick={cerrar} disabled={guardando}>
                   <X className="size-4" /> Cancelar
                 </Button>
-                <Button type="submit" disabled={guardando || sinCambios || faltan > 0}>
-                  {guardando ? <><Loader className="spin size-4" /> Guardando…</> : <><Check className="size-4" /> Guardar cambios</>}
+                <Button type="submit" disabled={sinCambios || faltan > 0} loading={guardando}>
+                  <Check className="size-4" /> Guardar cambios
                 </Button>
               </div>
               <FaltanCampos faltan={faltan} />
