@@ -601,10 +601,8 @@ function ProductorForm({
             <Button variant="neutral" onClick={onCancel} disabled={acciones.guardando}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={bloqueado}>
-              {acciones.guardando ? (
-                <Loader className="spin size-[17px]" />
-              ) : editando ? (
+            <Button type="submit" disabled={bloqueado} loading={acciones.guardando}>
+              {editando ? (
                 <Check className="size-[17px]" />
               ) : (
                 <UserPlus className="size-[17px]" />
@@ -749,12 +747,8 @@ function SuspenderForm({
             <Button variant="neutral" onClick={onCancel} disabled={acciones.moderando}>
               Cancelar
             </Button>
-            <Button type="submit" variant="danger" disabled={acciones.moderando || faltan > 0}>
-              {acciones.moderando ? (
-                <Loader className="spin size-[17px]" />
-              ) : (
-                <UserX className="size-[17px]" />
-              )}
+            <Button type="submit" variant="danger" disabled={faltan > 0} loading={acciones.moderando}>
+              <UserX className="size-[17px]" />
               Suspender productor
             </Button>
           </div>
@@ -881,12 +875,8 @@ function LevantarForm({
             <Button variant="neutral" onClick={onCancel} disabled={acciones.moderando}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={acciones.moderando || faltan > 0}>
-              {acciones.moderando ? (
-                <Loader className="spin size-[17px]" />
-              ) : (
-                <UserCheck className="size-[17px]" />
-              )}
+            <Button type="submit" disabled={faltan > 0} loading={acciones.moderando}>
+              <UserCheck className="size-[17px]" />
               Levantar suspensión
             </Button>
           </div>
@@ -1117,7 +1107,6 @@ function Pantalla({
           </p>
         </div>
         <Button
-          size="lg"
           disabled={!gestionar}
           title={gestionar ? "Agregar un productor a la finca" : SIN_GESTION}
           onClick={() => setDialogo({ tipo: "form", productor: null })}
@@ -1360,13 +1349,9 @@ function Pantalla({
             <Button
               variant="danger"
               onClick={() => confirmarBaja(dialogo.productor)}
-              disabled={acciones.borrando}
+              loading={acciones.borrando}
             >
-              {acciones.borrando ? (
-                <Loader className="spin size-[17px]" />
-              ) : (
-                <Trash2 className="size-[17px]" />
-              )}
+              <Trash2 className="size-[17px]" />
               Sí, borrar
             </Button>
           </div>
