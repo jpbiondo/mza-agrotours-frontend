@@ -3,6 +3,8 @@ import { Bitter, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import AuthSync from "@/components/AuthSync";
 import PushSync from "@/components/PushSync";
+import Toaster from "@/components/Toaster";
+import { ConfirmHost } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 // next/font inyecta estas variables "crudas"; globals.css (@theme) las expone
@@ -48,6 +50,9 @@ export default function RootLayout({
         <AuthSync />
         <PushSync />
         {children}
+        {/* Los dibujantes de `notify.*` y `confirm()`: uno para toda la app. */}
+        <Toaster />
+        <ConfirmHost />
       </body>
     </html>
   );
