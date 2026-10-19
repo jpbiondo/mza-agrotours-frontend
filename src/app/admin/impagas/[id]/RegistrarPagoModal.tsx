@@ -1,10 +1,9 @@
 "use client";
-
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, ArrowLeft, Banknote, Check, CreditCard, Hash, Loader, X } from "lucide-react";
-import { Alert, Button, Modal } from "@/components/ui";
+import { AlertTriangle, ArrowLeft, Banknote, Check, CreditCard, Hash, X } from "lucide-react";
+import { Alert, Button, IconButton, Modal } from "@/components/ui";
 import { DatePicker, hoyISO } from "@/components/ui/date-picker";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -106,15 +105,9 @@ export function RegistrarPagoModal({ reembolso, onRegistrado, onDesactualizado, 
             Monto a reembolsar: <strong className="font-semibold text-fg-1">{moneyAr(reembolso.monto)}</strong>
           </p>
         </div>
-        <button
-          type="button"
-          onClick={cerrar}
-          disabled={guardando}
-          aria-label="Cerrar"
-          className="flex size-[42px] shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <X className="size-5 text-fg-2" />
-        </button>
+        <IconButton onClick={cerrar} disabled={guardando} aria-label="Cerrar">
+          <X />
+        </IconButton>
       </div>
 
       {aConfirmar ? (
@@ -142,8 +135,8 @@ export function RegistrarPagoModal({ reembolso, onRegistrado, onDesactualizado, 
             <Button variant="neutral" onClick={() => { setRechazo(null); setAConfirmar(null); }} disabled={guardando}>
               <ArrowLeft className="size-[17px]" /> Volver
             </Button>
-            <Button onClick={confirmar} disabled={guardando}>
-              {guardando ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />} Confirmar pago
+            <Button onClick={confirmar} loading={guardando}>
+              <Check className="size-[17px]" /> Confirmar pago
             </Button>
           </div>
         </>
