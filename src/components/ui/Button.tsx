@@ -10,9 +10,8 @@ import { cn } from "@/lib/utils";
  * - `neutral`: secundarias, y el "Cancelar" de un diálogo.
  * - `danger`: confirmar una acción destructiva dentro de su diálogo.
  * - `danger-outline`: disparar una acción destructiva desde la página (abre el diálogo).
- * - `ghost`: **deprecada**. Queda hasta migrar sus usos a `neutral`.
  */
-export type ButtonVariant = "primary" | "neutral" | "danger" | "danger-outline" | "ghost";
+export type ButtonVariant = "primary" | "neutral" | "danger" | "danger-outline";
 export type ButtonSize = "sm" | "md" | "lg";
 
 /** Variantes tácticas (sombra inset inferior) equivalentes a las clases .btn-* heredadas. */
@@ -26,7 +25,6 @@ const variants: Record<ButtonVariant, string> = {
   // De contorno y sin relieve: una acción destructiva secundaria no tiene que
   // pesar más que la principal de la pantalla.
   "danger-outline": "border-danger bg-surface text-danger hover:bg-danger-fill active:translate-y-px",
-  ghost: "border-transparent bg-transparent text-green-800 hover:bg-green-050",
 };
 
 const sizes: Record<ButtonSize, string> = {
