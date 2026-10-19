@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, MapPin, Warehouse } from "lucide-react";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import { CropChip } from "@/components/catalog/controls";
-import { Skeleton } from "@/components/ui";
+import { Skeleton, buttonClasses } from "@/components/ui";
 import { moneyAr } from "@/lib/format";
 import type { ActividadResumen } from "@/types/catalogo";
 
@@ -56,7 +56,7 @@ export default function ActividadCard({
               </div>
             )}
           </div>
-          <span className="btn btn-primary btn-sm shrink-0 whitespace-nowrap">
+          <span className={buttonClasses({ size: "sm", className: "shrink-0 whitespace-nowrap" })}>
             Ver detalle <ArrowRight size={16} />
           </span>
         </div>
