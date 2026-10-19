@@ -32,7 +32,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { TextField } from "@/components/ui/text-field";
-import { ActionBtn, Button, Skeleton } from "@/components/ui";
+import { ActionBtn, Button, IconButton, Skeleton } from "@/components/ui";
 import { EMAIL_RE } from "@/data/auth";
 import { admInitials } from "@/data/admin";
 import { PermisoAdmin } from "@/lib/permisos";
@@ -524,25 +524,9 @@ function AdminForm({
                 : "Ingresá el correo de un usuario registrado y elegí su rol. Queda activo en el sistema de inmediato."}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onCancel}
-            aria-label="Cerrar"
-            style={{
-              width: 42,
-              height: 42,
-              flexShrink: 0,
-              borderRadius: "var(--radius)",
-              border: "1px solid var(--outline-variant)",
-              background: "var(--surface)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <X size={20} color="var(--fg-2)" />
-          </button>
+          <IconButton onClick={onCancel} aria-label="Cerrar">
+            <X />
+          </IconButton>
         </div>
 
         <div
@@ -668,10 +652,8 @@ function AdminForm({
           <Button variant="neutral" onClick={onCancel} disabled={saving}>
             Cancelar
           </Button>
-          <Button type="submit" variant="primary" disabled={bloqueado}>
-            {saving ? (
-              <Loader size={17} className="spin" />
-            ) : editando ? (
+          <Button type="submit" variant="primary" disabled={bloqueado} loading={saving}>
+            {editando ? (
               <Check size={17} />
             ) : (
               <UserPlus size={17} />
@@ -754,8 +736,8 @@ function ConfirmarBaja({
         <Button variant="neutral" onClick={onCancel} disabled={busy}>
           No, volver
         </Button>
-        <Button variant="danger" onClick={onConfirm} disabled={busy}>
-          {busy ? <Loader size={17} className="spin" /> : <Trash2 size={17} />}{" "}
+        <Button variant="danger" onClick={onConfirm} loading={busy}>
+          <Trash2 size={17} />
           Sí, borrar
         </Button>
       </div>
@@ -1067,15 +1049,13 @@ function Inner() {
             Quedan activas de inmediato; el rol define qué puede hacer cada una.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary btn-lg"
+        <Button
           disabled={!gestionar}
           title={gestionar ? undefined : SIN_GESTION}
           onClick={() => setModal("nuevo")}
         >
           <UserPlus size={18} /> Agregar administrador
-        </button>
+        </Button>
       </div>
       <div
         style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}
