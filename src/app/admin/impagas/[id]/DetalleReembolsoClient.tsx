@@ -7,7 +7,7 @@ import {
   HandCoins, Hash, Mail, Phone, ReceiptText, SearchX, User, UserCheck, Users, Warehouse,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, EstadoBadge, Skeleton, Toast, buttonClasses } from "@/components/ui";
+import { Alert, BackLink, Button, EstadoBadge, Skeleton, Toast, buttonClasses } from "@/components/ui";
 import { ESTADO_META } from "@/data/impagas";
 import { fmtDiaLocal, fmtFecha, fmtFranja, fmtHoraLocal, moneyAr } from "@/lib/format";
 import { PermisoAdmin } from "@/lib/permisos";
@@ -253,9 +253,7 @@ export default function DetalleReembolsoClient({ id }: { id: string }) {
         <h1 className="flex items-center gap-3 font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">
           <HandCoins size={28} className="text-brown-700" /> Detalle del reembolso
         </h1>
-        <Link href="/admin/impagas" className={buttonClasses({ variant: "neutral", size: "sm" })}>
-          <ArrowLeft size={15} /> Volver
-        </Link>
+        <BackLink href="/admin/impagas" />
       </div>
 
       {aviso && <Alert tone="warning" className="mb-6">{aviso}</Alert>}
