@@ -12,7 +12,7 @@ import AsyncBoundary from "@/components/AsyncBoundary";
 import ContactarEstablecimiento from "@/components/chat/ContactarEstablecimiento";
 import MapaEmbed, { consultaMapa, urlComoLlegar } from "@/components/MapaEmbed";
 import PagarConMercadoPago from "@/components/reserva/PagarConMercadoPago";
-import { Alert, Button, EstadoBadge, Skeleton, Toast, buttonClasses } from "@/components/ui";
+import { Alert, BackLink, Button, EstadoBadge, Skeleton, Toast, buttonClasses } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { metaEstadoReserva } from "@/data/reservas";
 import { fmtDiaLocal, fmtFranja, fmtHoraLocal, moneyAr } from "@/lib/format";
@@ -154,9 +154,9 @@ function Cabecera({ r, onCancelar, pagable }: { r: ReservaDetalle; onCancelar?: 
         </div>
         <div className="flex flex-wrap items-start gap-2.5">
           {pagable && r.checkout && <PagarConMercadoPago preferenceId={r.checkout.preferenceId} />}
-          <button type="button" className="btn btn-neutral" onClick={() => descargarComprobante(r)}>
+          <Button variant="neutral" onClick={() => descargarComprobante(r)}>
             <Download size={17} /> Descargar comprobante
-          </button>
+          </Button>
           {/* El chat es por actividad: sin los dos ids no hay a quién escribirle. */}
           {r.actividadId && r.establecimientoId && (
             <ContactarEstablecimiento
@@ -167,7 +167,7 @@ function Cabecera({ r, onCancelar, pagable }: { r: ReservaDetalle; onCancelar?: 
             />
           )}
           {onCancelar && (
-            <Button variant="neutral" className="border-danger text-danger hover:border-danger" onClick={onCancelar}>
+            <Button variant="danger-outline" onClick={onCancelar}>
               <XCircle size={17} /> Cancelar reserva
             </Button>
           )}
@@ -329,7 +329,7 @@ function NoEncontrada() {
       <div className="max-w-[440px] text-[14.5px] leading-normal text-fg-2">
         No encontramos esta reserva entre las tuyas. Puede que el enlace esté incompleto.
       </div>
-      <Link href="/mis-reservas" className="btn btn-primary mt-2">
+      <Link href="/mis-reservas" className={buttonClasses({ className: "mt-2" })}>
         <ArrowLeft size={17} /> Volver a Mis reservas
       </Link>
     </div>
@@ -405,9 +405,7 @@ export default function DetalleClient({ id, retornoPago }: { id: string; retorno
         <span className="font-medium text-fg-2">Detalle de la reserva</span>
       </div>
 
-      <Link href="/mis-reservas" className="btn btn-neutral btn-sm mb-4 inline-flex items-center gap-[7px]">
-        <ArrowLeft size={16} /> Volver a Mis reservas
-      </Link>
+      <BackLink href="/mis-reservas" className="mb-4">Volver a Mis reservas</BackLink>
 
       <h1 className="mb-6 font-display text-[34px] font-bold tracking-[-.01em] text-fg-1">Detalle de la reserva</h1>
 
