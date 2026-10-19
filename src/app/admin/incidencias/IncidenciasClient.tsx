@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Pagination } from "@/components/catalog/controls";
-import { Alert, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
+import { Alert, Button, Card, EstadoBadge, IconButton, Skeleton, Toast } from "@/components/ui";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { TextArea } from "@/components/ui/text-area";
 import {
@@ -294,8 +294,8 @@ function GestionarForm({ detalle, puedeGestionar, busy, error, onCancel, onGuard
               <X className="size-[17px]" /> {puedeGestionar ? "Cancelar" : "Cerrar"}
             </Button>
             {puedeGestionar && (
-              <Button type="submit" disabled={cerrada || !cambio || busy || faltan > 0}>
-                {busy ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />} Guardar
+              <Button type="submit" disabled={cerrada || !cambio || faltan > 0} loading={busy}>
+                <Check className="size-[17px]" /> Guardar
               </Button>
             )}
           </div>
@@ -358,14 +358,9 @@ function GestionarModal({ inc, puedeGestionar, busy, error, onCancel, onGuardar 
               Reportada por <strong className="font-semibold text-fg-1">{inc.usuario || "—"}</strong>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={cerrar}
-            aria-label="Cerrar"
-            className="flex size-[42px] shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface"
-          >
-            <X className="size-5 text-fg-2" />
-          </button>
+          <IconButton onClick={cerrar} aria-label="Cerrar">
+            <X />
+          </IconButton>
         </div>
 
         {!alDia ? (
