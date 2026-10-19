@@ -1,14 +1,13 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  AlertTriangle, ArrowLeft, CalendarCheck, CalendarClock, CalendarDays, CalendarRange, Check, Clock, Loader, MapPin, X,
+  AlertTriangle, ArrowLeft, CalendarCheck, CalendarClock, CalendarDays, CalendarRange, Check, Clock, MapPin, X,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Card, Modal, Skeleton } from "@/components/ui";
+import { Alert, BackLink, Button, Card, Modal, Skeleton } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
 import { CalendarioFechas, hoyISO, sumarDiasISO } from "@/components/ui/date-picker";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
@@ -93,8 +92,8 @@ function ConfirmarModal({ resumen, reprogramando, rechazo, onConfirmar, onCerrar
         <Button variant="neutral" onClick={cerrar} disabled={reprogramando}>
           <X className="size-4" /> Cancelar
         </Button>
-        <Button onClick={onConfirmar} disabled={reprogramando}>
-          {reprogramando ? <><Loader className="spin size-4" /> Reprogramando…</> : <><Check className="size-4" /> Confirmar</>}
+        <Button onClick={onConfirmar} loading={reprogramando}>
+          <Check className="size-4" /> Confirmar
         </Button>
       </div>
     </Modal>
@@ -427,12 +426,9 @@ export default function ReprogramarClient({ actividadId, diaId }: { actividadId:
             <Exito resumen={r} nuevo={listo} volver={volver} calendario={calendario} />
           ) : (
             <>
-              <Link
-                href={volver}
-                className="mb-[18px] inline-flex items-center gap-[7px] text-[13.5px] font-semibold text-fg-2 no-underline hover:text-fg-1"
-              >
-                <ArrowLeft className="size-4" /> Volver a las reservas del día
-              </Link>
+              <BackLink href={volver} className="mb-[18px]">
+                Volver a las reservas del día
+              </BackLink>
 
               <div className="mb-2.5 flex flex-wrap items-start gap-4">
                 <div className="flex size-14 shrink-0 items-center justify-center rounded-[16px] border border-green-100 bg-green-050">
