@@ -3,6 +3,7 @@
 import { AlertCircle, Trash2, Plus } from "lucide-react";
 import { moneyAr } from "@/lib/format";
 import { evalViajero, TIPOS_DOC, type Viajero, type Precios, type Rango } from "@/data/reserva";
+import { IconButton } from "@/components/ui";
 
 const inputStyle: React.CSSProperties = {
   width: "100%", fontFamily: "var(--font-sans)", fontSize: 14.5, color: "var(--fg-1)",
@@ -32,16 +33,14 @@ function TravelerRow({
           <span style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--green-800)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12.5, fontWeight: 700, fontFamily: "var(--font-mono)" }}>{index + 1}</span>
           <span style={{ fontSize: 14, fontWeight: 600, color: "var(--fg-1)" }}>Visitante {index + 1}</span>
         </div>
-        <button
-          type="button"
+        <IconButton
           onClick={onRemove}
           disabled={!canRemove}
           aria-label="Eliminar visitante"
           title={canRemove ? "Eliminar visitante" : "Debe haber al menos un visitante"}
-          style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid var(--outline-variant)", background: "var(--surface)", cursor: canRemove ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", opacity: canRemove ? 1 : 0.4 }}
         >
-          <Trash2 size={15} color="var(--danger)" />
-        </button>
+          <Trash2 className={canRemove ? "text-danger" : undefined} />
+        </IconButton>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 14, marginBottom: 14 }} className="trav-grid">
