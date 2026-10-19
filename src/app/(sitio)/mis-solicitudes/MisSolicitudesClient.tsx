@@ -7,7 +7,7 @@ import {
   Loader, PlusCircle, Building2, MapPin, CalendarDays, ChevronRight, Inbox,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { EstadoBadge, Skeleton } from "@/components/ui";
+import { EstadoBadge, Skeleton, buttonClasses } from "@/components/ui";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { fmtFechaHora } from "@/lib/format";
 import { useMisSolicitudes } from "@/hooks/useMisSolicitudes";
@@ -123,7 +123,7 @@ export default function MisSolicitudesClient() {
             Seguí el estado de las solicitudes de alta de establecimiento que enviaste.
           </p>
         </div>
-        <Link href={NUEVA_HREF} className="btn btn-primary inline-flex shrink-0 no-underline">
+        <Link href={NUEVA_HREF} className={buttonClasses({ className: "shrink-0" })}>
           <PlusCircle className="size-[17px]" /> Nueva solicitud
         </Link>
       </div>
