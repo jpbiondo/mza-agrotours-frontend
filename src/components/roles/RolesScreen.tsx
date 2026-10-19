@@ -1,11 +1,10 @@
 "use client";
-
 import { useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import {
-  ChevronRight, Info, KeyRound, Loader, Lock, Pencil, Plus, ShieldCheck, Trash2,
+  ChevronRight, Info, KeyRound, Lock, Pencil, Plus, ShieldCheck, Trash2,
 } from "lucide-react";
-import { Alert, Button, Card, IconCircle, Modal, Panel, Skeleton, Toast } from "@/components/ui";
+import { ActionBtn, Alert, Button, Card, IconCircle, Modal, Panel, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { AccionesRoles, DatosRol, GrupoPermiso, RolDetalle } from "@/types/roles";
@@ -184,7 +183,7 @@ export function RolesSkeleton({ textos }: { textos: TextosRoles }) {
       <Encabezado
         textos={textos}
         accion={
-          <Button size="lg" disabled>
+          <Button disabled>
             <Plus className="size-[18px]" /> Agregar rol
           </Button>
         }
@@ -337,7 +336,6 @@ export function RolesScreen({
         textos={textos}
         accion={
           <Button
-            size="lg"
             disabled={!puedeGestionar}
             title={puedeGestionar ? "Crear un rol nuevo" : textos.sinGestion}
             onClick={() => abrirForm(null)}
@@ -415,28 +413,21 @@ export function RolesScreen({
 
                 <td className="p-4 align-top">
                   <div className="flex justify-end gap-2.5">
-                    <Button
-                      variant="neutral"
-                      size="sm"
-                      className="text-sm text-green-800"
+                    <ActionBtn
+                      icon={<Pencil className="size-[17px]" />}
+                      label="Modificar"
                       disabled={r.esProtegido || !puedeGestionar}
                       title={editTitle}
                       onClick={() => abrirForm(r)}
-                    >
-                      <Pencil className="size-[17px]" /> Modificar
-                    </Button>
-                    {/* Danger de contorno: <Button variant="danger"> es relleno,
-                        demasiado peso para una acción secundaria de la fila. */}
-                    <Button
-                      variant="neutral"
-                      size="sm"
-                      className="border-danger text-sm text-danger"
+                    />
+                    <ActionBtn
+                      icon={<Trash2 className="size-[17px]" />}
+                      label="Borrar"
+                      tone="danger"
                       disabled={noBorrable}
                       title={delTitle}
                       onClick={() => pedirBaja(r)}
-                    >
-                      <Trash2 className="size-[17px]" /> Borrar
-                    </Button>
+                    />
                   </div>
                   {/* Sólo si ése es el motivo real: sin poder gestionar, la
                       aclaración distrae del que importa. */}
@@ -491,13 +482,9 @@ export function RolesScreen({
             <Button
               variant="danger"
               onClick={() => confirmDelete(toDelete)}
-              disabled={acciones.borrando}
+              loading={acciones.borrando}
             >
-              {acciones.borrando ? (
-                <Loader className="spin size-[17px]" />
-              ) : (
-                <Trash2 className="size-[17px]" />
-              )}
+              <Trash2 className="size-[17px]" />
               Sí, dar de baja
             </Button>
           </div>
