@@ -2,17 +2,29 @@
 
 import { useEffect } from "react";
 import { Check, Loader, LayoutDashboard } from "lucide-react";
-import { DESTINO_DEFAULT } from "@/data/auth";
+import { DESTINO_DEFAULT, type Destino } from "@/data/auth";
 import type { Cuenta } from "@/types/auth";
 
 const REDIRECT_MS = 2600;
 
 interface LoginSuccessProps {
   cuenta: Cuenta;
+  /** Ruta interna de la que vino el usuario (ya validada con `destinoSeguro`). */
+  volver?: string | null;
 }
 
-export default function LoginSuccess({ cuenta }: LoginSuccessProps) {
-  const dest = DESTINO_DEFAULT;
+/**
+ * El destino cuando hay a dónde volver: la pantalla que pidió el login. Los
+ * textos encajan en "Te estamos llevando a tu {sub}" e "Ir a {label}".
+ */
+const destinoVuelta = (href: string): Destino => ({
+  label: "La pantalla anterior",
+  sub: "Pantalla anterior",
+  href,
+});
+
+export default function LoginSuccess({ cuenta, volver }: LoginSuccessProps) {
+  const dest = volver ? destinoVuelta(volver) : DESTINO_DEFAULT;
 
   useEffect(() => {
     const t = setTimeout(() => { window.location.href = dest.href; }, REDIRECT_MS);
