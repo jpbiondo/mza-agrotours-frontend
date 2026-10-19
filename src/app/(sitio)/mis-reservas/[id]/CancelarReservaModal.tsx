@@ -197,10 +197,8 @@ export default function CancelarReservaModal({
           {bloqueado ? "Cerrar" : "No, volver"}
         </Button>
         {!bloqueado && (
-          <Button variant="danger" className="flex-1" onClick={() => confirmar(condicion)} disabled={cancelando}>
-            {cancelando
-              ? <><Loader size={16} className="spin" /> Cancelando…</>
-              : <><XCircle size={17} /> Sí, cancelar reserva</>}
+          <Button variant="danger" className="flex-1" onClick={() => confirmar(condicion)} loading={cancelando}>
+            <XCircle size={17} /> Sí, cancelar reserva
           </Button>
         )}
       </div>
