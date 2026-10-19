@@ -1,14 +1,13 @@
 "use client";
-
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useController, useForm, useWatch, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  AlertCircle, ArrowLeft, Ban, Check, HelpCircle, Info, Loader, LogOut, MapPin, Save, Send, X,
+  AlertCircle, Ban, Check, HelpCircle, Info, LogOut, MapPin, Save, Send, X,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Card, Modal, Skeleton, Toast } from "@/components/ui";
+import { Alert, BackLink, Button, Card, Modal, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -420,21 +419,9 @@ function Formulario({
                   >
                     <Save className="size-4" /> Guardar como borrador
                   </Button>
-                  <Button type="submit" disabled={bloqueado} title={bloqueoTarifas ?? undefined}>
-                    {guardando ? (
-                      <>
-                        <Loader className="spin size-4" /> Guardando…
-                      </>
-                    ) : resultado ? (
-                      <>
-                        <Check className="size-4" /> Guardado
-                      </>
-                    ) : (
-                      <>
-                        <Send className="size-4" />{" "}
-                        {inicial.estado === "publicado" ? "Publicar cambios" : "Publicar"}
-                      </>
-                    )}
+                  <Button type="submit" disabled={bloqueado} loading={guardando} title={bloqueoTarifas ?? undefined}>
+                    {resultado ? <Check className="size-4" /> : <Send className="size-4" />}
+                    {resultado ? "Guardado" : inicial.estado === "publicado" ? "Publicar cambios" : "Publicar"}
                   </Button>
                 </div>
                 {bloqueoTarifas && (
@@ -498,7 +485,6 @@ function FormularioSkeleton() {
 
 /* ---- Pantalla ------------------------------------------------------------ */
 export default function EditarActividadClient({ actividadId }: { actividadId: string }) {
-  const router = useRouter();
   // El establecimiento activo es el de la URL.
   const { activo } = useEstablecimientos();
   const listado = useRutaPanel()("actividades");
@@ -508,9 +494,7 @@ export default function EditarActividadClient({ actividadId }: { actividadId: st
   return (
     <div className="min-h-screen bg-cream-bg">
       <div className="mx-auto max-w-[1180px] px-7 pt-7 pb-16">
-        <Button variant="neutral" size="sm" className="mb-4 text-sm" onClick={() => router.push(listado)}>
-          <ArrowLeft className="size-4" /> Volver al listado
-        </Button>
+        <BackLink href={listado} className="mb-4">Volver al listado</BackLink>
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
