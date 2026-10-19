@@ -1,13 +1,12 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft, ArrowRight, Ban, CalendarCheck, CalendarDays, CheckCircle2, Clock, CreditCard, Hourglass, Info,
+   ArrowRight, Ban, CalendarCheck, CalendarDays, CheckCircle2, Clock, CreditCard, Hourglass, Info,
   ListChecks, MapPin, X,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { Alert, BackLink, Card, EstadoBadge, IconButton, Skeleton } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
 import { hoyISO, sumarDiasISO, aISO } from "@/components/ui/date-picker";
 import { CropChip, EstadoActividadBadge, IconoActividad } from "@/components/panel/actividad/identidad";
@@ -168,14 +167,9 @@ function ResumenDia({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <EstadoBadge tone={pasado ? "neutral" : "info"}>{pasado ? "Finalizado" : "Próximo"}</EstadoBadge>
-          <button
-            type="button"
-            onClick={onCerrar}
-            aria-label="Cerrar detalle"
-            className="flex size-8 cursor-pointer items-center justify-center rounded-md border border-green-100 bg-surface text-fg-2 transition-colors hover:bg-cream-tert"
-          >
-            <X className="size-4" />
-          </button>
+          <IconButton onClick={onCerrar} aria-label="Cerrar detalle">
+            <X />
+          </IconButton>
         </div>
       </div>
 
@@ -374,12 +368,9 @@ export default function CalendarioActividadClient({ actividadId, mesInicial }: {
         >
           {base && (
             <>
-              <Link
-                href={ruta("actividades")}
-                className="mb-[18px] inline-flex items-center gap-[7px] text-[13.5px] font-semibold text-fg-2 no-underline hover:text-fg-1"
-              >
-                <ArrowLeft className="size-4" /> Volver a actividades
-              </Link>
+              <BackLink href={ruta("actividades")} className="mb-[18px]">
+                Volver a actividades
+              </BackLink>
 
               <div className="mb-2 flex flex-wrap items-start gap-[18px]">
                 <div
