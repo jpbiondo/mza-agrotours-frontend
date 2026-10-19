@@ -14,10 +14,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { FormHead, BackLink, FormAlert } from "@/app/acceso/components/AuthShell";
+import { FormHead, FormAlert } from "@/app/acceso/components/AuthShell";
 import { Button } from "@/components/ui/Button";
 import { recoverEmailSchema } from "../schema";
 import { enviarResetEmail } from "@/lib/passwordReset";
+import { BackLink } from "@/components/ui";
 
 type RecoverEmailData = z.infer<typeof recoverEmailSchema>;
 
@@ -52,7 +53,7 @@ export default function RecoverEmailForm({ onSent, onBack }: RecoverEmailFormPro
 
   return (
     <div data-screen-label="Recuperar contraseña · correo">
-      <BackLink onClick={onBack}>Volver a iniciar sesión</BackLink>
+      <BackLink onClick={onBack} className="mb-[22px]">Volver a iniciar sesión</BackLink>
       <FormHead
         icon={<KeyRound size={24} color="var(--green-800)" />}
         title="Recuperá tu contraseña"
@@ -96,16 +97,10 @@ export default function RecoverEmailForm({ onSent, onBack }: RecoverEmailFormPro
             type="submit"
             variant="primary"
             size="lg"
-            disabled={form.formState.isSubmitting}
+            loading={form.formState.isSubmitting}
             className="mt-1 w-full"
           >
-            {form.formState.isSubmitting ? (
-              "Enviando…"
-            ) : (
-              <>
-                <Send className="size-[18px]" /> Enviar enlace de recuperación
-              </>
-            )}
+            <Send className="size-[18px]" /> Enviar enlace de recuperación
           </Button>
         </form>
       </Form>
