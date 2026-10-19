@@ -1,10 +1,9 @@
 "use client";
-
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader, MapPin, Send, Star, Users, X } from "lucide-react";
+import { MapPin, Send, Star, Users, X } from "lucide-react";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { Button, Modal } from "@/components/ui";
+import { Button, IconButton, Modal } from "@/components/ui";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { StarRating } from "@/components/ui/star-rating";
@@ -68,15 +67,9 @@ export default function ValorarModal({
           </div>
           <h2 className="font-display text-lg font-bold text-fg-1">Valorar actividad</h2>
         </div>
-        <button
-          type="button"
-          onClick={cerrar}
-          disabled={enviando}
-          aria-label="Cerrar"
-          className="inline-flex size-[34px] cursor-pointer items-center justify-center rounded-[10px] border border-outline-variant bg-cream-bg text-fg-2 disabled:cursor-not-allowed"
-        >
-          <X size={18} />
-        </button>
+        <IconButton onClick={cerrar} disabled={enviando} aria-label="Cerrar">
+          <X />
+        </IconButton>
       </div>
 
       <Form {...form}>
@@ -148,9 +141,9 @@ export default function ValorarModal({
           </div>
 
           <div className="mt-4 flex gap-3 border-t border-cream-tert px-6 pt-4 pb-[18px]">
-            <Button type="submit" className="flex-1" disabled={enviando || faltan > 0}>
-              {enviando ? <Loader size={16} className="spin" aria-hidden /> : <Send size={16} aria-hidden />}
-              {enviando ? "Enviando…" : "Enviar"}
+            <Button type="submit" className="flex-1" disabled={faltan > 0} loading={enviando}>
+              <Send size={16} aria-hidden />
+              Enviar
             </Button>
             <Button variant="neutral" className="min-w-[130px]" onClick={cerrar} disabled={enviando}>
               Cancelar
