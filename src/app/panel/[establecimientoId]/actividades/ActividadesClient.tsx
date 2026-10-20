@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle, Ban, CalendarDays, CalendarPlus, Check, Clock, Eye, EyeOff, FilePenLine,
@@ -10,9 +10,9 @@ import {
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { CropChip, IconoActividad } from "@/components/panel/actividad/identidad";
 import { Pagination } from "@/components/catalog/controls";
-import { ActionBtn, Alert, Button, Card, EstadoBadge, Modal, Skeleton, Toast } from "@/components/ui";
+import { ActionBtn, Alert, Button, Card, EstadoBadge, Modal, Skeleton } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
-import type { ToastData } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useActividades, useActividadAcciones, useEstadosActividad } from "@/hooks/useActividades";
@@ -342,13 +342,12 @@ export default function ActividadesClient() {
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
   const [toDelete, setToDelete] = useState<ActividadProd | null>(null);
   const [blocked, setBlocked] = useState<ActividadProd | null>(null);
-  const [toast, setToast] = useState<ToastData | null>(null);
+  const [errorBaja, setErrorBaja] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4800);
-    return () => clearTimeout(t);
-  }, [toast]);
+  function cerrarBaja() {
+    setToDelete(null);
+    setErrorBaja(null);
+  }
 
   const visibles = useMemo(
     () => (data?.items ?? []).map((a) => (overrides[a.id] ? { ...a, ...overrides[a.id] } : a)),
@@ -376,34 +375,32 @@ export default function ActividadesClient() {
   const limpiarTodo = () => { limpiar(); setEstadoF("todas"); setPage(0); };
 
   async function confirmDelete(act: ActividadProd) {
+    setErrorBaja(null);
     const r = await darDeBaja(act.id);
-    setToDelete(null);
     if (!r.ok) {
       // El botón ya se deshabilita con reservas pagadas, pero alguien pudo pagar
       // con el listado abierto: se cambia la confirmación por el aviso de qué hacer.
-      if (r.code === "A.reservasPagadas") setBlocked(act);
-      else setToast({
-        tone: "danger",
-        title: "No pudimos dar de baja la actividad.",
-        sub: r.code === "E.suspendido" ? SUSPENDIDO_MODIFICAR : "Probá de nuevo en un momento.",
-      });
+      if (r.code === "A.reservasPagadas") { cerrarBaja(); setBlocked(act); }
+      // El resto queda en el diálogo, que sigue abierto para reintentar.
+      else setErrorBaja(r.code === "E.suspendido" ? SUSPENDIDO_MODIFICAR : "No pudimos dar de baja la actividad. Probá de nuevo en un momento.");
       return;
     }
+    cerrarBaja();
     // La fila no desaparece del listado: el backend la devuelve como dada de
     // baja y la ordena al final. El override refleja eso hasta la próxima carga.
     setOverrides((o) => ({ ...o, [act.id]: { ...o[act.id], estado: "dado_de_baja" } }));
     estados.reload();
-    setToast({ tone: "success", title: "La actividad se dio de baja correctamente.", sub: `«${act.nombre}»` });
+    notify.successDetailed("La actividad se dio de baja correctamente.", `«${act.nombre}»`);
   }
 
-  async function setEstado(act: ActividadProd, nuevo: "publicado" | "borrador") {
+  /** Publicar o pasar a borrador es reversible: el toast ofrece "Deshacer", que vuelve al estado anterior. */
+  async function setEstado(act: ActividadProd, nuevo: "publicado" | "borrador", deshaciendo = false) {
     const r = await cambiarEstado(act.id, nuevo);
     if (!r.ok) {
-      setToast({
-        tone: "danger",
-        title: nuevo === "publicado" ? "No pudimos publicar la actividad." : "No pudimos pasar la actividad a borrador.",
-        sub: MENSAJE_ERROR_ESTADO[r.code ?? ""] ?? "Probá de nuevo en un momento.",
-      });
+      notify.error(
+        nuevo === "publicado" ? "No pudimos publicar la actividad." : "No pudimos pasar la actividad a borrador.",
+        MENSAJE_ERROR_ESTADO[r.code ?? ""] ?? "Probá de nuevo en un momento.",
+      );
       // Si el listado quedó viejo (alguien reservó, o la actividad cambió en otro
       // lado), se vuelve a pedir para que el toggle refleje lo que vale ahora.
       if (r.code) { setOverrides({}); reload(); estados.reload(); }
@@ -412,11 +409,13 @@ export default function ActividadesClient() {
     setOverrides((o) => ({ ...o, [act.id]: { ...o[act.id], estado: nuevo } }));
     // Los contadores del selector los cuenta el backend: se vuelven a pedir.
     estados.reload();
-    setToast({
-      tone: "success",
-      title: nuevo === "publicado" ? "La actividad se publicó correctamente." : "La actividad pasó a borrador.",
-      sub: `«${act.nombre}»`,
-    });
+    const titulo = nuevo === "publicado" ? "La actividad se publicó correctamente." : "La actividad pasó a borrador.";
+    if (deshaciendo) {
+      notify.successDetailed(titulo, `«${act.nombre}»`);
+      return;
+    }
+    const anterior = nuevo === "publicado" ? "borrador" : "publicado";
+    notify.undoable(titulo, () => setEstado(act, anterior, true), { sub: `«${act.nombre}»` });
   }
 
   return (
@@ -577,7 +576,7 @@ export default function ActividadesClient() {
       </div>
 
       {toDelete && (
-        <Modal onClose={() => setToDelete(null)} dismissable={pendingId !== toDelete.id}>
+        <Modal onClose={cerrarBaja} dismissable={pendingId !== toDelete.id}>
           <div className="flex gap-4">
             <div className="flex size-[46px] shrink-0 items-center justify-center rounded-full bg-danger-fill">
               <Trash2 className="size-[22px] text-danger" />
@@ -593,8 +592,9 @@ export default function ActividadesClient() {
               </p>
             </div>
           </div>
+          {errorBaja && <Alert tone="danger" className="mt-4">{errorBaja}</Alert>}
           <div className="mt-6 flex justify-end gap-3">
-            <Button variant="neutral" onClick={() => setToDelete(null)} disabled={pendingId === toDelete.id}>
+            <Button variant="neutral" onClick={cerrarBaja} disabled={pendingId === toDelete.id}>
               Cancelar
             </Button>
             <Button variant="danger" onClick={() => confirmDelete(toDelete)} loading={pendingId === toDelete.id}>
@@ -629,8 +629,6 @@ export default function ActividadesClient() {
           </div>
         </Modal>
       )}
-
-      {toast && <Toast {...toast} />}
     </div>
   );
 }
