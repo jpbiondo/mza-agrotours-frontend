@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
    Ban, CalendarDays, CalendarPlus, ChevronLeft, DollarSign, FilePenLine, Grape, MapPin, Users,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, BackLink, Button, Card, Skeleton, Toast } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { Alert, BackLink, Button, Card, Skeleton } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { aISO, hoyISO, sumarDiasISO } from "@/components/ui/date-picker";
 import { EstadoActividadBadge } from "@/components/panel/actividad/identidad";
 import { AbrirDiaModal } from "@/components/panel/gestion-dias/AbrirDiaModal";
@@ -152,13 +152,6 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
   const [editando, setEditando] = useState<DiaProgramado | null>(null);
   const [abriendo, setAbriendo] = useState<FechaISO | null>(null);
   const [loteAbierto, setLoteAbierto] = useState(false);
-  const [toast, setToast] = useState<ToastData | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 5200);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   const hoy = hoyISO();
   // Si la configuración no llegó se usa la misma ventana que aplica el backend:
@@ -199,7 +192,7 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
     }
     setEditando(null);
     cal.reload();
-    setToast({ tone: "success", title: "Día actualizado", sub: `${fechaCorta(dia.fecha)} · ${cupo} cupos` });
+    notify.successDetailed("Día actualizado", `${fechaCorta(dia.fecha)} · ${cupo} cupos`);
     return null;
   }
 
@@ -211,7 +204,7 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
     }
     setAbriendo(null);
     cal.reload();
-    setToast({ tone: "success", title: "Día abierto para reservas", sub: `${fechaCorta(d.fecha)} · ${d.cupoMax} cupos` });
+    notify.successDetailed("Día abierto para reservas", `${fechaCorta(d.fecha)} · ${d.cupoMax} cupos`);
     return null;
   }
 
@@ -225,7 +218,10 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
     const partes = [creados === undefined ? "Se abrieron los días nuevos" : `Se ${creados === 1 ? "abrió 1 día nuevo" : `abrieron ${creados} días nuevos`}`];
     if (descartados > 0) partes.push(`${descartados} ${descartados === 1 ? "fecha se descartó" : "fechas se descartaron"}`);
     if (!base?.vigenciaHasta || l.hasta > base.vigenciaHasta) partes.push(`la vigencia llega hasta el ${fechaCorta(l.hasta)}`);
-    setToast({ tone: descartados > 0 ? "info" : "success", title: "Días creados en lote", sub: partes.join(". ") + "." });
+    const detalle = partes.join(". ") + ".";
+    // Con fechas descartadas salió bien, pero hay algo para leer: va en `info`.
+    if (descartados > 0) notify.info("Días creados en lote", detalle);
+    else notify.successDetailed("Días creados en lote", detalle);
     return null;
   }
 
@@ -406,7 +402,6 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
         />
       )}
 
-      {toast && <Toast {...toast} />}
     </div>
   );
 }
