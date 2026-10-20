@@ -265,9 +265,9 @@ export default function NotificationBell({ ambito = "personal", className }: Not
                 ) : errorMas ? (
                   <div className="flex items-center justify-center gap-2 pt-2.5 pb-1 text-xs text-fg-2">
                     No pudimos cargar más.
-                    <button type="button" onClick={cargarMas} className="cursor-pointer font-semibold text-green-800 hover:underline">
+                    <Button variant="text" size="sm" onClick={cargarMas}>
                       Reintentar
-                    </button>
+                    </Button>
                   </div>
                 ) : hayMas ? null : (
                   <div className="pt-2.5 pb-1 text-center text-xs text-fg-3">No hay más notificaciones</div>
