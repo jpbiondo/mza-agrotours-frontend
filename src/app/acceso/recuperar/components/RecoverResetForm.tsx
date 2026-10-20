@@ -15,7 +15,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { FormHead, FormAlert } from "@/app/acceso/components/AuthShell";
+import { FormHead } from "@/app/acceso/components/AuthShell";
+import { Alert } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { newPasswordSchema } from "../schema";
 import { confirmarResetPassword } from "@/lib/passwordReset";
@@ -60,7 +61,7 @@ export default function RecoverResetForm({ oobCode, onSuccess }: RecoverResetFor
         sub="Elegí una contraseña robusta para tu cuenta. Vas a usarla la próxima vez que inicies sesión."
       />
 
-      {apiError && <FormAlert tone="danger">{apiError}</FormAlert>}
+      {apiError && <Alert tone="danger" className="pop mb-[22px]">{apiError}</Alert>}
 
       <Form {...form}>
         <form
