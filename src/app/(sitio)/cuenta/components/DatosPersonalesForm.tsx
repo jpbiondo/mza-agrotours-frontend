@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Button, Alert, SectionLabel } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { TIPOS_IDENTIFICACION } from "@/data/registro";
 import { perfilSchema } from "../schema";
 import type { Perfil } from "@/data/cuenta";
@@ -35,13 +35,11 @@ import { usePaises } from "@/hooks/usePaises";
 interface DatosPersonalesFormProps {
   inicial: Perfil;
   onDelete: () => void;
-  setToast: (t: ToastData | null) => void;
 }
 
 export default function DatosPersonalesForm({
   inicial,
   onDelete,
-  setToast,
 }: DatosPersonalesFormProps) {
   const { guardar, isLoading } = useGuardarPerfil();
   const { paises } = usePaises();
@@ -64,7 +62,7 @@ export default function DatosPersonalesForm({
         await cerrarSesion("/acceso?motivo=email-actualizado");
         return;
       }
-      setToast({ tone: "success", title: "Cambios guardados exitosamente" });
+      notify.success("Cambios guardados exitosamente");
       return;
     }
     // Email duplicado → error en el propio campo (mejor UX que un toast).
@@ -76,14 +74,12 @@ export default function DatosPersonalesForm({
       );
       return;
     }
-    setToast({
-      tone: "danger",
-      title: "No se pudieron guardar los cambios",
-      sub:
-        r.code === "validationError"
-          ? "Revisá los datos e intentá de nuevo."
-          : "Intentá de nuevo en unos minutos.",
-    });
+    notify.error(
+      "No se pudieron guardar los cambios",
+      r.code === "validationError"
+        ? "Revisá los datos e intentá de nuevo."
+        : "Intentá de nuevo en unos minutos.",
+    );
   }
 
   const showErrorAlert =
