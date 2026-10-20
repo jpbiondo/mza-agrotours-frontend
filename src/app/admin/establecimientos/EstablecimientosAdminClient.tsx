@@ -8,8 +8,8 @@ import {
   List as ListIcon, MapPin, RotateCcw, Search, SearchX, User, Warehouse,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { ActionBtn, Alert, Button, Card, EstadoBadge, IconCircle, Modal, Skeleton, Toast } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { ActionBtn, Alert, Button, Card, EstadoBadge, IconCircle, Modal, Skeleton } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { TextArea } from "@/components/ui/text-area";
@@ -453,19 +453,12 @@ function Pantalla({
   const [aSuspender, setASuspender] = useState<AdminEstab | null>(null);
   const [aReactivar, setAReactivar] = useState<AdminEstab | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
-  const [toast, setToast] = useState<ToastData | null>(null);
   const [query, setQuery] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const { suspender, reactivar, isLoading } = useModerarEstablecimiento();
 
   const activos = estabs.filter((e) => e.estado === "activo").length;
   const suspendidos = estabs.length - activos;
-
-  function avisar(title: string) {
-    const data: ToastData = { tone: "success", title };
-    setToast(data);
-    setTimeout(() => setToast((t) => (t === data ? null : t)), 3400);
-  }
 
   const visibles = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -510,7 +503,7 @@ function Pantalla({
       ejecutorEstado: "",
     });
     setASuspender(null);
-    avisar(`Se suspendió ${estab.nombre}.`);
+    notify.success(`Se suspendió ${estab.nombre}.`);
   }
 
   async function confirmarReactivacion(estab: AdminEstab) {
@@ -527,7 +520,7 @@ function Pantalla({
       ejecutorEstado: "",
     });
     setAReactivar(null);
-    avisar(`Se reactivó ${estab.nombre}.`);
+    notify.success(`Se reactivó ${estab.nombre}.`);
   }
 
   function cerrarModal() {
@@ -681,7 +674,6 @@ function Pantalla({
           onConfirm={() => confirmarReactivacion(aReactivar)}
         />
       )}
-      {toast && <Toast {...toast} />}
     </div>
   );
 }
