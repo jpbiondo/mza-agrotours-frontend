@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { Loader } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,6 +10,9 @@ import { cn } from "@/lib/utils";
  * por fila pesarían más que el contenido de la tabla, y con la sombra se leen
  * más altos de lo que son.
  *
+ * Con `href` es un link (p. ej. "Ver", "Modificar" que lleva a otra pantalla);
+ * deshabilitado o cargando se dibuja como botón, porque un link no se apaga.
+ *
  * El motivo de un botón apagado va en `title` y, según la guía, además en una
  * leyenda única arriba de la tabla: repetirlo debajo de cada fila no entra.
  */
@@ -19,6 +23,7 @@ export function ActionBtn({
   disabled,
   loading = false,
   title,
+  href,
   onClick,
 }: {
   icon: ReactNode;
@@ -29,9 +34,32 @@ export function ActionBtn({
   loading?: boolean;
   /** Siempre: cuando está deshabilitado, es el único lugar de la fila donde se explica por qué. */
   title: string;
+  /** Navega en vez de ejecutar: se dibuja como `<Link>`. */
+  href?: string;
   onClick?: () => void;
 }) {
   const apagado = disabled || loading;
+  const clase = cn(
+    "inline-flex items-center gap-2 rounded-md border bg-surface px-3 py-2 font-sans text-sm font-semibold whitespace-nowrap no-underline transition-colors",
+    apagado
+      ? "cursor-not-allowed border-outline-variant bg-cream-tert text-fg-3"
+      : tone === "danger"
+        ? "cursor-pointer border-danger text-danger hover:bg-danger-fill"
+        : "cursor-pointer border-sand text-green-800 hover:bg-green-050",
+  );
+  const contenido = (
+    <>
+      {loading ? <Loader aria-hidden className="spin size-4 shrink-0" /> : icon} {label}
+    </>
+  );
+
+  if (href && !apagado) {
+    return (
+      <Link href={href} title={title} className={clase}>
+        {contenido}
+      </Link>
+    );
+  }
   return (
     <button
       type="button"
@@ -39,16 +67,9 @@ export function ActionBtn({
       disabled={apagado}
       aria-busy={loading || undefined}
       title={title}
-      className={cn(
-        "inline-flex items-center gap-2 rounded-md border bg-surface px-3 py-2 font-sans text-sm font-semibold whitespace-nowrap transition-colors",
-        apagado
-          ? "cursor-not-allowed border-outline-variant bg-cream-tert text-fg-3"
-          : tone === "danger"
-            ? "cursor-pointer border-danger text-danger hover:bg-danger-fill"
-            : "cursor-pointer border-sand text-green-800 hover:bg-green-050",
-      )}
+      className={clase}
     >
-      {loading ? <Loader aria-hidden className="spin size-4 shrink-0" /> : icon} {label}
+      {contenido}
     </button>
   );
 }
