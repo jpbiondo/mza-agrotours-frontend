@@ -131,3 +131,10 @@ Se distingue por el hook, no por la pantalla: si usa `apiFetch` está contra el 
 ## Git
 
 Rama principal `main`, integración en `dev`. No commitees salvo que te lo pidan: el trabajo terminado queda en el working tree para revisión.
+
+## UI y diseño
+- Las reglas de UI están en docs/ui-guidelines.md. Leerlas antes de crear o modificar cualquier pantalla o componente visual.
+- Usar siempre los componentes y APIs compartidas que allí se listan (Button, notify, ConfirmDialog, Skeleton, EmptyState, ForbiddenScreen, AsyncView). No crear variantes locales ni importar directamente la librería de toasts.
+- Toda pantalla nueva debe resolver los estados de carga, vacío, error y sin autorización según las guías.
+- Si un caso no está cubierto por las guías, preguntar antes de inventar un patrón nuevo.
+- Al terminar cambios de UI, usar el subagente ui-reviewer.
