@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { CalendarCheck, Heart, Ticket } from "lucide-react";
 import RegistroForm, { type ModoRegistro } from "./RegistroForm";
-import { BackLink, Toast } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { BackLink } from "@/components/ui";
 import type { FormData } from "@/types/registro";
 
 interface RegisterViewProps {
@@ -52,13 +50,6 @@ export default function RegisterView({
   modo = "alta",
   emailCuenta,
 }: RegisterViewProps) {
-  const [toast, setToast] = useState<ToastData | null>(null);
-
-  function notify(t: ToastData | null) {
-    setToast(t);
-    if (t) setTimeout(() => setToast((cur) => (cur === t ? null : cur)), 4000);
-  }
-
   return (
     <div
       data-screen-label={
@@ -80,7 +71,6 @@ export default function RegisterView({
           <div className="rounded-lg border border-outline-variant bg-surface px-8 py-[30px]">
             <RegistroForm
               onSuccess={onSuccess}
-              setToast={notify}
               modo={modo}
               emailCuenta={emailCuenta}
             />
@@ -122,8 +112,6 @@ export default function RegisterView({
           </div>
         </aside>
       </div>
-
-      {toast && <Toast {...toast} />}
     </div>
   );
 }
