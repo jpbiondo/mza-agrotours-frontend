@@ -215,13 +215,9 @@ function Formulario({
               {resultado.advertencias.map((a) => (
                 <span key={a}>{a}</span>
               ))}
-              <button
-                type="button"
-                onClick={salir}
-                className="mt-1 w-fit cursor-pointer text-[13px] font-semibold text-info-fg underline underline-offset-2"
-              >
+              <Button variant="text" className="mt-1 w-fit" onClick={salir}>
                 Volver al listado
-              </button>
+              </Button>
             </div>
           </div>
         </div>
