@@ -8,6 +8,7 @@ import { useChatsEstablecimiento, useInfoChatsEstablecimiento, marcarChatLeidoEs
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { cn } from "@/lib/utils";
 import type { ChatEstablecimientoResumen } from "@/types/chats";
+import { IconButton } from "@/components/ui";
 
 /** Tope de caracteres por respuesta, como en el diseño. */
 const MAX = 500;
@@ -98,9 +99,9 @@ function Hilo({ chat, establecimientoId, onBack }: {
     <div className="flex min-w-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-3 border-b border-outline-variant bg-surface px-[18px] py-3">
         {/* En angosto la lista y el hilo no entran juntos: se vuelve a la lista. */}
-        <button type="button" onClick={onBack} aria-label="Volver al listado" className="inline-flex cursor-pointer rounded-md p-1.5 text-fg-2 hover:bg-cream-tert md:hidden">
-          <ArrowLeft size={20} />
-        </button>
+        <IconButton appearance="plain" onClick={onBack} aria-label="Volver al listado" className="md:hidden">
+          <ArrowLeft />
+        </IconButton>
         <Avatar nombre={chat.titulo} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-display text-base leading-tight font-bold text-fg-1">{chat.titulo}</div>
