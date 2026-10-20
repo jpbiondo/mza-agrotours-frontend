@@ -24,6 +24,7 @@ import { ROL_PRODUCTOR_LIDER, tienePermiso, tieneRol } from "@/lib/roles";
 import type { EstablecimientoAcceso } from "@/lib/roles";
 import { useAuthStore } from "@/stores/authStore";
 import { useEstablecimientoStore } from "@/stores/establecimientoStore";
+import { IconButton } from "@/components/ui";
 
 interface NavItem {
   id: string;
@@ -391,14 +392,9 @@ function AccountBar({
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-2.5 border-b border-outline-variant bg-surface px-3.5 shell:gap-3 shell:px-7">
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
-        <button
-          type="button"
-          onClick={onMenu}
-          aria-label="Abrir menú"
-          className={cn(BTN_SHELL, "shell:hidden")}
-        >
-          <Menu className="size-5 text-fg-1" />
-        </button>
+        <IconButton onClick={onMenu} aria-label="Abrir menú" className="shell:hidden">
+          <Menu />
+        </IconButton>
         {/* En compacto queda sólo el icono, para dejarle el ancho a la campana
             y al avatar. */}
         <Link
@@ -545,14 +541,9 @@ export default function PanelShell({ children }: { children: ReactNode }) {
               </span>
             </span>
           </Link>
-          <button
-            type="button"
-            onClick={cerrar}
-            aria-label="Cerrar menú"
-            className={cn(BTN_SHELL, "mr-4 shell:hidden")}
-          >
-            <X className="size-5 text-fg-2" />
-          </button>
+          <IconButton onClick={cerrar} aria-label="Cerrar menú" className="mr-4 shell:hidden">
+            <X />
+          </IconButton>
         </div>
 
         <EstablishmentSwitcher lista={lista} activo={activo} onElegir={elegir} />
