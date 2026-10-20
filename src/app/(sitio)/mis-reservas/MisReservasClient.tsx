@@ -235,9 +235,9 @@ export default function MisReservasClient() {
           {applied && (
             <div className="flex items-center gap-2.5 text-[13.5px] text-fg-2">
               <span>Buscando:&nbsp;<strong className="text-fg-1">“{applied}”</strong></span>
-              <button type="button" onClick={() => { setQuery(""); setApplied(""); }} className="cursor-pointer border-none bg-transparent px-1.5 py-1 text-[13.5px] font-semibold text-green-800">
+              <Button variant="text" onClick={() => { setQuery(""); setApplied(""); }}>
                 Limpiar búsqueda
-              </button>
+              </Button>
             </div>
           )}
         </div>
