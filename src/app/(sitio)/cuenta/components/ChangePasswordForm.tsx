@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Button, Card } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { cambiarPasswordSchema, type CambiarPasswordForm } from "../schema";
 import { useCambiarPassword } from "@/hooks/usePerfil";
 
@@ -26,11 +26,7 @@ const TIPS = [
   "No la reutilices de otros sitios.",
 ];
 
-export default function ChangePasswordForm({
-  setToast,
-}: {
-  setToast: (t: ToastData | null) => void;
-}) {
+export default function ChangePasswordForm() {
   const [showActual, setShowActual] = useState(false);
   const [showNueva, setShowNueva] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -50,16 +46,12 @@ export default function ChangePasswordForm({
           message: "La contraseña actual ingresada es incorrecta",
         });
       } else {
-        setToast({
-          tone: "danger",
-          title: "No se pudo cambiar la contraseña",
-          sub: "Intentá de nuevo en unos minutos.",
-        });
+        notify.error("No se pudo cambiar la contraseña", "Intentá de nuevo en unos minutos.");
       }
       return;
     }
     form.reset();
-    setToast({ tone: "success", title: "Contraseña actualizada correctamente" });
+    notify.success("Contraseña actualizada correctamente");
   }
 
   return (
