@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/form";
 import { TextArea } from "@/components/ui/text-area";
 import { TextField } from "@/components/ui/text-field";
+import { notify } from "@/lib/notify";
 import { TipoPermiso } from "@/lib/permisos";
 import { ROL_PRODUCTOR_LIDER, tieneRol } from "@/lib/roles";
 import { cn } from "@/lib/utils";
@@ -434,11 +435,6 @@ function Inner({
   const [toast, setToast] = useState<ToastData | null>(null);
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
 
-  function notificar(title: string) {
-    setToast({ tone: "success", title });
-    setTimeout(() => setToast((t) => (t?.title === title ? null : t)), 3400);
-  }
-
   /**
    * Tras la baja el aviso queda a la vista un rato y recién después se sale, así
    * el usuario alcanza a leerlo. El cleanup cancela la salida si se desmonta
@@ -500,7 +496,7 @@ function Inner({
     }
     onGuardado(cambios);
     setEditando(null);
-    notificar(mensaje);
+    notify.success(mensaje);
     return res;
   }
 
