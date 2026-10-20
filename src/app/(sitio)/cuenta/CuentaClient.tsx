@@ -10,10 +10,8 @@ import DeleteAccountFlow from "./components/DeleteAccountFlow";
 import type { CuentaSesion, Perfil } from "@/data/cuenta";
 import { usePerfil } from "@/hooks/usePerfil";
 import { ordenarRoles } from "@/lib/roles";
-import { Card, Toast } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { Card } from "@/components/ui";
 
-type ToastState = ToastData | null;
 type Tab = "datos" | "seguridad";
 
 function Inner({
@@ -26,13 +24,7 @@ function Inner({
   initialTab: Tab;
 }) {
   const [deleting, setDeleting] = useState(false);
-  const [toast, setToast] = useState<ToastState>(null);
   const [tab, setTab] = useState<Tab>(initialTab);
-
-  function notify(t: ToastState) {
-    setToast(t);
-    if (t) setTimeout(() => setToast((cur) => (cur === t ? null : cur)), 4000);
-  }
 
   const tabBtn = (id: Tab, label: string, Icon: typeof UserCog) => {
     const on = tab === id;
@@ -79,11 +71,10 @@ function Inner({
           <DatosPersonalesForm
             inicial={perfil}
             onDelete={() => setDeleting(true)}
-            setToast={notify}
           />
         </Card>
       ) : (
-        <ChangePasswordForm setToast={notify} />
+        <ChangePasswordForm />
       )}
 
       {deleting && (
@@ -92,7 +83,6 @@ function Inner({
           onClose={() => setDeleting(false)}
         />
       )}
-      {toast && <Toast {...toast} />}
     </div>
   );
 }
