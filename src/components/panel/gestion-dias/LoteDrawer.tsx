@@ -379,12 +379,8 @@ export function LoteDrawer({
                 <Button variant="neutral" onClick={cerrar} disabled={guardando}>
                   <X className="size-4" /> Cancelar
                 </Button>
-                <Button type="submit" disabled={guardando || faltan > 0 || aCrear === 0}>
-                  {guardando ? (
-                    <><Loader className="spin size-4" /> Creando…</>
-                  ) : (
-                    <><Check className="size-4" /> Crear{aCrear > 0 && ` ${aCrear} ${aCrear === 1 ? "día" : "días"}`}</>
-                  )}
+                <Button type="submit" disabled={faltan > 0 || aCrear === 0} loading={guardando}>
+                  <Check className="size-4" /> Crear{aCrear > 0 && ` ${aCrear} ${aCrear === 1 ? "día" : "días"}`}
                 </Button>
               </div>
               <FaltanCampos faltan={faltan} para="crear los días" onVerQueFalta={verQueFalta} />

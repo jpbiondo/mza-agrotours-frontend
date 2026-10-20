@@ -1,10 +1,9 @@
 "use client";
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
-import { CalendarPlus, Loader, X } from "lucide-react";
+import { CalendarPlus, X } from "lucide-react";
 import { Alert, Button, Modal } from "@/components/ui";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { NumberField } from "@/components/ui/number-field";
@@ -122,8 +121,8 @@ export function AbrirDiaModal({
                 <Button variant="neutral" onClick={cerrar} disabled={guardando}>
                   <X className="size-4" /> Cancelar
                 </Button>
-                <Button type="submit" disabled={guardando || faltan > 0}>
-                  {guardando ? <><Loader className="spin size-4" /> Abriendo…</> : <><CalendarPlus className="size-4" /> Abrir día</>}
+                <Button type="submit" disabled={faltan > 0} loading={guardando}>
+                  <CalendarPlus className="size-4" /> Abrir día
                 </Button>
               </div>
               <FaltanCampos faltan={faltan} para="abrir el día" onVerQueFalta={verQueFalta} />

@@ -1,16 +1,15 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  ArrowLeft, CheckCircle2, ChevronRight, CircleDot, ClipboardCheck, Info, List, Loader,
+   CheckCircle2, ChevronRight, CircleDot, ClipboardCheck, Info, List, Loader,
   MessageSquareReply, Plus, Send, X, XCircle, type LucideIcon,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
+import { Alert, BackLink, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { TextField } from "@/components/ui/text-field";
 import { TextArea } from "@/components/ui/text-area";
@@ -228,13 +227,7 @@ function Formulario({ onCancelar, onReportada }: { onCancelar: () => void; onRep
         <span className="font-medium text-fg-2">Reportar incidencia</span>
       </Migas>
 
-      <button
-        type="button"
-        onClick={onCancelar}
-        className="mb-3.5 inline-flex cursor-pointer items-center gap-1.5 bg-transparent py-1 text-sm font-semibold text-green-800"
-      >
-        <ArrowLeft className="size-4" /> Volver al listado
-      </button>
+      <BackLink onClick={onCancelar} className="mb-3.5">Volver al listado</BackLink>
 
       <div className="mb-6">
         <h1 className="font-display text-[30px] font-bold tracking-[-.01em] text-fg-1">Reportar incidencia</h1>
@@ -299,8 +292,8 @@ function Formulario({ onCancelar, onReportada }: { onCancelar: () => void; onRep
                   <Button variant="neutral" onClick={onCancelar} disabled={enviando}>
                     <X className="size-[17px]" /> Cancelar
                   </Button>
-                  <Button type="submit" disabled={enviando || faltan > 0}>
-                    {enviando ? <Loader className="spin size-[17px]" /> : <Send className="size-[17px]" />} Reportar
+                  <Button type="submit" disabled={faltan > 0} loading={enviando}>
+                    <Send className="size-[17px]" /> Reportar
                   </Button>
                 </div>
                 <FaltanCampos faltan={faltan} para="reportar" onVerQueFalta={verQueFalta} />

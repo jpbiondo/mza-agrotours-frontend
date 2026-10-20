@@ -378,13 +378,9 @@ export default function RecetasListClient() {
                   {total === 1 ? "receta" : "recetas"}
                 </span>
                 {hayFiltro && (
-                  <button
-                    type="button"
-                    onClick={limpiar}
-                    className="inline-flex cursor-pointer items-center gap-[5px] rounded-pill border border-sand bg-surface px-2.5 py-1 text-xs font-semibold text-fg-2 hover:bg-cream-tert"
-                  >
+                  <Button variant="text" onClick={limpiar}>
                     <X size={13} /> Limpiar filtros
-                  </button>
+                  </Button>
                 )}
               </div>
 

@@ -6,6 +6,7 @@ import { UserX } from "lucide-react";
 import { fmtFecha } from "@/lib/format";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import type { EstablecimientoAcceso } from "@/lib/roles";
+import { buttonClasses } from "@/components/ui";
 
 function AccesoSuspendido({
   establecimiento,
@@ -65,7 +66,7 @@ function AccesoSuspendido({
         {/* "Volver al inicio" y no "Volver a explorar": la barra del shell ya
             tiene ese botón, y repetir la etiqueta en la misma pantalla se lee
             como dos acciones distintas. Es además la salida de <SinPermiso>. */}
-        <Link href="/explorar" className="btn btn-primary mt-4 inline-flex no-underline">
+        <Link href="/explorar" className={buttonClasses({ className: "mt-4" })}>
           Volver al inicio
         </Link>
       </div>

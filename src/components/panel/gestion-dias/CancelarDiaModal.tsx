@@ -1,9 +1,8 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, ArrowLeft, CalendarX, Loader } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CalendarX } from "lucide-react";
 import { Alert, Button, Modal } from "@/components/ui";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { TextArea } from "@/components/ui/text-area";
@@ -115,10 +114,8 @@ export function CancelarDiaModal({
             <Button variant="neutral" onClick={cerrar} disabled={cancelando}>
               <ArrowLeft className="size-4" /> Volver
             </Button>
-            <Button type="submit" variant="danger" disabled={cancelando}>
-              {cancelando
-                ? <><Loader className="spin size-4" /> Cancelando…</>
-                : <><CalendarX className="size-[17px]" /> Confirmar cancelación</>}
+            <Button type="submit" variant="danger" loading={cancelando}>
+              <CalendarX className="size-[17px]" /> Confirmar cancelación
             </Button>
           </div>
         </form>

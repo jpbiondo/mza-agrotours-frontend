@@ -439,24 +439,11 @@ export default function RegistroForm({
             type="submit"
             variant="primary"
             size="lg"
-            disabled={form.formState.isSubmitting}
+            loading={form.formState.isSubmitting}
             className="w-full"
           >
-            {form.formState.isSubmitting ? (
-              alta ? (
-                "Creando tu cuenta…"
-              ) : (
-                "Guardando tus datos…"
-              )
-            ) : alta ? (
-              <>
-                <UserPlus className="size-[18px]" /> Registrarse
-              </>
-            ) : (
-              <>
-                <UserCheck className="size-[18px]" /> Completar registro
-              </>
-            )}
+            {alta ? <UserPlus className="size-[18px]" /> : <UserCheck className="size-[18px]" />}
+            {alta ? "Registrarse" : "Completar registro"}
           </Button>
           {alta ? (
             <div className="mt-3.5 text-center text-[13.5px] text-fg-2">

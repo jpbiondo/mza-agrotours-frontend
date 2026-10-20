@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { Skeleton } from "@/components/ui";
+import { BackLink, Skeleton, buttonClasses } from "@/components/ui";
 import { useEstablecimientoPublico } from "@/hooks/useCatalogoEstablecimientos";
 import { moneyAr } from "@/lib/format";
 import type { ActividadOfrecida, EstablecimientoPublico } from "@/types/catalogo";
@@ -115,7 +115,7 @@ function NoEncontrado() {
       <p style={{ margin: "0 auto 22px", color: "var(--fg-2)", fontSize: 15.5, maxWidth: 420, lineHeight: 1.5 }}>
         Puede que haya dejado de estar publicado o que el enlace esté mal.
       </p>
-      <Link href="/establecimientos" className="btn btn-primary" style={{ textDecoration: "none" }}>
+      <Link href="/establecimientos" className={buttonClasses()}>
         <ArrowLeft size={16} /> Volver al listado
       </Link>
     </div>
@@ -233,9 +233,7 @@ export default function DetalleClient({ id }: { id: string }) {
         <span style={{ color: "var(--fg-2)", fontWeight: 500 }}>{data?.nombre ?? "Detalle"}</span>
       </div>
 
-      <Link href="/establecimientos" style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--green-800)", fontSize: 14, fontWeight: 600, textDecoration: "none", marginBottom: 18 }}>
-        <ArrowLeft size={16} color="var(--green-800)" /> Volver al listado
-      </Link>
+      <BackLink href="/establecimientos" className="mb-[18px]">Volver al listado</BackLink>
 
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<DetalleSkeleton />}>
         {/* `data` en null es un id que no existe, no una falla de la lectura. */}

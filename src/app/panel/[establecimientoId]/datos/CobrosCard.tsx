@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeftRight, CheckCircle2, Info, Landmark, Link2, Loader, RefreshCw } from "lucide-react";
+import { ArrowLeftRight, CheckCircle2, Info, Landmark, Link2, RefreshCw } from "lucide-react";
 import { Alert, Button, Skeleton } from "@/components/ui";
 import { useCuentaMercadoPago, useVincularMercadoPago } from "@/hooks/useMercadoPago";
 import { fmtFechaHora } from "@/lib/format";
@@ -70,7 +70,7 @@ export function CobrosCard({ establecimientoId }: { establecimientoId: string })
       ) : error || !cuenta ? (
         <div className="pt-3">
           <Alert>{error ?? "No pudimos consultar la cuenta de Mercado Pago."}</Alert>
-          <Button variant="ghost" size="sm" className="mt-3 text-sm" onClick={reload}>
+          <Button variant="neutral" size="sm" className="mt-3" onClick={reload}>
             <RefreshCw className="size-3.75" /> Reintentar
           </Button>
         </div>
@@ -92,9 +92,9 @@ export function CobrosCard({ establecimientoId }: { establecimientoId: string })
 
               {!cambiando ? (
                 <Button
-                  variant="ghost"
+                  variant="neutral"
                   size="sm"
-                  className="mt-4 text-sm"
+                  className="mt-4"
                   onClick={() => {
                     setErrorVincular(null);
                     setCambiando(true);
@@ -117,14 +117,13 @@ export function CobrosCard({ establecimientoId }: { establecimientoId: string })
                     </div>
                   </div>
                   <div className="mt-3.5 flex flex-wrap gap-2 pl-6">
-                    <Button size="sm" className="text-sm" onClick={alVincular} disabled={vinculando}>
-                      {vinculando ? <Loader className="spin size-3.75" /> : <Link2 className="size-3.75" />}
+                    <Button size="sm" onClick={alVincular} loading={vinculando}>
+                      <Link2 className="size-3.75" />
                       Continuar a Mercado Pago
                     </Button>
                     <Button
-                      variant="ghost"
+                      variant="neutral"
                       size="sm"
-                      className="text-sm"
                       onClick={() => setCambiando(false)}
                       disabled={vinculando}
                     >
@@ -154,8 +153,8 @@ export function CobrosCard({ establecimientoId }: { establecimientoId: string })
 
           {cuenta.estadoCobro !== "HABILITADO" && (
             <>
-              <Button className="mt-4" onClick={alVincular} disabled={vinculando}>
-                {vinculando ? <Loader className="spin size-4" /> : <Link2 className="size-4" />}
+              <Button className="mt-4" onClick={alVincular} loading={vinculando}>
+                <Link2 className="size-4" />
                 {cuenta.estadoCobro === "SIN_CUENTA"
                   ? "Vincular cuenta de Mercado Pago"
                   : "Volver a vincular Mercado Pago"}

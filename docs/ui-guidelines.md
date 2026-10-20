@@ -10,12 +10,17 @@ Sale de [`ui-audit.md`](ui-audit.md). Cada regla dice **cuándo** se usa cada va
 | CTA del encabezado de página ("Agregar …") | `primary md`, igual que el resto de los botones de la página. *Decisión del equipo* |
 | Acción secundaria, y "Cancelar" en el pie de un diálogo | `neutral`. *Tiene 61 usos. `ghost` se elimina: sus 13 usos pasan a `neutral`* |
 | Zonas densas: filas, tarjetas, edición en línea | `sm`, tal cual, sin pisar el tamaño del texto (los `size="sm" className="text-sm"` vuelven a `sm`) |
-| Confirmar una acción destructiva **dentro** del diálogo de confirmación | `danger` relleno. *Es el uso de 15 de sus 16 apariciones* |
+| Confirmar una acción destructiva **dentro** del diálogo de confirmación | `danger` relleno. *Es el uso de 15 de sus 16 apariciones*. Sólo para confirmar: "Reintentar" o "Cerrar" dentro de un flujo destructivo van en `primary` y `neutral` |
 | Disparar una acción destructiva desde la página (abre el diálogo) | `danger-outline` ✅. *Hoy hay 5 implementaciones; esta generaliza el `ActionBtn tone="danger"`, que es la más usada* |
-| Acciones de fila de tabla o de tarjeta de listado | `ActionBtn` ✅ (`neutral` / `danger`). Reemplaza `CardAction`, los `Button sm` con overrides y los botones de sólo ícono |
+| Acciones de fila de tabla o de tarjeta de listado | `ActionBtn` ✅ (`neutral` / `danger`), con `href` si la acción navega ("Detalle", "Modificar"). Reemplaza `CardAction`, los `Button sm` y los links con `buttonClasses` de las filas, y los botones de sólo ícono. En una fila no va `primary` |
+| Acción menor en línea con el contenido: "Cargar más", "Reintentar" junto a un mensaje, "Limpiar filtros" o "Limpiar búsqueda" junto al contador, un link dentro de un aviso | `Button variant="text"` ✅: texto verde, sin caja, subrayado al pasar el mouse |
 | Volver a la pantalla anterior | `BackLink` ✅: texto verde con flecha. *Es la variante más usada (4 de 9)* |
-| Botón de sólo ícono (cerrar, mes anterior/siguiente) | `IconButton` ✅, 36 px, siempre con `aria-label` |
-| Mientras se envía | `Button loading` ✅: el spinner reemplaza al ícono, la etiqueta no cambia y el botón queda deshabilitado. *Es el patrón de ~15 de 29 casos* |
+| Botón de sólo ícono (cerrar, mes anterior/siguiente, quitar, abrir el menú del shell) | `IconButton` ✅, 36 px, siempre con `aria-label`. También en el shell: el menú y su cierre miden 36 px como el resto. *Decisión del equipo* |
+| Volver dentro de un mismo panel, sin texto (lista ↔ conversación en los chats) | `IconButton appearance="plain"`. `BackLink` es para salir de la pantalla |
+| El ícono es la acción principal (enviar un mensaje) | `IconButton appearance="primary"` ✅ |
+| Mientras se envía, o mientras se resuelve lo que hace falta para ejecutar la acción | `Button loading` / `IconButton loading` ✅: el spinner reemplaza al ícono, la etiqueta no cambia y el botón queda deshabilitado. *Es el patrón de ~15 de 29 casos* |
+
+**Fuera de estas reglas.** Los botones que son parte de otro control se resuelven con ese control, no con `IconButton`: limpiar el texto de un buscador, mostrar u ocultar una contraseña, el +/− de un selector de cantidad y las flechas de un carrusel de fotos. Tampoco son botones el segmentado Borrador/Público, las píldoras de filtro ni el "agregar ítem" con borde punteado: son patrones propios, todavía sin componente.
 
 Las clases `.btn-*` de `globals.css` no se usan en código nuevo.
 
@@ -126,6 +131,17 @@ Las preguntas abiertas del primer borrador quedaron resueltas así (2026-10-19):
 10. **Reautenticación**: sólo en parámetros, implementada de verdad con Firebase.
 11. **Toast de error**: también se cierra solo, a los 7 s.
 
+Los casos de botones que quedaron dudosos al migrar se resolvieron así (2026-10-19):
+
+12. **Acciones de fila que navegan**: `ActionBtn` acepta `href`; `CardAction` se elimina.
+13. **Botones del shell**: `IconButton` de 36 px, sin tamaño especial.
+14. **Volver dentro de un panel sin texto**: `IconButton plain`, no `BackLink`.
+15. **Botones de un control** (buscador, contraseña, cantidad, carrusel): quedan fuera de `IconButton`.
+16. **Enviar del chat**: `IconButton` con apariencia `primary`.
+17. **Spinner mientras se prepara la acción** (p. ej. "Contactar" averiguando si ya hay chat): también es `loading`.
+18. **"Reintentar" dentro de un flujo destructivo**: `primary`, no `danger`.
+19. **Botón de texto**: nueva variante `text` de `Button`.
+
 ## Preguntas abiertas
 
 Ninguna por ahora.
@@ -139,17 +155,19 @@ Cada patrón tiene un único punto de entrada. Las pantallas existentes **todav�
 ### Botones
 
 **`Button`** · `components/ui/Button.tsx` (modificado)
-- `variant`: `"primary" | "neutral" | "danger" | "danger-outline" | "ghost"`. `ghost` está *deprecada*.
-- `size`: `"sm" | "md" | "lg"`.
+- `variant`: `"primary" | "neutral" | "danger" | "danger-outline" | "text"`. `ghost` se eliminó al migrar sus usos a `neutral`.
+- `size`: `"sm" | "md" | "lg"`. Con `text` sólo cambia el tamaño de la letra: la variante no tiene padding.
 - `loading?: boolean`: el spinner reemplaza al primer ícono, la etiqueta queda igual, se deshabilita y marca `aria-busy`.
 - `disabledReason?: string`: con `disabled`, muestra el motivo como texto debajo del botón y lo asocia con `aria-describedby`.
 - `buttonClasses({ variant, size, className })`: las mismas clases, para un `<Link>`.
 
 **`ActionBtn`** · `components/ui/ActionBtn.tsx` (modificado)
-- `{ icon, label, tone?: "neutral" | "danger", disabled?, loading?, title, onClick? }`. Se agregó `loading`.
+- `{ icon, label, tone?: "neutral" | "danger", disabled?, loading?, title, href?, onClick? }`. Se agregaron `loading` y `href`.
+- Con `href` es un `<Link>`; deshabilitado o cargando se dibuja como botón apagado.
 
 **`IconButton`** · `components/ui/IconButton.tsx` (nuevo)
-- `{ "aria-label": string (obligatorio), appearance?: "bordered" | "plain", ...props de <button> }`. Mide 36 px.
+- `{ "aria-label": string (obligatorio), appearance?: "bordered" | "plain" | "primary", loading?, ...props de <button> }`. Mide 36 px.
+- `loading` reemplaza el ícono por el spinner y deshabilita el botón.
 
 **`BackLink`** · `components/ui/BackLink.tsx` (nuevo)
 - `{ href?: string, onClick?, children = "Volver" }`. Con `href` es un link; con `onClick`, un botón (para pasar por `useAvisoSalida().salir`).

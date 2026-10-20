@@ -1,5 +1,4 @@
 "use client";
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -10,7 +9,6 @@ import {
   Mail,
   Check,
   Trash2,
-  Loader,
 } from "lucide-react";
 import { TextField } from "@/components/ui/text-field";
 import { SimpleSelect } from "@/components/ui/simple-select";
@@ -255,24 +253,12 @@ export default function DatosPersonalesForm({
         </div>
 
         <div className="mt-7 flex flex-wrap items-center gap-3 border-t border-cream-tert pt-[22px]">
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader size={16} className="spin" /> Guardando…
-              </>
-            ) : (
-              <>
-                <Check size={16} /> Guardar cambios
-              </>
-            )}
+          <Button type="submit" loading={isLoading}>
+            <Check size={16} /> Guardar cambios
           </Button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="ml-auto inline-flex cursor-pointer items-center gap-2 rounded-md border border-danger bg-transparent px-4 py-2.5 font-sans text-sm font-semibold text-danger-fg"
-          >
+          <Button variant="danger-outline" className="ml-auto" onClick={onDelete}>
             <Trash2 size={16} /> Eliminar cuenta
-          </button>
+          </Button>
         </div>
       </form>
     </Form>

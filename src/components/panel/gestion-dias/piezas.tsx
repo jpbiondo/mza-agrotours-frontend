@@ -3,18 +3,13 @@ import { DIA_CORTO, fechaCorta, mesCorto, nombreMes } from "@/lib/gestion-dias";
 import { moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { FechaISO, Tarifa, VigenciaMes } from "@/types/gestion-dias";
+import { IconButton } from "@/components/ui";
 
 export function BotonCerrar({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label="Cerrar"
-      className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface text-fg-2 transition-colors hover:bg-cream-tert disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      <X className="size-[18px]" />
-    </button>
+    <IconButton onClick={onClick} disabled={disabled} aria-label="Cerrar">
+      <X />
+    </IconButton>
   );
 }
 

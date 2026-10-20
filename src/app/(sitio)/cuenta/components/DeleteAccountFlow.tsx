@@ -265,7 +265,7 @@ export default function DeleteAccountFlow({
         <Button variant="neutral" onClick={onClose}>
           Cerrar
         </Button>
-        <Button variant="danger" onClick={reintentarCheck}>
+        <Button onClick={reintentarCheck}>
           <RotateCcw size={16} /> Reintentar
         </Button>
       </div>

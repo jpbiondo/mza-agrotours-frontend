@@ -1,13 +1,11 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft, Ban, CalendarDays, CalendarPlus, ChevronLeft, DollarSign, FilePenLine, Grape, MapPin, Users,
+   Ban, CalendarDays, CalendarPlus, ChevronLeft, DollarSign, FilePenLine, Grape, MapPin, Users,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, Button, Card, Skeleton, Toast } from "@/components/ui";
-import { buttonClasses } from "@/components/ui/Button";
+import { Alert, BackLink, Button, Card, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
 import { aISO, hoyISO, sumarDiasISO } from "@/components/ui/date-picker";
 import { EstadoActividadBadge } from "@/components/panel/actividad/identidad";
@@ -286,9 +284,7 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
                     </div>
                   </div>
                 </div>
-                <Link href={ruta("actividades")} className={buttonClasses({ variant: "neutral" })}>
-                  <ArrowLeft className="size-4" /> Volver
-                </Link>
+                <BackLink href={ruta("actividades")} />
               </div>
 
               <div className="mt-[22px] flex flex-wrap items-center overflow-hidden rounded-lg border border-outline-variant bg-surface px-1.5 py-4">

@@ -1,11 +1,10 @@
 "use client";
-
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, Check, Lightbulb, Loader, X } from "lucide-react";
-import { Alert, Button } from "@/components/ui";
+import { AlertCircle, Check, Lightbulb, X } from "lucide-react";
+import { Alert, Button, IconButton } from "@/components/ui";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
@@ -104,14 +103,9 @@ export function RoleForm({
                 : textos.form.bajadaCrear}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onCancel}
-            aria-label="Cerrar"
-            className="flex size-[42px] shrink-0 cursor-pointer items-center justify-center rounded-md border border-outline-variant bg-surface"
-          >
-            <X className="size-5 text-fg-2" />
-          </button>
+          <IconButton onClick={onCancel} aria-label="Cerrar">
+            <X />
+          </IconButton>
         </div>
 
         <div className="flex flex-col gap-5 overflow-y-auto px-[26px] py-[22px]">
@@ -247,8 +241,8 @@ export function RoleForm({
             <Button variant="neutral" onClick={onCancel} disabled={busy}>
               Cancelar
             </Button>
-            <Button onClick={guardar} disabled={busy || faltan > 0}>
-              {busy ? <Loader className="spin size-[17px]" /> : <Check className="size-[17px]" />}
+            <Button onClick={guardar} disabled={faltan > 0} loading={busy}>
+              <Check className="size-[17px]" />
               {editing ? "Guardar cambios" : "Crear rol"}
             </Button>
           </div>

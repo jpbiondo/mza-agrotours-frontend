@@ -1,10 +1,9 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Lock, Check, Loader, ShieldCheck } from "lucide-react";
+import { Lock, Check, ShieldCheck } from "lucide-react";
 import { TextField, EyeToggle } from "@/components/ui/text-field";
 import { PasswordMeter } from "@/components/ui/password-meter";
 import {
@@ -168,16 +167,8 @@ export default function ChangePasswordForm({
             />
 
             <div className="mt-1.5 flex gap-3">
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? (
-                  <>
-                    <Loader size={16} className="spin" /> Guardando…
-                  </>
-                ) : (
-                  <>
-                    <Check size={16} /> Guardar
-                  </>
-                )}
+              <Button type="submit" loading={form.formState.isSubmitting}>
+                <Check size={16} /> Guardar
               </Button>
             </div>
           </form>

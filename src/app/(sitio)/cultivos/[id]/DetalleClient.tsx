@@ -8,7 +8,7 @@ import {
 import AsyncBoundary from "@/components/AsyncBoundary";
 import CalendarioTemporada from "@/components/cultivos/CalendarioTemporada";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { BackLink, Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
 import { useCultivoDetalle } from "@/hooks/useCatalogoCultivos";
 import { useMesActual } from "@/hooks/useMesActual";
 import { moneyAr } from "@/lib/format";
@@ -319,9 +319,7 @@ export default function DetalleClient({ id }: { id: string }) {
         <span className="font-medium text-fg-2">{data?.nombre ?? "Detalle"}</span>
       </div>
 
-      <Link href="/cultivos" className="mb-[18px] inline-flex items-center gap-[7px] text-sm font-semibold text-green-800 no-underline">
-        <ArrowLeft size={16} /> Volver a cultivos
-      </Link>
+      <BackLink href="/cultivos" className="mb-[18px]">Volver a cultivos</BackLink>
 
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<DetalleSkeleton />}>
         {/* `data` en null es un id que no existe, no una falla de la lectura. */}

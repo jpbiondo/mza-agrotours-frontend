@@ -68,10 +68,10 @@ export function PortadaCard({
       aside={
         foto.imagen ? (
           <div className="flex shrink-0 gap-2">
-            <Button variant="ghost" size="sm" className="text-sm" onClick={abrir} disabled={ocupada}>
+            <Button variant="neutral" size="sm" onClick={abrir} disabled={ocupada}>
               <Upload className="size-[15px]" /> Cambiar portada
             </Button>
-            <Button variant="ghost" size="sm" className="text-sm" onClick={quitar} disabled={ocupada}>
+            <Button variant="neutral" size="sm" onClick={quitar} disabled={ocupada}>
               <Trash2 className="size-[15px]" /> Eliminar
             </Button>
           </div>

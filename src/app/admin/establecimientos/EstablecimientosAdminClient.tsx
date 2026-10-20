@@ -1,12 +1,11 @@
 "use client";
-
 import { Fragment, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertTriangle, Ban, CalendarCheck, Check, ChevronRight, Clock, Grape,
-  List as ListIcon, Loader, MapPin, RotateCcw, Search, SearchX, User, Warehouse,
+  List as ListIcon, MapPin, RotateCcw, Search, SearchX, User, Warehouse,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { ActionBtn, Alert, Button, Card, EstadoBadge, IconCircle, Modal, Skeleton, Toast } from "@/components/ui";
@@ -392,8 +391,8 @@ function SuspenderModal({
         <Button variant="neutral" onClick={onCancel} disabled={busy}>
           Cancelar
         </Button>
-        <Button variant="danger" disabled={busy || faltan > 0} onClick={suspender}>
-          {busy ? <Loader className="size-[17px] spin" /> : <Ban className="size-[17px]" />}
+        <Button variant="danger" disabled={faltan > 0} onClick={suspender} loading={busy}>
+          <Ban className="size-[17px]" />
           Suspender establecimiento
         </Button>
       </div>
@@ -432,8 +431,8 @@ function ReactivarModal({
         <Button variant="neutral" onClick={onCancel} disabled={busy}>
           No, volver
         </Button>
-        <Button onClick={onConfirm} disabled={busy}>
-          {busy ? <Loader className="size-[17px] spin" /> : <Check className="size-[17px]" />}
+        <Button onClick={onConfirm} loading={busy}>
+          <Check className="size-[17px]" />
           Sí, reactivar
         </Button>
       </div>

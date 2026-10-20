@@ -12,6 +12,7 @@ import {
 } from "@/hooks/useChats";
 import { cn } from "@/lib/utils";
 import type { MensajeChat, TipoEmisor } from "@/types/chats";
+import { IconButton } from "@/components/ui";
 
 /*
  * Hilo de mensajes + composer, compartido por el drawer del visitante y la
@@ -357,15 +358,15 @@ export default function ConversacionChat({
             disabled={deBaja}
             className="box-border max-h-[112px] min-h-8 flex-1 resize-none overflow-y-hidden border-none bg-transparent py-1.5 font-sans text-[13.5px] leading-5 text-fg-1 outline-none disabled:cursor-not-allowed"
           />
-          <button
-            type="button"
+          <IconButton
+            appearance="primary"
             onClick={() => void submit()}
             disabled={!puedeEnviar}
+            loading={iniciando}
             aria-label="Enviar mensaje"
-            className="flex size-[38px] shrink-0 cursor-pointer items-center justify-center rounded-[10px] bg-green-800 text-white shadow-[var(--btn-tactile-primary)] transition-colors disabled:cursor-not-allowed disabled:bg-cream-tert disabled:text-fg-3 disabled:shadow-none"
           >
-            {iniciando ? <Loader size={17} className="spin" aria-hidden /> : <Send size={17} />}
-          </button>
+            <Send />
+          </IconButton>
         </div>
         {!deBaja && (
           <div className="mt-1.5 flex justify-between font-mono text-[11px] text-fg-3">

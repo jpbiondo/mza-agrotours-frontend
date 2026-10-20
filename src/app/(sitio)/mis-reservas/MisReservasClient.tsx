@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { EstadoBadge, Skeleton } from "@/components/ui";
+import { Button, EstadoBadge, Skeleton, buttonClasses } from "@/components/ui";
 import { metaEstadoReserva } from "@/data/reservas";
 import { fmtDiaLocal, fmtFranja, fmtHoraLocal, moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -203,9 +203,9 @@ export default function MisReservasClient() {
               </button>
             )}
           </div>
-          <button type="button" className="btn btn-primary" disabled={!searchEnabled} onClick={() => setApplied(query)}>
+          <Button disabled={!searchEnabled} onClick={() => setApplied(query)}>
             <Search size={16} /> Buscar
-          </button>
+          </Button>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -235,9 +235,9 @@ export default function MisReservasClient() {
           {applied && (
             <div className="flex items-center gap-2.5 text-[13.5px] text-fg-2">
               <span>Buscando:&nbsp;<strong className="text-fg-1">“{applied}”</strong></span>
-              <button type="button" onClick={() => { setQuery(""); setApplied(""); }} className="cursor-pointer border-none bg-transparent px-1.5 py-1 text-[13.5px] font-semibold text-green-800">
+              <Button variant="text" onClick={() => { setQuery(""); setApplied(""); }}>
                 Limpiar búsqueda
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -249,7 +249,7 @@ export default function MisReservasClient() {
             icon={<CalendarX size={28} />}
             title="Todavía no tenés reservas"
             sub="Cuando reserves tu primera experiencia en una finca de Mendoza, vas a verla acá."
-            action={<Link href="/explorar" className="btn btn-primary mt-2"><Compass size={18} /> Explorar experiencias</Link>}
+            action={<Link href="/explorar" className={buttonClasses({ className: "mt-2" })}><Compass size={18} /> Explorar experiencias</Link>}
           />
         ) : visible.length === 0 ? (
           <EmptyState
@@ -258,7 +258,7 @@ export default function MisReservasClient() {
             sub={applied
               ? <>No hay reservas que coincidan con <strong className="text-fg-1">“{applied}”</strong>{filter !== "todas" ? " en el estado seleccionado" : null}. Probá con otro término o limpiá los filtros.</>
               : "No hay reservas en este estado."}
-            action={<button type="button" className="btn btn-neutral mt-2" onClick={limpiar}><RotateCcw size={17} /> Limpiar filtros</button>}
+            action={<Button variant="neutral" className="mt-2" onClick={limpiar}><RotateCcw size={17} /> Limpiar filtros</Button>}
           />
         ) : (
           <>

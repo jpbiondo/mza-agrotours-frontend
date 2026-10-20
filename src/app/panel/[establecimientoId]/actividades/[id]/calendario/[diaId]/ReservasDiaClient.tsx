@@ -1,14 +1,13 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft, Banknote, CalendarClock, CalendarDays, CalendarX, CheckCircle2, Clock, CreditCard, FilterX, MapPin,
+   Banknote, CalendarClock, CalendarDays, CalendarX, CheckCircle2, Clock, CreditCard, FilterX, MapPin,
   RotateCcw, Settings2, SlidersHorizontal, Timer, Users, XCircle,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Pagination } from "@/components/catalog/controls";
-import { Alert, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
+import { Alert, BackLink, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
 import type { ToastData } from "@/components/ui";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -324,10 +323,9 @@ function AccionesDia({
           </Button>
         )}
         <Button
-          variant="neutral"
+          variant="danger-outline"
           onClick={onCancelar}
           disabled={cerrado}
-          className="border-danger text-danger-fg shadow-[inset_0_-2px_0_var(--danger-fill)] hover:border-danger hover:bg-danger-fill"
         >
           <CalendarX className="size-[17px]" /> Cancelar actividad del día
         </Button>
@@ -468,12 +466,9 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
         >
           {r && (
             <>
-              <Link
-                href={volver}
-                className="mb-[18px] inline-flex items-center gap-[7px] text-[13.5px] font-semibold text-fg-2 no-underline hover:text-fg-1"
-              >
-                <ArrowLeft className="size-4" /> Volver al calendario
-              </Link>
+              <BackLink href={volver} className="mb-[18px]">
+                Volver al calendario
+              </BackLink>
 
               <div className="mb-1.5 flex flex-wrap items-start gap-[18px]">
                 <div className="flex size-[60px] shrink-0 items-center justify-center rounded-[16px] border border-green-100 bg-green-050 text-green-700">

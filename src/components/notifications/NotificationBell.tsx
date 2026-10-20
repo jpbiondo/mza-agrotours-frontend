@@ -12,6 +12,7 @@ import { useNotificaciones, type AmbitoNotificaciones } from "@/hooks/useNotific
 import { usePermisoPush } from "@/hooks/usePush";
 import { cn } from "@/lib/utils";
 import type { Notificacion } from "@/types/notificaciones";
+import { Button } from "@/components/ui";
 
 const ICON: Record<string, LucideIcon> = {
   "file-clock": FileClock, "file-check": FileCheck, "file-x": FileX, "file-search": FileSearch,
@@ -198,9 +199,9 @@ export default function NotificationBell({ ambito = "personal", className }: Not
                   <AlertTriangle className="size-6 text-danger-fg" />
                 </div>
                 <div className="mb-3.5 text-sm leading-normal">No pudimos cargar tus notificaciones.</div>
-                <button type="button" className="btn btn-neutral btn-sm" onClick={reload}>
+                <Button variant="neutral" size="sm" onClick={reload}>
                   <RotateCcw size={15} /> Reintentar
-                </button>
+                </Button>
               </div>
             ) : notificaciones.length === 0 ? (
               <div className="px-6 py-12 text-center text-fg-2">
@@ -264,9 +265,9 @@ export default function NotificationBell({ ambito = "personal", className }: Not
                 ) : errorMas ? (
                   <div className="flex items-center justify-center gap-2 pt-2.5 pb-1 text-xs text-fg-2">
                     No pudimos cargar más.
-                    <button type="button" onClick={cargarMas} className="cursor-pointer font-semibold text-green-800 hover:underline">
+                    <Button variant="text" size="sm" onClick={cargarMas}>
                       Reintentar
-                    </button>
+                    </Button>
                   </div>
                 ) : hayMas ? null : (
                   <div className="pt-2.5 pb-1 text-center text-xs text-fg-3">No hay más notificaciones</div>

@@ -1,9 +1,8 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-  Users, Banknote, CalendarX, TrendingUp, TrendingDown, CheckCircle2, Info, Download, X, Loader,
+  Users, Banknote, CalendarX, TrendingUp, TrendingDown, CheckCircle2, Info, Download, X,
   FileText, FileSpreadsheet, Table2, BarChart3, Grape, Sprout, Wheat, Apple,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
@@ -25,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import type { ActividadPerf, Periodo, RangoFechas } from "@/types/estadisticas";
 import EmptyEstablecimiento from "../../EmptyEstablecimiento";
+import { IconButton } from "@/components/ui";
 
 const SIN_ACCESO =
   "Sólo el Productor Líder puede ver las estadísticas del establecimiento. Pedíselas al Productor Líder de la finca.";
@@ -178,7 +178,7 @@ function ExportModal({ busy, onClose, onConfirm }: { busy: boolean; onClose: () 
 
   return (
     <Modal onClose={onClose} dismissable={!busy} className="w-[520px]">
-      <button type="button" onClick={onClose} disabled={busy} aria-label="Cerrar" className="absolute top-3.5 right-3.5 flex size-8 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-fg-2 hover:bg-cream-tert"><X size={18} /></button>
+      <IconButton appearance="plain" onClick={onClose} disabled={busy} aria-label="Cerrar" className="absolute top-3.5 right-3.5"><X /></IconButton>
       <h3 className="mt-0 mb-2 font-display text-[22px] leading-tight font-semibold text-fg-1">Exportar reporte</h3>
       <p className="mt-0 mb-[22px] text-sm leading-normal text-fg-2">Vas a descargar los datos de performance del período seleccionado. Elegí qué incluir y en qué formato.</p>
 
@@ -214,8 +214,8 @@ function ExportModal({ busy, onClose, onConfirm }: { busy: boolean; onClose: () 
 
       <div className="flex justify-end gap-3">
         <Button variant="neutral" onClick={onClose} disabled={busy}>Cancelar</Button>
-        <Button onClick={() => onConfirm({ format, scope })} disabled={busy}>
-          {busy ? <><Loader size={17} className="spin" /> Generando…</> : <><Download size={17} /> Descargar</>}
+        <Button onClick={() => onConfirm({ format, scope })} loading={busy}>
+          <Download size={17} /> Descargar
         </Button>
       </div>
     </Modal>

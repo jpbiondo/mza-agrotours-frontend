@@ -10,7 +10,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { Skeleton, buttonClasses } from "@/components/ui";
+import { Button, Skeleton, buttonClasses } from "@/components/ui";
 import { useActividadPublica } from "@/hooks/useCatalogoActividades";
 import { usePronosticoClima } from "@/hooks/useClima";
 import ContactarEstablecimiento from "@/components/chat/ContactarEstablecimiento";
@@ -30,10 +30,10 @@ function ShareButton() {
     setTimeout(() => setCopied(false), 2200);
   }
   return (
-    <button type="button" onClick={onShare} className={`btn btn-sm ${copied ? "btn-primary" : "btn-neutral"}`} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+    <Button variant={copied ? "primary" : "neutral"} size="sm" onClick={onShare}>
       {copied ? <Check size={16} /> : <Share2 size={16} />}
       {copied ? "Link copiado" : "Compartir"}
-    </button>
+    </Button>
   );
 }
 
@@ -200,8 +200,7 @@ function MapaUbicacion({ a }: { a: ActividadPublica }) {
             href={urlComoLlegar(consulta)}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-neutral btn-sm"
-            style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}
+            className={buttonClasses({ variant: "neutral", size: "sm", className: "shrink-0" })}
           >
             Cómo llegar <ExternalLink size={15} />
           </a>
@@ -342,7 +341,7 @@ function NoEncontrada() {
       <p style={{ margin: "0 auto 22px", color: "var(--fg-2)", fontSize: 15.5, maxWidth: 440, lineHeight: 1.5 }}>
         Puede que ya no esté publicada o que el link esté mal. Mirá el resto de las experiencias disponibles.
       </p>
-      <Link href="/explorar" className="btn btn-primary">Explorar actividades</Link>
+      <Link href="/explorar" className={buttonClasses()}>Explorar actividades</Link>
     </div>
   );
 }

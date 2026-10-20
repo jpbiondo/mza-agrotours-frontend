@@ -7,7 +7,7 @@ import { auth } from "../../../firebase.config";
 import { ArrowLeft, ArrowRight, Grape, MessageCircle, MessageCircleOff, X } from "lucide-react";
 import { SkeletonFilasChat } from "@/components/chat/ChatSkeletons";
 import ConversacionChat, { momentoCorto } from "@/components/chat/ConversacionChat";
-import { buttonClasses } from "@/components/ui";
+import { IconButton, buttonClasses } from "@/components/ui";
 import { marcarChatLeido, partesDeChat, useIniciarChat, useInfoChatsUsuario, useMisChats } from "@/hooks/useChats";
 import { useChatDrawer, type ChatAbierto } from "@/stores/chatDrawerStore";
 import { cn } from "@/lib/utils";
@@ -62,14 +62,9 @@ function AvatarChat({ id, foto, size }: { id: string; foto: string | null; size:
 
 function BotonCerrar({ onClick }: { onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Cerrar"
-      className="inline-flex size-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-outline-variant bg-cream-bg text-fg-2 hover:bg-cream-tert"
-    >
-      <X size={18} />
-    </button>
+    <IconButton onClick={onClick} aria-label="Cerrar">
+      <X />
+    </IconButton>
   );
 }
 
@@ -126,9 +121,9 @@ function InfoChat({ chat, establecimiento, foto, onBack, onClose }: {
   return (
     <div className="pop absolute inset-0 z-10 flex flex-col bg-surface">
       <div className="flex items-center gap-3 border-b border-outline-variant bg-surface py-3.5 pr-4 pl-3">
-        <button type="button" onClick={onBack} aria-label="Volver a la conversación" className="inline-flex cursor-pointer rounded-md p-1.5 text-fg-2 hover:bg-cream-tert">
-          <ArrowLeft size={20} />
-        </button>
+        <IconButton appearance="plain" onClick={onBack} aria-label="Volver a la conversación">
+          <ArrowLeft />
+        </IconButton>
         <div className="min-w-0 flex-1 font-display text-[15px] font-semibold text-fg-1">Info del chat</div>
         <BotonCerrar onClick={onClose} />
       </div>
@@ -180,9 +175,9 @@ function Conversacion({ chat, establecimiento, foto, noLeidos, onBack, onClose, 
   return (
     <>
       <div className="flex items-center gap-3 border-b border-outline-variant bg-surface py-3.5 pr-4 pl-3">
-        <button type="button" onClick={onBack} aria-label="Volver al listado" className="inline-flex cursor-pointer rounded-md p-1.5 text-fg-2 hover:bg-cream-tert">
-          <ArrowLeft size={20} />
-        </button>
+        <IconButton appearance="plain" onClick={onBack} aria-label="Volver al listado">
+          <ArrowLeft />
+        </IconButton>
         <button
           type="button"
           onClick={() => setVerInfo(true)}

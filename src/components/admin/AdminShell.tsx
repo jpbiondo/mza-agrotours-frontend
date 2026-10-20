@@ -38,6 +38,7 @@ import { nombreRol, tienePermiso } from "@/lib/roles";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
+import { IconButton } from "@/components/ui";
 
 interface NavEntry {
   section?: string;
@@ -288,14 +289,9 @@ function AccountBar({ onMenu }: { onMenu: () => void }) {
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-2.5 border-b border-outline-variant bg-surface px-3.5 shell:gap-0 shell:px-7">
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
-        <button
-          type="button"
-          onClick={onMenu}
-          aria-label="Abrir menú"
-          className={cn(BTN_SHELL, "shell:hidden")}
-        >
-          <Menu className="size-5 text-fg-1" />
-        </button>
+        <IconButton onClick={onMenu} aria-label="Abrir menú" className="shell:hidden">
+          <Menu />
+        </IconButton>
         {/* En compacto queda sólo el icono: el rótulo se lleva el ancho que
             necesitan la campana y el avatar. */}
         <Link
@@ -474,14 +470,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               </div>
             </div>
           </Link>
-          <button
-            type="button"
-            onClick={cerrar}
-            aria-label="Cerrar menú"
-            className={cn(BTN_SHELL, "mr-4 shell:hidden")}
-          >
-            <X className="size-5 text-fg-2" />
-          </button>
+          <IconButton onClick={cerrar} aria-label="Cerrar menú" className="mr-4 shell:hidden">
+            <X />
+          </IconButton>
         </div>
 
         <div className="px-3 pb-3">

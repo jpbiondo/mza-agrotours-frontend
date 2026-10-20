@@ -10,7 +10,7 @@ import {
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { CropChip, IconoActividad } from "@/components/panel/actividad/identidad";
 import { Pagination } from "@/components/catalog/controls";
-import { Alert, Button, Card, EstadoBadge, Modal, Skeleton, Toast } from "@/components/ui";
+import { ActionBtn, Alert, Button, Card, EstadoBadge, Modal, Skeleton, Toast } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
 import type { ToastData } from "@/components/ui";
 import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
@@ -33,35 +33,6 @@ const MENSAJE_ERROR_ESTADO: Record<string, string> = {
 };
 
 type Override = Partial<Pick<ActividadProd, "estado">>;
-
-/* ---- Piezas chicas ------------------------------------------------------ */
-
-function CardAction({
-  icon, label, href, onClick, danger, disabled, title,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  href?: string;
-  onClick?: () => void;
-  danger?: boolean;
-  disabled?: boolean;
-  title?: string;
-}) {
-  const clase = cn(
-    "inline-flex items-center gap-[7px] rounded-md border border-sand bg-surface px-3.5 py-2.5 text-[13.5px] font-semibold whitespace-nowrap no-underline transition-colors",
-    danger ? "text-danger-fg shadow-[inset_0_-2px_0_var(--danger-fill)]" : "text-fg-1 shadow-[inset_0_-2px_0_var(--outline)]",
-    disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-cream-tert",
-  );
-
-  if (href && !disabled) {
-    return <Link href={href} className={clase} title={title}>{icon} {label}</Link>;
-  }
-  return (
-    <button type="button" onClick={onClick} className={clase} disabled={disabled} title={title}>
-      {icon} {label}
-    </button>
-  );
-}
 
 /* ---- Toggle Borrador / Público ------------------------------------------ */
 function PublishToggle({
@@ -223,35 +194,36 @@ function ActivityCard({
       <div className="flex flex-wrap justify-end gap-2.5 border-t border-outline-variant bg-cream-tert px-6 py-3.5">
         {!deBaja && (
           <>
-            <CardAction
-              icon={<Settings2 className="size-[15px] text-fg-2" />}
+            <ActionBtn
+              icon={<Settings2 className="size-[15px]" />}
               label="Modificar"
               href={ruta("actividades", act.id, "editar")}
               disabled={suspendido}
-              title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
+              title={suspendido ? SUSPENDIDO_MODIFICAR : "Modificar la actividad"}
             />
-            <CardAction
-              icon={<CalendarPlus className="size-[15px] text-fg-2" />}
+            <ActionBtn
+              icon={<CalendarPlus className="size-[15px]" />}
               label="Agregar días"
               href={ruta("actividades", act.id, "dias")}
               disabled={suspendido}
-              title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
+              title={suspendido ? SUSPENDIDO_MODIFICAR : "Agregar días a la actividad"}
             />
           </>
         )}
-        <CardAction
-          icon={<CalendarDays className="size-[15px] text-fg-2" />}
+        <ActionBtn
+          icon={<CalendarDays className="size-[15px]" />}
           label="Ver reservas"
           href={ruta("actividades", act.id, "calendario")}
+          title="Ver las reservas de la actividad"
         />
         {!deBaja && (
-          <CardAction
-            icon={<Trash2 className="size-[15px] text-danger" />}
+          <ActionBtn
+            icon={<Trash2 className="size-[15px]" />}
             label="Eliminar"
-            danger
+            tone="danger"
             onClick={onEliminar}
             disabled={conPagadas}
-            title={conPagadas ? "No se puede eliminar: tiene reservas pagadas" : undefined}
+            title={conPagadas ? "No se puede eliminar: tiene reservas pagadas" : "Eliminar la actividad"}
           />
         )}
       </div>
@@ -625,12 +597,8 @@ export default function ActividadesClient() {
             <Button variant="neutral" onClick={() => setToDelete(null)} disabled={pendingId === toDelete.id}>
               Cancelar
             </Button>
-            <Button variant="danger" onClick={() => confirmDelete(toDelete)} disabled={pendingId === toDelete.id}>
-              {pendingId === toDelete.id ? (
-                <><Loader className="spin size-4" /> Dando de baja…</>
-              ) : (
-                <><Check className="size-[17px]" /> Confirmar</>
-              )}
+            <Button variant="danger" onClick={() => confirmDelete(toDelete)} loading={pendingId === toDelete.id}>
+              <Check className="size-[17px]" /> Confirmar
             </Button>
           </div>
         </Modal>

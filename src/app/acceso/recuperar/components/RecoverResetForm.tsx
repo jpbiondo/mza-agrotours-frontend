@@ -122,16 +122,10 @@ export default function RecoverResetForm({ oobCode, onSuccess }: RecoverResetFor
             type="submit"
             variant="primary"
             size="lg"
-            disabled={form.formState.isSubmitting}
+            loading={form.formState.isSubmitting}
             className="mt-1 w-full"
           >
-            {form.formState.isSubmitting ? (
-              "Guardando…"
-            ) : (
-              <>
-                <Check className="size-[18px]" /> Guardar
-              </>
-            )}
+            <Check className="size-[18px]" /> Guardar
           </Button>
         </form>
       </Form>

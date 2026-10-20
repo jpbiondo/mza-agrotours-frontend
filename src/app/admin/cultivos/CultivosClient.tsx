@@ -1,10 +1,9 @@
 "use client";
-
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Sprout, Utensils, Leaf, Scissors, Grape, Pencil, Trash2, Lock, Loader, Eye } from "lucide-react";
+import { Sprout, Utensils, Leaf, Scissors, Grape, Pencil, Trash2, Lock, Eye } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { ActionBtn, Alert, Card, Skeleton, Toast } from "@/components/ui";
 import type { ToastData } from "@/components/ui";
@@ -409,7 +408,7 @@ function CultivoForm({
         onCancel={onCancel}
         onSave={guardar}
         saveLabel={editando ? "Guardar cambios" : "Agregar cultivo"}
-        saveIcon={busy ? <Loader className="spin size-[17px]" /> : editando ? undefined : <Sprout className="size-[17px]" />}
+        saveIcon={editando ? undefined : <Sprout className="size-[17px]" />}
         // Con la imagen a medio subir su key todavía no existe: guardar ahora
         // la perdería sin avisar.
         busy={busy || imagen.subiendo}
@@ -501,15 +500,10 @@ function Filas({
             <td className="p-4 align-middle">
               <div className="flex items-center justify-end gap-2.5">
                 <ActionBtn
-                  icon={
-                    abriendo ? (
-                      <Loader className="spin size-[17px]" />
-                    ) : (
-                      <Pencil className="size-[17px]" />
-                    )
-                  }
+                  icon={<Pencil className="size-[17px]" />}
                   label="Editar"
-                  disabled={abriendo || !gestionar}
+                  disabled={!gestionar}
+                  loading={abriendo}
                   title={gestionar ? "Editar el cultivo" : SIN_GESTION}
                   onClick={() => onEdit(c)}
                 />

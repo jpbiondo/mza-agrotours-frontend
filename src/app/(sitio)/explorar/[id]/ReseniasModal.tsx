@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader, RotateCcw, Star, StarOff, X } from "lucide-react";
-import { Alert, Button, Estrellas, Modal, Skeleton } from "@/components/ui";
+import { Alert, Button, Estrellas, IconButton, Modal, Skeleton } from "@/components/ui";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { useReseniasActividad } from "@/hooks/useCatalogoActividades";
 import { fmtPuntaje } from "@/lib/format";
@@ -73,14 +73,9 @@ export default function ReseniasModal({ a, onClose }: { a: ActividadPublica; onC
             {[a.nombre, a.establecimiento.nombre].filter(Boolean).join(" · ")}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Cerrar"
-          className="flex size-[38px] shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-outline-variant bg-surface text-fg-2 transition-colors hover:bg-cream-tert"
-        >
-          <X size={20} />
-        </button>
+        <IconButton onClick={onClose} aria-label="Cerrar">
+          <X />
+        </IconButton>
       </div>
 
       <div ref={scrollRef} className="overflow-x-hidden overflow-y-auto p-6">

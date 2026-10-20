@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
+import { buttonClasses } from "@/components/ui";
 
 /** Misma grilla que los catálogos: de 1 a 3 columnas según el ancho. */
 const GRILLA = "grid grid-cols-1 gap-6 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
@@ -44,7 +45,7 @@ export default function Destacados({
           <h2 className="m-0 font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">{titulo}</h2>
           <p className="mt-2.5 mb-0 max-w-[540px] text-base text-fg-2">{bajada}</p>
         </div>
-        <Link href={href} className="btn btn-neutral inline-flex shrink-0 items-center gap-2">
+        <Link href={href} className={buttonClasses({ variant: "neutral", className: "shrink-0" })}>
           {verTodas} <ArrowRight size={16} />
         </Link>
       </div>

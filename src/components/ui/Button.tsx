@@ -10,9 +10,10 @@ import { cn } from "@/lib/utils";
  * - `neutral`: secundarias, y el "Cancelar" de un diálogo.
  * - `danger`: confirmar una acción destructiva dentro de su diálogo.
  * - `danger-outline`: disparar una acción destructiva desde la página (abre el diálogo).
- * - `ghost`: **deprecada**. Queda hasta migrar sus usos a `neutral`.
+ * - `text`: acción menor en línea con el contenido ("Cargar más", "Limpiar
+ *   filtros" junto al contador, "Reintentar" dentro de un bloque). Sin caja.
  */
-export type ButtonVariant = "primary" | "neutral" | "danger" | "danger-outline" | "ghost";
+export type ButtonVariant = "primary" | "neutral" | "danger" | "danger-outline" | "text";
 export type ButtonSize = "sm" | "md" | "lg";
 
 /** Variantes tácticas (sombra inset inferior) equivalentes a las clases .btn-* heredadas. */
@@ -26,7 +27,9 @@ const variants: Record<ButtonVariant, string> = {
   // De contorno y sin relieve: una acción destructiva secundaria no tiene que
   // pesar más que la principal de la pantalla.
   "danger-outline": "border-danger bg-surface text-danger hover:bg-danger-fill active:translate-y-px",
-  ghost: "border-transparent bg-transparent text-green-800 hover:bg-green-050",
+  // Sin caja ni relleno: pisa el padding del tamaño (por eso las variantes van
+  // después de los tamaños en `buttonClasses`) y conserva sólo el cuerpo de texto.
+  text: "border-transparent bg-transparent p-0 text-green-800 underline-offset-2 hover:underline disabled:border-transparent disabled:bg-transparent disabled:no-underline",
 };
 
 const sizes: Record<ButtonSize, string> = {
@@ -48,7 +51,7 @@ export function buttonClasses({
   size = "md",
   className = "",
 }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}): string {
-  return cn(BASE, variants[variant], sizes[size], className);
+  return cn(BASE, sizes[size], variants[variant], className);
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

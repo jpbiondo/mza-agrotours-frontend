@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import {
   ChevronRight,
@@ -10,7 +9,6 @@ import {
   Inbox,
   User,
   MapPin,
-  ArrowLeft,
   Hash,
   Building2,
   Mail,
@@ -21,7 +19,6 @@ import {
   ShieldCheck,
   MessageSquare,
   AlertCircle,
-  Loader,
   ClipboardCheck,
   Eye,
   FileText,
@@ -30,7 +27,7 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { BackLink, Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { admInitials } from "@/data/admin";
@@ -663,13 +660,9 @@ function Detail({
 
   return (
     <div className="mx-auto max-w-[1080px] px-7 pt-6 pb-24">
-      <button
-        type="button"
-        onClick={onBack}
-        className="mb-3.5 inline-flex cursor-pointer items-center gap-[7px] text-[13.5px] font-semibold text-green-800"
-      >
-        <ArrowLeft className="size-4" /> Volver a solicitudes
-      </button>
+      <BackLink onClick={onBack} className="mb-3.5">
+        Volver a solicitudes
+      </BackLink>
 
       <div className="mb-6 flex min-w-0 items-center gap-4">
         <EstabTile nombre={sol.nombreEstablecimiento} size="lg" />
@@ -876,30 +869,22 @@ function Detail({
                 disabled={bloqueado}
                 title={gestionar ? undefined : SIN_GESTION}
                 onClick={() => onResolver("VALIDADA", obs.trim())}
+                loading={busy}
               >
-                {busy ? (
-                  <Loader className="size-[18px] spin" />
-                ) : (
-                  <CheckCircle2 className="size-[18px]" />
-                )}
+                <CheckCircle2 className="size-[18px]" />
                 Aprobar solicitud
               </Button>
 
-              {/* Rechazar es un danger "outline": no hay variante para eso en <Button>. */}
-              <button
-                type="button"
+              <Button
+                variant="danger-outline"
+                size="lg"
+                className="w-full"
                 disabled={bloqueado}
                 title={gestionar ? undefined : SIN_GESTION}
                 onClick={() => onResolver("RECHAZADA", obs.trim())}
-                className={cn(
-                  "inline-flex w-full items-center justify-center gap-2.5 rounded-md border bg-surface px-[18px] py-[13px] text-[15px] font-semibold transition-colors",
-                  bloqueado
-                    ? "cursor-not-allowed border-cream-tert text-fg-3"
-                    : "cursor-pointer border-danger text-danger hover:bg-danger-fill",
-                )}
               >
                 <XCircle className="size-[18px]" /> Rechazar solicitud
-              </button>
+              </Button>
 
               {!gestionar && (
                 <div className="mt-0.5 text-center text-xs leading-snug text-fg-3">

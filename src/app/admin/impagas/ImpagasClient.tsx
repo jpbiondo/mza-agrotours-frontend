@@ -1,10 +1,8 @@
 "use client";
-
 import { useMemo, useState } from "react";
 import { ChevronRight, AlertCircle, Landmark, Search, X, Warehouse, HandCoins, SearchX, User, ReceiptText } from "lucide-react";
-import Link from "next/link";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Button, EstadoBadge, Skeleton, buttonClasses } from "@/components/ui";
+import { ActionBtn, EstadoBadge, Skeleton } from "@/components/ui";
 import { ESTADO_META } from "@/data/impagas";
 import { fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
 import { PermisoAdmin } from "@/lib/permisos";
@@ -69,26 +67,29 @@ function Fila({ r, puedeVerDeudas }: { r: Reembolso; puedeVerDeudas: boolean }) 
       <td className="p-4 text-right align-top font-mono text-[15px] font-semibold whitespace-nowrap text-fg-1">{moneyAr(r.monto)}</td>
       <td className="p-4 align-top">
         <div className="flex flex-wrap justify-end gap-2">
-          <Link
+          <ActionBtn
+            icon={<ReceiptText size={15} />}
+            label="Detalle"
             href={`/admin/impagas/${encodeURIComponent(r.id)}`}
-            className={buttonClasses({ variant: "neutral", size: "sm", className: "whitespace-nowrap" })}
-          >
-            <ReceiptText size={15} /> Detalle
-          </Link>
+            title="Ver el detalle del reembolso"
+          />
           {/* Sin LEER_DEUDAS la deuda no se puede abrir: el botón ni aparece. */}
           {r.estado === "sistema" && puedeVerDeudas && (
             r.deudaId ? (
-              <Link
+              <ActionBtn
+                icon={<Landmark size={15} />}
+                label="Ir a deuda"
                 href={`/admin/deudas/${encodeURIComponent(r.deudaId)}`}
-                className={buttonClasses({ size: "sm", className: "whitespace-nowrap" })}
-              >
-                <Landmark size={15} /> Ir a deuda
-              </Link>
+                title="Ver la deuda asociada"
+              />
             ) : (
               // Cubiertos por el sistema antes de que existieran las deudas: no tienen una a la que ir.
-              <Button size="sm" className="whitespace-nowrap" disabled title="Este reembolso no tiene una deuda asociada.">
-                <Landmark size={15} /> Ir a deuda
-              </Button>
+              <ActionBtn
+                icon={<Landmark size={15} />}
+                label="Ir a deuda"
+                disabled
+                title="Este reembolso no tiene una deuda asociada."
+              />
             )
           )}
         </div>

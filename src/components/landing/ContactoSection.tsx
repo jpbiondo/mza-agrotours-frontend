@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Mail, Phone, MapPin, Send, CheckCircle2, User } from "lucide-react";
 import { TextField } from "@/components/ui/text-field";
+import { Button } from "@/components/ui";
 
 /** Etiqueta + campo. Local porque es el único formulario del landing. */
 function Campo({
@@ -117,9 +118,9 @@ export default function ContactoSection() {
                   className="textarea"
                 />
               </Campo>
-              <button type="submit" className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center" }}>
+              <Button type="submit" size="lg" className="w-full">
                 <Send size={18} /> Enviar mensaje
-              </button>
+              </Button>
             </form>
           )}
         </div>
