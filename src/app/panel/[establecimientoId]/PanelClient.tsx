@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import DashboardSkeleton from "@/components/panel/DashboardSkeleton";
-import { Card, EstadoBadge, Estrellas, Skeleton } from "@/components/ui";
+import { Button, Card, EstadoBadge, Estrellas, Skeleton } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useEstadisticas } from "@/hooks/useEstadisticas";
@@ -359,9 +359,9 @@ function Ultimos30Dias({ establecimientoId }: { establecimientoId: string }) {
       ) : error || !k ? (
         <div className="border-t border-cream-tert px-6 py-6 text-center text-sm text-fg-3">
           No pudimos cargar los números.{" "}
-          <button type="button" onClick={reload} className="cursor-pointer border-none bg-transparent p-0 font-semibold text-green-800 underline">
+          <Button variant="text" onClick={reload}>
             Reintentar
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-2 border-t border-cream-tert">
