@@ -1,7 +1,6 @@
 "use client";
-
 import { useRouter } from "next/navigation";
-import { Loader, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useChatDeActividad } from "@/hooks/useChats";
 import { useChatDrawer } from "@/stores/chatDrawerStore";
@@ -43,10 +42,8 @@ export default function ContactarEstablecimiento({
 
   const iconSize = size === "sm" ? 15 : 17;
   return (
-    <Button variant="neutral" size={size} className={className} onClick={contactar} disabled={chat.estado === "cargando"}>
-      {chat.estado === "cargando"
-        ? <Loader size={iconSize} className="spin" aria-hidden />
-        : <MessageCircle size={iconSize} aria-hidden />}
+    <Button variant="neutral" size={size} className={className} onClick={contactar} loading={chat.estado === "cargando"}>
+      <MessageCircle size={iconSize} aria-hidden />
       {chat.estado === "listo" && chat.existe ? "Continuar chat" : etiqueta}
     </Button>
   );
