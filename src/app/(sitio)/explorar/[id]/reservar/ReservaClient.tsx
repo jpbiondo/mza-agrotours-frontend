@@ -15,7 +15,7 @@ import { refrescarCalendario, useInfoParaReservar } from "@/hooks/useInfoParaRes
 import { useReserva , type RealizarReservaRequest } from "@/hooks/useCheckout";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import TravelersList from "./Travelers";
-import { CancelToast } from "./Resultados";
+import { notify } from "@/lib/notify";
 import { AvisoBloqueado, BloqueoCupos, type EstadoBloqueo } from "./Bloqueo";
 import { Alert, EstadoBadge } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -179,7 +179,6 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
 
   const [bloqueo, setBloqueo] = useState<EstadoBloqueo>({ estado: "libre" });
   const [errorReserva, setErrorReserva] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [cancelando, setCancelando] = useState(false);
 
   // El aviso de fecha sin cupos queda hasta que se elige otra.
@@ -280,13 +279,13 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
     try {
       const res = await cancelarPago(bloqueo.preferenceId);
       if (!res.ok) {
-        setToast("No pudimos liberar los cupos. Probá de nuevo.");
+        notify.error("No pudimos liberar los cupos. Probá de nuevo.");
         return;
       }
       setBloqueo({ estado: "libre" });
-      setToast(mensaje);
+      notify.success(mensaje);
     } catch {
-      setToast("No pudimos liberar los cupos. Probá de nuevo.");
+      notify.error("No pudimos liberar los cupos. Probá de nuevo.");
     } finally {
       setCancelando(false);
     }
@@ -416,8 +415,6 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
           </div>
         </div>
       </div>
-
-      <CancelToast open={toast !== null} message={toast ?? ""} onClose={() => setToast(null)} />
     </div>
   );
 }
