@@ -121,9 +121,9 @@ function InfoChat({ chat, establecimiento, foto, onBack, onClose }: {
   return (
     <div className="pop absolute inset-0 z-10 flex flex-col bg-surface">
       <div className="flex items-center gap-3 border-b border-outline-variant bg-surface py-3.5 pr-4 pl-3">
-        <button type="button" onClick={onBack} aria-label="Volver a la conversación" className="inline-flex cursor-pointer rounded-md p-1.5 text-fg-2 hover:bg-cream-tert">
-          <ArrowLeft size={20} />
-        </button>
+        <IconButton appearance="plain" onClick={onBack} aria-label="Volver a la conversación">
+          <ArrowLeft />
+        </IconButton>
         <div className="min-w-0 flex-1 font-display text-[15px] font-semibold text-fg-1">Info del chat</div>
         <BotonCerrar onClick={onClose} />
       </div>
@@ -175,9 +175,9 @@ function Conversacion({ chat, establecimiento, foto, noLeidos, onBack, onClose, 
   return (
     <>
       <div className="flex items-center gap-3 border-b border-outline-variant bg-surface py-3.5 pr-4 pl-3">
-        <button type="button" onClick={onBack} aria-label="Volver al listado" className="inline-flex cursor-pointer rounded-md p-1.5 text-fg-2 hover:bg-cream-tert">
-          <ArrowLeft size={20} />
-        </button>
+        <IconButton appearance="plain" onClick={onBack} aria-label="Volver al listado">
+          <ArrowLeft />
+        </IconButton>
         <button
           type="button"
           onClick={() => setVerInfo(true)}
