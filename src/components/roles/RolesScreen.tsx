@@ -4,8 +4,8 @@ import type { ComponentType, ReactNode } from "react";
 import {
   ChevronRight, Info, KeyRound, Lock, Pencil, Plus, ShieldCheck, Trash2,
 } from "lucide-react";
-import { ActionBtn, Alert, Button, Card, IconCircle, Modal, Panel, Skeleton, Toast } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { ActionBtn, Alert, Button, Card, IconCircle, Modal, Panel, Skeleton } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import type { AccionesRoles, DatosRol, GrupoPermiso, RolDetalle } from "@/types/roles";
 import { PermSummary } from "./permisos-ui";
@@ -257,16 +257,10 @@ export function RolesScreen({
   const [toDelete, setToDelete] = useState<RolDetalle | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [toast, setToast] = useState<ToastData | null>(null);
 
   const totalUsuarios = roles.reduce((s, r) => s + r.cantidadUsuarios, 0);
   // Un mismo código puede repetirse en dos grupos: se cuentan los distintos.
   const permisosDisponibles = new Set(grupos.flatMap((g) => g.permisos.map((p) => p.codigo))).size;
-
-  function notify(title: string) {
-    setToast({ tone: "success", title });
-    setTimeout(() => setToast((t) => (t?.title === title ? null : t)), 3200);
-  }
 
   function abrirForm(initial: RolDetalle | null) {
     setFormError(null);
@@ -296,7 +290,7 @@ export function RolesScreen({
       }
       setRoles((prev) => prev.map((r) => (r.id === role.id ? role : r)));
       cerrarForm();
-      notify(`Se guardaron los cambios del rol «${role.nombre}».`);
+      notify.success(`Se guardaron los cambios del rol «${role.nombre}».`);
       return;
     }
 
@@ -310,7 +304,7 @@ export function RolesScreen({
     // El id lo asigna el backend; el de `role` es el provisorio de genId.
     setRoles((prev) => [...prev, { ...role, id: res.id ?? role.id }]);
     cerrarForm();
-    notify(`Se creó el rol «${role.nombre}».`);
+    notify.success(`Se creó el rol «${role.nombre}».`);
   }
 
   function pedirBaja(role: RolDetalle | null) {
@@ -327,7 +321,7 @@ export function RolesScreen({
     }
     setRoles((prev) => prev.filter((r) => r.id !== role.id));
     setToDelete(null);
-    notify(`El rol «${role.nombre}» fue dado de baja.`);
+    notify.success(`El rol «${role.nombre}» fue dado de baja.`);
   }
 
   return (
@@ -491,7 +485,6 @@ export function RolesScreen({
         </Modal>
       )}
 
-      {toast && <Toast {...toast} />}
     </div>
   );
 }
