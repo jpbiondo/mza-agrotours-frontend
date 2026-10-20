@@ -13,7 +13,6 @@ import {
   Trash2,
   Info,
   ChevronRight,
-  CheckCircle2,
   UserCog,
   Loader,
   Check,
@@ -37,6 +36,7 @@ import { EMAIL_RE } from "@/data/auth";
 import { admInitials } from "@/data/admin";
 import { PermisoAdmin } from "@/lib/permisos";
 import { tienePermiso } from "@/lib/roles";
+import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import {
@@ -954,13 +954,6 @@ function Inner() {
   const [modal, setModal] = useState<"nuevo" | AdminSistema | null>(null);
   const [aBorrar, setABorrar] = useState<AdminSistema | null>(null);
   const [errorBaja, setErrorBaja] = useState<string | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
-
-  function notify(msg: string) {
-    setFlash(msg);
-    setTimeout(() => setFlash((f) => (f === msg ? null : f)), 3400);
-  }
-
   function setEditando(a: AdminSistema) {
     setModal(a);
   }
@@ -979,14 +972,14 @@ function Inner() {
     quitar(aBorrar.id);
     const nombre = aBorrar.nombreUsuario;
     setABorrar(null);
-    notify(`Se quitó a ${nombre} del sistema.`);
+    notify.success(`Se quitó a ${nombre} del sistema.`);
   }
 
   function onGuardado(a: AdminSistema, editando: boolean) {
     if (editando) reemplazar(a);
     else agregar(a);
     setModal(null);
-    notify(
+    notify.success(
       editando
         ? `Se actualizó el rol de ${a.nombreUsuario} a «${a.nombreRol}».`
         : `Se agregó a ${a.nombreUsuario} al sistema.`,
@@ -1350,32 +1343,6 @@ function Inner() {
             onConfirm={confirmarBaja}
           />
         </Scrim>
-      )}
-
-      {flash && (
-        <div
-          className="pop"
-          style={{
-            position: "fixed",
-            left: "calc(50% + 132px)",
-            bottom: 28,
-            transform: "translateX(-50%)",
-            zIndex: 80,
-            background: "var(--green-800)",
-            color: "#fff",
-            borderRadius: "var(--radius)",
-            padding: "14px 20px",
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            boxShadow: "var(--shadow-pop)",
-            fontSize: 15,
-            fontWeight: 500,
-            maxWidth: "calc(100vw - 40px)",
-          }}
-        >
-          <CheckCircle2 size={20} color="#fff" /> {flash}
-        </div>
       )}
     </div>
   );
