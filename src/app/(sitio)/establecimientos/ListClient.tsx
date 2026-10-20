@@ -118,9 +118,9 @@ export default function ListClient() {
             onChange={elegirDepartamento}
           />
           {hayFiltros && (
-            <button type="button" onClick={limpiarTodo} style={{ height: 46, display: "inline-flex", alignItems: "center", gap: 7, background: "transparent", border: "none", cursor: "pointer", color: "var(--green-800)", fontFamily: "var(--font-sans)", fontSize: 14.5, fontWeight: 600, padding: "0 6px" }}>
-              <RotateCcw size={16} color="var(--green-800)" /> Limpiar todo
-            </button>
+            <Button variant="text" className="h-[46px]" onClick={limpiarTodo}>
+              <RotateCcw size={16} /> Limpiar todo
+            </Button>
           )}
         </div>
       )}
