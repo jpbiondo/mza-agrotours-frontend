@@ -1,11 +1,9 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { AlertCircle, CheckCircle2, ChevronRight, Handshake, HandCoins, Landmark, ListTree, Search, SearchX, X } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { DeudaBadge } from "@/components/admin/DeudaBadge";
-import { Alert, Button, Skeleton, Toast, buttonClasses } from "@/components/ui";
+import { ActionBtn, Alert, Skeleton, Toast } from "@/components/ui";
 import { estabInitials } from "@/data/admin";
 import { DEUDA_ESTADO_META, DEUDA_ESTADOS_ORDEN, deudaResoluble, pendienteDe } from "@/data/deudas";
 import { fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
@@ -90,17 +88,20 @@ function Fila({ d, onResolver }: {
       <td className="p-4"><DeudaBadge estado={d.estado} /></td>
       <td className="p-4">
         <div className="flex flex-wrap justify-end gap-2">
-          <Link
+          <ActionBtn
+            icon={<ListTree size={15} />}
+            label="Detalle"
             href={`/admin/deudas/${encodeURIComponent(d.id)}`}
-            className={buttonClasses({ variant: "neutral", size: "sm", className: "whitespace-nowrap" })}
-          >
-            <ListTree size={15} /> Detalle
-          </Link>
+            title="Ver el detalle de la deuda"
+          />
           {/* Las saldadas son finales: el backend las rechaza. */}
           {onResolver && deudaResoluble(d.estado) && (
-            <Button size="sm" className="whitespace-nowrap" onClick={() => onResolver(d)}>
-              <HandCoins size={15} /> Resolver deuda
-            </Button>
+            <ActionBtn
+              icon={<HandCoins size={15} />}
+              label="Resolver deuda"
+              title="Resolver la deuda"
+              onClick={() => onResolver(d)}
+            />
           )}
         </div>
       </td>
