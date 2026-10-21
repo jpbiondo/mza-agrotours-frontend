@@ -50,6 +50,10 @@ export const PermisoAdmin = {
   LEER_DEUDAS: "LEER_DEUDAS",
   /** Registrar devoluciones de una deuda. Todavía no tiene endpoints. */
   GESTIONAR_DEUDAS: "GESTIONAR_DEUDAS",
+  /** Ver los parámetros globales del sistema. */
+  LEER_PARAMETROS: "LEER_PARAMETROS",
+  /** Modificar los parámetros globales del sistema. */
+  GESTIONAR_PARAMETROS: "GESTIONAR_PARAMETROS",
 } as const;
 
 export type PermisoAdmin = (typeof PermisoAdmin)[keyof typeof PermisoAdmin];
