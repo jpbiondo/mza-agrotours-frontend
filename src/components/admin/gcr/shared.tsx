@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Search, SearchX, Trash2, X, Plus, Check, AlertCircle, ChevronRight, Gauge } from "lucide-react";
-import { Alert, Button, Card, IconButton, IconCircle, Modal, Toast } from "@/components/ui";
+import { Alert, Button, Card, IconButton, IconCircle, Modal } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { GCR_MESES, GCR_ESTACIONES, GCR_EST_ORDEN } from "@/data/gestionCr";
 import { gradienteDe } from "@/lib/color";
@@ -16,12 +16,6 @@ function useEscape(onClose: () => void) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-}
-
-/* ---- Flash toast ------------------------------------------------------- */
-export function GcrFlash({ flash }: { flash: string | null }) {
-  if (!flash) return null;
-  return <Toast tone="success" title={flash} />;
 }
 
 /* ---- Confirmación de eliminación --------------------------------------- */

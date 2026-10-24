@@ -5,8 +5,8 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Sprout, Utensils, Leaf, Scissors, Grape, Pencil, Trash2, Lock, Eye } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { ActionBtn, Alert, Card, Skeleton, Toast } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { ActionBtn, Alert, Card, Skeleton } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { TextArea } from "@/components/ui/text-area";
@@ -558,17 +558,11 @@ function Inner({
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<CultivoCatalogo | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [toast, setToast] = useState<ToastData | null>(null);
 
   const visibles = useMemo(() => {
     const q = query.trim().toLowerCase();
     return q ? cultivos.filter((c) => c.nombre.toLowerCase().includes(q)) : cultivos;
   }, [cultivos, query]);
-
-  function notificar(title: string, tone: ToastData["tone"] = "success") {
-    setToast({ tone, title });
-    setTimeout(() => setToast((t) => (t?.title === title ? null : t)), 3400);
-  }
 
   function abrirAlta() {
     setFormError(null);
@@ -585,7 +579,7 @@ function Inner({
     const res = await cargar(c.id);
     setDetalleId(null);
     if (!res.ok || !res.datos) {
-      notificar("No pudimos abrir el cultivo. Probá de nuevo.", "danger");
+      notify.error("No pudimos abrir el cultivo. Probá de nuevo.");
       return;
     }
     setFormError(null);
@@ -605,7 +599,7 @@ function Inner({
     }
     setForm(null);
     onRefrescar();
-    notificar(
+    notify.success(
       editando
         ? `Se guardaron los cambios de «${datos.nombre}».`
         : `Se agregó «${datos.nombre}» al catálogo.`,
@@ -623,7 +617,7 @@ function Inner({
     const nombre = toDelete.nombre;
     setToDelete(null);
     onRefrescar();
-    notificar(`Se eliminó «${nombre}» del catálogo.`);
+    notify.success(`Se eliminó «${nombre}» del catálogo.`);
   }
 
   return (
@@ -726,10 +720,6 @@ function Inner({
         onCancel={() => setToDelete(null)}
         onConfirm={confirmarBaja}
       />
-
-      {/* Toast propio y no <GcrFlash>: ése sólo hace el tono de éxito, y el
-          fallo al abrir la edición necesita el rojo. */}
-      {toast && <Toast {...toast} />}
     </div>
   );
 }

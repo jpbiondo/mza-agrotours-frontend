@@ -7,7 +7,8 @@ import {
   SearchX, RotateCcw, Check,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { ActionBtn, Alert, Button, IconButton, Modal, Skeleton, Toast } from "@/components/ui";
+import { ActionBtn, Alert, Button, IconButton, Modal, Skeleton } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { TextField } from "@/components/ui/text-field";
 import { TextArea } from "@/components/ui/text-area";
 import { SimpleSelect } from "@/components/ui/simple-select";
@@ -382,14 +383,7 @@ function FaqGestion({ initial, editor, setEditor }: {
   const [borrar, setBorrar] = useState<FaqItem | null>(null);
   const [errorEditor, setErrorEditor] = useState<string | null>(null);
   const [errorBorrar, setErrorBorrar] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const { crear, actualizar, eliminar, guardando, borrando } = useFaqCrud();
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4200);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   // 1) Búsqueda por término
   const afterSearch = useMemo(() => {
@@ -416,7 +410,7 @@ function FaqGestion({ initial, editor, setEditor }: {
       const r = await actualizar(actual.id, datos);
       if (!r.ok) { setErrorEditor(mensajeError(r.code, "guardar")); return; }
       setItems((prev) => prev.map((x) => (x.id === actual.id ? { ...x, ...datos } : x)));
-      setToast("Pregunta actualizada correctamente.");
+      notify.success("Pregunta actualizada correctamente.");
     } else {
       const r = await crear(datos);
       if (!r.ok) { setErrorEditor(mensajeError(r.code, "guardar")); return; }
@@ -427,7 +421,7 @@ function FaqGestion({ initial, editor, setEditor }: {
         setItems((prev) => [nueva, ...prev]);
         setOpenId(nueva.id);
       }
-      setToast("Pregunta agregada a la base de conocimiento.");
+      notify.success("Pregunta agregada a la base de conocimiento.");
     }
     cerrarEditor();
   }
@@ -440,7 +434,7 @@ function FaqGestion({ initial, editor, setEditor }: {
     setItems((prev) => prev.filter((x) => x.id !== borrar.id));
     if (openId === borrar.id) setOpenId(null);
     setBorrar(null);
-    setToast("Pregunta eliminada.");
+    notify.success("Pregunta eliminada.");
   }
 
   const limpiar = () => { setTerm(""); setCat("todas"); };
@@ -524,7 +518,6 @@ function FaqGestion({ initial, editor, setEditor }: {
           onConfirm={confirmarBorrado}
         />
       )}
-      {toast && <Toast tone="success" title={toast} />}
     </>
   );
 }

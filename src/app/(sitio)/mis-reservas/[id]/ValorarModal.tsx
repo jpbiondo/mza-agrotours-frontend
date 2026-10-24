@@ -1,9 +1,10 @@
 "use client";
+import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MapPin, Send, Star, Users, X } from "lucide-react";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { Button, IconButton, Modal } from "@/components/ui";
+import { Alert, Button, IconButton, Modal } from "@/components/ui";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { StarRating } from "@/components/ui/star-rating";
@@ -24,13 +25,13 @@ const MENSAJE_ERROR: Record<ErrorValoracion, string> = {
 /**
  * Con estos errores reintentar no sirve: la reserva cambió en el backend. Se
  * cierra el modal y la pantalla la vuelve a pedir. Con el resto, el modal
- * queda abierto y conserva lo escrito.
+ * queda abierto, conserva lo escrito y muestra el error adentro.
  */
 const DEFINITIVO: Record<ErrorValoracion, boolean> = {
   noFinalizada: true, yaValorada: true, noEncontrada: true, invalida: false, tecnico: false,
 };
 
-export type ResultadoValoracion = { ok: true } | { ok: false; mensaje: string; definitivo: boolean };
+export type ResultadoValoracion = { ok: true } | { ok: false; mensaje: string };
 
 /** Modal para calificar con estrellas y, opcionalmente, dejar una reseña. */
 export default function ValorarModal({
@@ -38,7 +39,10 @@ export default function ValorarModal({
 }: {
   reserva: ReservaDetalle;
   onClose: () => void;
-  /** Avisa cómo terminó el envío; la pantalla decide si cierra y qué toast muestra. */
+  /**
+   * Avisa cómo terminó el envío cuando el modal se tiene que cerrar (éxito o
+   * error definitivo); la pantalla decide qué toast muestra.
+   */
   onResultado: (r: ResultadoValoracion) => void;
 }) {
   const { valorar, enviando } = useValorarReserva(reserva.id);
@@ -50,10 +54,15 @@ export default function ValorarModal({
   const puntaje = useWatch({ control: form.control, name: "puntaje" });
   const resenia = useWatch({ control: form.control, name: "resenia" });
   const { faltan } = useCamposFaltantes(form, valoracionSchema);
+  const [error, setError] = useState<string | null>(null);
 
   async function onValid(data: ValoracionForm) {
+    setError(null);
     const r = await valorar(data.puntaje, data.resenia);
-    onResultado(r.ok ? { ok: true } : { ok: false, mensaje: MENSAJE_ERROR[r.error], definitivo: DEFINITIVO[r.error] });
+    if (r.ok) return onResultado({ ok: true });
+    // Un error que se puede reintentar va en el modal, que sigue abierto.
+    if (!DEFINITIVO[r.error]) return setError(MENSAJE_ERROR[r.error]);
+    onResultado({ ok: false, mensaje: MENSAJE_ERROR[r.error] });
   }
 
   const cerrar = () => { if (!enviando) onClose(); };
@@ -138,6 +147,8 @@ export default function ValorarModal({
                 </FormItem>
               )}
             />
+
+            {error && <Alert tone="danger" className="mt-5">{error}</Alert>}
           </div>
 
           <div className="mt-4 flex gap-3 border-t border-cream-tert px-6 pt-4 pb-[18px]">

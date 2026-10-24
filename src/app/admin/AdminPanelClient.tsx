@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { UserCog, ShieldCheck, Warehouse, Ban, AlertTriangle, ArrowRight } from "lucide-react";
+import { UserCog, ShieldCheck, Warehouse, Ban, ArrowRight } from "lucide-react";
+import { Alert } from "@/components/ui/Alert";
+import { buttonClasses } from "@/components/ui/Button";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -76,16 +78,13 @@ export default function AdminPanelClient() {
             </div>
 
             {data.estSusp > 0 && (
-              <div className="mb-8 flex items-start gap-3 rounded-md border border-danger bg-danger-fill px-[18px] py-4">
-                <AlertTriangle size={20} className="mt-0.5 shrink-0 text-danger" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[15.5px] font-semibold text-fg-1">{data.estSusp === 1 ? "Hay 1 establecimiento suspendido" : `Hay ${data.estSusp} establecimientos suspendidos`}</div>
-                  {data.suspendidos.length > 0 && (
-                    <div className="mt-[3px] text-sm text-fg-2">{data.suspendidos.map((e) => e.nombre).join(" · ")}</div>
-                  )}
-                </div>
-                <Link href="/admin/establecimientos" className="inline-flex items-center gap-[7px] text-[14.5px] font-semibold whitespace-nowrap text-danger-fg no-underline">Revisar <ArrowRight size={16} className="text-danger-fg" /></Link>
-              </div>
+              <Alert tone="warning" className="mb-8">
+                <div className="font-semibold">{data.estSusp === 1 ? "Hay 1 establecimiento suspendido" : `Hay ${data.estSusp} establecimientos suspendidos`}</div>
+                {data.suspendidos.length > 0 && (
+                  <div className="mt-[3px] break-words">{data.suspendidos.map((e) => e.nombre).join(" · ")}</div>
+                )}
+                <Link href="/admin/establecimientos" className={buttonClasses({ variant: "text", className: "mt-2" })}>Revisar <ArrowRight size={16} /></Link>
+              </Alert>
             )}
 
             <h2 className={cn("mb-4 font-display text-2xl font-bold text-fg-1", data.estSusp > 0 ? "mt-0" : "mt-8")}>Gestiones del sistema</h2>

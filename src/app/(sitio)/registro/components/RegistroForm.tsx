@@ -28,8 +28,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import type { ToastData } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { TIPOS_IDENTIFICACION, EMPTY_FORM } from "@/data/registro";
 import { CODIGO_PERFIL_INACTIVO } from "@/data/auth";
@@ -48,7 +48,6 @@ export type ModoRegistro = "alta" | "completar";
 
 interface RegistroFormProps {
   onSuccess: (data: FormData) => void;
-  setToast: (t: ToastData | null) => void;
   modo?: ModoRegistro;
   /** Email de la cuenta de Firebase; sólo en modo `completar`. */
   emailCuenta?: string;
@@ -59,7 +58,6 @@ const SECTION_LABEL =
 
 export default function RegistroForm({
   onSuccess,
-  setToast,
   modo = "alta",
   emailCuenta = "",
 }: RegistroFormProps) {
@@ -135,20 +133,18 @@ export default function RegistroForm({
     // La cuenta de Firebase es de un perfil dado de baja que todavía no se
     // terminó de eliminar; el hook ya cerró la sesión.
     if (r.code === CODIGO_PERFIL_INACTIVO) {
-      setToast({
-        tone: "danger",
-        title: "Esta cuenta fue dada de baja",
-        sub: "Vas a poder registrarte de nuevo con este correo cuando se termine de eliminar.",
+      form.setError("root", {
+        message:
+          "Esta cuenta fue dada de baja. Vas a poder registrarte de nuevo con este correo cuando se termine de eliminar.",
       });
       return;
     }
-    setToast({
-      tone: "danger",
-      title: "No se pudo crear el usuario",
-      sub:
+    // El backend rechazó el envío entero: va arriba del pie, no en un toast.
+    form.setError("root", {
+      message:
         r.code === "validationError"
-          ? "Revisá los datos e intentá de nuevo."
-          : "Intentá de nuevo en unos minutos.",
+          ? "No se pudo crear el usuario. Revisá los datos e intentá de nuevo."
+          : "No se pudo crear el usuario. Intentá de nuevo en unos minutos.",
     });
   }
 
@@ -432,6 +428,10 @@ export default function RegistroForm({
             </FormItem>
           )}
         />
+
+        {form.formState.errors.root?.message && (
+          <Alert tone="danger">{form.formState.errors.root.message}</Alert>
+        )}
 
         {/* ---- Submit ---- */}
         <div className="mt-1.5">

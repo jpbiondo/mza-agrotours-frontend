@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, ArrowRight, Calendar, CalendarClock, ChevronRight, ClipboardClock, CreditCard, Fingerprint, HandCoins, Hash,
@@ -8,7 +8,8 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { DEUDA_ESTADO_ICON, DeudaBadge } from "@/components/admin/DeudaBadge";
-import { Alert, BackLink, Button, Skeleton, Toast, buttonClasses } from "@/components/ui";
+import { Alert, BackLink, Button, Skeleton, buttonClasses } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { estabInitials } from "@/data/admin";
 import { DEUDA_ESTADO_META, deudaResoluble, pendienteDe } from "@/data/deudas";
 import { fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
@@ -233,13 +234,6 @@ export default function DetalleDeudaClient({ id }: { id: string }) {
   const [resolviendo, setResolviendo] = useState(false);
   /** Por qué el detalle se recargó por su cuenta: queda a la vista hasta la próxima acción. */
   const [aviso, setAviso] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4200);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   function onResuelta(d: DeudaDetalle | null) {
     setResolviendo(false);
@@ -247,7 +241,7 @@ export default function DetalleDeudaClient({ id }: { id: string }) {
     // La lista de deudas no se cachea —se pide al montar—, así que no hay nada que invalidar.
     if (d) reemplazar(d);
     else reload();
-    setToast("Cambio de estado registrado.");
+    notify.success("Cambio de estado registrado.");
   }
 
   function onDesactualizado(mensaje: string) {
@@ -297,7 +291,6 @@ export default function DetalleDeudaClient({ id }: { id: string }) {
           onCerrar={() => setResolviendo(false)}
         />
       )}
-      {toast && <Toast tone="success" title={toast} />}
     </div>
   );
 }

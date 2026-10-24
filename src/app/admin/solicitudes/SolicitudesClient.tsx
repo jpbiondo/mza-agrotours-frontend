@@ -32,6 +32,7 @@ import { TextField } from "@/components/ui/text-field";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { admInitials } from "@/data/admin";
 import { fmtFecha, fmtFechaHora } from "@/lib/format";
+import { notify } from "@/lib/notify";
 import { PermisoAdmin } from "@/lib/permisos";
 import { tienePermiso } from "@/lib/roles";
 import { cn } from "@/lib/utils";
@@ -1114,16 +1115,10 @@ function Inner({ abiertaInicial }: { abiertaInicial?: string }) {
     PermisoAdmin.GESTIONAR_SOLICITUD_ESTABLECIMIENTO,
   );
   const [abierta, setAbierta] = useState<string | null>(abiertaInicial ?? null);
-  const [flash, setFlash] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [abierta]);
-
-  function notify(msg: string) {
-    setFlash(msg);
-    setTimeout(() => setFlash((f) => (f === msg ? null : f)), 3800);
-  }
 
   /**
    * Vuelve al listado. Si se entró por `/admin/solicitudes/{id}`, la URL
@@ -1138,7 +1133,7 @@ function Inner({ abiertaInicial }: { abiertaInicial?: string }) {
     cerrar();
     // La lista trae el estado nuevo; se recarga en vez de parchearla a mano.
     reload();
-    notify(
+    notify.success(
       estado === "VALIDADA"
         ? "Solicitud del establecimiento aprobada correctamente"
         : "Solicitud del establecimiento rechazada correctamente",
@@ -1163,12 +1158,6 @@ function Inner({ abiertaInicial }: { abiertaInicial?: string }) {
         >
           <List solicitudes={solicitudes} onOpen={setAbierta} />
         </AsyncBoundary>
-      )}
-
-      {flash && (
-        <div className="pop fixed right-6 bottom-6 z-90 flex max-w-[400px] items-center gap-[11px] rounded-md bg-green-800 px-[18px] py-3.5 text-[14.5px] font-medium text-fg-on-dark shadow-[0px_8px_24px_rgba(45,90,39,0.18)]">
-          <CheckCircle2 className="size-[19px]" /> {flash}
-        </div>
       )}
     </>
   );

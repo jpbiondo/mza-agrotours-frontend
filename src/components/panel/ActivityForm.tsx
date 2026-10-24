@@ -7,8 +7,8 @@ import {
   ArrowLeft, ArrowRight, Ban, CalendarDays, Check, FileText, HelpCircle,
   Info, ListChecks, MapPin, Save, Send, Users, X,
 } from "lucide-react";
-import { Alert, BackLink, Button, Card, Toast } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { Alert, BackLink, Button, Card } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { FaltanCampos } from "@/components/ui/faltan-campos";
@@ -164,6 +164,10 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
         return;
       }
       setDone(estado);
+      notify.successDetailed(
+        estado === "publicado" ? "Actividad publicada correctamente." : "Borrador guardado correctamente.",
+        `«${data.nombre}»`,
+      );
       setTimeout(() => router.push(listado), 1400);
     });
 
@@ -179,17 +183,6 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
     fotos.subiendo ||
     fotos.conError > 0;
   const motivoBloqueo = erroresDelPaso > 0 ? "Completá los campos de este paso para seguir." : undefined;
-
-  const toast: ToastData | null = done
-    ? {
-        tone: "success",
-        title:
-          done === "publicado"
-            ? "Actividad publicada correctamente."
-            : "Borrador guardado correctamente.",
-        sub: `«${valores.nombre}»`,
-      }
-    : null;
 
   return (
     <div className="min-h-screen bg-cream-bg">
@@ -425,13 +418,10 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
                 />
 
                 {huecos.length > 0 && (
-                  <div className="flex items-start gap-2 rounded-md bg-info-fill px-3.5 py-2.5 text-[13px] text-info-fg">
-                    <Info className="mt-px size-[15px] shrink-0 text-info" />
-                    <span>
-                      Ninguno de tus rangos cubre {huecos.join(", ")}. Si esperás visitantes de esas
-                      edades, agregales un rango.
-                    </span>
-                  </div>
+                  <Alert tone="info">
+                    Ninguno de tus rangos cubre {huecos.join(", ")}. Si esperás visitantes de esas
+                    edades, agregales un rango.
+                  </Alert>
                 )}
               </div>
             )}
@@ -533,7 +523,6 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
         </Form>
       </div>
 
-      {toast && <Toast {...toast} />}
     </div>
   );
 }

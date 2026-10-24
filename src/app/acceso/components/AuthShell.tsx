@@ -4,9 +4,6 @@ import { useState } from "react";
 import {
   LifeBuoy,
   Sprout,
-  AlertCircle,
-  AlertTriangle,
-  Info,
   Lock,
 } from "lucide-react";
 import { TextField, EyeToggle } from "@/components/ui/text-field";
@@ -180,30 +177,6 @@ export function FormHead({ icon, title, sub }: { icon?: React.ReactNode; title: 
         {title}
       </h1>
       {sub && <p style={{ fontSize: 15, color: "var(--fg-2)", lineHeight: 1.5, margin: "12px 0 0" }}>{sub}</p>}
-    </div>
-  );
-}
-
-/* ---- Banner de error a nivel formulario -------------------------------- */
-type AlertTone = "danger" | "warning" | "info";
-
-export function FormAlert({ tone = "danger", icon, children }: { tone?: AlertTone; icon?: React.ReactNode; children: React.ReactNode }) {
-  const map = {
-    danger: { bg: "var(--danger-fill)", fg: "var(--danger-fg)", bd: "var(--danger)", ic: <AlertCircle size={18} /> },
-    warning: { bg: "var(--warning-fill)", fg: "var(--warning-fg)", bd: "var(--warning)", ic: <AlertTriangle size={18} /> },
-    info: { bg: "var(--info-fill)", fg: "var(--info-fg)", bd: "var(--info)", ic: <Info size={18} /> },
-  }[tone];
-  return (
-    <div
-      className="pop"
-      style={{
-        display: "flex", alignItems: "flex-start", gap: 11, padding: "13px 15px",
-        borderRadius: "var(--radius)", background: map.bg,
-        border: "1px solid " + map.bd, marginBottom: 22,
-      }}
-    >
-      <span style={{ color: map.fg, display: "inline-flex", marginTop: 1, flexShrink: 0 }}>{icon || map.ic}</span>
-      <div style={{ fontSize: 13.5, color: map.fg, lineHeight: 1.45, fontWeight: 500 }}>{children}</div>
     </div>
   );
 }

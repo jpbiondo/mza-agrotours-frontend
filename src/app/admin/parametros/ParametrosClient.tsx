@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-  ChevronRight, Pencil, X, Save, Info, ShieldCheck, Eye, EyeOff, Check, AlertCircle, AlertTriangle,
-  CheckCircle2, ArrowRight, ImageOff, Image as ImageIcon, Building2, Coins, Landmark, Percent,
+  ChevronRight, Pencil, X, Save, Info, ShieldCheck, Eye, EyeOff, Check, AlertCircle,
+  ArrowRight, ImageOff, Image as ImageIcon, Building2, Coins, Landmark, Percent,
   CalendarPlus, Undo2, Timer, Store, Wallet, Settings2,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
@@ -10,7 +10,9 @@ import { PARAM_ADMIN, PARAM_FIELDS, PARAM_GROUPS, paramError, paramDisplay } fro
 import { admInitials } from "@/data/admin";
 import { useParametros, useConfirmarIdentidad, useGuardarParametros } from "@/hooks/useParametros";
 import type { ParametroKey, Parametros } from "@/types/parametros";
-import { Button } from "@/components/ui";
+import { Alert, Button } from "@/components/ui";
+import { FaltanCampos } from "@/components/ui/faltan-campos";
+import { notify } from "@/lib/notify";
 
 const ICON: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
   image: ImageIcon, "building-2": Building2, coins: Coins, landmark: Landmark, percent: Percent,
@@ -73,11 +75,11 @@ function ParamRow({ fieldKey, value, editing, error, onChange }: { fieldKey: Par
         )}
         {field.unit ? (
           <div style={{ position: "relative" }}>
-            <input inputMode={field.kind === "int" ? "numeric" : "decimal"} value={value} maxLength={field.max} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, paddingRight: 84, fontFamily: field.mono ? "var(--font-mono)" : "var(--font-sans)", borderColor: error ? "var(--danger)" : "var(--sand)" }} />
+            <input id={`param-${fieldKey}`} aria-invalid={!!error} inputMode={field.kind === "int" ? "numeric" : "decimal"} value={value} maxLength={field.max} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, paddingRight: 84, fontFamily: field.mono ? "var(--font-mono)" : "var(--font-sans)", borderColor: error ? "var(--danger)" : "var(--sand)" }} />
             <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 13, fontWeight: 600, color: "var(--fg-3)", pointerEvents: "none" }}>{field.unit}</span>
           </div>
         ) : (
-          <input value={value} maxLength={field.max} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, fontFamily: field.mono ? "var(--font-mono)" : "var(--font-sans)", borderColor: error ? "var(--danger)" : "var(--sand)" }} />
+          <input id={`param-${fieldKey}`} aria-invalid={!!error} value={value} maxLength={field.max} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, fontFamily: field.mono ? "var(--font-mono)" : "var(--font-sans)", borderColor: error ? "var(--danger)" : "var(--sand)" }} />
         )}
         {error ? fieldErr(error) : field.max && <p style={{ margin: "7px 0 0", fontSize: 11.5, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>{(value || "").length}/{field.max}</p>}
       </div>
@@ -86,7 +88,7 @@ function ParamRow({ fieldKey, value, editing, error, onChange }: { fieldKey: Par
 }
 
 /* ---- Modal de reconfirmación de identidad ------------------------------ */
-function AuthModal({ busy, onCancel, onSubmit }: { busy: boolean; onCancel: () => void; onSubmit: (pass: string) => void }) {
+function AuthModal({ busy, error, onCancel, onSubmit }: { busy: boolean; error: string | null; onCancel: () => void; onSubmit: (pass: string) => void }) {
   const [pass, setPass] = useState("");
   const [show, setShow] = useState(false);
   const [err, setErr] = useState("");
@@ -130,6 +132,7 @@ function AuthModal({ busy, onCancel, onSubmit }: { busy: boolean; onCancel: () =
             {err && fieldErr(err)}
             <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--fg-3)" }}>Demo: la contraseña es <span style={{ fontFamily: "var(--font-mono)", color: "var(--fg-2)" }}>agrotours</span>.</p>
           </div>
+          {error && <Alert tone="danger">{error}</Alert>}
         </div>
         <div style={{ padding: "14px 28px", borderTop: "1px solid var(--outline-variant)", background: "var(--cream-tert)", display: "flex", justifyContent: "flex-end", gap: 12 }}>
           <Button variant="neutral" onClick={onCancel} disabled={busy}>Cancelar</Button>
@@ -199,28 +202,32 @@ function Inner({ initial }: { initial: Parametros }) {
   const [attempted, setAttempted] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [flash, setFlash] = useState<{ tone: "success" | "danger"; msg: string } | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const { confirmar, isLoading: authing } = useConfirmarIdentidad();
   const { guardar, isLoading: guardando } = useGuardarParametros();
 
-  const notify = (tone: "success" | "danger", msg: string) => { setFlash({ tone, msg }); setTimeout(() => setFlash((f) => (f?.msg === msg ? null : f)), 3600); };
-
   const errors: Partial<Record<ParametroKey, string>> = {};
   PARAM_FIELDS.forEach((f) => { const e = paramError(f.key, draft[f.key]); if (e) errors[f.key] = e; });
-  const hasErrors = Object.keys(errors).length > 0;
+  const faltan = Object.keys(errors).length;
 
   async function onAuthSubmit(pass: string) {
+    setAuthError(null);
     const ok = await confirmar(pass);
+    // Falló dentro del diálogo: queda abierto, con el aviso adentro.
+    if (!ok) { setAuthError("No pudimos verificar tu identidad. Autenticación fallida."); return; }
     setAuthOpen(false);
-    if (!ok) { notify("danger", "No pudimos verificar tu identidad. Autenticación fallida."); return; }
     setDraft({ ...saved });
     setAttempted(false);
     setEditing(true);
   }
   function cancelEdit() { setEditing(false); setAttempted(false); setDraft({ ...saved }); }
-  function askSave() {
+  /** Marca los campos con error y lleva al primero: el botón está arriba y el campo puede no estar a la vista. */
+  function verQueFalta() {
     setAttempted(true);
-    if (hasErrors) { notify("danger", "Revisá los campos marcados antes de guardar."); return; }
+    const primero = PARAM_FIELDS.find((f) => errors[f.key]);
+    if (primero) document.getElementById(`param-${primero.key}`)?.focus();
+  }
+  function askSave() {
     setReviewOpen(true);
   }
   async function confirmSave() {
@@ -232,7 +239,7 @@ function Inner({ initial }: { initial: Parametros }) {
     setReviewOpen(false);
     setEditing(false);
     setAttempted(false);
-    notify("success", "Los parámetros del sistema se cambiaron exitosamente.");
+    notify.success("Los parámetros del sistema se cambiaron exitosamente.");
   }
 
   return (
@@ -246,17 +253,21 @@ function Inner({ initial }: { initial: Parametros }) {
         {!editing ? (
           <Button onClick={() => setAuthOpen(true)}><Pencil size={18} /> Modificar parámetros</Button>
         ) : (
-          <div style={{ display: "flex", gap: 12, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
             <Button variant="neutral" onClick={cancelEdit} disabled={guardando}><X size={18} /> Cancelar cambios</Button>
-            <Button onClick={askSave} disabled={guardando}><Save size={18} /> Guardar cambios</Button>
+            <div className="flex flex-col items-end gap-2">
+              {/* Deshabilitado hasta que todo valide; "Ver qué falta" marca los campos en rojo. */}
+              <Button onClick={askSave} disabled={guardando || faltan > 0}><Save size={18} /> Guardar cambios</Button>
+              <FaltanCampos faltan={faltan} onVerQueFalta={verQueFalta} />
+            </div>
           </div>
         )}
       </div>
 
       {editing && (
-        <div role="status" style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: "var(--radius)", padding: "12px 16px", marginBottom: 20 }}>
-          <Pencil size={18} color="var(--green-800)" /><span style={{ fontSize: 14.5, color: "var(--green-800)", fontWeight: 500 }}>Estás editando los parámetros. Los cambios no se guardan hasta que los confirmes.</span>
-        </div>
+        <Alert tone="success" icon={<Pencil size={18} />} className="mb-5">
+          Estás editando los parámetros. Los cambios no se guardan hasta que los confirmes.
+        </Alert>
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -280,9 +291,9 @@ function Inner({ initial }: { initial: Parametros }) {
 
       <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, color: "var(--fg-3)", fontSize: 13 }}><Info size={16} color="var(--fg-3)" />Estos valores afectan a toda la plataforma. Los cambios se aplican una vez confirmados.</div>
 
-      {authOpen && <AuthModal busy={authing} onCancel={() => setAuthOpen(false)} onSubmit={onAuthSubmit} />}
+      {authOpen && <AuthModal busy={authing} error={authError} onCancel={() => { setAuthOpen(false); setAuthError(null); }} onSubmit={onAuthSubmit} />}
       {reviewOpen && <ReviewModal draft={draft} original={saved} busy={guardando} onCancel={() => setReviewOpen(false)} onConfirm={confirmSave} />}
-      {flash && <div className="pop" style={{ position: "fixed", right: 24, bottom: 24, zIndex: 90, maxWidth: 440, background: flash.tone === "danger" ? "var(--danger)" : "var(--green-800)", color: "#fff", borderRadius: "var(--radius)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, boxShadow: "var(--shadow-pop)", fontSize: 15, fontWeight: 500 }}>{flash.tone === "danger" ? <AlertTriangle size={20} color="#fff" /> : <CheckCircle2 size={20} color="#fff" />}{flash.msg}</div>}
+
     </div>
   );
 }

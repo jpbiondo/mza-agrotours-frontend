@@ -9,7 +9,8 @@ import {
   MessageSquareReply, Plus, Send, X, XCircle, type LucideIcon,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, BackLink, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
+import { Alert, BackLink, Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { TextField } from "@/components/ui/text-field";
 import { TextArea } from "@/components/ui/text-area";
@@ -311,17 +312,10 @@ export default function IncidenciasClient() {
   const router = useRouter();
   const { incidencias, isLoading, error, unauthenticated, reload } = useMisIncidencias();
   const [vista, setVista] = useState<"listado" | "formulario">("listado");
-  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     if (unauthenticated) router.replace("/acceso");
   }, [unauthenticated, router]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 5000);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   if (unauthenticated) return null;
 
@@ -335,7 +329,7 @@ export default function IncidenciasClient() {
             // la fecha y la antigüedad los pone el backend.
             reload();
             setVista("listado");
-            setToast("Incidencia reportada exitosamente");
+            notify.success("Incidencia reportada exitosamente");
           }}
         />
       ) : (
@@ -344,10 +338,9 @@ export default function IncidenciasClient() {
           isLoading={isLoading}
           error={error}
           reload={reload}
-          onReportar={() => { setToast(null); setVista("formulario"); }}
+          onReportar={() => setVista("formulario")}
         />
       )}
-      {toast && <Toast tone="success" title={toast} />}
     </main>
   );
 }

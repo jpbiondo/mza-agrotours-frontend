@@ -10,7 +10,8 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Pagination } from "@/components/catalog/controls";
-import { Alert, Button, Card, EstadoBadge, IconButton, Skeleton, Toast } from "@/components/ui";
+import { Alert, Button, Card, EstadoBadge, IconButton, Skeleton } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { TextArea } from "@/components/ui/text-area";
 import {
@@ -481,13 +482,6 @@ export default function IncidenciasClient() {
   const puedeGestionar = tienePermiso(accesos, PermisoAdmin.GESTIONAR_INCIDENCIAS);
   const [gestionando, setGestionando] = useState<Incidencia | null>(null);
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4200);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   function filtrar(f: Filtro) {
     setFiltro(f);
@@ -508,7 +502,7 @@ export default function IncidenciasClient() {
     // la página queda vacía y conviene ir a la anterior.
     if (filtro !== "todas" && incidencias.length === 1 && pagina > 1) setPagina((p) => p - 1);
     reload();
-    setToast(`Incidencia ${giCodigo(gestionando.id)} actualizada a «${GI_ESTADOS[estado].label}».`);
+    notify.success(`Incidencia ${giCodigo(gestionando.id)} actualizada a «${GI_ESTADOS[estado].label}».`);
     cerrarModal();
   }
 
@@ -632,7 +626,6 @@ export default function IncidenciasClient() {
           onGuardar={onGuardar}
         />
       )}
-      {toast && <Toast tone="success" title={toast} />}
     </div>
   );
 }

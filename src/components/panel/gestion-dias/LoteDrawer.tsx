@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
-import { AlertTriangle, Calendar, CalendarCheck, CalendarPlus, Check, Info, Loader, X } from "lucide-react";
+import { Calendar, CalendarCheck, CalendarPlus, Check, Info, Loader, X } from "lucide-react";
 import { Alert, Button, Panel } from "@/components/ui";
 import { DatePicker, hoyISO } from "@/components/ui/date-picker";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -141,20 +141,17 @@ function Resumen({
         </div>
       )}
       {plan.descartadas.length > 0 && (
-        <div className="rounded-[10px] border border-warning bg-warning-fill p-3.5">
-          <div className="flex items-center gap-2 text-[13.5px]">
-            <AlertTriangle className="size-4 text-warning-fg" />
-            <strong className="text-warning-fg">
-              {plan.descartadas.length}{" "}
-              {plan.descartadas.length === 1 ? "día se descarta" : "días se descartan"}
-            </strong>
-          </div>
-          <p className="mt-1.5 text-[12.5px] leading-normal text-warning-fg">
+        <Alert tone="warning">
+          <strong>
+            {plan.descartadas.length}{" "}
+            {plan.descartadas.length === 1 ? "día se descarta" : "días se descartan"}
+          </strong>
+          <p className="mt-1.5">
             Estas fechas ya tienen un día programado o su horario ya pasó. Se mantiene el día original: para
             cambiarle el cupo, editalo desde el calendario.
           </p>
           <ChipsFechas fechas={plan.descartadas} tono="aviso" />
-        </div>
+        </Alert>
       )}
     </div>
   );

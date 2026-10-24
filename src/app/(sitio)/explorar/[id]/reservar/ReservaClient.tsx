@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  MapPin, Star, Users, ShieldCheck, AlertTriangle, CalendarCheck, CalendarX, Lock,
+  MapPin, Star, Users, ShieldCheck, CalendarCheck, CalendarX, Lock,
   ChevronRight as Crumb,
 } from "lucide-react";
 import { moneyAr } from "@/lib/format";
@@ -15,7 +15,7 @@ import { refrescarCalendario, useInfoParaReservar } from "@/hooks/useInfoParaRes
 import { useReserva , type RealizarReservaRequest } from "@/hooks/useCheckout";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import TravelersList from "./Travelers";
-import { CancelToast } from "./Resultados";
+import { notify } from "@/lib/notify";
 import { AvisoBloqueado, BloqueoCupos, type EstadoBloqueo } from "./Bloqueo";
 import { Alert, EstadoBadge } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -179,7 +179,6 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
 
   const [bloqueo, setBloqueo] = useState<EstadoBloqueo>({ estado: "libre" });
   const [errorReserva, setErrorReserva] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [cancelando, setCancelando] = useState(false);
 
   // El aviso de fecha sin cupos queda hasta que se elige otra.
@@ -280,13 +279,13 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
     try {
       const res = await cancelarPago(bloqueo.preferenceId);
       if (!res.ok) {
-        setToast("No pudimos liberar los cupos. Probá de nuevo.");
+        notify.error("No pudimos liberar los cupos. Probá de nuevo.");
         return;
       }
       setBloqueo({ estado: "libre" });
-      setToast(mensaje);
+      notify.success(mensaje);
     } catch {
-      setToast("No pudimos liberar los cupos. Probá de nuevo.");
+      notify.error("No pudimos liberar los cupos. Probá de nuevo.");
     } finally {
       setCancelando(false);
     }
@@ -322,13 +321,10 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
               <div className="card grid grid-cols-1 items-start gap-6 p-[22px] sm:grid-cols-[minmax(0,1fr)_250px]">
                 {/* Abajo del calendario y a lo ancho de la tarjeta: es ahí donde hay que elegir otra fecha. */}
                 {bloqueo.estado === "conflicto" && (
-                  <div role="alert" className="flex items-start gap-2.5 rounded-[10px] border border-danger bg-danger-fill px-3.5 py-3 sm:col-span-2">
-                    <CalendarX size={18} className="mt-px shrink-0 text-danger" aria-hidden />
-                    <div className="text-[13px] leading-[1.45] text-fg-2">
-                      <strong className="text-danger-fg">El {bloqueo.fecha} se quedó sin cupos.</strong> Otra persona
-                      reservó antes que vos. Actualizamos el calendario: elegí otra fecha.
-                    </div>
-                  </div>
+                  <Alert tone="danger" icon={<CalendarX size={18} aria-hidden />} className="sm:col-span-2">
+                    <strong>El {bloqueo.fecha} se quedó sin cupos.</strong> Otra persona
+                    reservó antes que vos. Actualizamos el calendario: elegí otra fecha.
+                  </Alert>
                 )}
                 <div className="rounded-xl border border-outline-variant bg-cream-tert p-4">
                   {calendario.length > 0 ? (
@@ -386,20 +382,14 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
             )}
 
             {cuposInsuficientes && !mios && (
-              <div style={{ marginTop: 14, padding: "12px 14px", background: "var(--warning-fill)", border: "1px solid var(--warning)", borderRadius: 10, display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <AlertTriangle size={18} color="var(--warning-fg)" style={{ marginTop: 1, flexShrink: 0 }} />
-                <div style={{ fontSize: 12.5, lineHeight: 1.45, color: "var(--fg-2)" }}>
-                  <strong style={{ color: "var(--fg-1)" }}>No hay suficientes cupos</strong> para el día seleccionado. Para el {selLabel} quedan {cupos} lugares y estás reservando para {totalRows}. Reducí los viajeros o elegí otra fecha.
-                </div>
-              </div>
+              <Alert tone="warning" className="mt-3.5">
+                <strong>No hay suficientes cupos</strong> para el día seleccionado. Para el {selLabel} quedan {cupos} lugares y estás reservando para {totalRows}. Reducí los viajeros o elegí otra fecha.
+              </Alert>
             )}
 
-            <div style={{ marginTop: 14, padding: "12px 14px", background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: 10, display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <ShieldCheck size={18} color="var(--green-800)" style={{ marginTop: 1, flexShrink: 0 }} />
-              <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--fg-2)" }}>
-                Podés realizar un reembolso total si cancelás con <strong style={{ color: "var(--green-800)" }}>{info.diasMinReembolso} {info.diasMinReembolso === 1 ? "día" : "días"} o más</strong> de anterioridad a la actividad.
-              </div>
-            </div>
+            <Alert tone="success" icon={<ShieldCheck size={18} />} className="mt-3.5">
+              Podés realizar un reembolso total si cancelás con <strong>{info.diasMinReembolso} {info.diasMinReembolso === 1 ? "día" : "días"} o más</strong> de anterioridad a la actividad.
+            </Alert>
 
             {errorReserva && <Alert className="mt-3.5">{errorReserva}</Alert>}
 
@@ -416,8 +406,6 @@ function ReservaForm({ id, info, diaInicial, visitantesIniciales }: {
           </div>
         </div>
       </div>
-
-      <CancelToast open={toast !== null} message={toast ?? ""} onClose={() => setToast(null)} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
    Banknote, CalendarClock, CalendarDays, CalendarX, CheckCircle2, Clock, CreditCard, FilterX, MapPin,
@@ -7,9 +7,9 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Pagination } from "@/components/catalog/controls";
-import { Alert, BackLink, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
+import { Alert, BackLink, Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { buttonClasses } from "@/components/ui/Button";
-import type { ToastData } from "@/components/ui";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { hoyISO } from "@/components/ui/date-picker";
 import { CropChip, IconoActividad } from "@/components/panel/actividad/identidad";
@@ -400,13 +400,6 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
   const { cancelar, cancelando } = useCancelarDia(establecimientoId, actividadId, diaId);
 
   const [modalCancelar, setModalCancelar] = useState(false);
-  const [toast, setToast] = useState<ToastData | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 5200);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   const r = resumen.data;
   const hoy = hoyISO();
@@ -435,13 +428,15 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
     resumen.reload();
     reservas.reload();
     estados.reload();
-    setToast({
-      tone: "success",
-      title: "La actividad de este día se canceló",
-      sub: pagadas > 0
-        ? `Se ${pagadas === 1 ? "emitió 1 reembolso automático" : `emitieron ${pagadas} reembolsos automáticos`} a los visitantes.`
-        : "No había reservas pagadas, así que no se generaron reembolsos.",
-    });
+    // La cantidad de reembolsos es el dato para leer; sin pagadas no hay ninguno.
+    if (pagadas > 0) {
+      notify.successDetailed(
+        "La actividad de este día se canceló",
+        `Se ${pagadas === 1 ? "emitió 1 reembolso automático" : `emitieron ${pagadas} reembolsos automáticos`} a los visitantes.`,
+      );
+    } else {
+      notify.success("La actividad de este día se canceló");
+    }
     return null;
   }
 
@@ -589,7 +584,6 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
         />
       )}
 
-      {toast && <Toast {...toast} />}
     </div>
   );
 }

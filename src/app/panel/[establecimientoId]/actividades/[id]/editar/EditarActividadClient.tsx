@@ -7,8 +7,8 @@ import {
   AlertCircle, Ban, Check, HelpCircle, Info, LogOut, MapPin, Save, Send, X,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, BackLink, Button, Card, Modal, Skeleton, Toast } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { Alert, BackLink, Button, Card, Modal, Skeleton } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { MultiSelect } from "@/components/ui/multi-select";
 import {
@@ -71,13 +71,10 @@ function BloqueTarifas({
     <>
       <TarifasEditor filas={field.value} onChange={field.onChange} errs={errs} intentado />
       {huecos.length > 0 && (
-        <div className="mb-[26px] flex items-start gap-2 rounded-md bg-info-fill px-3.5 py-2.5 text-[13px] text-info-fg">
-          <Info className="mt-px size-[15px] shrink-0 text-info" />
-          <span>
-            Ninguno de tus rangos cubre {huecos.join(", ")}. Si esperás visitantes de esas edades,
-            agregales un rango.
-          </span>
-        </div>
+        <Alert tone="info" className="mb-[26px]">
+          Ninguno de tus rangos cubre {huecos.join(", ")}. Si esperás visitantes de esas edades,
+          agregales un rango.
+        </Alert>
       )}
     </>
   );
@@ -173,6 +170,12 @@ function Formulario({
       : [];
 
     setResultado({ estado, advertencias });
+    notify.successDetailed(
+      estado === "publicado"
+        ? "La actividad se modificó y quedó publicada."
+        : "Los cambios se guardaron como borrador.",
+      `«${nombre}»`,
+    );
     // Con algo que avisar se queda en la pantalla: si redirigiéramos, el aviso
     // se iría con ella.
     if (advertencias.length === 0) setTimeout(salir, 1400);
@@ -192,46 +195,29 @@ function Formulario({
   const bloqueado = guardando || fotos.subiendo || fotos.conError > 0 || !!bloqueoTarifas || !!resultado;
   const sucio = formState.isDirty || fotos.sucio;
 
-  const toast: ToastData | null = resultado
-    ? {
-        tone: "success",
-        title:
-          resultado.estado === "publicado"
-            ? "La actividad se modificó y quedó publicada."
-            : "Los cambios se guardaron como borrador.",
-        sub: `«${nombre}»`,
-      }
-    : null;
-
   return (
     <>
       {errorGuardado && <Alert className="mb-5">{errorGuardado}</Alert>}
 
       {resultado && (
-        <div className="mb-5 rounded-md border border-info bg-info-fill px-4 py-3.5 text-[13.5px] text-info-fg">
-          <div className="flex items-start gap-2.5">
-            <Info className="mt-px size-[18px] shrink-0 text-info" />
-            <div className="flex flex-col gap-1.5">
-              {resultado.advertencias.map((a) => (
-                <span key={a}>{a}</span>
-              ))}
-              <Button variant="text" className="mt-1 w-fit" onClick={salir}>
-                Volver al listado
-              </Button>
-            </div>
+        <Alert tone="info" className="mb-5">
+          <div className="flex flex-col gap-1.5">
+            {resultado.advertencias.map((a) => (
+              <span key={a}>{a}</span>
+            ))}
+            <Button variant="text" className="mt-1 w-fit" onClick={salir}>
+              Volver al listado
+            </Button>
           </div>
-        </div>
+        </Alert>
       )}
 
       {formState.isSubmitted && cantidadErrores > 0 && (
-        <div className="mb-5 flex items-center gap-2.5 rounded-md border border-danger bg-danger-fill px-4 py-3 text-sm font-medium text-danger-fg">
-          <AlertCircle className="size-[18px] shrink-0 text-danger" />
-          <span>
-            Revisá los campos marcados en rojo.{" "}
-            {cantidadErrores === 1 ? "Hay 1 campo" : `Hay ${cantidadErrores} campos`} que
-            necesita{cantidadErrores === 1 ? "" : "n"} atención. Tus datos se conservaron.
-          </span>
-        </div>
+        <Alert tone="danger" className="mb-5">
+          Revisá los campos marcados en rojo.{" "}
+          {cantidadErrores === 1 ? "Hay 1 campo" : `Hay ${cantidadErrores} campos`} que
+          necesita{cantidadErrores === 1 ? "" : "n"} atención. Tus datos se conservaron.
+        </Alert>
       )}
 
       <Form {...form}>
@@ -454,8 +440,6 @@ function Formulario({
           </div>
         </Modal>
       )}
-
-      {toast && <Toast {...toast} />}
     </>
   );
 }

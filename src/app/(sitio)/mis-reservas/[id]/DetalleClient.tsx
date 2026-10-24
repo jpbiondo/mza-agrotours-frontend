@@ -12,8 +12,8 @@ import AsyncBoundary from "@/components/AsyncBoundary";
 import ContactarEstablecimiento from "@/components/chat/ContactarEstablecimiento";
 import MapaEmbed, { consultaMapa, urlComoLlegar } from "@/components/MapaEmbed";
 import PagarConMercadoPago from "@/components/reserva/PagarConMercadoPago";
-import { Alert, BackLink, Button, EstadoBadge, Skeleton, Toast, buttonClasses } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { Alert, BackLink, Button, EstadoBadge, Skeleton, buttonClasses } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { metaEstadoReserva } from "@/data/reservas";
 import { fmtDiaLocal, fmtFranja, fmtHoraLocal, moneyAr } from "@/lib/format";
 import type { RetornoPago } from "@/lib/mercadoPago";
@@ -358,27 +358,19 @@ export default function DetalleClient({ id, retornoPago }: { id: string; retorno
   /** Copia de la reserva al abrir el modal: el reload posterior no debe desmontarlo ni cambiarle los datos. */
   const [aCancelar, setACancelar] = useState<ReservaDetalle | null>(null);
   const [valorando, setValorando] = useState(false);
-  const [toast, setToast] = useState<ToastData | null>(null);
-
-  function avisar(t: ToastData) {
-    setToast(t);
-    setTimeout(() => setToast((cur) => (cur === t ? null : cur)), t.tone === "danger" ? 7000 : 5500);
-  }
-
   function alValorar(r: ResultadoValoracion) {
     if (r.ok) {
       setValorando(false);
-      avisar({ tone: "success", title: "Valoración enviada", sub: "Muchas gracias por contarnos cómo te fue." });
+      notify.success("Valoración enviada");
       reload();
       return;
     }
-    // Si la reserva cambió en el backend, se cierra y se vuelve a pedir para
-    // que la tarjeta muestre el estado real; si no, se queda con lo escrito.
-    if (r.definitivo) {
-      setValorando(false);
-      reload();
-    }
-    avisar({ tone: "danger", title: "No se pudo enviar tu valoración", sub: r.mensaje });
+    // La reserva cambió en el backend: se cierra el modal y se vuelve a pedir
+    // para que la tarjeta muestre el estado real. Los errores que se pueden
+    // reintentar los muestra el propio modal.
+    setValorando(false);
+    reload();
+    notify.error("No se pudo enviar tu valoración", r.mensaje);
   }
 
   // Ruta protegida: sin sesión, a la pantalla de login.
@@ -437,7 +429,6 @@ export default function DetalleClient({ id, retornoPago }: { id: string; retorno
       {valorando && reserva && (
         <ValorarModal reserva={reserva} onClose={() => setValorando(false)} onResultado={alValorar} />
       )}
-      {toast && <Toast {...toast} />}
     </div>
   );
 }
