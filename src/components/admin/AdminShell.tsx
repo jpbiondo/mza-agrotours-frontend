@@ -114,6 +114,7 @@ const NAV: NavEntry[] = [
     iconC: SlidersHorizontal,
     label: "Parámetros del sistema",
     href: "/admin/parametros",
+    permiso: PermisoAdmin.LEER_PARAMETROS,
   },
   { section: "Deudas y reembolsos" },
   {
