@@ -17,7 +17,7 @@ import AsyncBoundary from "@/components/AsyncBoundary";
 import TravelersList from "./Travelers";
 import { notify } from "@/lib/notify";
 import { AvisoBloqueado, BloqueoCupos, type EstadoBloqueo } from "./Bloqueo";
-import { Alert, EstadoBadge } from "@/components/ui";
+import { Alert, EstadoBadge, Skeleton } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { CalendarioReserva, type DiaSeleccionado } from "@/components/reserva/CalendarioReserva";
 import { buscarDia, primerMesDisponible } from "@/lib/calendarioReserva";
@@ -143,7 +143,12 @@ export default function ReservaClient({ id, diaInicial = "", visitantesIniciales
 }) {
   const { data: info, isLoading, error, reload } = useInfoParaReservar(id);
   return (
-    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} pad={160}>
+    <AsyncBoundary
+      loading={isLoading}
+      error={error}
+      onRetry={reload}
+      skeleton={<Skeleton layout="detail" className="mx-auto max-w-[1180px] px-7 pt-[22px] pb-[90px]" />}
+    >
       {info && <ReservaForm id={id} info={info} diaInicial={diaInicial} visitantesIniciales={visitantesIniciales} />}
     </AsyncBoundary>
   );
