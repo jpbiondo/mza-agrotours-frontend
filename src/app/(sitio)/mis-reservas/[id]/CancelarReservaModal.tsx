@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, Loader, RotateCcw, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader, RotateCcw } from "lucide-react";
 import { Alert, Button, IconCircle, Modal } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useCancelarReserva } from "@/hooks/useReservas";
 import { fmtDiaLocal, fmtFranja, moneyAr } from "@/lib/format";
 import type {
@@ -107,7 +108,7 @@ export default function CancelarReservaModal({
         <div className="font-display text-[18px] font-semibold text-fg-1">Verificando condiciones…</div>
         <div className={`mt-1.5 ${lead}`}>Estamos revisando si te corresponde reembolso.</div>
         <div className="mt-5 flex justify-center">
-          <Button variant="neutral" onClick={onClose}>No, volver</Button>
+          <Button variant="neutral" onClick={onClose}>Cancelar</Button>
         </div>
       </Modal>
     );
@@ -154,22 +155,26 @@ export default function CancelarReservaModal({
   const bloqueado = !!error && DEFINITIVO[error];
 
   return (
-    <Modal onClose={onClose} dismissable={!cancelando}>
-      <div className="flex items-start gap-3.5">
-        <IconCircle tone="danger" className="shrink-0">
-          <AlertTriangle size={24} className="text-danger-fg" />
-        </IconCircle>
-        <div className="min-w-0 flex-1">
-          <h2 className={titulo}>¿Querés cancelar esta reserva?</h2>
-          <p className={`mt-2 ${lead}`}>
-            Vas a cancelar <strong className="text-fg-1">{reserva.actividad}</strong>
-            {reserva.establecimiento && <> en <strong className="text-fg-1">{reserva.establecimiento}</strong></>}.
-            Esta acción no se puede deshacer.
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-1.5 rounded-md bg-cream-tert px-3.5 py-3 text-[13px] text-fg-2">
+    <ConfirmDialog
+      open
+      title="¿Querés cancelar esta reserva?"
+      description={
+        <>
+          Vas a cancelar <strong className="text-fg-1">{reserva.actividad}</strong>
+          {reserva.establecimiento && <> en <strong className="text-fg-1">{reserva.establecimiento}</strong></>}.
+          Esta acción no se puede deshacer.
+        </>
+      }
+      confirmLabel="Cancelar reserva"
+      // Con un error definitivo la reserva ya cambió: queda sólo la salida.
+      cancelLabel={bloqueado ? "Cerrar" : "Cancelar"}
+      confirmDisabled={bloqueado}
+      busy={cancelando}
+      error={error ? MENSAJE_ERROR[error] : null}
+      onCancel={onClose}
+      onConfirm={() => confirmar(condicion)}
+    >
+      <div className="flex flex-col gap-1.5 rounded-md bg-cream-tert px-3.5 py-3 text-[13px] text-fg-2">
         {reserva.inicio && <div>{fmtDiaLocal(reserva.inicio)} · {fmtFranja(reserva.inicio, reserva.fin)}</div>}
         <div className="truncate font-mono">{reserva.id}</div>
       </div>
@@ -187,21 +192,6 @@ export default function CancelarReservaModal({
           <Alert tone="warning">No pudimos confirmar si te corresponde reembolso.</Alert>
         )}
       </div>
-
-      {error && (
-        <Alert tone="danger" className="mt-3">{MENSAJE_ERROR[error]}</Alert>
-      )}
-
-      <div className="mt-5 flex gap-3">
-        <Button variant="neutral" className="flex-1" onClick={onClose} disabled={cancelando}>
-          {bloqueado ? "Cerrar" : "No, volver"}
-        </Button>
-        {!bloqueado && (
-          <Button variant="danger" className="flex-1" onClick={() => confirmar(condicion)} loading={cancelando}>
-            <XCircle size={17} /> Sí, cancelar reserva
-          </Button>
-        )}
-      </div>
-    </Modal>
+    </ConfirmDialog>
   );
 }
