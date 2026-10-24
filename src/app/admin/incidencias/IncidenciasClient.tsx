@@ -365,15 +365,23 @@ function GestionarModal({ inc, puedeGestionar, busy, error, onCancel, onGuardar 
           </div>
         </DialogBody>
       ) : !dato || !dato.estado ? (
-        <DialogBody className="flex flex-col items-center py-12 text-center">
-          <span className="mb-4 flex size-14 items-center justify-center rounded-full bg-danger-fill">
-            <AlertTriangle className="size-[26px] text-danger-fg" />
-          </span>
-          <p className="mb-5 text-[15px] text-fg-2">{detalle.error ?? "La incidencia tiene un estado que no reconocemos."}</p>
-          <Button variant="neutral" onClick={() => setNonce((n) => n + 1)}>
-            <RotateCcw className="size-4" /> Reintentar
-          </Button>
-        </DialogBody>
+        // La lectura falló: el aviso y "Reintentar" van en el cuerpo, y el pie da la salida.
+        <>
+          <DialogBody className="flex flex-col items-center py-12 text-center">
+            <span className="mb-4 flex size-14 items-center justify-center rounded-full bg-danger-fill">
+              <AlertTriangle className="size-[26px] text-danger-fg" />
+            </span>
+            <p className="mb-5 text-[15px] text-fg-2">{detalle.error ?? "La incidencia tiene un estado que no reconocemos."}</p>
+            <Button variant="neutral" onClick={() => setNonce((n) => n + 1)}>
+              <RotateCcw className="size-4" /> Reintentar
+            </Button>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="neutral" onClick={onCancel}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </>
       ) : (
         <GestionarForm
           detalle={{ ...dato, estado: dato.estado }}
