@@ -57,6 +57,7 @@ export function CancelarDiaModal({
         </>
       }
       confirmLabel="Cancelar día"
+      note={<FaltanCampos faltan={faltan} para="cancelar el día" />}
       busy={cancelando}
       error={rechazo}
       confirmDisabled={faltan > 0}
@@ -104,7 +105,6 @@ export function CancelarDiaModal({
             </FormItem>
           )}
         />
-        <FaltanCampos faltan={faltan} para="cancelar el día" className="mt-2" />
       </Form>
     </ConfirmDialog>
   );
