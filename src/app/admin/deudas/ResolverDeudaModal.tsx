@@ -190,7 +190,7 @@ export function ResolverDeudaModal({ deuda, onResuelta, onDesactualizado, onCerr
       onOpenChange={(abierto) => { if (!abierto) cerrar(); }}
       disablePointerDismissal={guardando}
     >
-      <DialogContent className="w-[560px]">
+      <DialogContent size="md">
         <DialogHeader closeDisabled={guardando}>
           <span className="t-label mb-1.5 block">{aConfirmar ? "Confirmar cambio" : "Resolver deuda"}</span>
           <DialogTitle className="leading-tight break-words">{deuda.deudor || "Deuda"}</DialogTitle>
