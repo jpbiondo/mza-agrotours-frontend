@@ -181,7 +181,7 @@ export default function ImpagasClient() {
         <Kpi
           label="Total reembolsos impagos"
           value={isLoading ? "–" : moneyAr(totalImpago)}
-          sub={isLoading ? "Cargando…" : `${counts.impago} reembolso${counts.impago === 1 ? "" : "s"} sin pagar`}
+          sub={isLoading ? "–" : `${counts.impago} reembolso${counts.impago === 1 ? "" : "s"} sin pagar`}
           icon={<AlertCircle size={21} />}
           tone="danger"
         />
