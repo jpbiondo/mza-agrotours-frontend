@@ -23,10 +23,9 @@ import {
   Button,
   buttonClasses,
   Card,
+  ResultScreen,
   Skeleton,
-  Toast,
 } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import {
   Form,
@@ -432,7 +431,6 @@ function Inner({
   const [bajaAbierta, setBajaAbierta] = useState(false);
   const [bajaHecha, setBajaHecha] = useState(false);
   const [editando, setEditando] = useState<Seccion | null>(null);
-  const [toast, setToast] = useState<ToastData | null>(null);
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
 
   /**
@@ -498,6 +496,19 @@ function Inner({
     setEditando(null);
     notify.success(mensaje);
     return res;
+  }
+
+  // Terminó un proceso que saca al usuario del panel: pantalla de resultado,
+  // y la salida diferida del efecto de arriba.
+  if (bajaHecha) {
+    return (
+      <ResultScreen
+        title="Establecimiento eliminado correctamente"
+        action={<Button onClick={salirDelPanel}>Ir a explorar</Button>}
+      >
+        En unos segundos te llevamos a explorar experiencias.
+      </ResultScreen>
+    );
   }
 
   return (
@@ -610,11 +621,8 @@ function Inner({
       </SectionCard>
 
       <div className="mt-8 flex justify-end">
-        {/* Ya dado de baja, no tiene sentido volver a abrir el flujo en los
-            segundos que quedan hasta la salida. */}
         <Button
           variant="danger-outline"
-          disabled={bajaHecha}
           onClick={() => setBajaAbierta(true)}
         >
           <Trash2 className="size-4" /> Eliminar establecimiento
@@ -628,17 +636,10 @@ function Inner({
           onCancel={() => setBajaAbierta(false)}
           onEliminado={() => {
             setBajaAbierta(false);
-            // Sin auto-ocultado: el aviso tiene que seguir ahí cuando se sale.
-            setToast({
-              tone: "success",
-              title: "Establecimiento eliminado correctamente.",
-            });
             setBajaHecha(true);
           }}
         />
       )}
-
-      {toast && <Toast {...toast} />}
     </div>
   );
 }
