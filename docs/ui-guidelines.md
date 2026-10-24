@@ -29,11 +29,14 @@ Las clases `.btn-*` de `globals.css` no se usan en código nuevo.
 | Cuándo | Qué se muestra | Implementación |
 |---|---|---|
 | Una acción salió bien y el usuario sigue en la misma pantalla | Toast `success` de 4 s. Lleva `sub` sólo si hay un dato que leer (nombre, fecha, cupos) | `notify.success` / `notify.successDetailed` ✅. Reemplaza las 24 copias de `useState`+`setTimeout` y los 4 toasts propios |
-| Una acción **reversible** salió bien (publicar o pasar a borrador, quitar portada) | Toast con botón **Deshacer**, 6 s, sin modal previo | `notify.undoable` ✅ |
+| Una acción **reversible** salió bien (publicar o pasar a borrador) | Toast con botón **Deshacer**, 6 s, sin modal previo. *Quitar la portada no cuenta: el backend no garantiza que el archivo siga en el bucket* | `notify.undoable` ✅ |
 | Falló una acción **lanzada desde un diálogo** | `Alert danger` dentro del diálogo. El diálogo queda abierto con lo cargado. *Es el caso de ~25 diálogos* | `Alert` ✅ (o `error` de `ConfirmDialog`) |
-| Falló una acción lanzada sin diálogo (toggle, acción de fila) | Toast `danger` de 7 s, con botón de cerrar. Dura más que el de éxito porque hay que leer qué falló | `notify.error` ✅ |
+| Falló una acción lanzada sin diálogo (toggle, acción de fila) | Toast `danger` de 7 s, con botón de cerrar. Dura más que el de éxito porque hay que leer qué falló. *El envío de un formulario no entra acá: ver "Errores de formulario"* | `notify.error` ✅ |
+| La acción ya no aplica porque lo que se ve quedó viejo (otro usuario o pestaña lo resolvió) | Se cierra el diálogo o panel, se recarga y sale un toast `info` que dice qué pasó | `notify.info` ✅ |
 | Un estado de la pantalla limita lo que se puede hacer (sólo lectura, suspendido, borrador) | `Alert` persistente arriba del contenido: `warning` si bloquea, `info` si sólo informa | `Alert` ✅, con tono `info` ✅ |
-| Termina un proceso que cambia de contexto (login, alta enviada, pago, reprogramación) | Pantalla de resultado con un ícono, un título y un único CTA | `ResultScreen` ✅ |
+| Un aviso de contexto dentro de una tarjeta, un formulario o un diálogo (cupos, reembolsos que se van a emitir, fechas descartadas) | `Alert` en el lugar donde hace falta, con el tono de lo que avisa. Nunca una caja armada a mano | `Alert` ✅ |
+| Termina un proceso que cambia de contexto (login, alta enviada, pago, reprogramación, baja de un establecimiento) | Pantalla de resultado con un ícono, un título y un único CTA. Si hay otra salida (reenviar un correo), va como link dentro del texto | `ResultScreen` ✅ |
+| Feedback dentro del propio control ("Link copiado" en el botón Compartir) | El control cambia su texto o ícono un momento; no hace falta toast | — |
 
 Nunca se muestra un mensaje técnico (`Backend respondió…`, códigos `X.y`). Cada código de dominio se traduce a un mensaje en el hook. Si no hay traducción, `clasificarError` ✅ elige el texto genérico de su categoría (ver "Error genérico").
 
@@ -141,6 +144,19 @@ Los casos de botones que quedaron dudosos al migrar se resolvieron así (2026-10
 17. **Spinner mientras se prepara la acción** (p. ej. "Contactar" averiguando si ya hay chat): también es `loading`.
 18. **"Reintentar" dentro de un flujo destructivo**: `primary`, no `danger`.
 19. **Botón de texto**: nueva variante `text` de `Button`.
+
+Los casos de feedback que quedaron dudosos al migrar se resolvieron así (2026-10-21):
+
+20. **Quitar la portada**: no lleva Deshacer; toast de éxito simple.
+21. **Baja de un establecimiento**: `ResultScreen` con "Ir a explorar" y salida automática a los 5 s.
+22. **Envío de un formulario de página rechazado**: gana "Errores de formulario": `Alert danger` arriba del pie, también en `/cuenta` y `/registro`.
+23. **Avisos de envío armados a mano**: pasan a `Alert` con el mismo tono.
+24. **Avisos de contexto armados a mano**: pasan a `Alert` con el tono que tenían, aunque no estén arriba del contenido.
+25. **Pantallas de resultado con más de un CTA**: se recortan a uno con `ResultScreen`.
+26. **"Link copiado"**: queda como feedback del botón.
+27. **Acción sobre datos viejos** (p. ej. un reembolso que ya no está pendiente): se cierra, se recarga y sale un toast `info`.
+28. **Establecimientos suspendidos en el inicio de admin**: `Alert warning`, no `danger`. Es un estado que se queda a la vista, y `danger` lo anunciaría como urgente en cada carga.
+29. **Validación del cliente en parámetros**: `FaltanCampos` debajo de "Guardar cambios", que queda deshabilitado; "Ver qué falta" marca los campos.
 
 ## Preguntas abiertas
 
