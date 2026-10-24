@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, Plus, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Alert, Button } from "@/components/ui";
 import { EDAD_MAX, EDAD_MIN, nuevaTarifa, soloDigitos, type ErroresActividad } from "@/lib/actividad-form";
 import { cn } from "@/lib/utils";
 import type { TarifaFila } from "@/types/actividad-form";
@@ -269,15 +269,15 @@ export function TarifasEditor({
         </span>
       </div>
 
+      {/* Se recalcula en vivo: `status` para no interrumpir al lector en cada tecla. */}
       {globales.length > 0 && (
-        <div className="mt-3.5 flex items-start gap-2.5 rounded-md border border-danger bg-danger-fill px-3.5 py-3 text-[13px] leading-normal text-danger-fg">
-          <AlertTriangle className="mt-px size-4 shrink-0" />
+        <Alert tone="danger" role="status" icon={<AlertTriangle size={18} />} className="mt-3.5">
           <div className="flex flex-col gap-1">
             {globales.map((m) => (
               <span key={m}>{m}</span>
             ))}
           </div>
-        </div>
+        </Alert>
       )}
     </div>
   );

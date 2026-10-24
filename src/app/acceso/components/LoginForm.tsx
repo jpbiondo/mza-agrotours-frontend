@@ -13,7 +13,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { FormHead, FormAlert, AuthLink } from "./AuthShell";
+import { FormHead, AuthLink } from "./AuthShell";
+import { Alert } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { loginSchema, type LoginData } from "../schema";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,18 +55,18 @@ export default function LoginForm({ onSuccess, onRecover, notice }: LoginFormPro
         sub="Ingresá con tus credenciales para acceder a tus reservas y experiencias."
       />
 
-      {notice && <FormAlert tone="info">{notice}</FormAlert>}
+      {notice && <Alert tone="info" className="pop mb-[22px]">{notice}</Alert>}
 
       {authError === "badCreds" && (
-        <FormAlert tone="danger">El correo o contraseña ingresado no son correctos.</FormAlert>
+        <Alert tone="danger" className="pop mb-[22px]">El correo o contraseña ingresado no son correctos.</Alert>
       )}
       {authError === "baja" && (
-        <FormAlert tone="danger">Esta cuenta ha sido eliminada.</FormAlert>
+        <Alert tone="danger" className="pop mb-[22px]">Esta cuenta ha sido eliminada.</Alert>
       )}
       {authError === "error" && (
-        <FormAlert tone="danger">
+        <Alert tone="danger" className="pop mb-[22px]">
           Ocurrió un problema al iniciar sesión. Intentá de nuevo en unos minutos.
-        </FormAlert>
+        </Alert>
       )}
 
       <Form {...form}>

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CalendarCheck, CalendarDays, CalendarOff, CalendarX, Info, Minus, Plus, Star, Users } from "lucide-react";
-import { Button, buttonClasses } from "@/components/ui";
+import { CalendarCheck, CalendarDays, CalendarOff, CalendarX, Info, Minus, Plus, Star, Users } from "lucide-react";
+import { Alert, Button, buttonClasses } from "@/components/ui";
 import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CalendarioReserva, type DiaSeleccionado } from "@/components/reserva/CalendarioReserva";
 import { primerMesDisponible } from "@/lib/calendarioReserva";
@@ -267,29 +267,23 @@ function PanelReserva({ a, r, tactil = false }: { a: ActividadPublica; r: Estado
                   </div>
 
                   {excede && (
-                    <div className="mt-3.5 flex items-start gap-2.5 rounded-[10px] border border-warning bg-warning-fill px-3.5 py-3 text-[13px] leading-[1.45]">
-                      <AlertTriangle size={18} className="mt-px shrink-0 text-warning" aria-hidden />
-                      <div>
-                        <div className="font-semibold text-fg-1">Superás los cupos disponibles</div>
-                        <div className="mt-0.5 text-fg-2">
-                          Para el {fecha} quedan <strong>{cupos} {cupos === 1 ? "lugar" : "lugares"}</strong> y estás
-                          reservando para {totalVisitantes}. Reducí la cantidad o elegí otra fecha.
-                        </div>
+                    <Alert tone="warning" className="mt-3.5">
+                      <div className="font-semibold">Superás los cupos disponibles</div>
+                      <div className="mt-0.5">
+                        Para el {fecha} quedan <strong>{cupos} {cupos === 1 ? "lugar" : "lugares"}</strong> y estás
+                        reservando para {totalVisitantes}. Reducí la cantidad o elegí otra fecha.
                       </div>
-                    </div>
+                    </Alert>
                   )}
 
                   {completo && (
-                    <div className="mt-3.5 flex items-start gap-2.5 rounded-[10px] border border-warning bg-warning-fill px-3.5 py-3 text-[13px] leading-[1.45]">
-                      <Info size={18} className="mt-px shrink-0 text-warning-fg" aria-hidden />
-                      <div>
-                        <div className="font-semibold text-fg-1">Alcanzaste el límite de cupos</div>
-                        <div className="mt-0.5 text-fg-2">
-                          Para el {fecha} quedan <strong>{cupos} {cupos === 1 ? "lugar" : "lugares"}</strong> y ya los
-                          completaste. No podés agregar más visitantes para esta fecha.
-                        </div>
+                    <Alert tone="warning" icon={<Info size={18} aria-hidden />} className="mt-3.5">
+                      <div className="font-semibold">Alcanzaste el límite de cupos</div>
+                      <div className="mt-0.5">
+                        Para el {fecha} quedan <strong>{cupos} {cupos === 1 ? "lugar" : "lugares"}</strong> y ya los
+                        completaste. No podés agregar más visitantes para esta fecha.
                       </div>
-                    </div>
+                    </Alert>
                   )}
 
                   {totalVisitantes > 0 && !excede && (

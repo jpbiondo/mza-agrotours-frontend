@@ -22,11 +22,17 @@ const tones: Record<Tone, { box: string; Icon: typeof AlertCircle }> = {
 export function Alert({
   tone = "danger",
   icon,
+  role,
   className = "",
   children,
 }: {
   tone?: Tone;
   icon?: ReactNode;
+  /**
+   * Por defecto `alert` en `danger` y `status` en el resto. Un error que se
+   * recalcula mientras se escribe pasa `status`: si no, interrumpe en cada tecla.
+   */
+  role?: "alert" | "status";
   className?: string;
   children: ReactNode;
 }) {
@@ -34,11 +40,11 @@ export function Alert({
   return (
     <div
       // Un error se anuncia apenas aparece; los otros tonos, cuando el lector termina lo que está leyendo.
-      role={tone === "danger" ? "alert" : "status"}
+      role={role ?? (tone === "danger" ? "alert" : "status")}
       className={cn("flex items-start gap-[11px] rounded-md border p-[13px_15px]", box, className)}
     >
       <span className="mt-px shrink-0">{icon ?? <Icon size={18} />}</span>
-      <div className="text-[13.5px] font-medium leading-[1.45]">{children}</div>
+      <div className="min-w-0 flex-1 text-[13.5px] font-medium leading-[1.45]">{children}</div>
     </div>
   );
 }

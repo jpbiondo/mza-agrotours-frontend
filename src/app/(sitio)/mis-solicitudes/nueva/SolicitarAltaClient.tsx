@@ -11,7 +11,6 @@ import {
   Phone,
   Send,
   Check,
-  Clock,
   ClipboardList,
   AlertTriangle,
   AlertCircle,
@@ -30,7 +29,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { BackLink, Button, Modal, SectionLabel } from "@/components/ui";
+import { Alert, BackLink, Button, Modal, ResultScreen, SectionLabel } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
   REQUISITOS_DOC,
@@ -142,43 +141,20 @@ interface ConfirmacionProps {
  */
 function Confirmacion({ nombre, onIr }: ConfirmacionProps) {
   return (
-    <div className="mx-auto max-w-[640px] px-7 pt-12 pb-20">
-      <div className="rounded-lg border border-outline-variant bg-surface px-10 py-12 text-center">
-        <div className="mx-auto mb-[22px] flex size-[76px] items-center justify-center rounded-full bg-success-fill">
-          <Check className="size-[38px] text-success-fg" />
-        </div>
-        <h1 className="mb-3 font-display text-[28px] font-bold text-fg-1">
-          ¡Tu solicitud fue creada correctamente!
-        </h1>
-        <p className="mx-auto mb-6 max-w-[460px] text-[15.5px] leading-relaxed text-fg-2">
-          Registramos la solicitud de alta de{" "}
-          <strong className="text-fg-1">
-            {nombre || "tu establecimiento"}
-          </strong>
-          . Pronto nos pondremos en comunicación para informarte sobre el estado
-          de la verificación.
-        </p>
-        <div className="mb-7 inline-flex items-center gap-2.5 rounded-pill bg-warning-fill px-4 py-2.5 text-[13.5px] font-semibold text-warning-fg">
-          <Clock className="size-[15px]" /> Estado de la solicitud: Pendiente
-        </div>
-
-        <div className="mb-7 flex items-start gap-2.5 rounded-md border border-outline-variant bg-cream-tert px-4 py-3.5 text-left">
-          <Mail className="size-[17px] shrink-0 text-green-800" />
-          <span className="text-[13.5px] leading-normal text-fg-2">
-            Notificamos a los administradores del sistema por correo y por la
-            plataforma para que revisen la verificación de tu establecimiento.
-          </span>
-        </div>
-        <div className="flex flex-wrap justify-center gap-3">
-          <Button variant="primary" onClick={() => onIr("/mis-solicitudes")}>
-            <ClipboardList className="size-[17px]" /> Ver mis solicitudes
-          </Button>
-          <Button variant="neutral" onClick={() => onIr("/explorar")}>
-            Explorar experiencias
-          </Button>
-        </div>
-      </div>
-    </div>
+    <ResultScreen
+      title="¡Tu solicitud fue creada correctamente!"
+      action={
+        <Button onClick={() => onIr("/mis-solicitudes")}>
+          <ClipboardList className="size-[17px]" /> Ver mis solicitudes
+        </Button>
+      }
+    >
+      Registramos la solicitud de alta de{" "}
+      <strong className="text-fg-1">{nombre || "tu establecimiento"}</strong>, que
+      queda <strong className="text-fg-1">pendiente</strong>. Ya avisamos a los
+      administradores para que la revisen, y te vamos a informar el resultado de la
+      verificación.
+    </ResultScreen>
   );
 }
 
@@ -565,53 +541,46 @@ export default function SolicitarAltaClient() {
               {/* Acciones */}
               <div className="mt-6">
                 {fallidos.length > 0 && (
-                  <div className="mb-3.5 rounded-md border border-warning bg-warning-fill px-3.5 py-3 text-left">
-                    <div className="flex items-start gap-2.5">
-                      <AlertTriangle className="mt-px size-[17px] shrink-0 text-warning-fg" />
-                      <div className="min-w-0 flex-1">
-                        <h2 className="font-display text-[14.5px] font-semibold text-warning-fg">
-                          {fallidos.length === 1
-                            ? "No pudimos subir 1 archivo"
-                            : `No pudimos subir ${fallidos.length} archivos`}
-                        </h2>
-                        <p className="mt-1 text-[13.5px] leading-normal text-warning-fg/85">
-                          La solicitud no se envió: necesitamos toda la documentación para
-                          registrarla. Volvé a enviarla —los archivos que sí llegaron no se
-                          vuelven a subir—.
-                        </p>
-                        <ul className="mt-2.5 flex flex-col gap-1">
-                          {fallidos.map((f, i) => (
-                            <li
-                              key={f.storageKey ?? `${f.nombre}-${i}`}
-                              className="flex items-center gap-2 text-[13px] text-warning-fg"
-                            >
-                              <AlertCircle className="size-[13px] shrink-0" />
-                              <span className="truncate">{f.nombre}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
+                  <Alert tone="warning" className="mb-3.5 text-left">
+                    <h2 className="font-display text-[14.5px] font-semibold">
+                      {fallidos.length === 1
+                        ? "No pudimos subir 1 archivo"
+                        : `No pudimos subir ${fallidos.length} archivos`}
+                    </h2>
+                    <p className="mt-1">
+                      La solicitud no se envió: necesitamos toda la documentación para
+                      registrarla. Volvé a enviarla —los archivos que sí llegaron no se
+                      vuelven a subir—.
+                    </p>
+                    <ul className="mt-2.5 flex flex-col gap-1">
+                      {fallidos.map((f, i) => (
+                        <li
+                          key={f.storageKey ?? `${f.nombre}-${i}`}
+                          className="flex items-start gap-2 text-[13px]"
+                        >
+                          <AlertCircle className="mt-[3px] size-[13px] shrink-0" />
+                          {/* El contenido de Alert no tiene ancho mínimo 0: un nombre largo se corta en vez de truncarse. */}
+                          <span className="break-all">{f.nombre}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Alert>
                 )}
                 {submitError && (
-                  <div className="mb-3.5 flex items-start gap-2 rounded-md border border-danger bg-danger-fill px-3.5 py-2.5 text-[13.5px] leading-normal text-danger-fg">
-                    <AlertCircle className="mt-px size-[15px] shrink-0" />
-                    <span>
-                      {submitError.texto}
-                      {submitError.verSolicitudes && (
-                        <>
-                          {" "}
-                          <Link
-                            href="/mis-solicitudes"
-                            className="font-semibold underline underline-offset-2"
-                          >
-                            Ver mis solicitudes
-                          </Link>
-                        </>
-                      )}
-                    </span>
-                  </div>
+                  <Alert tone="danger" className="mb-3.5 text-left">
+                    {submitError.texto}
+                    {submitError.verSolicitudes && (
+                      <>
+                        {" "}
+                        <Link
+                          href="/mis-solicitudes"
+                          className="font-semibold underline underline-offset-2"
+                        >
+                          Ver mis solicitudes
+                        </Link>
+                      </>
+                    )}
+                  </Alert>
                 )}
                 <div className="flex justify-end gap-3">
                   <Button

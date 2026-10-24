@@ -7,8 +7,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Pagination } from "@/components/catalog/controls";
-import { Alert, Button, Card, EstadoBadge, Skeleton, Toast } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { Alert, Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import {
@@ -266,7 +266,6 @@ export default function ReembolsosClient() {
   const { reembolsar, isLoading: reembolsando } = useReembolsar();
   const [abierto, setAbierto] = useState<ReembolsoPendiente | null>(null);
   const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
-  const [toast, setToast] = useState<ToastData | null>(null);
 
   if (!establecimientoId) return <SinEstablecimiento />;
 
@@ -274,11 +273,6 @@ export default function ReembolsosClient() {
   // página sola y engañaría, así que no se muestra.
   const montoTotal = totalPaginas <= 1 ? reembolsos.reduce((s, r) => s + r.monto, 0) : null;
   const desde = (pagina - 1) * REEMBOLSOS_POR_PAGINA;
-
-  function notificar(t: ToastData) {
-    setToast(t);
-    setTimeout(() => setToast((actual) => (actual === t ? null : actual)), 3400);
-  }
 
   function abrir(r: ReembolsoPendiente) {
     setErrorDetalle(null);
@@ -307,15 +301,8 @@ export default function ReembolsosClient() {
       }
       setAbierto(null);
       refrescarSinElUltimo();
-      notificar(
-        res.resultado === "REALIZADO"
-          ? { tone: "success", title: "Monto de reserva reembolsado correctamente" }
-          : {
-              tone: "info",
-              title: "Reembolso en proceso",
-              sub: "Mercado Pago lo está confirmando",
-            },
-      );
+      if (res.resultado === "REALIZADO") notify.success("Monto de reserva reembolsado correctamente");
+      else notify.info("Reembolso en proceso", "Mercado Pago lo está confirmando");
       return;
     }
 
@@ -324,12 +311,11 @@ export default function ReembolsosClient() {
       // en pantalla está viejo.
       setAbierto(null);
       refrescarSinElUltimo();
-      notificar({
-        tone: "info",
-        title: res.code === "reembolsoNoPendiente"
+      notify.info(
+        res.code === "reembolsoNoPendiente"
           ? "Este reembolso ya no estaba pendiente"
           : "Este reembolso ya no existe",
-      });
+      );
       return;
     }
 
@@ -384,7 +370,6 @@ export default function ReembolsosClient() {
         onReembolsar={onReembolsar}
       />
 
-      {toast && <Toast {...toast} />}
     </div>
   );
 }

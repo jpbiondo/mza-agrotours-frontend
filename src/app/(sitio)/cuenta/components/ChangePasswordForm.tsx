@@ -14,8 +14,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Button, Card } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { Alert, Button, Card } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { cambiarPasswordSchema, type CambiarPasswordForm } from "../schema";
 import { useCambiarPassword } from "@/hooks/usePerfil";
 
@@ -26,11 +26,7 @@ const TIPS = [
   "No la reutilices de otros sitios.",
 ];
 
-export default function ChangePasswordForm({
-  setToast,
-}: {
-  setToast: (t: ToastData | null) => void;
-}) {
+export default function ChangePasswordForm() {
   const [showActual, setShowActual] = useState(false);
   const [showNueva, setShowNueva] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -50,16 +46,15 @@ export default function ChangePasswordForm({
           message: "La contraseña actual ingresada es incorrecta",
         });
       } else {
-        setToast({
-          tone: "danger",
-          title: "No se pudo cambiar la contraseña",
-          sub: "Intentá de nuevo en unos minutos.",
+        // El backend rechazó el envío entero: va arriba del pie, no en un toast.
+        form.setError("root", {
+          message: "No se pudo cambiar la contraseña. Intentá de nuevo en unos minutos.",
         });
       }
       return;
     }
     form.reset();
-    setToast({ tone: "success", title: "Contraseña actualizada correctamente" });
+    notify.success("Contraseña actualizada correctamente");
   }
 
   return (
@@ -165,6 +160,10 @@ export default function ChangePasswordForm({
                 </FormItem>
               )}
             />
+
+            {form.formState.errors.root?.message && (
+              <Alert tone="danger">{form.formState.errors.root.message}</Alert>
+            )}
 
             <div className="mt-1.5 flex gap-3">
               <Button type="submit" loading={form.formState.isSubmitting}>

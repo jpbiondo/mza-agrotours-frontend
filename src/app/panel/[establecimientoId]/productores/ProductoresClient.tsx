@@ -37,9 +37,8 @@ import {
   Modal,
   Panel,
   Skeleton,
-  Toast,
 } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import {
   Form,
   FormControl,
@@ -1023,7 +1022,6 @@ function Pantalla({
 
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [errorBaja, setErrorBaja] = useState<string | null>(null);
-  const [toast, setToast] = useState<ToastData | null>(null);
 
   // El líder siempre primero; el resto en el orden en que los devuelve el backend.
   const ordenados = useMemo(
@@ -1034,11 +1032,6 @@ function Pantalla({
   const esPropio = (p: Productor) =>
     !!emailSesion && p.emailUsuario.trim().toLowerCase() === emailSesion.trim().toLowerCase();
 
-  function notify(title: string) {
-    setToast({ tone: "success", title });
-    setTimeout(() => setToast((t) => (t?.title === title ? null : t)), 3400);
-  }
-
   function cerrar() {
     setErrorBaja(null);
     setDialogo(null);
@@ -1048,7 +1041,7 @@ function Pantalla({
     if (editando) reemplazar(p);
     else agregar(p);
     cerrar();
-    notify(
+    notify.success(
       editando
         ? `Se actualizó el rol de ${p.nombreUsuario} a «${p.nombreRol}».`
         : `Se agregó a ${p.nombreUsuario} al establecimiento.`,
@@ -1070,7 +1063,7 @@ function Pantalla({
     }
     quitar(p.id);
     cerrar();
-    notify(`Se quitó a ${p.nombreUsuario} del establecimiento.`);
+    notify.success(`Se quitó a ${p.nombreUsuario} del establecimiento.`);
   }
 
   const stats = [
@@ -1307,7 +1300,7 @@ function Pantalla({
             onHecho={(p, hasta) => {
               reemplazar(p);
               cerrar();
-              notify(`Se suspendió a ${p.nombreUsuario} hasta el ${fmtFecha(finDelDia(hasta))}.`);
+              notify.success(`Se suspendió a ${p.nombreUsuario} hasta el ${fmtFecha(finDelDia(hasta))}.`);
             }}
           />
         </Panel>
@@ -1322,7 +1315,7 @@ function Pantalla({
             onHecho={(p) => {
               reemplazar(p);
               cerrar();
-              notify(`Se levantó la suspensión de ${p.nombreUsuario}. Ya puede ingresar.`);
+              notify.success(`Se levantó la suspensión de ${p.nombreUsuario}. Ya puede ingresar.`);
             }}
           />
         </Panel>
@@ -1358,7 +1351,6 @@ function Pantalla({
         </Modal>
       )}
 
-      {toast && <Toast {...toast} />}
     </div>
   );
 }

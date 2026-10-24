@@ -4,9 +4,8 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
-import { buttonClasses, Card } from "@/components/ui";
+import { buttonClasses, ResultScreen } from "@/components/ui";
 import { RAIZ_PANEL, rutaPanel } from "@/lib/rutasPanel";
-import { cn } from "@/lib/utils";
 
 export type ResultadoVinculacion = "ok" | "cancelada" | "error";
 
@@ -17,13 +16,13 @@ const CONTENIDO: Record<ResultadoVinculacion, {
   titulo: string;
   texto: string;
   Icono: typeof CheckCircle2;
-  tono: string;
+  tono: "success" | "warning" | "danger";
 }> = {
   ok: {
     titulo: "Cuenta de Mercado Pago vinculada",
     texto: "Tu establecimiento ya puede recibir reservas. Te llevamos de vuelta a los datos del establecimiento.",
     Icono: CheckCircle2,
-    tono: "text-success",
+    tono: "success",
   },
   cancelada: {
     titulo: "No se vinculó la cuenta",
@@ -31,13 +30,13 @@ const CONTENIDO: Record<ResultadoVinculacion, {
     // casos lo que había sigue igual.
     texto: "Cancelaste la autorización en Mercado Pago, así que la cuenta de cobro del establecimiento sigue como estaba.",
     Icono: XCircle,
-    tono: "text-warning",
+    tono: "warning",
   },
   error: {
     titulo: "No pudimos vincular la cuenta",
     texto: "Algo falló al conectar con Mercado Pago o el enlace venció. La cuenta de cobro sigue como estaba: probá de nuevo desde los datos del establecimiento.",
     Icono: AlertTriangle,
-    tono: "text-danger",
+    tono: "danger",
   },
 };
 
@@ -64,18 +63,21 @@ export default function VinculacionClient({
     return () => clearTimeout(t);
   }, [resultado, destino, router]);
 
+  // Se anuncia apenas aparece: si salió bien, la pantalla se va sola en 3 s.
   return (
-    <div className="mx-auto max-w-[560px] px-4 pt-16 pb-24">
-      <Card className="p-8 text-center">
-        <Icono className={cn("mx-auto size-10", tono)} aria-hidden />
-        <h1 role="status" className="mt-4 font-display text-[24px] font-bold text-fg-1">
-          {titulo}
-        </h1>
-        <p className="mt-2 text-[15px] leading-normal text-pretty text-fg-2">{texto}</p>
-        <Link href={destino} replace className={buttonClasses({ className: "mt-6" })}>
+    <div role="status">
+    <ResultScreen
+      tone={tono}
+      icon={<Icono />}
+      title={titulo}
+      action={
+        <Link href={destino} replace className={buttonClasses()}>
           Ir a los datos del establecimiento
         </Link>
-      </Card>
+      }
+    >
+      {texto}
+    </ResultScreen>
     </div>
   );
 }

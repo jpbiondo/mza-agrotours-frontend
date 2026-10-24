@@ -8,15 +8,16 @@ import {
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { SinPermiso } from "@/components/GuardRol";
 import { Donut, BarChart, OccupancyBar } from "@/components/panel/charts";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { Toast, type ToastData } from "@/components/ui/Toast";
 import { PERIODOS, labelPeriodo } from "@/data/estadisticas";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import { useEstadisticas, useExportarReporte, type ExportOpts } from "@/hooks/useEstadisticas";
 import { colorDe } from "@/lib/color";
+import { notify } from "@/lib/notify";
 import { fmtFecha, fmtPctConSigno, moneyAr } from "@/lib/format";
 import { TipoPermiso } from "@/lib/permisos";
 import { ROL_PRODUCTOR_LIDER, tieneRol } from "@/lib/roles";
@@ -165,7 +166,7 @@ const opcion = (on: boolean) =>
     on ? "m-0 border-2 border-green-800 bg-green-050" : "m-px border border-outline-variant bg-surface hover:border-sand",
   );
 
-function ExportModal({ busy, onClose, onConfirm }: { busy: boolean; onClose: () => void; onConfirm: (o: ExportOpts) => void }) {
+function ExportModal({ busy, error, onClose, onConfirm }: { busy: boolean; error: string | null; onClose: () => void; onConfirm: (o: ExportOpts) => void }) {
   const [format, setFormat] = useState<ExportOpts["format"]>("pdf");
   const [scope, setScope] = useState<ExportOpts["scope"]>("performance");
 
@@ -212,6 +213,8 @@ function ExportModal({ busy, onClose, onConfirm }: { busy: boolean; onClose: () 
         })}
       </div>
 
+      {error && <Alert tone="danger" className="mb-5">{error}</Alert>}
+
       <div className="flex justify-end gap-3">
         <Button variant="neutral" onClick={onClose} disabled={busy}>Cancelar</Button>
         <Button onClick={() => onConfirm({ format, scope })} loading={busy}>
@@ -247,31 +250,25 @@ export default function EstadisticasClient() {
   const { data, isLoading, error, reload } = useEstadisticas(esLider ? establecimientoId : "", period);
   const { exportar, isLoading: exporting } = useExportarReporte();
   const [exportOpen, setExportOpen] = useState(false);
-  const [toast, setToast] = useState<ToastData | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4200);
-    return () => clearTimeout(t);
-  }, [toast]);
+  const [errorExport, setErrorExport] = useState<string | null>(null);
 
   if (!activo) return <EmptyEstablecimiento />;
   if (!esLider) return <SinPermiso motivo={SIN_ACCESO} />;
 
   async function onConfirmExport(opts: ExportOpts) {
     if (!data) return;
+    setErrorExport(null);
     const { ok } = await exportar(opts, data, period, {
       establecimiento: activo?.nombre || "Establecimiento",
       periodo: labelPeriodo(period),
     });
+    if (!ok) {
+      // Falló desde el diálogo: queda abierto con lo elegido, y el aviso adentro.
+      setErrorExport("No se pudo generar el reporte. Intentá nuevamente en unos minutos. Si el problema persiste, contactá a soporte.");
+      return;
+    }
     setExportOpen(false);
-    setToast(ok
-      ? {
-          tone: "success",
-          title: `Reporte generado en ${opts.format.toUpperCase()}`,
-          sub: opts.scope === "completo" ? "Se descargó el reporte completo con KPIs, gráfico y tabla." : "Se descargó la tabla de performance por actividad.",
-        }
-      : { tone: "danger", title: "No se pudo generar el reporte", sub: "Intentá nuevamente en unos minutos. Si el problema persiste, contactá a soporte." });
+    notify.success(`Reporte generado en ${opts.format.toUpperCase()}`);
   }
 
   const label = labelPeriodo(period);
@@ -367,8 +364,7 @@ export default function EstadisticasClient() {
         })()}
       </AsyncBoundary>
 
-      {exportOpen && <ExportModal busy={exporting} onClose={() => setExportOpen(false)} onConfirm={onConfirmExport} />}
-      {toast && <Toast {...toast} />}
+      {exportOpen && <ExportModal busy={exporting} error={errorExport} onClose={() => { setExportOpen(false); setErrorExport(null); }} onConfirm={onConfirmExport} />}
     </div>
   );
 }

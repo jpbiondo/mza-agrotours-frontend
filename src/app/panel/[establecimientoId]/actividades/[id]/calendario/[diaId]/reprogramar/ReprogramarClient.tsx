@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  AlertTriangle, ArrowLeft, CalendarCheck, CalendarClock, CalendarDays, CalendarRange, Check, Clock, MapPin, X,
+  AlertTriangle, CalendarCheck, CalendarClock, CalendarDays, CalendarRange, Check, Clock, MapPin, X,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, BackLink, Button, Card, Modal, Skeleton } from "@/components/ui";
+import { Alert, BackLink, Button, Card, Modal, ResultScreen, Skeleton } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
 import { CalendarioFechas, hoyISO, sumarDiasISO } from "@/components/ui/date-picker";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
@@ -100,45 +100,25 @@ function ConfirmarModal({ resumen, reprogramando, rechazo, onConfirmar, onCerrar
   );
 }
 
-function Exito({ resumen, nuevo, volver, calendario }: {
+function Exito({ resumen, nuevo, calendario }: {
   resumen: ResumenDia;
   nuevo: Reprogramacion;
-  volver: string;
   calendario: string;
 }) {
   return (
-    <div className="pop mx-auto max-w-[620px]">
-      <Card className="overflow-hidden p-0 text-center">
-        <div className="px-8 pt-10 pb-7">
-          <div className="mx-auto mb-[22px] flex size-[72px] items-center justify-center rounded-full bg-green-800 shadow-[inset_0_-3px_0_var(--green-900)]">
-            <Check className="size-[34px] text-white" />
-          </div>
-          <h1 className="mb-2 font-display text-[26px] leading-tight font-bold text-fg-1">
-            La actividad se reprogramó correctamente
-          </h1>
-          <p className="mx-auto max-w-[440px] text-[15px] leading-normal text-fg-2">
-            {[resumen.nombre, resumen.establecimiento].filter(Boolean).join(" — ")}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-6 border-y border-green-100 bg-green-050 px-6 py-5">
-          <span className="inline-flex items-center gap-[9px] text-base font-semibold text-fg-1">
-            <CalendarDays className="size-[18px] text-green-800" /> {fechaLarga(nuevo.fecha)}
-          </span>
-          <span className="inline-flex items-center gap-[9px] text-base font-semibold text-fg-1">
-            <Clock className="size-[18px] text-green-800" />
-            <span className="font-mono">{nuevo.horaInicio} – {nuevo.horaFin} h</span>
-          </span>
-        </div>
-        <div className="flex flex-wrap justify-center gap-3 bg-cream-tert px-6 py-[22px]">
-          <Link href={volver} className={buttonClasses({ variant: "neutral" })}>
-            <ArrowLeft className="size-4" /> Volver a las reservas
-          </Link>
-          <Link href={calendario} className={buttonClasses()}>
-            <CalendarDays className="size-4" /> Ver calendario
-          </Link>
-        </div>
-      </Card>
-    </div>
+    <ResultScreen
+      title="La actividad se reprogramó correctamente"
+      action={
+        <Link href={calendario} className={buttonClasses()}>
+          <CalendarDays className="size-4" /> Ver calendario
+        </Link>
+      }
+    >
+      {[resumen.nombre, resumen.establecimiento].filter(Boolean).join(" — ")}
+      <span className="mt-1 block font-semibold text-fg-1">
+        {fechaLarga(nuevo.fecha)} · <span className="font-mono">{nuevo.horaInicio} – {nuevo.horaFin} h</span>
+      </span>
+    </ResultScreen>
   );
 }
 
@@ -254,15 +234,12 @@ function Formulario({
                     )}
                   />
                   <Leyenda />
-                  <div className="mt-3.5 flex items-start gap-[7px] rounded-[8px] bg-warning-fill px-3 py-[9px] text-[12.5px] leading-[1.45] text-warning-fg">
-                    <CalendarRange className="mt-px size-3.5 shrink-0" />
-                    <span>
-                      Fechas disponibles hasta el <strong>{fechaCorta(max)}</strong>
-                      {pagoMasAntiguo && (
-                        <span className="text-fg-3"> — 120 días desde el pago más antiguo ({fechaCorta(pagoMasAntiguo)}).</span>
-                      )}
-                    </span>
-                  </div>
+                  <Alert tone="warning" icon={<CalendarRange size={18} />} className="mt-3.5">
+                    Fechas disponibles hasta el <strong>{fechaCorta(max)}</strong>
+                    {pagoMasAntiguo && (
+                      <span className="text-fg-3"> — 120 días desde el pago más antiguo ({fechaCorta(pagoMasAntiguo)}).</span>
+                    )}
+                  </Alert>
                 </div>
 
                 <div className="flex min-w-[240px] flex-[1_1_260px] flex-col gap-[18px]">
@@ -423,7 +400,7 @@ export default function ReprogramarClient({ actividadId, diaId }: { actividadId:
           pad={72}
         >
           {r && (listo ? (
-            <Exito resumen={r} nuevo={listo} volver={volver} calendario={calendario} />
+            <Exito resumen={r} nuevo={listo} calendario={calendario} />
           ) : (
             <>
               <BackLink href={volver} className="mb-[18px]">

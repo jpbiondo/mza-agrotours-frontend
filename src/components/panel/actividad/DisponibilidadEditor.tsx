@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, CalendarPlus, Info } from "lucide-react";
-import { Button } from "@/components/ui";
+import { AlertCircle, CalendarPlus } from "lucide-react";
+import { Alert, Button } from "@/components/ui";
 import { DatePicker, hoyISO, sumarDiasISO } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import { DIAS } from "@/data/actividad-form";
@@ -211,14 +211,11 @@ export function DisponibilidadEditor({
           </div>
         )}
 
-        <div className="mt-4 flex items-center gap-2 rounded-md bg-info-fill px-3.5 py-2.5 text-[13px] text-info-fg">
-          <Info className="size-[15px] shrink-0 text-info" />
-          <span>
-            {!fechaDesde
-              ? "Seleccioná primero la fecha de inicio para habilitar la fecha de fin."
-              : `La vigencia puede extenderse hasta ${DIAS_VIGENCIA_MAX} días desde hoy. No se permiten fechas pasadas.`}
-          </span>
-        </div>
+        <Alert tone="info" className="mt-4">
+          {!fechaDesde
+            ? "Seleccioná primero la fecha de inicio para habilitar la fecha de fin."
+            : `La vigencia puede extenderse hasta ${DIAS_VIGENCIA_MAX} días desde hoy. No se permiten fechas pasadas.`}
+        </Alert>
       </div>
     </div>
   );

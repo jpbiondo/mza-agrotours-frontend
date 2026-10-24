@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
-import { CalendarCheck, CheckCircle2, Lock, Pencil, Ticket } from "lucide-react";
+import { CalendarCheck, Lock, Pencil, Ticket } from "lucide-react";
 import PagarConMercadoPago from "@/components/reserva/PagarConMercadoPago";
-import { Button, buttonClasses } from "@/components/ui";
+import { Alert, Button, buttonClasses } from "@/components/ui";
 
 /**
  * Dónde está la reserva respecto de los cupos.
@@ -65,13 +65,10 @@ export function BloqueoCupos({
   if (bloqueo.estado === "pagada") {
     return (
       <div className="mt-4 flex flex-col gap-3">
-        <div className="flex items-start gap-2.5 rounded-xl border border-success bg-success-fill px-4 py-3.5">
-          <CheckCircle2 size={18} className="mt-px shrink-0 text-success" aria-hidden />
-          <div className="text-[12.5px] leading-normal text-fg-2">
-            <strong className="text-success-fg">¡Listo! Tu reserva quedó confirmada.</strong>
-            <div className="mt-1 font-mono text-[11.5px] text-fg-3">{bloqueo.codigo} · pagada</div>
-          </div>
-        </div>
+        <Alert tone="success">
+          <strong>¡Listo! Tu reserva quedó confirmada.</strong>
+          <div className="mt-1 font-mono text-[11.5px]">{bloqueo.codigo} · pagada</div>
+        </Alert>
         <Link href="/mis-reservas" className={buttonClasses({ size: "lg", className: "w-full" })}>
           <Ticket size={20} aria-hidden /> Ir a Mis reservas
         </Link>

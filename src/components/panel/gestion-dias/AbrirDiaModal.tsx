@@ -11,7 +11,7 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { fechaLarga } from "@/lib/gestion-dias";
 import { abrirDiaSchema, type AbrirDiaForm } from "@/app/panel/[establecimientoId]/actividades/[id]/dias/schema";
 import type { AltaDia, FechaISO, Tarifa } from "@/types/gestion-dias";
-import { CabeceraDia, NotaInfo, PieDialogo, PrecioContexto } from "./piezas";
+import { CabeceraDia, PieDialogo, PrecioContexto } from "./piezas";
 
 /**
  * Abre a reservas una fecha libre. El horario arranca con el que la actividad
@@ -107,10 +107,10 @@ export function AbrirDiaModal({
 
             <PrecioContexto tarifas={tarifas} />
 
-            <NotaInfo>
+            <Alert tone="info">
               Se abrirá un nuevo día de reservas con estos valores. Podés modificar el cupo después desde el
               calendario.
-            </NotaInfo>
+            </Alert>
 
             {rechazo && <Alert>{rechazo}</Alert>}
           </div>

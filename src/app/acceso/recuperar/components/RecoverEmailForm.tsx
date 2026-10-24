@@ -14,11 +14,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { FormHead, FormAlert } from "@/app/acceso/components/AuthShell";
+import { FormHead } from "@/app/acceso/components/AuthShell";
 import { Button } from "@/components/ui/Button";
 import { recoverEmailSchema } from "../schema";
 import { enviarResetEmail } from "@/lib/passwordReset";
-import { BackLink } from "@/components/ui";
+import { Alert, BackLink } from "@/components/ui";
 
 type RecoverEmailData = z.infer<typeof recoverEmailSchema>;
 
@@ -60,7 +60,7 @@ export default function RecoverEmailForm({ onSent, onBack }: RecoverEmailFormPro
         sub="Ingresá el correo asociado a tu cuenta y te enviaremos un enlace para crear una nueva contraseña."
       />
 
-      {apiError && <FormAlert tone="danger">{apiError}</FormAlert>}
+      {apiError && <Alert tone="danger" className="pop mb-[22px]">{apiError}</Alert>}
 
       <Form {...form}>
         <form

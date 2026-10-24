@@ -1,4 +1,4 @@
-import { CalendarRange, Clock, Info, Tag, X } from "lucide-react";
+import { CalendarRange, Clock, Tag, X } from "lucide-react";
 import { DIA_CORTO, fechaCorta, mesCorto, nombreMes } from "@/lib/gestion-dias";
 import { moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -56,15 +56,6 @@ export function PrecioContexto({ tarifas, className }: { tarifas: Tarifa[]; clas
         ))}
         . Se cambian desde «Modificar».
       </span>
-    </div>
-  );
-}
-
-export function NotaInfo({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={cn("flex items-start gap-1.5 rounded-md bg-info-fill px-3 py-2.5 text-[12.5px] leading-normal text-info-fg", className)}>
-      <Info className="mt-px size-3.5 shrink-0 text-info" />
-      <span>{children}</span>
     </div>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ChevronRight, Handshake, HandCoins, Landmark, ListTree, Search, SearchX, X } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { DeudaBadge } from "@/components/admin/DeudaBadge";
-import { ActionBtn, Alert, Skeleton, Toast } from "@/components/ui";
+import { ActionBtn, Alert, Skeleton } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { estabInitials } from "@/data/admin";
 import { DEUDA_ESTADO_META, DEUDA_ESTADOS_ORDEN, deudaResoluble, pendienteDe } from "@/data/deudas";
 import { fmtDiaLocal, fmtHoraLocal, moneyAr } from "@/lib/format";
@@ -160,13 +161,6 @@ export default function DeudasClient() {
   const [resolviendo, setResolviendo] = useState<Deuda | null>(null);
   /** Por qué la lista se recargó por su cuenta: queda a la vista hasta la próxima acción. */
   const [aviso, setAviso] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4200);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   function abrirResolver(d: Deuda) {
     setAviso(null);
@@ -177,7 +171,7 @@ export default function DeudasClient() {
   function onResuelta() {
     setResolviendo(null);
     reload();
-    setToast("Cambio de estado registrado.");
+    notify.success("Cambio de estado registrado.");
   }
 
   function onDesactualizado(mensaje: string) {
@@ -314,7 +308,6 @@ export default function DeudasClient() {
           onCerrar={() => setResolviendo(null)}
         />
       )}
-      {toast && <Toast tone="success" title={toast} />}
     </div>
   );
 }

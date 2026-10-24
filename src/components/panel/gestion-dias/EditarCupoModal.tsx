@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
-import { AlertTriangle, Check, Clock, Info, RotateCcw, Users, X } from "lucide-react";
+import { Check, Clock, Info, RotateCcw, Users, X } from "lucide-react";
 import { Alert, Button, Modal } from "@/components/ui";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { NumberField } from "@/components/ui/number-field";
@@ -119,13 +119,10 @@ export function EditarCupoModal({
                   </FormControl>
                   <FormMessage />
                   {!form.formState.errors.cupos && (
-                    <div className="mt-0.5 flex items-start gap-1.5 rounded-md bg-info-fill px-2.5 py-2 text-xs leading-normal text-info-fg">
-                      <AlertTriangle className="mt-px size-3.5 shrink-0 text-warning-fg" />
-                      <span>
-                        Mínimo permitido: <strong className="font-mono">{reservados}</strong> · No podés bajar el
-                        cupo por debajo de las reservas vigentes.
-                      </span>
-                    </div>
+                    <Alert tone="info" className="mt-0.5">
+                      Mínimo permitido: <strong className="font-mono">{reservados}</strong> · No podés bajar el
+                      cupo por debajo de las reservas vigentes.
+                    </Alert>
                   )}
                 </FormItem>
               )}

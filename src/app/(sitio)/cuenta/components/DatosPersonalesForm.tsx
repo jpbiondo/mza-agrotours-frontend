@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Button, Alert, SectionLabel } from "@/components/ui";
-import type { ToastData } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { TIPOS_IDENTIFICACION } from "@/data/registro";
 import { perfilSchema } from "../schema";
 import type { Perfil } from "@/data/cuenta";
@@ -35,13 +35,11 @@ import { usePaises } from "@/hooks/usePaises";
 interface DatosPersonalesFormProps {
   inicial: Perfil;
   onDelete: () => void;
-  setToast: (t: ToastData | null) => void;
 }
 
 export default function DatosPersonalesForm({
   inicial,
   onDelete,
-  setToast,
 }: DatosPersonalesFormProps) {
   const { guardar, isLoading } = useGuardarPerfil();
   const { paises } = usePaises();
@@ -64,7 +62,7 @@ export default function DatosPersonalesForm({
         await cerrarSesion("/acceso?motivo=email-actualizado");
         return;
       }
-      setToast({ tone: "success", title: "Cambios guardados exitosamente" });
+      notify.success("Cambios guardados exitosamente");
       return;
     }
     // Email duplicado → error en el propio campo (mejor UX que un toast).
@@ -76,18 +74,19 @@ export default function DatosPersonalesForm({
       );
       return;
     }
-    setToast({
-      tone: "danger",
-      title: "No se pudieron guardar los cambios",
-      sub:
+    // El backend rechazó el envío entero: va arriba del pie, no en un toast.
+    form.setError("root", {
+      message:
         r.code === "validationError"
-          ? "Revisá los datos e intentá de nuevo."
-          : "Intentá de nuevo en unos minutos.",
+          ? "No se pudieron guardar los cambios. Revisá los datos e intentá de nuevo."
+          : "No se pudieron guardar los cambios. Intentá de nuevo en unos minutos.",
     });
   }
 
+  // `root` es el rechazo del backend, que tiene su propio aviso al pie.
+  const { root: errorEnvio, ...erroresDeCampo } = form.formState.errors;
   const showErrorAlert =
-    form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0;
+    form.formState.isSubmitted && Object.keys(erroresDeCampo).length > 0;
 
   return (
     <Form {...form}>
@@ -251,6 +250,12 @@ export default function DatosPersonalesForm({
             )}
           />
         </div>
+
+        {errorEnvio?.message && (
+          <Alert tone="danger" className="mt-7">
+            {errorEnvio.message}
+          </Alert>
+        )}
 
         <div className="mt-7 flex flex-wrap items-center gap-3 border-t border-cream-tert pt-[22px]">
           <Button type="submit" loading={isLoading}>

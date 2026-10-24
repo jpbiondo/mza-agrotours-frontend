@@ -2,14 +2,14 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader, AlertTriangle } from "lucide-react";
+import { Loader } from "lucide-react";
 import { AuthHeader, AuthLayout } from "../components/AuthShell";
 import RecoverEmailForm from "./components/RecoverEmailForm";
 import RecoverSentView from "./components/RecoverSentView";
 import RecoverResetForm from "./components/RecoverResetForm";
 import RecoverDoneView from "./components/RecoverDoneView";
 import { verificarResetCode } from "@/lib/passwordReset";
-import { Button } from "@/components/ui";
+import { Button, ResultScreen } from "@/components/ui";
 
 type View = "email" | "sent" | "verifying" | "reset" | "invalid" | "done";
 
@@ -74,30 +74,17 @@ function RecuperarInner() {
           <RecoverResetForm oobCode={oobCode} onSuccess={() => setView("done")} />
         )}
         {view === "invalid" && (
-          <div data-screen-label="Recuperar contraseña · enlace inválido" style={{ textAlign: "center", paddingTop: 8 }}>
-            <div
-              className="pop"
-              style={{
-                width: 80, height: 80, borderRadius: "50%", background: "var(--danger-fill)",
-                display: "inline-flex", alignItems: "center", justifyContent: "center", margin: "0 auto 22px",
-              }}
-            >
-              <AlertTriangle size={38} color="var(--danger-fg)" />
-            </div>
-            <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 27, color: "var(--fg-1)", margin: 0 }}>
-              El enlace no es válido
-            </h1>
-            <p style={{ fontSize: 15, color: "var(--fg-2)", lineHeight: 1.55, margin: "12px 0 26px" }}>
-              El enlace de recuperación expiró o ya fue usado. Solicitá uno nuevo para continuar.
-            </p>
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={pedirNuevo}
-            >
-              Solicitar un nuevo enlace
-            </Button>
-          </div>
+          <ResultScreen
+            tone="danger"
+            title="El enlace no es válido"
+            action={
+              <Button size="lg" onClick={pedirNuevo}>
+                Solicitar un nuevo enlace
+              </Button>
+            }
+          >
+            El enlace de recuperación expiró o ya fue usado. Solicitá uno nuevo para continuar.
+          </ResultScreen>
         )}
         {view === "done" && <RecoverDoneView onBackLogin={goLogin} />}
       </AuthLayout>

@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Banknote, CalendarClock, CalendarDays, ChevronRight, ClipboardClock, Clock, CreditCard, Fingerprint,
   HandCoins, Hash, Mail, Phone, ReceiptText, SearchX, User, UserCheck, Users, Warehouse,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, BackLink, Button, EstadoBadge, Skeleton, Toast, buttonClasses } from "@/components/ui";
+import { Alert, BackLink, Button, EstadoBadge, Skeleton, buttonClasses } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { ESTADO_META } from "@/data/impagas";
 import { fmtDiaLocal, fmtFecha, fmtFranja, fmtHoraLocal, moneyAr } from "@/lib/format";
 import { PermisoAdmin } from "@/lib/permisos";
@@ -217,13 +218,6 @@ export default function DetalleReembolsoClient({ id }: { id: string }) {
   const [registrando, setRegistrando] = useState(false);
   /** Por qué el detalle se recargó por su cuenta: queda a la vista hasta la próxima acción. */
   const [aviso, setAviso] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4200);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   function onRegistrado(r: ReembolsoDetalle | null) {
     setRegistrando(false);
@@ -231,7 +225,7 @@ export default function DetalleReembolsoClient({ id }: { id: string }) {
     // El listado de impagas no se cachea —se pide al montar—, así que no hay nada que invalidar.
     if (r) reemplazar(r);
     else reload();
-    setToast("Pago del reembolso registrado.");
+    notify.success("Pago del reembolso registrado.");
   }
 
   function onDesactualizado(mensaje: string) {
@@ -287,7 +281,6 @@ export default function DetalleReembolsoClient({ id }: { id: string }) {
           onCerrar={() => setRegistrando(false)}
         />
       )}
-      {toast && <Toast tone="success" title={toast} />}
     </div>
   );
 }
