@@ -73,7 +73,7 @@ Todo diálogo centrado se arma en tres zonas, y sólo el cuerpo scrollea. Es lo 
 
 **Cambios sin guardar en un diálogo.** La regla de "Cambios sin guardar" (Escape, la cruz y el click afuera preguntan si hay algo cargado) **queda postergada** para los diálogos: la migración no la suma. Mientras tanto, cerrar un formulario en diálogo lo descarta como hasta ahora.
 
-**Migración.** `Modal`, `Panel`, `GcrFormShell`, el `Scrim` de administradores y los overlays de parámetros se pasan a `Dialog` **de a una pantalla**, cuando se las toca. Al migrar una, gana también la trampa de foco, Escape y el bloqueo de scroll que `Modal` no tiene. Los cajones laterales (`Sheet`, `LoteDrawer`) siguen con su propia cabecera y cuerpo: ya cumplen la regla. El estado de cada pantalla está en [`ui-audit.md`](ui-audit.md), A2.3.
+**Migración.** `Modal` y los overlays de parámetros se pasan a `Dialog` **de a una pantalla**, cuando se las toca. Ya están migrados los formularios largos: catálogo, FAQ e incidencias (`GcrFormShell` es ahora un `Dialog` `lg`), productor, administrador (se eliminó su `Scrim`) y rol (dejó `Panel`). Al migrar una, gana también la trampa de foco, Escape y el bloqueo de scroll que `Modal` no tiene. Los cajones laterales (`Sheet`, `LoteDrawer`) siguen con su propia cabecera y cuerpo: ya cumplen la regla. El estado de cada pantalla está en [`ui-audit.md`](ui-audit.md), A2.3.
 
 ## Carga
 
