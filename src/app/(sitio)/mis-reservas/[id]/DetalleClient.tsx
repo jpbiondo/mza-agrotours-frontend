@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ChevronRight, ArrowLeft, MapPin, Download, ReceiptText, CalendarDays, Clock, Users,
   SearchX, Loader, XCircle, Map as MapIcon, ExternalLink, Star, CheckCircle2,
@@ -337,9 +336,8 @@ function NoEncontrada() {
 }
 
 export default function DetalleClient({ id, retornoPago }: { id: string; retornoPago: RetornoPago | null }) {
-  const router = useRouter();
   const {
-    reserva, cancelable, pagable, isLoading, error, notFound, unauthenticated, reload, refrescar,
+    reserva, cancelable, pagable, isLoading, error, notFound, reload, refrescar,
   } = useReserva(id);
   const [consultas, setConsultas] = useState(0);
 
@@ -371,20 +369,6 @@ export default function DetalleClient({ id, retornoPago }: { id: string; retorno
     setValorando(false);
     reload();
     notify.error("No se pudo enviar tu valoración", r.mensaje);
-  }
-
-  // Ruta protegida: sin sesión, a la pantalla de login.
-  useEffect(() => {
-    if (unauthenticated) router.replace("/acceso");
-  }, [unauthenticated, router]);
-
-  if (unauthenticated) {
-    return (
-      <div className="px-7 py-[120px] text-center text-fg-3">
-        <Loader size={26} className="spin mx-auto" />
-        <div className="mt-3 text-sm">Redirigiendo…</div>
-      </div>
-    );
   }
 
   return (

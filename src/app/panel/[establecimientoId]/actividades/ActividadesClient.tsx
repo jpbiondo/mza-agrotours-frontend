@@ -327,13 +327,17 @@ export default function ActividadesClient() {
 
   // Búsqueda, filtro por estado y paginado los resuelve el backend, así que
   // cualquier cambio vuelve a pedir el listado.
-  const { data, isLoading, error, reload } = useActividades({
+  const { data: actual, ultimo, isLoading, error, reload } = useActividades({
     establecimientoId,
     busqueda,
     estado: estadoF === "todas" ? null : estadoF,
     page,
     size: PAGE_SIZE,
   });
+  // Mientras se pide otro criterio o se recarga, sigue a la vista el último
+  // listado que llegó —con la barra de filtros— en vez de volver al esqueleto.
+  const data = actual ?? (isLoading ? ultimo : null);
+  const recargando = isLoading && data !== null;
   const estados = useEstadosActividad(establecimientoId);
   const { darDeBaja, cambiarEstado, pendingId } = useActividadAcciones(establecimientoId);
 
@@ -358,14 +362,17 @@ export default function ActividadesClient() {
   const total = data?.totalElements ?? 0;
   const hayFiltros = busqueda !== "" || estadoF !== "todas";
   // Sin filtros y sin resultados: el establecimiento todavía no cargó ninguna,
-  // que no es lo mismo que "tu búsqueda no encontró nada".
-  const sinActividades = data !== null && total === 0 && !hayFiltros;
+  // que no es lo mismo que "tu búsqueda no encontró nada". Sale de la respuesta
+  // actual: el listado anterior es de otro criterio.
+  const sinActividades = actual !== null && total === 0 && !hayFiltros;
 
   // "Todas" es la suma de los tres, que es lo mismo que cuenta el listado sin
   // filtro. Si la faceta no cargó no se inventa un 0: no se muestra contador.
-  const counts: Record<string, number> | null = estados.data && {
-    ...estados.data,
-    todas: estados.data.publicado + estados.data.borrador + estados.data.dado_de_baja,
+  // Se recargan en cada acción: mientras tanto quedan los últimos que llegaron.
+  const conteo = estados.data ?? (estados.isLoading ? estados.ultimo : null);
+  const counts: Record<string, number> | null = conteo && {
+    ...conteo,
+    todas: conteo.publicado + conteo.borrador + conteo.dado_de_baja,
   };
 
   // Cualquier cambio de criterio vuelve a la primera página: la que estabas
@@ -466,7 +473,7 @@ export default function ActividadesClient() {
         )}
 
         <AsyncBoundary
-          loading={isLoading}
+          loading={isLoading && !recargando}
           error={error}
           onRetry={reload}
           loadingLabel="Cargando actividades…"
@@ -539,6 +546,7 @@ export default function ActividadesClient() {
                 <EstadoSelector value={estadoF} onChange={elegirEstado} counts={counts} />
               </div>
 
+              <div aria-busy={recargando || undefined}>
               {total === 0 ? (
                 <Card className="px-8 py-14 text-center">
                   <div className="mb-[18px] inline-flex size-[60px] items-center justify-center rounded-full bg-cream-tert">
@@ -571,6 +579,7 @@ export default function ActividadesClient() {
 
               {/* El backend numera desde 0 y la paginación desde 1. */}
               <Pagination page={page + 1} pages={data?.totalPages ?? 1} onPage={(n) => setPage(n - 1)} />
+              </div>
             </>
           )}
         </AsyncBoundary>

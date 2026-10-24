@@ -401,11 +401,16 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
 
   const [modalCancelar, setModalCancelar] = useState(false);
 
-  const r = resumen.data;
+  // Al recargar después de cancelar, o al filtrar o paginar, sigue a la vista lo
+  // último que llegó en vez de volver al esqueleto.
+  const r = resumen.data ?? (resumen.isLoading ? resumen.ultimo : null);
   const hoy = hoyISO();
   const temporalidad = r?.fecha ? temporalidadDe(r.fecha, hoy) : "futura";
-  const opciones = opcionesFiltro(temporalidad, estados.data ?? {});
-  const pagina = reservas.data;
+  // Los contadores del filtro también se recargan al cancelar: mientras tanto quedan los últimos.
+  const conteo = estados.data ?? (estados.isLoading ? estados.ultimo : null);
+  const opciones = opcionesFiltro(temporalidad, conteo ?? {});
+  const pagina = reservas.data ?? (reservas.isLoading ? reservas.ultimo : null);
+  const recargandoReservas = reservas.isLoading && pagina !== null;
 
   const volver = ruta("actividades", actividadId, "calendario") + (r?.fecha ? `?mes=${r.fecha.slice(0, 7)}` : "");
 
@@ -440,7 +445,7 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
     return null;
   }
 
-  const cantidad = pagina?.totalElements ?? (estado ? estados.data?.[estado] : r?.totalReservas);
+  const cantidad = pagina?.totalElements ?? (estado ? conteo?.[estado] : r?.totalReservas);
 
   return (
     <div className="min-h-screen bg-cream-bg">
@@ -452,7 +457,7 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
         )}
 
         <AsyncBoundary
-          loading={!!establecimientoId && resumen.isLoading}
+          loading={!!establecimientoId && resumen.isLoading && !r}
           error={resumen.error}
           onRetry={resumen.reload}
           loadingLabel="Cargando el día…"
@@ -460,7 +465,7 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
           pad={72}
         >
           {r && (
-            <>
+            <div aria-busy={resumen.isLoading || undefined}>
               <BackLink href={volver} className="mb-[18px]">
                 Volver al calendario
               </BackLink>
@@ -543,14 +548,14 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
                     value={estado}
                     onChange={filtrar}
                     opciones={opciones}
-                    conteo={estados.data}
+                    conteo={conteo}
                     total={r.totalReservas}
                   />
                 )}
               </div>
 
               <AsyncBoundary
-                loading={reservas.isLoading}
+                loading={reservas.isLoading && !recargandoReservas}
                 error={reservas.error}
                 onRetry={reservas.reload}
                 skeleton={<ReservasSkeleton />}
@@ -560,16 +565,16 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
                   <SinReservas filtrado={estado !== null} onLimpiar={() => filtrar(null)} />
                 ) : (
                   pagina && (
-                    <>
+                    <div aria-busy={recargandoReservas || undefined}>
                       <div className="flex flex-col gap-4">
                         {pagina.items.map((x) => <TarjetaReserva key={x.id} r={x} />)}
                       </div>
                       <Pagination page={page + 1} pages={pagina.totalPages} onPage={(n) => setPage(n - 1)} />
-                    </>
+                    </div>
                   )
                 )}
               </AsyncBoundary>
-            </>
+            </div>
           )}
         </AsyncBoundary>
       </div>

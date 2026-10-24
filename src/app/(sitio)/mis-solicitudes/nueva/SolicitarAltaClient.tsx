@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -14,7 +14,6 @@ import {
   ClipboardList,
   AlertTriangle,
   AlertCircle,
-  Loader,
 } from "lucide-react";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { TextField } from "@/components/ui/text-field";
@@ -40,7 +39,6 @@ import {
   esArchivoPermitido,
 } from "@/data/establecimiento";
 import { useDepartamentos } from "@/hooks/useDepartamentos";
-import { useSesionRequerida } from "@/hooks/useSesionRequerida";
 import { useSolicitarEstablecimiento } from "@/hooks/useSolicitarEstablecimiento";
 import type { ArchivoFallido } from "@/types/establecimiento";
 import {
@@ -160,7 +158,6 @@ function Confirmacion({ nombre, onIr }: ConfirmacionProps) {
 
 export default function SolicitarAltaClient() {
   const router = useRouter();
-  const { checking, unauthenticated } = useSesionRequerida();
   const {
     departamentos,
     isLoading: deptoLoading,
@@ -202,10 +199,6 @@ export default function SolicitarAltaClient() {
   };
 
   const dirty = !submitted && (files.length > 0 || form.formState.isDirty);
-
-  useEffect(() => {
-    if (unauthenticated) router.replace("/acceso");
-  }, [unauthenticated, router]);
 
   async function onValid(data: SolicitarAltaForm) {
     const fErr = validarArchivos(files);
@@ -255,19 +248,6 @@ export default function SolicitarAltaClient() {
   function irA(destino: string) {
     if (dirty) setLeaving(destino);
     else router.push(destino);
-  }
-
-  // Ruta protegida: sin sesión, a la pantalla de login. Se espera a que Firebase
-  // resuelva para no mostrar el formulario entero y redirigir un instante después.
-  if (checking || unauthenticated) {
-    return (
-      <div className="px-7 py-[120px] text-center text-fg-3">
-        <Loader size={26} className="spin mx-auto" />
-        <div className="mt-3 text-sm">
-          {unauthenticated ? "Redirigiendo…" : "Verificando tu sesión…"}
-        </div>
-      </div>
-    );
   }
 
   return (

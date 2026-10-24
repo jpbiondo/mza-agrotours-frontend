@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GuardSesion from "@/components/GuardSesion";
 import MisReservasClient from "./MisReservasClient";
 
 export const metadata: Metadata = {
@@ -8,6 +9,8 @@ export const metadata: Metadata = {
 
 export default function MisReservasPage() {
   return (
-    <MisReservasClient />
+    <GuardSesion>
+      <MisReservasClient />
+    </GuardSesion>
   );
 }

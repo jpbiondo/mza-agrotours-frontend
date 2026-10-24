@@ -6,6 +6,7 @@ import {
   CreditCard, RotateCcw, XCircle, CheckCircle2, Banknote, UserCheck,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
+import { Skeleton } from "@/components/ui";
 import { Pagination } from "@/components/catalog/controls";
 import {
   ESTADO_META, ESTADO_OPTS, categoriaEtaria, precioCategoria, totalReserva, rangoEtario, type ProdTone,
@@ -106,6 +107,31 @@ function ReservaRow({ r }: { r: ReservaProd }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Misma caja que `ReservaRow` cerrada, para que la lista no salte al llegar los datos. */
+function ListaSkeleton() {
+  return (
+    <div role="status" aria-busy aria-label="Cargando reservas…" className="flex flex-col gap-3.5">
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i} className="flex items-center gap-4 rounded-lg border border-outline-variant bg-surface px-5 py-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2.5">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-5 w-20 rounded-pill" />
+            </div>
+            <Skeleton className="mt-2.5 h-5 w-1/2" />
+            <Skeleton className="mt-2.5 h-3.5 w-3/4" />
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <Skeleton className="h-3 w-10" />
+            <Skeleton className="h-5 w-24" />
+          </div>
+          <Skeleton className="size-5 shrink-0" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -213,7 +239,7 @@ export default function ReservasRecibidasClient() {
           </div>
         </div>
 
-        <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando reservas…" pad={72}>
+        <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<ListaSkeleton />}>
           {filtradas.length === 0 ? (
           <div style={{ background: "var(--surface)", border: "1px dashed var(--sand)", borderRadius: "var(--radius-lg)", padding: "64px 24px", textAlign: "center" }}>
             <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--cream-tert)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>

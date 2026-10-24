@@ -885,12 +885,12 @@ function Inner() {
           {
             icon: <UserCog size={20} color="var(--green-800)" />,
             label: "Administradores activos",
-            value: isLoading ? "—" : administradores.length,
+            value: isLoading ? "–" : administradores.length,
           },
           {
             icon: <ShieldCheck size={20} color="var(--green-800)" />,
             label: "Roles disponibles",
-            value: rolesLoading ? "—" : roles.length,
+            value: rolesLoading ? "–" : roles.length,
           },
         ].map((s) => (
           <div

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader, UserCog, ShieldCheck } from "lucide-react";
+import { UserCog, ShieldCheck } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import DatosPersonalesForm from "./components/DatosPersonalesForm";
 import ChangePasswordForm from "./components/ChangePasswordForm";
@@ -10,7 +10,7 @@ import DeleteAccountFlow from "./components/DeleteAccountFlow";
 import type { CuentaSesion, Perfil } from "@/data/cuenta";
 import { usePerfil } from "@/hooks/usePerfil";
 import { ordenarRoles } from "@/lib/roles";
-import { Card } from "@/components/ui";
+import { Card, Skeleton } from "@/components/ui";
 
 type Tab = "datos" | "seguridad";
 
@@ -87,6 +87,49 @@ function Inner({
   );
 }
 
+function CamposSkeleton({ n }: { n: number }) {
+  return (
+    <Card className="flex flex-col gap-5 p-[28px_30px]">
+      {Array.from({ length: n }, (_, i) => (
+        <div key={i}>
+          <Skeleton className="h-3.5 w-32" />
+          <Skeleton className="mt-2 h-11" />
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+/** Misma caja que `Inner`, para que la pantalla no salte al llegar la cuenta. */
+function CuentaSkeleton({ tab }: { tab: Tab }) {
+  return (
+    <div role="status" aria-busy aria-label="Cargando tu cuenta…" className="mx-auto max-w-[820px] p-[40px_28px_80px]">
+      <div className="mb-[26px]">
+        <Skeleton className="mb-4 h-7 w-28 rounded-pill" />
+        <Skeleton className="h-9 w-48" />
+        <Skeleton className="mt-3 h-4 w-3/4" />
+      </div>
+      <div className="mb-[22px] flex gap-4 border-b border-outline-variant pb-3">
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="h-5 w-40" />
+      </div>
+      {tab === "datos" ? (
+        <CamposSkeleton n={4} />
+      ) : (
+        // Como `ChangePasswordForm`: el formulario y la tarjeta de consejos al costado.
+        <div className="grid grid-cols-1 items-start gap-7 min-[681px]:grid-cols-[minmax(0,1fr)_280px]">
+          <CamposSkeleton n={3} />
+          <Card className="flex flex-col gap-3 p-5">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-3.5" />
+            <Skeleton className="h-3.5 w-4/5" />
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CuentaClient({
   initialTab = "datos",
 }: {
@@ -106,17 +149,13 @@ export default function CuentaClient({
 
   return (
     <>
-      {sinSesion ? (
-        <div className="p-[120px_28px] text-center text-fg-3">
-          <Loader size={26} className="spin mx-auto" />
-          <div className="mt-3 text-sm">Redirigiendo…</div>
-        </div>
-      ) : (
+      {/* Mientras redirige no se dibuja nada, como en los guards de sesión. */}
+      {sinSesion ? null : (
         <AsyncBoundary
           loading={isLoading}
           error={error}
           onRetry={reload}
-          loadingLabel="Cargando tu cuenta…"
+          skeleton={<CuentaSkeleton tab={initialTab} />}
         >
           {cuenta && perfil && (
             <Inner cuenta={cuenta} perfil={perfil} initialTab={initialTab} />

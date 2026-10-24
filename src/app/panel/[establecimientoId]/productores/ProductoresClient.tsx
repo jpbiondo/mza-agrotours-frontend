@@ -1027,17 +1027,17 @@ function Pantalla({
   }
 
   const stats = [
-    { icon: Users, label: "Productores en la finca", value: isLoading ? "—" : productores.length },
+    { icon: Users, label: "Productores en la finca", value: isLoading ? "–" : productores.length },
     {
       icon: UserX,
       label: suspendidos === 1 ? "Productor suspendido" : "Productores suspendidos",
-      value: isLoading ? "—" : suspendidos,
+      value: isLoading ? "–" : suspendidos,
       alerta: !isLoading && suspendidos > 0,
     },
     {
       icon: ShieldCheck,
       label: "Roles disponibles",
-      value: rolesLoading ? "—" : roles.length,
+      value: rolesLoading ? "–" : roles.length,
     },
   ];
 

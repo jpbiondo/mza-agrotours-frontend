@@ -1,10 +1,8 @@
 "use client";
-import { useEffect } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
-  Loader, FileText, Image as ImageIcon, File as FileIcon,
+  FileText, Image as ImageIcon, File as FileIcon,
   CalendarDays, PlusCircle, FileSearch, Clock, CheckCircle2, XCircle,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
@@ -434,23 +432,8 @@ function NoEncontrada() {
 }
 
 export default function SolicitudDetalleClient({ id }: { id: string }) {
-  const router = useRouter();
-  const { solicitud, isLoading, error, notFound, unauthenticated, reload } =
+  const { solicitud, isLoading, error, notFound, reload } =
     useSolicitudDetalle(id);
-
-  // Ruta protegida: sin sesión, a la pantalla de login.
-  useEffect(() => {
-    if (unauthenticated) router.replace("/acceso");
-  }, [unauthenticated, router]);
-
-  if (unauthenticated) {
-    return (
-      <div className="px-7 py-[120px] text-center text-fg-3">
-        <Loader size={26} className="spin mx-auto" />
-        <div className="mt-3 text-sm">Redirigiendo…</div>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-[900px] px-7 pt-7 pb-24">

@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader } from "lucide-react";
 import { AuthHeader, AuthLayout } from "../components/AuthShell";
 import RecoverEmailForm from "./components/RecoverEmailForm";
 import RecoverSentView from "./components/RecoverSentView";
@@ -10,6 +9,7 @@ import RecoverResetForm from "./components/RecoverResetForm";
 import RecoverDoneView from "./components/RecoverDoneView";
 import { verificarResetCode } from "@/lib/passwordReset";
 import { Button, ResultScreen } from "@/components/ui";
+import { Cargando } from "@/components/AsyncView";
 
 type View = "email" | "sent" | "verifying" | "reset" | "invalid" | "done";
 
@@ -64,12 +64,7 @@ function RecuperarInner() {
             onResend={() => setView("email")}
           />
         )}
-        {view === "verifying" && (
-          <div style={{ textAlign: "center", padding: "60px 8px", color: "var(--fg-3)" }}>
-            <Loader size={28} className="spin" />
-            <div style={{ marginTop: 12, fontSize: 14 }}>Verificando el enlace…</div>
-          </div>
-        )}
+        {view === "verifying" && <Cargando label="Verificando el enlace…" pad="sm" />}
         {view === "reset" && oobCode && (
           <RecoverResetForm oobCode={oobCode} onSuccess={() => setView("done")} />
         )}

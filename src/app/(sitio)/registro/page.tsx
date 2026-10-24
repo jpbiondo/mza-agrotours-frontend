@@ -37,16 +37,20 @@ export default function RegistroPage() {
     window.location.href = DESTINO_DEFAULT.href;
   }
 
-  // Evitamos el flash del formulario mientras hidrata, si ya está logueado, o
-  // mientras navegamos al destino tras el alta.
-  const showLoader = !hasHydrated || loggedIn || altaIncompleta || finishing;
+  // Mientras navegamos al destino tras el alta.
+  if (finishing) {
+    return (
+      <div className="px-7 py-30 text-center text-fg-3">
+        <Loader className="mx-auto size-[26px] animate-spin" />
+        <div className="mt-3 text-sm">Creando tu cuenta…</div>
+      </div>
+    );
+  }
 
-  return showLoader ? (
-    <div className="px-7 py-30 text-center text-fg-3">
-      <Loader className="mx-auto size-[26px] animate-spin" />
-      <div className="mt-3 text-sm">{finishing ? "Creando tu cuenta…" : "Cargando…"}</div>
-    </div>
-  ) : (
-    <RegisterView onSuccess={handleSuccess} onBack={() => router.push("/")} />
-  );
+  // Mientras hidrata, si ya está logueado o si hay un alta a medias, se decide
+  // adónde va sin dibujar nada, como en los guards de sesión: evita el flash
+  // del formulario.
+  if (!hasHydrated || loggedIn || altaIncompleta) return null;
+
+  return <RegisterView onSuccess={handleSuccess} onBack={() => router.push("/")} />;
 }
