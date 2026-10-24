@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Sprout, Utensils, Leaf, Scissors, Grape, Pencil, Trash2, Lock, Eye } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { ActionBtn, Alert, Card, Skeleton } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { notify } from "@/lib/notify";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -25,7 +26,7 @@ import {
 } from "@/hooks/useGestionCultivos";
 import type { CultivoCatalogo, DatosCultivo, Estacion } from "@/types/gestionCr";
 import {
-  GcrConfirmDelete, GcrFormShell, GcrFormHeader, GcrFormFooter, GcrFieldLabel, GcrErr,
+  GcrFormShell, GcrFormHeader, GcrFormFooter, GcrFieldLabel, GcrErr,
   GcrSeasonBar, GcrSeasonEditor, GcrListEditor, GcrStats, GcrSearchBar, GcrEmptyState, GcrPageHead,
   GcrNoMatch,
 } from "@/components/admin/gcr/shared";
@@ -704,22 +705,23 @@ function Inner({
         </GcrFormShell>
       )}
 
-      <GcrConfirmDelete
-        open={!!toDelete}
-        title="Eliminar cultivo"
-        busy={borrando}
-        error={deleteError}
-        body={
-          toDelete ? (
+      {toDelete && (
+        <ConfirmDialog
+          open
+          title="Eliminar cultivo"
+          confirmLabel="Eliminar cultivo"
+          busy={borrando}
+          error={deleteError}
+          description={
             <>
               ¿Seguro que querés eliminar <strong className="text-fg-1">«{toDelete.nombre}»</strong>{" "}
               del catálogo? Esta acción no se puede deshacer.
             </>
-          ) : null
-        }
-        onCancel={() => setToDelete(null)}
-        onConfirm={confirmarBaja}
-      />
+          }
+          onCancel={() => setToDelete(null)}
+          onConfirm={confirmarBaja}
+        />
+      )}
     </div>
   );
 }
