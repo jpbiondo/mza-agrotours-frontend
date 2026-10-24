@@ -87,7 +87,8 @@ function Cuerpo({
 }: Omit<ConfirmDialogProps, "open">) {
   const [escrito, setEscrito] = useState("");
   const campoId = useId();
-  const falta = !!requireText && escrito.trim() !== requireText;
+  // Sin distinguir mayúsculas: lo que importa es que se escribió la palabra, no el Bloq Mayús.
+  const falta = !!requireText && escrito.trim().toUpperCase() !== requireText.toUpperCase();
 
   return (
     <>
