@@ -9,6 +9,7 @@ import {
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { ActionBtn, Alert, Card, Skeleton } from "@/components/ui";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DialogBody } from "@/components/ui/dialog";
 import { notify } from "@/lib/notify";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -302,11 +303,11 @@ function RecetaForm({
             ? "Modificá los datos de la receta del catálogo."
             : "Sumá una receta al catálogo. Asociala a los cultivos con los que se prepara."
         }
-        onCancel={onCancel}
+        busy={busy}
       />
 
       <Form {...form}>
-      <div className="flex min-h-0 flex-1 flex-col gap-[22px] overflow-y-auto px-[26px] py-[22px]">
+      <DialogBody className="flex flex-col gap-[22px]">
         <FormField
           control={control}
           name="nombre"
@@ -515,7 +516,7 @@ function RecetaForm({
             </div>
           )}
         />
-      </div>
+      </DialogBody>
       </Form>
 
       <GcrFormFooter
@@ -801,7 +802,7 @@ function Inner({
       </Card>
 
       {form && (
-        <GcrFormShell onCancel={() => setForm(null)}>
+        <GcrFormShell onCancel={() => setForm(null)} busy={creando || actualizando}>
           <RecetaForm
             initial={form.datos}
             editando={form.id !== null}
