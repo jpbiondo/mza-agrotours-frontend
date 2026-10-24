@@ -4,8 +4,9 @@ import type { ComponentType, ReactNode } from "react";
 import {
   ChevronRight, Info, KeyRound, Lock, Pencil, Plus, ShieldCheck, Trash2,
 } from "lucide-react";
-import { ActionBtn, Button, Card, Panel, Skeleton } from "@/components/ui";
+import { ActionBtn, Button, Card, Skeleton } from "@/components/ui";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import type { AccionesRoles, DatosRol, GrupoPermiso, RolDetalle } from "@/types/roles";
@@ -441,20 +442,26 @@ export function RolesScreen({
       <NotaProtegidos />
 
       {form.open && (
-        <Panel onClose={cerrarForm}>
-          <RoleForm
-            initial={form.initial}
-            grupos={grupos}
-            existingNames={roles
-              .filter((r) => !form.initial || r.id !== form.initial!.id)
-              .map((r) => r.nombre)}
-            textos={textos}
-            busy={acciones.guardando}
-            error={formError}
-            onCancel={cerrarForm}
-            onSave={saveRole}
-          />
-        </Panel>
+        <Dialog
+          open
+          onOpenChange={(abierto) => { if (!abierto && !acciones.guardando) cerrarForm(); }}
+          disablePointerDismissal={acciones.guardando}
+        >
+          <DialogContent size="lg">
+            <RoleForm
+              initial={form.initial}
+              grupos={grupos}
+              existingNames={roles
+                .filter((r) => !form.initial || r.id !== form.initial!.id)
+                .map((r) => r.nombre)}
+              textos={textos}
+              busy={acciones.guardando}
+              error={formError}
+              onCancel={cerrarForm}
+              onSave={saveRole}
+            />
+          </DialogContent>
+        </Dialog>
       )}
 
       {toDelete && (
