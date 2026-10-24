@@ -145,6 +145,17 @@ Las clases `.btn-*` heredadas viven sobre todo en: `AsyncBoundary` (el "Reintent
 
 Velos (scrim) con 6 colores distintos: `rgba(42,38,32,.48)` (`Modal`), `.45` (`Panel`, `GcrFormShell`, `Scrim`, Parámetros), `.32` (`Sheet`, chat), `rgba(31,28,22,.32)` (calendario), `rgba(45,40,30,.42)` (cajones de los shells).
 
+**Cruz de cerrar y scroll** (relevado el 2026-10-24, después de migrar las confirmaciones a `ConfirmDialog`). La regla nueva está en la guía, "Diálogos".
+
+| Qué pasa hoy | Dónde |
+|---|---|
+| Cabecera fija con cruz, cuerpo con scroll y pie fijo (el patrón de la guía), cada uno armado a mano | `deudas/ResolverDeudaModal.tsx` (ya sobre `Dialog`), `impagas/[id]/RegistrarPagoModal.tsx`, `gestion-dias/AbrirDiaModal.tsx`, `EditarCupoModal.tsx` y `LoteDrawer.tsx` (cruz de `gestion-dias/piezas.tsx`), `mis-reservas/[id]/ValorarModal.tsx`, `explorar/[id]/ReseniasModal.tsx`, los formularios en `GcrFormShell` (cultivos, recetas, FAQ, incidencias), `RoleForm` en `Panel`, `Sheet` (reembolsos, `BookingWidget`) |
+| Cruz flotante (`absolute`) y **sin alto máximo**: en una ventana baja la caja se sale de la pantalla | `estadisticas/EstadisticasClient.tsx:181` (exportar reporte) |
+| **Sin cruz**: se cierra sólo con "Cancelar", Escape o click afuera | todos los `ConfirmDialog` (hasta esta migración), `ProductorForm` en `Panel`, formulario de administradores en `Scrim`, reprogramar, salir sin guardar (editar actividad, solicitar alta), modal informativo de actividades, los dos de parámetros |
+| Pasos sin salida (no llevan cruz a propósito) | "Verificando condiciones…" y "Tu cuenta ha sido eliminada" (`DeleteAccountFlow`), "Verificando…" (`EliminarEstablecimientoFlow`, `CancelarReservaModal`) |
+
+Cada uno arma su cabecera y su pie a mano: el padding de la cabecera va de `px-[26px] py-5` a `px-7 pt-6`, y el pie es crema con borde en unos y blanco sin borde en otros.
+
 #### A2.4 Diálogo de resultado y pantalla de resultado
 
 - **Modal de resultado o de proceso**: `cuenta/components/DeleteAccountFlow.tsx:225/253`, `mis-reservas/[id]/CancelarReservaModal.tsx:105` (procesando) y `:140` (resultado), `datos/EliminarEstablecimientoFlow.tsx:118` (verificando) y `:174` (error), `ActividadesClient.tsx:640` (no se puede eliminar).
