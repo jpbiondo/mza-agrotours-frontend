@@ -20,6 +20,8 @@ interface NumberFieldProps {
    * no se deja escribir, para que "4.000" no se lea como 4. No se combina con `stepper`.
    */
   decimales?: number;
+  /** Unidad dentro del campo, a la derecha ("días", "%"). No se combina con `stepper`. */
+  sufijo?: string;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -43,7 +45,7 @@ function limpiar(valor: string, decimales: number): string {
  * Reenvía ref/onBlur/id/aria-* al input para integrarse con `<FormControl>`.
  */
 export function NumberField({
-  id, name, value, onChange, onBlur, ref, stepper, min = 0, decimales = 0, placeholder, disabled, className,
+  id, name, value, onChange, onBlur, ref, stepper, min = 0, decimales = 0, sufijo, placeholder, disabled, className,
   "aria-invalid": ariaInvalid, "aria-describedby": describedBy,
 }: NumberFieldProps) {
   const n = value === "" ? NaN : Number(value);
@@ -67,10 +69,22 @@ export function NumberField({
         "h-11 bg-surface font-mono text-base font-semibold",
         stepper ? "min-w-[60px] rounded-none text-center" : "rounded-md",
         errored && "bg-danger-fill",
-        !stepper && className,
+        sufijo && "pr-20",
+        !stepper && !sufijo && className,
       )}
     />
   );
+
+  if (!stepper && sufijo) {
+    return (
+      <div className={cn("relative flex items-center", className)}>
+        {input}
+        <span aria-hidden className="pointer-events-none absolute right-3.5 text-[13px] font-semibold text-fg-3">
+          {sufijo}
+        </span>
+      </div>
+    );
+  }
 
   if (!stepper) return input;
 

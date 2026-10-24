@@ -1,308 +1,391 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useForm, useFormState, type UseFormReturn } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  ChevronRight, Pencil, X, Save, Info, ShieldCheck, Eye, EyeOff, Check, AlertCircle,
-  ArrowRight, ImageOff, Image as ImageIcon, Building2, Coins, Landmark, Percent,
-  CalendarPlus, Undo2, Timer, Store, Wallet, Settings2,
+  ArrowRight, CalendarPlus, Check, ChevronRight, HandCoins, Info, Lock, Pencil, Percent, Save, Settings2,
+  ShieldCheck, Timer, Undo2, Wallet, X,
 } from "lucide-react";
-import AsyncBoundary from "@/components/AsyncBoundary";
-import { PARAM_ADMIN, PARAM_FIELDS, PARAM_GROUPS, paramError, paramDisplay } from "@/data/parametros";
+import type { ComponentType } from "react";
+import { AsyncView } from "@/components/AsyncView";
+import { Alert, Button, Card, IconCircle, Skeleton } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { NumberField } from "@/components/ui/number-field";
+import { EyeToggle, TextField } from "@/components/ui/text-field";
 import { admInitials } from "@/data/admin";
-import { useParametros, useConfirmarIdentidad, useGuardarParametros } from "@/hooks/useParametros";
-import type { ParametroKey, Parametros } from "@/types/parametros";
-import { Alert, Button } from "@/components/ui";
-import { FaltanCampos } from "@/components/ui/faltan-campos";
+import { PARAM_FIELDS, PARAM_GROUPS } from "@/data/parametros";
+import { useAvisoSalida } from "@/hooks/useAvisoSalida";
+import { useGuardarParametros, useParametros, useReautenticar } from "@/hooks/useParametros";
+import { PermisoAdmin } from "@/lib/permisos";
 import { notify } from "@/lib/notify";
+import { tienePermiso } from "@/lib/roles";
+import { useAuthStore } from "@/stores/authStore";
+import type { DatosParametros, ParamField, ParametroKey, Parametros } from "@/types/parametros";
+import {
+  aDatos, aFormulario, parametrosSchema, reautenticarSchema, type ParametrosForm, type ReautenticarForm,
+} from "./schema";
 
-const ICON: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
-  image: ImageIcon, "building-2": Building2, coins: Coins, landmark: Landmark, percent: Percent,
-  "calendar-plus": CalendarPlus, "undo-2": Undo2, timer: Timer, store: Store, wallet: Wallet, "settings-2": Settings2,
+const ICON: Record<string, ComponentType<{ className?: string }>> = {
+  percent: Percent, "calendar-plus": CalendarPlus, "undo-2": Undo2, timer: Timer, "hand-coins": HandCoins,
+  wallet: Wallet, "settings-2": Settings2,
 };
-const inputStyle: React.CSSProperties = { width: "100%", fontFamily: "var(--font-sans)", fontSize: 15, color: "var(--fg-1)", borderRadius: "var(--radius)", border: "1px solid var(--sand)", padding: "12px 14px", outline: "none", boxSizing: "border-box", background: "var(--surface)" };
 
-function fieldErr(msg: string) {
-  return <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 7, fontSize: 13, color: "var(--danger-fg)" }}><AlertCircle size={15} color="var(--danger)" /> {msg}</div>;
-}
-
-/* ---- Vista previa del logo (remonta al cambiar src) -------------------- */
-function LogoPreview({ src, size = 56 }: { src: string; size?: number }) {
-  const [ok, setOk] = useState(true);
-  return (
-    <span style={{ width: size, height: size, flexShrink: 0, borderRadius: 14, border: "1px solid var(--outline-variant)", background: "var(--cream-tert)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-      {ok && src
-        // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={src} alt="Logo de la empresa" style={{ maxWidth: "78%", maxHeight: "78%", objectFit: "contain" }} onError={() => setOk(false)} />
-        : <ImageOff size={size * 0.34} color="var(--fg-3)" />}
-    </span>
-  );
+/** Cómo se lee un valor guardado. `null` es un parámetro que todavía no se cargó. */
+function mostrar(f: ParamField, v: number | null): string | null {
+  if (v === null) return null;
+  if (f.kind === "percent") return `${String(v).replace(".", ",")} %`;
+  if (f.unit) return `${v} ${v === 1 ? f.unit.replace(/s$/, "") : f.unit}`;
+  return String(v);
 }
 
 /* ---- Fila de parámetro ------------------------------------------------- */
-function ParamRow({ fieldKey, value, editing, error, onChange }: { fieldKey: ParametroKey; value: string; editing: boolean; error: string; onChange: (v: string) => void }) {
-  const field = PARAM_FIELDS.find((f) => f.key === fieldKey)!;
-  const FIcon = ICON[field.icon] ?? Info;
-  const labelCol = (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, minWidth: 0 }}>
-      <span style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 10, background: "var(--green-050)", border: "1px solid var(--green-300)", display: "flex", alignItems: "center", justifyContent: "center" }}><FIcon size={18} color="var(--green-800)" /></span>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 15, color: "var(--fg-1)", lineHeight: 1.3 }}>{field.label}</div>
-        <div style={{ fontSize: 12.5, color: "var(--fg-3)", marginTop: 3, lineHeight: 1.4 }}>{field.hint}</div>
-      </div>
-    </div>
-  );
-
-  if (!editing) {
-    return (
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1fr)", gap: 24, alignItems: "center", padding: "14px 0" }}>
-        {labelCol}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 14, minWidth: 0 }}>
-          {field.kind === "logo" && <LogoPreview key={value} src={value} size={56} />}
-          <span style={{ fontFamily: field.mono || (field.kind !== "logo" && field.kind !== "text") ? "var(--font-mono)" : "var(--font-sans)", fontSize: 15.5, fontWeight: 600, color: "var(--fg-1)", textAlign: "right", wordBreak: "break-word", maxWidth: field.kind === "logo" ? 220 : 360 }}>{paramDisplay(field.key, value)}</span>
-        </div>
-      </div>
-    );
-  }
-
+/** Con `enFormulario`, el título es el `<FormLabel>` del campo: sólo va dentro de un `<FormItem>`. */
+function Etiqueta({ f, enFormulario }: { f: ParamField; enFormulario?: boolean }) {
+  const Icono = ICON[f.icon] ?? Info;
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.1fr)", gap: 24, alignItems: "start", padding: "16px 0" }}>
-      {labelCol}
-      <div style={{ minWidth: 0 }}>
-        {field.kind === "logo" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
-            <LogoPreview key={value} src={value} size={64} />
-            <div style={{ fontSize: 12.5, color: "var(--fg-2)", lineHeight: 1.45 }}>Vista previa en vivo. Pegá la ruta o URL de la imagen del logo.</div>
-          </div>
-        )}
-        {field.unit ? (
-          <div style={{ position: "relative" }}>
-            <input id={`param-${fieldKey}`} aria-invalid={!!error} inputMode={field.kind === "int" ? "numeric" : "decimal"} value={value} maxLength={field.max} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, paddingRight: 84, fontFamily: field.mono ? "var(--font-mono)" : "var(--font-sans)", borderColor: error ? "var(--danger)" : "var(--sand)" }} />
-            <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 13, fontWeight: 600, color: "var(--fg-3)", pointerEvents: "none" }}>{field.unit}</span>
-          </div>
+    <div className="flex min-w-0 items-start gap-3">
+      <span className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] border border-green-300 bg-green-050">
+        <Icono className="size-[18px] text-green-800" />
+      </span>
+      <div className="min-w-0">
+        {enFormulario ? (
+          <FormLabel required className="text-[15px] leading-tight font-semibold">{f.label}</FormLabel>
         ) : (
-          <input id={`param-${fieldKey}`} aria-invalid={!!error} value={value} maxLength={field.max} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, fontFamily: field.mono ? "var(--font-mono)" : "var(--font-sans)", borderColor: error ? "var(--danger)" : "var(--sand)" }} />
+          <div className="text-[15px] leading-tight font-semibold text-fg-1">{f.label}</div>
         )}
-        {error ? fieldErr(error) : field.max && <p style={{ margin: "7px 0 0", fontSize: 11.5, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>{(value || "").length}/{field.max}</p>}
+        <div className="mt-[3px] text-[12.5px] leading-snug text-fg-3">{f.hint}</div>
       </div>
     </div>
   );
 }
 
-/* ---- Modal de reconfirmación de identidad ------------------------------ */
-function AuthModal({ busy, error, onCancel, onSubmit }: { busy: boolean; error: string | null; onCancel: () => void; onSubmit: (pass: string) => void }) {
-  const [pass, setPass] = useState("");
-  const [show, setShow] = useState(false);
-  const [err, setErr] = useState("");
+function FilaLectura({ f, valor }: { f: ParamField; valor: number | null }) {
+  const texto = mostrar(f, valor);
+  return (
+    <div className="grid grid-cols-1 items-center gap-3 py-3.5 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] sm:gap-6">
+      <Etiqueta f={f} />
+      <div className="flex min-w-0 items-center sm:justify-end">
+        {texto === null ? (
+          <span className="text-[14.5px] text-fg-3 italic">Sin definir</span>
+        ) : (
+          <span className="min-w-0 font-mono text-[15.5px] font-semibold break-words text-fg-1 sm:text-right">{texto}</span>
+        )}
+      </div>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
+function FilaEdicion({ f, form }: { f: ParamField; form: UseFormReturn<ParametrosForm> }) {
+  return (
+    <FormField
+      control={form.control}
+      name={f.key}
+      render={({ field }) => (
+        <FormItem className="grid grid-cols-1 items-start gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:gap-6">
+          <Etiqueta f={f} enFormulario />
+          <div className="flex min-w-0 flex-col gap-[7px]">
+            <FormControl>
+              <NumberField {...field} decimales={f.kind === "percent" ? 2 : 0} sufijo={f.unit} placeholder={f.kind === "percent" ? "Ej.: 12,5" : undefined} />
+            </FormControl>
+            <div className="flex min-h-5 items-center">
+              <FormMessage />
+            </div>
+          </div>
+        </FormItem>
+      )}
+    />
+  );
+}
 
-  function submit() {
-    if (!pass.trim()) { setErr("Ingresá tu contraseña para continuar."); return; }
-    onSubmit(pass);
+/* ---- Reconfirmación de identidad --------------------------------------- */
+function Reautenticar({ onCancel, onOk }: { onCancel: () => void; onOk: () => void }) {
+  const nombre = useAuthStore((s) => s.nombre);
+  const email = useAuthStore((s) => s.email);
+  const { reautenticar, isLoading } = useReautenticar();
+  const [ver, setVer] = useState(false);
+  const [rechazo, setRechazo] = useState<string | null>(null);
+  const form = useForm<ReautenticarForm>({
+    resolver: zodResolver(reautenticarSchema),
+    mode: "onTouched",
+    defaultValues: { pass: "" },
+  });
+
+  async function enviar({ pass }: ReautenticarForm) {
+    setRechazo(null);
+    const r = await reautenticar(pass);
+    if (r.ok) { onOk(); return; }
+    if (r.code === "badPass") { form.setError("pass", { type: "server", message: r.mensaje }, { shouldFocus: true }); return; }
+    setRechazo(r.mensaje ?? null);
   }
-  const fieldLbl: React.CSSProperties = { display: "block", fontWeight: 600, fontSize: 13, color: "var(--fg-2)", marginBottom: 7 };
 
   return (
-    <div onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(42,38,32,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(2px)" }}>
-      <div className="pop" style={{ background: "var(--surface)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-pop)", width: "min(440px, 100%)", overflow: "hidden" }}>
-        <div style={{ padding: "26px 28px 20px", borderBottom: "1px solid var(--outline-variant)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ width: 48, height: 48, flexShrink: 0, borderRadius: "50%", background: "var(--green-050)", border: "1px solid var(--green-300)", display: "flex", alignItems: "center", justifyContent: "center" }}><ShieldCheck size={23} color="var(--green-800)" /></span>
-            <div><div className="t-label" style={{ marginBottom: 4 }}>Seguridad</div><h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 21, color: "var(--fg-1)" }}>Confirmá tu identidad</h3></div>
-          </div>
-          <p style={{ margin: "16px 0 0", color: "var(--fg-2)", fontSize: 14.5, lineHeight: 1.55 }}>Para modificar los parámetros del sistema, reingresá tu contraseña.</p>
+    <Dialog open onOpenChange={(abierto) => { if (!abierto && !isLoading) onCancel(); }} disablePointerDismissal={isLoading}>
+      <DialogContent>
+        <div className="flex items-center gap-3.5">
+          <IconCircle tone="success" className="shrink-0">
+            <ShieldCheck className="size-[22px] text-green-800" aria-hidden />
+          </IconCircle>
+          <DialogTitle>Confirmá tu identidad</DialogTitle>
         </div>
-        <div style={{ padding: "20px 28px", display: "flex", flexDirection: "column", gap: 16 }}>
-          <div>
-            <label style={fieldLbl}>Cuenta</label>
-            <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 14px", borderRadius: "var(--radius)", border: "1px solid var(--outline-variant)", background: "var(--cream-tert)" }}>
-              <span style={{ width: 34, height: 34, flexShrink: 0, borderRadius: "50%", background: "var(--brown-700)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 13 }}>{admInitials(PARAM_ADMIN.nombre)}</span>
-              <span style={{ minWidth: 0 }}><span style={{ display: "block", fontWeight: 600, fontSize: 14, color: "var(--fg-1)" }}>{PARAM_ADMIN.nombre}</span><span style={{ display: "block", fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{PARAM_ADMIN.email}</span></span>
+        <DialogDescription className="mt-4">Para modificar los parámetros del sistema, reingresá tu contraseña.</DialogDescription>
+
+        <Form {...form}>
+          <form noValidate onSubmit={form.handleSubmit(enviar)} className="mt-5 flex flex-col gap-4">
+            <div className="flex items-center gap-[11px] rounded-md border border-outline-variant bg-cream-tert px-3.5 py-[11px]">
+              <span className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-brown-700 text-[13px] font-semibold text-white">
+                {admInitials(nombre ?? email ?? "")}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-fg-1">{nombre}</span>
+                <span className="block truncate font-mono text-xs text-fg-3">{email}</span>
+              </span>
             </div>
-          </div>
-          <div>
-            <label htmlFor="ps-pass" style={fieldLbl}>Contraseña <span style={{ color: "var(--danger)" }}>*</span></label>
-            <div style={{ position: "relative" }}>
-              <input id="ps-pass" type={show ? "text" : "password"} autoFocus placeholder="••••••••" value={pass} onChange={(e) => { setPass(e.target.value); setErr(""); }} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} style={{ ...inputStyle, paddingRight: 46, borderColor: err ? "var(--danger)" : "var(--sand)" }} />
-              <button type="button" onClick={() => setShow((s) => !s)} aria-label={show ? "Ocultar" : "Mostrar"} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}>{show ? <EyeOff size={18} color="var(--fg-3)" /> : <Eye size={18} color="var(--fg-3)" />}</button>
-            </div>
-            {err && fieldErr(err)}
-            <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--fg-3)" }}>Demo: la contraseña es <span style={{ fontFamily: "var(--font-mono)", color: "var(--fg-2)" }}>agrotours</span>.</p>
-          </div>
-          {error && <Alert tone="danger">{error}</Alert>}
-        </div>
-        <div style={{ padding: "14px 28px", borderTop: "1px solid var(--outline-variant)", background: "var(--cream-tert)", display: "flex", justifyContent: "flex-end", gap: 12 }}>
-          <Button variant="neutral" onClick={onCancel} disabled={busy}>Cancelar</Button>
-          <Button onClick={submit} loading={busy}><Check size={17} /> Confirmar</Button>
-        </div>
-      </div>
-    </div>
+            <FormField
+              control={form.control}
+              name="pass"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Contraseña</FormLabel>
+                  <FormControl>
+                    <TextField
+                      {...field}
+                      type={ver ? "text" : "password"}
+                      autoComplete="current-password"
+                      placeholder="••••••••"
+                      rightSlot={<EyeToggle shown={ver} onToggle={() => setVer((v) => !v)} />}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {rechazo && <Alert>{rechazo}</Alert>}
+            <DialogFooter className="mt-2">
+              <Button variant="neutral" onClick={onCancel} disabled={isLoading}>Cancelar</Button>
+              <Button type="submit" loading={isLoading}><Check className="size-[17px]" /> Verificar identidad</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-/* ---- Modal de revisión ------------------------------------------------- */
-function ReviewModal({ draft, original, busy, onCancel, onConfirm }: { draft: Parametros; original: Parametros; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
-  const changed = PARAM_FIELDS.filter((f) => (draft[f.key] ?? "").trim() !== (original[f.key] ?? "").trim());
-
+/* ---- Resumen de cambios ------------------------------------------------ */
+function ResumenCambios({ antes, despues }: { antes: Parametros; despues: DatosParametros }) {
+  const cambios = PARAM_FIELDS.filter((f) => antes[f.key] !== despues[f.key]);
   return (
-    <div onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(42,38,32,.45)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px", overflowY: "auto", backdropFilter: "blur(2px)" }}>
-      <div className="pop" style={{ background: "var(--surface)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-pop)", width: "min(620px, 100%)", maxHeight: "calc(100vh - 80px)", display: "flex", flexDirection: "column", overflow: "hidden", margin: "auto" }}>
-        <div style={{ padding: "24px 28px 18px", borderBottom: "1px solid var(--outline-variant)", flexShrink: 0 }}>
-          <div className="t-label" style={{ marginBottom: 6 }}>Revisión de cambios</div>
-          <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 23, color: "var(--fg-1)" }}>Así quedarían los parámetros</h3>
-          <p style={{ margin: "8px 0 0", color: "var(--fg-2)", fontSize: 14.5, lineHeight: 1.5 }}>{changed.length === 0 ? "No modificaste ningún valor." : `Revisá ${changed.length === 1 ? "el cambio" : `los ${changed.length} cambios`} antes de confirmar.`}</p>
-        </div>
-        <div style={{ padding: "6px 28px", overflowY: "auto", flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "18px 0", borderBottom: "1px solid var(--cream-tert)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ textAlign: "center" }}><LogoPreview key={"o" + original.logo} src={original.logo} size={56} /><div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 6 }}>Actual</div></div>
-              <ArrowRight size={18} color="var(--fg-3)" />
-              <div style={{ textAlign: "center" }}><LogoPreview key={"n" + draft.logo} src={draft.logo} size={56} /><div style={{ fontSize: 11, color: "var(--green-800)", fontWeight: 600, marginTop: 6 }}>Nuevo</div></div>
-            </div>
-            <div style={{ minWidth: 0 }}><div style={{ fontWeight: 600, fontSize: 15, color: "var(--fg-1)" }}>Logo de la empresa</div><div style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, color: "var(--fg-2)", marginTop: 4, wordBreak: "break-all" }}>{draft.logo}</div></div>
+    <ul className="flex flex-col divide-y divide-cream-tert rounded-md border border-outline-variant px-4">
+      {cambios.map((f) => (
+        <li key={f.key} className="py-3">
+          <div className="text-[13px] font-medium text-fg-2">{f.label}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px]">
+            <span className="font-mono text-fg-3 line-through">{mostrar(f, antes[f.key]) ?? "Sin definir"}</span>
+            <ArrowRight aria-label="pasa a" className="size-3.5 shrink-0 text-fg-3" />
+            <span className="font-mono font-semibold text-green-800">{mostrar(f, despues[f.key])}</span>
           </div>
-          {PARAM_FIELDS.filter((f) => f.key !== "logo").map((f) => {
-            const isChanged = (draft[f.key] ?? "").trim() !== (original[f.key] ?? "").trim();
-            const FIcon = ICON[f.icon] ?? Info;
-            return (
-              <div key={f.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "14px 0", borderBottom: "1px solid var(--cream-tert)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}><FIcon size={17} color="var(--fg-3)" /><span style={{ fontSize: 14, fontWeight: 500, color: "var(--fg-2)" }}>{f.label}</span></div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                  {isChanged && <span style={{ fontFamily: f.mono ? "var(--font-mono)" : "var(--font-sans)", fontSize: 13, color: "var(--fg-3)", textDecoration: "line-through" }}>{paramDisplay(f.key, original[f.key])}</span>}
-                  {isChanged && <ArrowRight size={14} color="var(--fg-3)" />}
-                  <span style={{ fontFamily: f.mono ? "var(--font-mono)" : "var(--font-sans)", fontSize: 14.5, fontWeight: 600, color: isChanged ? "var(--green-800)" : "var(--fg-1)" }}>{paramDisplay(f.key, draft[f.key])}</span>
-                  {isChanged && <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--green-800)", background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: "var(--radius-pill)", padding: "2px 8px" }}>Editado</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div style={{ padding: "14px 28px", borderTop: "1px solid var(--outline-variant)", background: "var(--cream-tert)", display: "flex", justifyContent: "flex-end", gap: 12, flexShrink: 0 }}>
-          <Button variant="neutral" onClick={onCancel} disabled={busy}>Cancelar cambios</Button>
-          <Button onClick={onConfirm} loading={busy}><Check size={17} /> Confirmar cambios</Button>
-        </div>
-      </div>
-    </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-/* ---- Inner ------------------------------------------------------------- */
-function Inner({ initial }: { initial: Parametros }) {
-  const [saved, setSaved] = useState<Parametros>(initial);
-  const [draft, setDraft] = useState<Parametros>(initial);
-  const [editing, setEditing] = useState(false);
-  const [attempted, setAttempted] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const { confirmar, isLoading: authing } = useConfirmarIdentidad();
+/* ---- Pantalla ---------------------------------------------------------- */
+function Pantalla({ inicial }: { inicial: Parametros }) {
+  const accesos = useAuthStore((s) => s.accesos);
+  // LEER_PARAMETROS ya lo exige el guard de la ruta; acá se distingue quién además puede modificarlos.
+  const puedeGestionar = tienePermiso(accesos, PermisoAdmin.GESTIONAR_PARAMETROS);
+  const [guardado, setGuardado] = useState(inicial);
+  const [editando, setEditando] = useState(false);
+  const [reautenticando, setReautenticando] = useState(false);
+  /** Los datos ya validados: con ellos se abre el resumen. */
+  const [aConfirmar, setAConfirmar] = useState<DatosParametros | null>(null);
+  /** Falló el guardado desde el resumen: queda abierto con el aviso. */
+  const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
+  /** El backend rechazó algo que no es de ningún campo del formulario. */
+  const [rechazo, setRechazo] = useState<string | null>(null);
   const { guardar, isLoading: guardando } = useGuardarParametros();
 
-  const errors: Partial<Record<ParametroKey, string>> = {};
-  PARAM_FIELDS.forEach((f) => { const e = paramError(f.key, draft[f.key]); if (e) errors[f.key] = e; });
-  const faltan = Object.keys(errors).length;
+  const form = useForm<ParametrosForm>({
+    resolver: zodResolver(parametrosSchema),
+    mode: "onTouched",
+    defaultValues: aFormulario(inicial),
+  });
+  const { isDirty } = useFormState({ control: form.control });
+  const { faltan, verQueFalta } = useCamposFaltantes(form, parametrosSchema);
+  const { confirmarDescarte } = useAvisoSalida(editando && isDirty);
 
-  async function onAuthSubmit(pass: string) {
-    setAuthError(null);
-    const ok = await confirmar(pass);
-    // Falló dentro del diálogo: queda abierto, con el aviso adentro.
-    if (!ok) { setAuthError("No pudimos verificar tu identidad. Autenticación fallida."); return; }
-    setAuthOpen(false);
-    setDraft({ ...saved });
-    setAttempted(false);
-    setEditing(true);
+  const sinDefinir = PARAM_FIELDS.filter((f) => guardado[f.key] === null).length;
+
+  async function cancelar() {
+    if (!(await confirmarDescarte())) return;
+    form.reset(aFormulario(guardado));
+    setRechazo(null);
+    setEditando(false);
   }
-  function cancelEdit() { setEditing(false); setAttempted(false); setDraft({ ...saved }); }
-  /** Marca los campos con error y lleva al primero: el botón está arriba y el campo puede no estar a la vista. */
-  function verQueFalta() {
-    setAttempted(true);
-    const primero = PARAM_FIELDS.find((f) => errors[f.key]);
-    if (primero) document.getElementById(`param-${primero.key}`)?.focus();
-  }
-  function askSave() {
-    setReviewOpen(true);
-  }
-  async function confirmSave() {
-    const clean = { ...draft } as Parametros;
-    (Object.keys(clean) as ParametroKey[]).forEach((k) => { clean[k] = (clean[k] ?? "").trim(); });
-    await guardar(clean);
-    setSaved(clean);
-    setDraft(clean);
-    setReviewOpen(false);
-    setEditing(false);
-    setAttempted(false);
-    notify.success("Los parámetros del sistema se cambiaron exitosamente.");
+
+  async function confirmar() {
+    if (!aConfirmar) return;
+    setErrorGuardar(null);
+    const r = await guardar(aConfirmar);
+    if (r.ok) {
+      const nuevo: Parametros = r.parametros ?? aConfirmar;
+      setGuardado(nuevo);
+      form.reset(aFormulario(nuevo));
+      setAConfirmar(null);
+      setRechazo(null);
+      setEditando(false);
+      notify.success("Los parámetros del sistema se guardaron.");
+      return;
+    }
+    if (r.code === "validationError") {
+      // De vuelta al formulario, con cada mensaje bajo su campo.
+      setAConfirmar(null);
+      for (const [campo, msg] of Object.entries(r.errores ?? {})) {
+        form.setError(campo as ParametroKey, { type: "server", message: msg });
+      }
+      setRechazo(r.mensaje ?? null);
+      return;
+    }
+    setErrorGuardar(r.mensaje ?? null);
   }
 
   return (
-    <div style={{ maxWidth: 980, margin: "0 auto", padding: "28px 28px 88px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--fg-3)", fontSize: 13.5, marginBottom: 14 }}><span>Parámetros</span><ChevronRight size={15} /><span style={{ color: "var(--fg-2)", fontWeight: 500 }}>Parámetros del sistema</span></div>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, flexWrap: "wrap", marginBottom: 24 }}>
-        <div style={{ minWidth: 280 }}>
-          <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 32, color: "var(--fg-1)", letterSpacing: "-.01em" }}>Parámetros del sistema</h1>
-          <p style={{ margin: "10px 0 0", color: "var(--fg-2)", fontSize: 15.5, lineHeight: 1.5, maxWidth: 640 }}>Información general del negocio y reglas de operación de la plataforma. Para modificarla, vas a tener que reconfirmar tu identidad.</p>
+    <div className="mx-auto max-w-[980px] px-4 pt-7 pb-24 sm:px-7">
+      <div className="mb-3.5 flex items-center gap-2.5 text-[13.5px] text-fg-3">
+        <span>Parámetros</span>
+        <ChevronRight size={15} />
+        <span className="font-medium text-fg-2">Parámetros del sistema</span>
+      </div>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-5">
+        <div className="max-w-[640px] min-w-0">
+          <h1 className="font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">Parámetros del sistema</h1>
+          <p className="mt-2.5 text-[15.5px] leading-normal text-fg-2">
+            Configuración financiera y reglas de operación de la plataforma. Para modificarlas, vas a tener que
+            reconfirmar tu identidad.
+          </p>
         </div>
-        {!editing ? (
-          <Button onClick={() => setAuthOpen(true)}><Pencil size={18} /> Modificar parámetros</Button>
-        ) : (
-          <div style={{ display: "flex", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
-            <Button variant="neutral" onClick={cancelEdit} disabled={guardando}><X size={18} /> Cancelar cambios</Button>
-            <div className="flex flex-col items-end gap-2">
-              {/* Deshabilitado hasta que todo valide; "Ver qué falta" marca los campos en rojo. */}
-              <Button onClick={askSave} disabled={guardando || faltan > 0}><Save size={18} /> Guardar cambios</Button>
-              <FaltanCampos faltan={faltan} onVerQueFalta={verQueFalta} />
-            </div>
-          </div>
+        {/* En edición, guardar y cancelar van al pie del formulario, junto al contador de lo que falta. */}
+        {!editando && (
+          <Button
+            onClick={() => setReautenticando(true)}
+            disabled={!puedeGestionar}
+            disabledReason="Tu rol no incluye el permiso para modificar los parámetros."
+          >
+            {puedeGestionar ? <Pencil className="size-[18px]" /> : <Lock className="size-[18px]" />} Modificar parámetros
+          </Button>
         )}
       </div>
 
-      {editing && (
-        <Alert tone="success" icon={<Pencil size={18} />} className="mb-5">
+      {editando ? (
+        <Alert tone="info" icon={<Pencil size={18} />} className="mb-5">
           Estás editando los parámetros. Los cambios no se guardan hasta que los confirmes.
+        </Alert>
+      ) : sinDefinir > 0 && (
+        <Alert tone="info" className="mb-5">
+          {sinDefinir === 1 ? "Hay 1 parámetro sin definir." : `Hay ${sinDefinir} parámetros sin definir.`}
+          {puedeGestionar && " Cargalos desde “Modificar parámetros”."}
         </Alert>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        {PARAM_GROUPS.map((g) => {
-          const GIcon = ICON[g.icon] ?? Info;
-          const fields = PARAM_FIELDS.filter((f) => f.group === g.id);
-          return (
-            <div key={g.id} className="card" style={{ padding: 0, overflow: "hidden" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 22px", borderBottom: "1px solid var(--outline-variant)", background: "var(--cream-tert)" }}><GIcon size={17} color="var(--brown-700)" /><span className="t-label">{g.label}</span></div>
-              <div>
-                {fields.map((f, i) => (
-                  <div key={f.key} style={{ borderBottom: i < fields.length - 1 ? "1px solid var(--cream-tert)" : "none", padding: "6px 22px" }}>
-                    <ParamRow fieldKey={f.key} value={editing ? draft[f.key] : saved[f.key]} editing={editing} error={attempted ? errors[f.key] ?? "" : ""} onChange={(v) => setDraft((d) => ({ ...d, [f.key]: v }))} />
+      <Form {...form}>
+        <form noValidate onSubmit={form.handleSubmit((v) => { setErrorGuardar(null); setAConfirmar(aDatos(v)); })}>
+          <div className="flex flex-col gap-5">
+            {PARAM_GROUPS.map((g) => {
+              const GIcon = ICON[g.icon] ?? Info;
+              const campos = PARAM_FIELDS.filter((f) => f.group === g.id);
+              return (
+                <Card key={g.id} className="overflow-hidden">
+                  <div className="flex items-center gap-2.5 border-b border-outline-variant bg-cream-tert px-[22px] py-4">
+                    <GIcon className="size-[17px] text-brown-700" />
+                    <h2 className="t-label">{g.label}</h2>
                   </div>
-                ))}
+                  <div className="divide-y divide-cream-tert">
+                    {campos.map((f) => (
+                      <div key={f.key} className="px-[22px] py-1.5">
+                        {editando ? <FilaEdicion f={f} form={form} /> : <FilaLectura f={f} valor={guardado[f.key]} />}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          {editando && (
+            <div className="mt-5 flex flex-col gap-3">
+              {rechazo && <Alert>{rechazo}</Alert>}
+              <div className="flex flex-wrap justify-end gap-3">
+                <Button variant="neutral" onClick={cancelar}><X className="size-[18px]" /> Cancelar cambios</Button>
+                <Button type="submit" disabled={!isDirty || faltan > 0}>
+                  <Save className="size-[18px]" /> Guardar cambios
+                </Button>
               </div>
+              <FaltanCampos faltan={faltan} para="guardar" onVerQueFalta={verQueFalta} className="self-end" />
             </div>
-          );
-        })}
+          )}
+        </form>
+      </Form>
+
+      <div className="mt-4 flex items-center gap-[9px] text-[13px] text-fg-3">
+        <Info className="size-4 shrink-0" />
+        Estos valores afectan a toda la plataforma. Los cambios se aplican una vez confirmados.
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, color: "var(--fg-3)", fontSize: 13 }}><Info size={16} color="var(--fg-3)" />Estos valores afectan a toda la plataforma. Los cambios se aplican una vez confirmados.</div>
+      {reautenticando && (
+        <Reautenticar
+          onCancel={() => setReautenticando(false)}
+          onOk={() => {
+            setReautenticando(false);
+            form.reset(aFormulario(guardado));
+            setRechazo(null);
+            setEditando(true);
+          }}
+        />
+      )}
 
-      {authOpen && <AuthModal busy={authing} error={authError} onCancel={() => { setAuthOpen(false); setAuthError(null); }} onSubmit={onAuthSubmit} />}
-      {reviewOpen && <ReviewModal draft={draft} original={saved} busy={guardando} onCancel={() => setReviewOpen(false)} onConfirm={confirmSave} />}
+      <ConfirmDialog
+        open={!!aConfirmar}
+        onCancel={() => { setAConfirmar(null); setErrorGuardar(null); }}
+        onConfirm={confirmar}
+        busy={guardando}
+        error={errorGuardar}
+        tone="primary"
+        icon={<Save className="size-[22px] text-info-fg" aria-hidden />}
+        title="Revisá los cambios"
+        description="Así van a quedar los parámetros que modificaste. Se aplican a toda la plataforma apenas los guardes."
+        confirmLabel="Guardar parámetros"
+        cancelLabel="Seguir editando"
+      >
+        {aConfirmar && <ResumenCambios antes={guardado} despues={aConfirmar} />}
+      </ConfirmDialog>
+    </div>
+  );
+}
 
+function ParametrosSkeleton() {
+  return (
+    <div className="mx-auto max-w-[980px] px-4 pt-7 pb-24 sm:px-7">
+      <Skeleton className="h-4 w-56" />
+      <Skeleton className="mt-4 h-9 w-80" />
+      <Skeleton className="mt-3 mb-6 h-4 w-full max-w-[560px]" />
+      <div className="flex flex-col gap-5">
+        {/* Una tarjeta por grupo, con su cantidad de filas: 1 y 4. */}
+        <Skeleton className="h-[126px] rounded-lg" />
+        <Skeleton className="h-[336px] rounded-lg" />
+      </div>
     </div>
   );
 }
 
 export default function ParametrosClient() {
-  const { data, isLoading, error, reload } = useParametros();
+  const query = useParametros();
   return (
-    <AsyncBoundary loading={isLoading} error={error} onRetry={reload} loadingLabel="Cargando parámetros…">
-      {data && <Inner initial={data} />}
-    </AsyncBoundary>
+    <AsyncView query={query} skeleton={<ParametrosSkeleton />}>
+      {(p) => <Pantalla inicial={p} />}
+    </AsyncView>
   );
 }
