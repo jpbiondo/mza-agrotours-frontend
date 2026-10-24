@@ -71,13 +71,10 @@ function BloqueTarifas({
     <>
       <TarifasEditor filas={field.value} onChange={field.onChange} errs={errs} intentado />
       {huecos.length > 0 && (
-        <div className="mb-[26px] flex items-start gap-2 rounded-md bg-info-fill px-3.5 py-2.5 text-[13px] text-info-fg">
-          <Info className="mt-px size-[15px] shrink-0 text-info" />
-          <span>
-            Ninguno de tus rangos cubre {huecos.join(", ")}. Si esperás visitantes de esas edades,
-            agregales un rango.
-          </span>
-        </div>
+        <Alert tone="info" className="mb-[26px]">
+          Ninguno de tus rangos cubre {huecos.join(", ")}. Si esperás visitantes de esas edades,
+          agregales un rango.
+        </Alert>
       )}
     </>
   );
@@ -216,14 +213,11 @@ function Formulario({
       )}
 
       {formState.isSubmitted && cantidadErrores > 0 && (
-        <div className="mb-5 flex items-center gap-2.5 rounded-md border border-danger bg-danger-fill px-4 py-3 text-sm font-medium text-danger-fg">
-          <AlertCircle className="size-[18px] shrink-0 text-danger" />
-          <span>
-            Revisá los campos marcados en rojo.{" "}
-            {cantidadErrores === 1 ? "Hay 1 campo" : `Hay ${cantidadErrores} campos`} que
-            necesita{cantidadErrores === 1 ? "" : "n"} atención. Tus datos se conservaron.
-          </span>
-        </div>
+        <Alert tone="danger" className="mb-5">
+          Revisá los campos marcados en rojo.{" "}
+          {cantidadErrores === 1 ? "Hay 1 campo" : `Hay ${cantidadErrores} campos`} que
+          necesita{cantidadErrores === 1 ? "" : "n"} atención. Tus datos se conservaron.
+        </Alert>
       )}
 
       <Form {...form}>
