@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, ArrowLeft, CalendarX } from "lucide-react";
+import { ArrowLeft, CalendarX } from "lucide-react";
 import { Alert, Button, Modal } from "@/components/ui";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { TextArea } from "@/components/ui/text-area";
@@ -63,17 +63,14 @@ export function CancelarDiaModal({
       </div>
 
       {!!pagadas && (
-        <div className="mb-[18px] flex items-start gap-3 rounded-md border border-warning bg-warning-fill px-4 py-3.5">
-          <AlertTriangle className="mt-px size-[19px] shrink-0 text-warning-fg" />
-          <p className="text-sm leading-normal text-warning-fg">
-            {pagadas === 1 ? (
-              <>Existe <strong>1 reserva pagada</strong> para este día. </>
-            ) : (
-              <>Existen <strong>{pagadas} reservas pagadas</strong> para este día. </>
-            )}
-            Al cancelar la actividad, se emitirá un <strong>reembolso automático</strong> a los visitantes.
-          </p>
-        </div>
+        <Alert tone="warning" className="mb-[18px]">
+          {pagadas === 1 ? (
+            <>Existe <strong>1 reserva pagada</strong> para este día. </>
+          ) : (
+            <>Existen <strong>{pagadas} reservas pagadas</strong> para este día. </>
+          )}
+          Al cancelar la actividad, se emitirá un <strong>reembolso automático</strong> a los visitantes.
+        </Alert>
       )}
 
       <Form {...form}>
