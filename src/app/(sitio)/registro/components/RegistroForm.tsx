@@ -28,8 +28,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import { TIPOS_IDENTIFICACION, EMPTY_FORM } from "@/data/registro";
 import { CODIGO_PERFIL_INACTIVO } from "@/data/auth";
@@ -133,18 +133,19 @@ export default function RegistroForm({
     // La cuenta de Firebase es de un perfil dado de baja que todavía no se
     // terminó de eliminar; el hook ya cerró la sesión.
     if (r.code === CODIGO_PERFIL_INACTIVO) {
-      notify.error(
-        "Esta cuenta fue dada de baja",
-        "Vas a poder registrarte de nuevo con este correo cuando se termine de eliminar.",
-      );
+      form.setError("root", {
+        message:
+          "Esta cuenta fue dada de baja. Vas a poder registrarte de nuevo con este correo cuando se termine de eliminar.",
+      });
       return;
     }
-    notify.error(
-      "No se pudo crear el usuario",
-      r.code === "validationError"
-        ? "Revisá los datos e intentá de nuevo."
-        : "Intentá de nuevo en unos minutos.",
-    );
+    // El backend rechazó el envío entero: va arriba del pie, no en un toast.
+    form.setError("root", {
+      message:
+        r.code === "validationError"
+          ? "No se pudo crear el usuario. Revisá los datos e intentá de nuevo."
+          : "No se pudo crear el usuario. Intentá de nuevo en unos minutos.",
+    });
   }
 
   return (
@@ -427,6 +428,10 @@ export default function RegistroForm({
             </FormItem>
           )}
         />
+
+        {form.formState.errors.root?.message && (
+          <Alert tone="danger">{form.formState.errors.root.message}</Alert>
+        )}
 
         {/* ---- Submit ---- */}
         <div className="mt-1.5">
