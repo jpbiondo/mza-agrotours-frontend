@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
-  Loader, PlusCircle, Building2, MapPin, CalendarDays, ChevronRight, Inbox,
+  PlusCircle, Building2, MapPin, CalendarDays, ChevronRight, Inbox,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { EstadoBadge, Skeleton, buttonClasses } from "@/components/ui";
@@ -93,22 +91,7 @@ function EmptyState() {
 }
 
 export default function MisSolicitudesClient() {
-  const router = useRouter();
-  const { solicitudes, isLoading, error, unauthenticated, reload } = useMisSolicitudes();
-
-  // Ruta protegida: sin sesión, a la pantalla de login.
-  useEffect(() => {
-    if (unauthenticated) router.replace("/acceso");
-  }, [unauthenticated, router]);
-
-  if (unauthenticated) {
-    return (
-      <div className="px-7 py-[120px] text-center text-fg-3">
-        <Loader size={26} className="spin mx-auto" />
-        <div className="mt-3 text-sm">Redirigiendo…</div>
-      </div>
-    );
-  }
+  const { solicitudes, isLoading, error, reload } = useMisSolicitudes();
 
   return (
     <div className="mx-auto max-w-[900px] px-7 pt-7 pb-24">
