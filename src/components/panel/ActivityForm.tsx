@@ -418,13 +418,10 @@ export default function ActivityForm({ initial }: { initial: ActividadFormData }
                 />
 
                 {huecos.length > 0 && (
-                  <div className="flex items-start gap-2 rounded-md bg-info-fill px-3.5 py-2.5 text-[13px] text-info-fg">
-                    <Info className="mt-px size-[15px] shrink-0 text-info" />
-                    <span>
-                      Ninguno de tus rangos cubre {huecos.join(", ")}. Si esperás visitantes de esas
-                      edades, agregales un rango.
-                    </span>
-                  </div>
+                  <Alert tone="info">
+                    Ninguno de tus rangos cubre {huecos.join(", ")}. Si esperás visitantes de esas
+                    edades, agregales un rango.
+                  </Alert>
                 )}
               </div>
             )}
