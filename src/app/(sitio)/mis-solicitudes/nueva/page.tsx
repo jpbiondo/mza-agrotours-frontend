@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GuardSesion from "@/components/GuardSesion";
 import SolicitarAltaClient from "./SolicitarAltaClient";
 
 export const metadata: Metadata = {
@@ -9,6 +10,8 @@ export const metadata: Metadata = {
 
 export default function SolicitarAltaPage() {
   return (
-    <SolicitarAltaClient />
+    <GuardSesion>
+      <SolicitarAltaClient />
+    </GuardSesion>
   );
 }
