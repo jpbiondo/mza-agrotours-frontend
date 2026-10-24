@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Search, X, List, Clock, CheckCircle2, XCircle, ChevronRight, CalendarDays,
-  Users, MapPin, ArrowRight, CalendarX, SearchX, RotateCcw, Compass, Loader,
+  Users, MapPin, ArrowRight, CalendarX, SearchX, RotateCcw, Compass,
 } from "lucide-react";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import AsyncBoundary from "@/components/AsyncBoundary";
@@ -124,16 +123,10 @@ function EmptyState({ icon, title, sub, action }: { icon: React.ReactNode; title
 }
 
 export default function MisReservasClient() {
-  const router = useRouter();
-  const { reservas, isLoading, error, unauthenticated, reload } = useReservas();
+  const { reservas, isLoading, error, reload } = useReservas();
   const [filter, setFilter] = useState<FilterId>("todas");
   const [query, setQuery] = useState("");
   const [applied, setApplied] = useState("");
-
-  // Ruta protegida: sin sesión, a la pantalla de login.
-  useEffect(() => {
-    if (unauthenticated) router.replace("/acceso");
-  }, [unauthenticated, router]);
 
   const afterSearch = useMemo(() => {
     const q = applied.trim().toLowerCase();
@@ -156,15 +149,6 @@ export default function MisReservasClient() {
 
   const searchEnabled = query.trim().length > 4;
   const limpiar = () => { setQuery(""); setApplied(""); setFilter("todas"); };
-
-  if (unauthenticated) {
-    return (
-      <div className="px-7 py-[120px] text-center text-fg-3">
-        <Loader size={26} className="spin mx-auto" />
-        <div className="mt-3 text-sm">Redirigiendo…</div>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-[1160px] px-7 pt-10 pb-20">
