@@ -19,7 +19,6 @@ import {
   User,
   Mail,
   BadgeCheck,
-  UserMinus,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import {
@@ -32,6 +31,7 @@ import {
 } from "@/components/ui/form";
 import { TextField } from "@/components/ui/text-field";
 import { ActionBtn, Button, IconButton, Skeleton } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EMAIL_RE } from "@/data/auth";
 import { admInitials } from "@/data/admin";
 import { PermisoAdmin } from "@/lib/permisos";
@@ -666,85 +666,6 @@ function AdminForm({
   );
 }
 
-function ConfirmarBaja({
-  admin,
-  busy,
-  error,
-  onCancel,
-  onConfirm,
-}: {
-  admin: AdminSistema;
-  busy: boolean;
-  error: string | null;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div style={{ padding: 26 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-          marginBottom: 16,
-        }}
-      >
-        <span
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            background: "var(--danger-fill)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <UserMinus size={22} color="var(--danger)" />
-        </span>
-        <h3
-          style={{
-            margin: 0,
-            fontFamily: "var(--font-display)",
-            fontWeight: 700,
-            fontSize: 20,
-            color: "var(--fg-1)",
-          }}
-        >
-          Borrar administrador
-        </h3>
-      </div>
-      <p
-        style={{
-          margin: "0 0 22px",
-          color: "var(--fg-2)",
-          fontSize: 15,
-          lineHeight: 1.55,
-        }}
-      >
-        ¿Seguro que querés quitar a{" "}
-        <strong style={{ color: "var(--fg-1)" }}>{admin.nombreUsuario}</strong>{" "}
-        del sistema? Perderá el acceso al panel de administración.
-      </p>
-      {error && (
-        <div style={{ marginBottom: 16 }}>
-          <ErrMsg>{error}</ErrMsg>
-        </div>
-      )}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
-          No, volver
-        </Button>
-        <Button variant="danger" onClick={onConfirm} loading={busy}>
-          <Trash2 size={17} />
-          Sí, borrar
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function Scrim({
   onClose,
   children,
@@ -1334,15 +1255,22 @@ function Inner() {
       )}
 
       {aBorrar && (
-        <Scrim onClose={() => setABorrar(null)} width={460}>
-          <ConfirmarBaja
-            admin={aBorrar}
-            busy={borrando}
-            error={errorBaja}
-            onCancel={() => setABorrar(null)}
-            onConfirm={confirmarBaja}
-          />
-        </Scrim>
+        <ConfirmDialog
+          open
+          title="Borrar administrador"
+          description={
+            <>
+              ¿Seguro que querés quitar a{" "}
+              <strong className="text-fg-1">{aBorrar.nombreUsuario}</strong> del sistema? Perderá el
+              acceso al panel de administración.
+            </>
+          }
+          confirmLabel="Borrar administrador"
+          busy={borrando}
+          error={errorBaja}
+          onCancel={() => setABorrar(null)}
+          onConfirm={confirmarBaja}
+        />
       )}
     </div>
   );
