@@ -1,14 +1,15 @@
 "use client";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  AlertTriangle, Ban, CalendarCheck, Check, ChevronRight, Clock, Grape,
+  AlertTriangle, Ban, CalendarCheck, ChevronRight, Clock, Grape,
   List as ListIcon, MapPin, RotateCcw, Search, SearchX, User, Warehouse,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { ActionBtn, Alert, Button, Card, EstadoBadge, IconCircle, Modal, Skeleton } from "@/components/ui";
+import { ActionBtn, Alert, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { notify } from "@/lib/notify";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -324,30 +325,26 @@ function SuspenderModal({
   const motivo = useWatch({ control: form.control, name: "motivo" });
   const { faltan } = useCamposFaltantes(form, suspensionEstabSchema);
   const suspender = form.handleSubmit((v) => onConfirm(v.motivo));
-  const { setFocus } = form;
-  useEffect(() => { setFocus("motivo"); }, [setFocus]);
 
   return (
-    <Modal onClose={onCancel} dismissable={!busy}>
-      <div className="flex items-center gap-3.5">
-        <IconCircle tone="danger">
-          <Ban className="size-[22px] text-danger" />
-        </IconCircle>
-        <div className="min-w-0">
-          <h3 className="font-display text-xl font-bold text-fg-1">Suspender establecimiento</h3>
-          <div className="mt-0.5 truncate text-[13.5px] text-fg-2">
-            {estab.nombre}
-            {estab.productorLider && ` · ${estab.productorLider}`}
-          </div>
-        </div>
-      </div>
-
-      <p className="mt-3.5 text-[14.5px] leading-relaxed text-fg-2">
-        El establecimiento dejará de aparecer en la exploración y no podrá recibir nuevas reservas.
-        El titular verá el motivo que registres acá.
-      </p>
-
-      <Alert tone="danger" icon={<Clock size={17} />} className="mt-3.5">
+    <ConfirmDialog
+      open
+      title="Suspender establecimiento"
+      description={
+        <>
+          <strong className="font-semibold text-fg-1">{estab.nombre}</strong>
+          {estab.productorLider && ` (${estab.productorLider})`} dejará de aparecer en la exploración y no
+          podrá recibir nuevas reservas. El titular verá el motivo que registres acá.
+        </>
+      }
+      confirmLabel="Suspender establecimiento"
+      busy={busy}
+      error={error}
+      confirmDisabled={faltan > 0}
+      onCancel={onCancel}
+      onConfirm={suspender}
+    >
+      <Alert tone="danger" icon={<Clock size={17} />}>
         <strong className="font-bold">Duración:</strong> la suspensión no tiene fecha de
         vencimiento. Se mantiene hasta que un administrador la reactive manualmente.
       </Alert>
@@ -384,20 +381,8 @@ function SuspenderModal({
           )}
         />
       </Form>
-
-      {error && <Alert className="mt-4">{error}</Alert>}
-
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
-          Cancelar
-        </Button>
-        <Button variant="danger" disabled={faltan > 0} onClick={suspender} loading={busy}>
-          <Ban className="size-[17px]" />
-          Suspender establecimiento
-        </Button>
-      </div>
       <FaltanCampos faltan={faltan} para="suspender" className="mt-2" />
-    </Modal>
+    </ConfirmDialog>
   );
 }
 
@@ -415,28 +400,22 @@ function ReactivarModal({
   onConfirm: () => void;
 }) {
   return (
-    <Modal onClose={onCancel} dismissable={!busy}>
-      <div className="flex items-center gap-3.5">
-        <IconCircle tone="success">
-          <RotateCcw className="size-[22px] text-green-800" />
-        </IconCircle>
-        <h3 className="font-display text-xl font-bold text-fg-1">Reactivar establecimiento</h3>
-      </div>
-      <p className="mt-4 text-[15px] leading-relaxed text-fg-2">
-        <strong className="font-semibold text-fg-1">{estab.nombre}</strong> volverá a aparecer en la
-        exploración y podrá recibir reservas nuevamente.
-      </p>
-      {error && <Alert className="mt-4">{error}</Alert>}
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
-          No, volver
-        </Button>
-        <Button onClick={onConfirm} loading={busy}>
-          <Check className="size-[17px]" />
-          Sí, reactivar
-        </Button>
-      </div>
-    </Modal>
+    <ConfirmDialog
+      open
+      tone="primary"
+      title="Reactivar establecimiento"
+      description={
+        <>
+          <strong className="font-semibold text-fg-1">{estab.nombre}</strong> volverá a aparecer en la
+          exploración y podrá recibir reservas nuevamente.
+        </>
+      }
+      confirmLabel="Reactivar establecimiento"
+      busy={busy}
+      error={error}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
   );
 }
 
