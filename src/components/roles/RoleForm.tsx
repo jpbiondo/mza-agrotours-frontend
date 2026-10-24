@@ -200,13 +200,10 @@ export function RoleForm({
                     </span>
                   </div>
 
-                  <div className="mb-3.5 flex items-center gap-2.5 rounded-md bg-info-fill px-3.5 py-2.5 text-[13.5px] leading-snug text-info-fg">
-                    <Lightbulb className="size-[17px] shrink-0 text-info" />
-                    <span>
-                      Marcá el título de un grupo para activar <strong>todos</strong> sus permisos de
-                      una vez. Después destildá los que no necesites.
-                    </span>
-                  </div>
+                  <Alert tone="info" icon={<Lightbulb size={18} />} className="mb-3.5">
+                    Marcá el título de un grupo para activar <strong>todos</strong> sus permisos de
+                    una vez. Después destildá los que no necesites.
+                  </Alert>
 
                   {fieldState.error && (
                     <div className="mb-3">
