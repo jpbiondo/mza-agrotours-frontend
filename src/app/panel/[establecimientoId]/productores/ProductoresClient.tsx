@@ -32,10 +32,12 @@ import {
   Alert,
   Button,
   Card,
-  Panel,
   Skeleton,
 } from "@/components/ui";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { notify } from "@/lib/notify";
 import {
   Form,
@@ -377,27 +379,24 @@ function SummaryRow({
   );
 }
 
-/** Cabecera del formulario de alta y cambio de rol, en el panel lateral. */
+/** Cabecera del formulario de alta y cambio de rol, con la cruz de cerrar. */
 function PanelHeader({
   etiqueta,
   titulo,
   bajada,
-  icono,
+  busy,
 }: {
   etiqueta: string;
   titulo: string;
   bajada: string;
-  icono?: ReactNode;
+  busy?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-4 border-b border-outline-variant px-[26px] py-[22px]">
-      {icono}
-      <div className="min-w-0">
-        <div className="t-label mb-1.5">{etiqueta}</div>
-        <h2 className="font-display text-2xl font-bold text-fg-1">{titulo}</h2>
-        <p className="mt-1.5 max-w-[460px] text-sm leading-relaxed text-fg-2">{bajada}</p>
-      </div>
-    </div>
+    <DialogHeader closeDisabled={busy}>
+      <div className="t-label mb-1.5">{etiqueta}</div>
+      <DialogTitle>{titulo}</DialogTitle>
+      <p className="mt-1.5 max-w-[460px] text-sm leading-relaxed text-fg-2">{bajada}</p>
+    </DialogHeader>
   );
 }
 
@@ -503,7 +502,7 @@ function ProductorForm({
       <form
         onSubmit={form.handleSubmit(onValid)}
         noValidate
-        className="flex max-h-[calc(100vh-80px)] flex-col"
+        className="flex min-h-0 flex-1 flex-col"
       >
         <PanelHeader
           etiqueta={editando ? "Modificar productor" : "Nuevo productor"}
@@ -513,9 +512,10 @@ function ProductorForm({
               ? "Sólo podés cambiar el rol del productor. El resto de los datos no se modifican desde acá."
               : "Ingresá el correo de un usuario registrado y elegí su rol. Queda activo en la finca de inmediato."
           }
+          busy={acciones.guardando}
         />
 
-        <div className="flex flex-col gap-5 overflow-y-auto px-[26px] py-[22px]">
+        <DialogBody className="flex flex-col gap-5">
           {editando ? (
             <div className="rounded-lg border border-outline-variant bg-cream-tert px-4 py-1">
               <SummaryRow
@@ -590,24 +590,21 @@ function ProductorForm({
               </FormItem>
             )}
           />
-        </div>
+        </DialogBody>
 
-        <div className="border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-          {submitError && <Alert className="mb-3">{submitError}</Alert>}
-          <div className="flex justify-end gap-3">
-            <Button variant="neutral" onClick={onCancel} disabled={acciones.guardando}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={bloqueado} loading={acciones.guardando}>
-              {editando ? (
-                <Check className="size-[17px]" />
-              ) : (
-                <UserPlus className="size-[17px]" />
-              )}
-              {editando ? "Guardar cambios" : "Agregar productor"}
-            </Button>
-          </div>
-        </div>
+        <DialogFooter alert={submitError && <Alert>{submitError}</Alert>}>
+          <Button variant="neutral" onClick={onCancel} disabled={acciones.guardando}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={bloqueado} loading={acciones.guardando}>
+            {editando ? (
+              <Check className="size-[17px]" />
+            ) : (
+              <UserPlus className="size-[17px]" />
+            )}
+            {editando ? "Guardar cambios" : "Agregar productor"}
+          </Button>
+        </DialogFooter>
       </form>
     </Form>
   );
@@ -1241,17 +1238,23 @@ function Pantalla({
       </div>
 
       {dialogo?.tipo === "form" && (
-        <Panel onClose={cerrar} width="w-[620px]">
-          <ProductorForm
-            initial={dialogo.productor}
-            roles={roles}
-            rolesLoading={rolesLoading}
-            existentes={productores}
-            acciones={acciones}
-            onCancel={cerrar}
-            onGuardado={onGuardado}
-          />
-        </Panel>
+        <Dialog
+          open
+          onOpenChange={(abierto) => { if (!abierto && !acciones.guardando) cerrar(); }}
+          disablePointerDismissal={acciones.guardando}
+        >
+          <DialogContent size="lg">
+            <ProductorForm
+              initial={dialogo.productor}
+              roles={roles}
+              rolesLoading={rolesLoading}
+              existentes={productores}
+              acciones={acciones}
+              onCancel={cerrar}
+              onGuardado={onGuardado}
+            />
+          </DialogContent>
+        </Dialog>
       )}
 
       {dialogo?.tipo === "suspender" && (
