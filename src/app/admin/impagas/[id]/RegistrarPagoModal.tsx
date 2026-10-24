@@ -136,7 +136,7 @@ export function RegistrarPagoModal({ reembolso, onRegistrado, onDesactualizado, 
               <ArrowLeft className="size-[17px]" /> Volver
             </Button>
             <Button onClick={confirmar} loading={guardando}>
-              <Check className="size-[17px]" /> Confirmar pago
+              <Check className="size-[17px]" /> Registrar pago
             </Button>
           </div>
         </>
