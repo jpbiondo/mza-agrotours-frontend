@@ -74,16 +74,19 @@ export default function DatosPersonalesForm({
       );
       return;
     }
-    notify.error(
-      "No se pudieron guardar los cambios",
-      r.code === "validationError"
-        ? "Revisá los datos e intentá de nuevo."
-        : "Intentá de nuevo en unos minutos.",
-    );
+    // El backend rechazó el envío entero: va arriba del pie, no en un toast.
+    form.setError("root", {
+      message:
+        r.code === "validationError"
+          ? "No se pudieron guardar los cambios. Revisá los datos e intentá de nuevo."
+          : "No se pudieron guardar los cambios. Intentá de nuevo en unos minutos.",
+    });
   }
 
+  // `root` es el rechazo del backend, que tiene su propio aviso al pie.
+  const { root: errorEnvio, ...erroresDeCampo } = form.formState.errors;
   const showErrorAlert =
-    form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0;
+    form.formState.isSubmitted && Object.keys(erroresDeCampo).length > 0;
 
   return (
     <Form {...form}>
@@ -247,6 +250,12 @@ export default function DatosPersonalesForm({
             )}
           />
         </div>
+
+        {errorEnvio?.message && (
+          <Alert tone="danger" className="mt-7">
+            {errorEnvio.message}
+          </Alert>
+        )}
 
         <div className="mt-7 flex flex-wrap items-center gap-3 border-t border-cream-tert pt-[22px]">
           <Button type="submit" loading={isLoading}>
