@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form";
 import { GI_ESTADOS, giCodigo } from "@/data/incidencias";
 import { useMisIncidencias, useReportarIncidencia } from "@/hooks/useMisIncidencias";
-import { fmtFechaHora } from "@/lib/format";
+import { fmtFechaHora, recortar } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { EstadoIncidencia, IncidenciaPropia } from "@/types/incidencias";
 import {
@@ -54,6 +54,33 @@ function Migas({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Caracteres antes del "Ver más" (la descripción y la respuesta pueden ser largas). */
+const MAX_RESUMEN = 220;
+
+/* ---- Texto recortado con "Ver más" -------------------------------------- */
+function TextoExpandible({ texto, className }: { texto: string; className?: string }) {
+  const [completo, setCompleto] = useState(false);
+  const largo = texto.length > MAX_RESUMEN;
+
+  return (
+    <>
+      <p className={cn("wrap-break-word whitespace-pre-line text-fg-2", className)}>
+        {largo && !completo ? recortar(texto, MAX_RESUMEN) : texto}
+      </p>
+      {largo && (
+        <Button
+          variant="text"
+          onClick={() => setCompleto((c) => !c)}
+          aria-expanded={completo}
+          className="mt-1.5 text-[13px]"
+        >
+          {completo ? "Ver menos" : "Ver más"}
+        </Button>
+      )}
+    </>
+  );
+}
+
 /* ---- Fila de una incidencia -------------------------------------------- */
 function IncidenciaFila({ inc }: { inc: IncidenciaPropia }) {
   const est = inc.estado ? GI_ESTADOS[inc.estado] : null;
@@ -74,7 +101,7 @@ function IncidenciaFila({ inc }: { inc: IncidenciaPropia }) {
           <span>{fmtFechaHora(inc.fechaInicio)}</span>
         </div>
         <h3 className="mb-1 truncate font-display text-lg font-semibold text-fg-1">{inc.titulo}</h3>
-        <p className="line-clamp-2 text-sm leading-normal text-fg-2">{inc.desc}</p>
+        <TextoExpandible texto={inc.desc} className="text-sm leading-normal" />
 
         {/* Respuesta del administrador: el backend sólo la manda en Resuelta o Desestimada. */}
         {inc.motivo && (
@@ -88,7 +115,7 @@ function IncidenciaFila({ inc }: { inc: IncidenciaPropia }) {
               <MessageSquareReply className="size-3.5" />
               <span className="t-label text-[11px] text-current">Respuesta del administrador</span>
             </div>
-            <p className="text-[13.5px] leading-[1.55] text-pretty text-fg-2">{inc.motivo}</p>
+            <TextoExpandible texto={inc.motivo} className="text-[13.5px] leading-[1.55] text-pretty" />
           </div>
         )}
       </div>
