@@ -3,8 +3,9 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, Check, Lightbulb, X } from "lucide-react";
-import { Alert, Button, IconButton } from "@/components/ui";
+import { AlertCircle, Check, Lightbulb } from "lucide-react";
+import { Alert, Button } from "@/components/ui";
+import { DialogBody, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
@@ -90,25 +91,20 @@ export function RoleForm({
 
   return (
     <Form {...form}>
-      <div className="flex max-h-[calc(100vh-80px)] flex-col">
-        <div className="flex items-start justify-between gap-4 border-b border-outline-variant px-[26px] py-[22px]">
-          <div>
-            <div className="t-label mb-1.5">{editing ? "Editar rol" : "Nuevo rol"}</div>
-            <h2 className="font-display text-2xl font-bold text-fg-1">
-              {editing ? nombre || "Editar rol" : textos.form.tituloCrear}
-            </h2>
-            <p className="mt-1.5 text-sm text-fg-2">
-              {editing
-                ? "Modificá el nombre, la descripción o los permisos del rol."
-                : textos.form.bajadaCrear}
-            </p>
-          </div>
-          <IconButton onClick={onCancel} aria-label="Cerrar">
-            <X />
-          </IconButton>
-        </div>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <DialogHeader closeDisabled={busy}>
+          <div className="t-label mb-1.5">{editing ? "Editar rol" : "Nuevo rol"}</div>
+          <DialogTitle>
+            {editing ? nombre || "Editar rol" : textos.form.tituloCrear}
+          </DialogTitle>
+          <p className="mt-1.5 text-sm text-fg-2">
+            {editing
+              ? "Modificá el nombre, la descripción o los permisos del rol."
+              : textos.form.bajadaCrear}
+          </p>
+        </DialogHeader>
 
-        <div className="flex flex-col gap-5 overflow-y-auto px-[26px] py-[22px]">
+        <DialogBody className="flex flex-col gap-5">
           <FormField
             control={control}
             name="nombre"
@@ -230,26 +226,26 @@ export function RoleForm({
               );
             }}
           />
-        </div>
+        </DialogBody>
 
-        <div className="border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-          {error && <Alert className="mb-3">{error}</Alert>}
-          <div className="flex justify-end gap-3">
-            <Button variant="neutral" onClick={onCancel} disabled={busy}>
-              Cancelar
-            </Button>
-            <Button onClick={guardar} disabled={faltan > 0} loading={busy}>
-              <Check className="size-[17px]" />
-              {editing ? "Guardar cambios" : "Crear rol"}
-            </Button>
-          </div>
-          <FaltanCampos
-            faltan={faltan}
-            para={editing ? "guardar" : "crear el rol"}
-            onVerQueFalta={verQueFalta}
-            className="mt-2"
-          />
-        </div>
+        <DialogFooter
+          alert={error && <Alert>{error}</Alert>}
+          note={
+            <FaltanCampos
+              faltan={faltan}
+              para={editing ? "guardar" : "crear el rol"}
+              onVerQueFalta={verQueFalta}
+            />
+          }
+        >
+          <Button variant="neutral" onClick={onCancel} disabled={busy}>
+            Cancelar
+          </Button>
+          <Button onClick={guardar} disabled={faltan > 0} loading={busy}>
+            <Check className="size-[17px]" />
+            {editing ? "Guardar cambios" : "Crear rol"}
+          </Button>
+        </DialogFooter>
       </div>
     </Form>
   );
