@@ -61,7 +61,8 @@ export function GcrFormFooter({
   error,
 }: {
   onCancel: () => void;
-  onSave: () => void;
+  /** Sin `onSave`, el botón envía el `<form>` que envuelve cuerpo y pie. */
+  onSave?: () => void;
   saveLabel: string;
   saveIcon?: React.ReactNode;
   busy?: boolean;
@@ -77,7 +78,7 @@ export function GcrFormFooter({
       <Button variant="neutral" onClick={onCancel} disabled={busy}>
         Cancelar
       </Button>
-      <Button onClick={onSave} disabled={saveDisabled} loading={busy}>
+      <Button type={onSave ? "button" : "submit"} onClick={onSave} disabled={saveDisabled} loading={busy}>
         {saveIcon ?? <Check className="size-[17px]" />} {saveLabel}
       </Button>
     </DialogFooter>
