@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  Trash2,
   ShieldAlert,
   Check,
   X,
@@ -15,6 +14,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { Modal, Alert, Button, IconCircle } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { CondicionIncumplida } from "@/data/cuenta";
 import {
   useEliminarCuenta,
@@ -26,7 +26,6 @@ type Step =
   | "checking"
   | "warn"
   | "blocked"
-  | "processing"
   | "success"
   | "error";
 
@@ -64,8 +63,9 @@ export default function DeleteAccountFlow({
   const [step, setStep] = useState<Step>("checking");
   const [bajaTs, setBajaTs] = useState<string | null>(null);
   const [condiciones, setCondiciones] = useState<CondicionIncumplida[]>([]);
+  const [errorBaja, setErrorBaja] = useState<string | null>(null);
   const { verificar } = useVerificarCondicionesBaja();
-  const { procesar } = useEliminarCuenta();
+  const { procesar, isLoading: procesando } = useEliminarCuenta();
 
   // El envelope viene `ok` aunque la baja no se pueda hacer: lo que bloquea es
   // que `data` traiga condiciones incumplidas (hasta 3). Sin `ok` es un fallo.
@@ -102,12 +102,15 @@ export default function DeleteAccountFlow({
   }
 
   async function confirmar() {
-    setStep("processing");
+    setErrorBaja(null);
     const r = await procesar();
-    if (r.ok) {
-      setBajaTs(r.ts);
-      setStep("success");
-    } else setStep("error");
+    if (!r.ok) {
+      // El diálogo queda abierto con el aviso, como cualquier confirmación.
+      setErrorBaja("No pudimos eliminar tu cuenta y sigue activa. Volvé a intentarlo en unos minutos.");
+      return;
+    }
+    setBajaTs(r.ts);
+    setStep("success");
   }
 
   if (step === "checking") {
@@ -133,34 +136,33 @@ export default function DeleteAccountFlow({
 
   if (step === "warn") {
     return (
-      <Modal onClose={onClose}>
-        <IconCircle tone="danger" className="mb-[18px]">
-          <Trash2 size={26} className="text-danger-fg" />
-        </IconCircle>
-        <h3 className={`mb-2 ${modalTitle}`}>¿Querés eliminar tu cuenta?</h3>
-        <p className={`mb-5 ${modalLead}`}>
-          Vas a dar de baja la cuenta de{" "}
-          <strong className="text-fg-1">{nombre}</strong>.
-        </p>
+      <ConfirmDialog
+        open
+        title="¿Querés eliminar tu cuenta?"
+        description={
+          <>
+            Vas a dar de baja la cuenta de{" "}
+            <strong className="text-fg-1">{nombre}</strong>.
+          </>
+        }
+        confirmLabel="Eliminar cuenta"
+        requireText="ELIMINAR"
+        busy={procesando}
+        error={errorBaja}
+        onCancel={onClose}
+        onConfirm={confirmar}
+      >
         <Alert tone="warning" className="mb-[18px]">
           Esta acción <strong>no se puede deshacer</strong>. Perderás el acceso
           a tu historial, reservas y mensajes.
         </Alert>
-        <div className="mb-[18px] flex items-center gap-[9px] rounded-md border border-green-300 bg-green-050 p-[10px_13px]">
+        <div className="flex items-center gap-[9px] rounded-md border border-green-300 bg-green-050 p-[10px_13px]">
           <CheckCircle2 size={16} className="shrink-0 text-green-800" />
           <div className="text-[13px] font-semibold text-green-800">
             Cumplís las condiciones para dar de baja tu cuenta.
           </div>
         </div>
-        <div className={modalActions}>
-          <Button variant="neutral" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button variant="danger" onClick={confirmar}>
-            <Trash2 size={16} /> Confirmo eliminar mi cuenta
-          </Button>
-        </div>
-      </Modal>
+      </ConfirmDialog>
     );
   }
 
@@ -194,27 +196,6 @@ export default function DeleteAccountFlow({
           <Button onClick={onClose}>
             <ArrowLeft size={16} /> Entendido
           </Button>
-        </div>
-      </Modal>
-    );
-  }
-
-  if (step === "processing") {
-    return (
-      <Modal
-        dismissable={false}
-        padding="p-[40px_28px]"
-        className="text-center"
-      >
-        <Loader
-          size={46}
-          className="spin mx-auto mb-[18px] block text-green-800"
-        />
-        <div className="font-display text-[18px] font-semibold text-fg-1">
-          Procesando la baja…
-        </div>
-        <div className="mt-1.5 text-[13.5px] text-fg-2">
-          Estamos gestionando tu solicitud.
         </div>
       </Modal>
     );
