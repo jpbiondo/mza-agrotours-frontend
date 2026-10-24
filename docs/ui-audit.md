@@ -145,6 +145,50 @@ Las clases `.btn-*` heredadas viven sobre todo en: `AsyncBoundary` (el "Reintent
 
 Velos (scrim) con 6 colores distintos: `rgba(42,38,32,.48)` (`Modal`), `.45` (`Panel`, `GcrFormShell`, `Scrim`, Parámetros), `.32` (`Sheet`, chat), `rgba(31,28,22,.32)` (calendario), `rgba(45,40,30,.42)` (cajones de los shells).
 
+**Cruz de cerrar y scroll** (relevado el 2026-10-24, después de migrar las confirmaciones a `ConfirmDialog`). La regla nueva está en la guía, "Diálogos".
+
+| Qué pasa hoy | Dónde |
+|---|---|
+| Cabecera fija con cruz, cuerpo con scroll y pie fijo (el patrón de la guía), cada uno armado a mano | `deudas/ResolverDeudaModal.tsx` (ya sobre `Dialog`), `impagas/[id]/RegistrarPagoModal.tsx`, `gestion-dias/AbrirDiaModal.tsx`, `EditarCupoModal.tsx` y `LoteDrawer.tsx` (cruz de `gestion-dias/piezas.tsx`), `mis-reservas/[id]/ValorarModal.tsx`, `explorar/[id]/ReseniasModal.tsx`, los formularios en `GcrFormShell` (cultivos, recetas, FAQ, incidencias), `RoleForm` en `Panel`, `Sheet` (reembolsos, `BookingWidget`) |
+| Cruz flotante (`absolute`) y **sin alto máximo**: en una ventana baja la caja se sale de la pantalla | `estadisticas/EstadisticasClient.tsx:181` (exportar reporte) |
+| **Sin cruz**: se cierra sólo con "Cancelar", Escape o click afuera | todos los `ConfirmDialog` (hasta esta migración), `ProductorForm` en `Panel`, formulario de administradores en `Scrim`, reprogramar, salir sin guardar (editar actividad, solicitar alta), modal informativo de actividades, los dos de parámetros |
+| Pasos sin salida (no llevan cruz a propósito) | "Verificando condiciones…" y "Tu cuenta ha sido eliminada" (`DeleteAccountFlow`), "Verificando…" (`EliminarEstablecimientoFlow`, `CancelarReservaModal`) |
+
+Cada uno arma su cabecera y su pie a mano: el padding de la cabecera va de `px-[26px] py-5` a `px-7 pt-6`, y el pie es crema con borde en unos y blanco sin borde en otros.
+
+**Relevamiento general de los diálogos** (2026-10-24). La decisión que sale de acá está en la guía, decisiones 34 a 36.
+
+| Familia | Diálogo | Base y ancho | Qué tiene de distinto |
+|---|---|---|---|
+| Confirmaciones | 14 (eliminar, dar de baja, suspender, rechazar, cancelar…) | `ConfirmDialog`, 468 px | Unificadas |
+| Formularios largos | Cultivo, receta, FAQ, incidencia (admin) | `GcrFormShell`, 680 px | Cruz y scroll bien; sin trampa de foco ni bloqueo de scroll |
+| | Productor: alta y cambio de rol (`ProductoresClient.tsx`, `ProductorForm`) | `Panel`, 620 px | **Sin cruz**: su `PanelHeader` no la tiene |
+| | Rol, en admin y en panel (`roles/RoleForm.tsx`) | `Panel`, 720 px | Cruz y scroll bien |
+| | Administrador (`AdministradoresClient.tsx`, `AdminForm`) | `Scrim`, 620 px, estilos inline | El rechazo va con `ErrMsg` (texto rojo), no con `Alert` |
+| Formularios cortos | Resolver deuda | `Dialog`, 560 px | El piloto |
+| | Registrar pago (`impagas/[id]/RegistrarPagoModal.tsx`) | `Modal`, 520 px | Tres zonas armadas a mano |
+| | Abrir día, editar cupo (`gestion-dias/`) | `Modal`, 540 px | Tres zonas; cabecera propia con el bloque de la fecha (`CabeceraDia`) y padding `px-6` |
+| | Valorar reserva (`mis-reservas/[id]/ValorarModal.tsx`) | `Modal`, 560 px | Pie blanco sin borde y botones invertidos (la acción primero) |
+| | Exportar reporte (`estadisticas/EstadisticasClient.tsx:181`) | `Modal`, 520 px | Cruz flotante y sin alto máximo |
+| Lectura | Reseñas (`explorar/[id]/ReseniasModal.tsx`) | `Modal`, 720 px | Cruz y scroll bien |
+| Varios pasos | Eliminar cuenta, eliminar establecimiento, cancelar reserva | `Modal` para verificar, error y resultado + `ConfirmDialog` para confirmar | Cada paso es otro diálogo: al cambiar de paso uno se cierra y abre el siguiente |
+| Avisos sueltos | Confirmar reprogramación, salir sin guardar (editar actividad, solicitar alta), "no es posible eliminar" (actividades) | `Modal`, 440 px y 468 px | Sin cruz |
+| Parámetros | Reautenticación, revisión de cambios | Overlays inline, 440 y 620 px, z-80 | Esperan la reautenticación real |
+| Cajones laterales | Lote de días (`LoteDrawer`), reembolsos, chat del visitante, calendario | `Panel` derecha 600 px, `Sheet` 460 px, dos propios | Otra familia |
+
+**Estado de la migración** (2026-10-24): los formularios largos (cultivo, receta, FAQ, incidencia, productor, administrador y rol) ya están sobre `Dialog` `lg`, con cruz, trampa de foco y bloqueo de scroll. El `Scrim` de administradores se eliminó y `Panel` quedó sólo para `LoteDrawer`. Falta el resto de la tabla.
+
+**Lo que se repite.** Los cuatro formularios largos son un solo diseño implementado cuatro veces sobre tres bases. Llevan la misma cabecera (etiqueta + título de 24 px + bajada, `px-[26px] py-[22px]` con borde), el mismo cuerpo con scroll y el mismo pie crema. `ProductorForm` y `AdminForm` son casi gemelos: alta por correo con un rol, o cambio del rol ("Cambiar el rol asignado").
+
+**Lo que difiere.**
+
+- **Bases:** seis (`Dialog`, `Modal`, `Panel`, `GcrFormShell`, `Scrim`, overlays de parámetros). Sólo `Dialog` y `Sheet` traen trampa de foco y bloqueo de scroll.
+- **Escape:** `Modal` no lo atiende, salvo que la pantalla agregue el suyo (exportar). `Panel`, `GcrFormShell` y `Scrim` sí, cada uno con su propio listener.
+- **Cambios sin guardar:** ningún formulario en diálogo pregunta al cerrar. Escape o un click afuera descartan lo escrito.
+- **Anchos:** ocho (440, 468, 520, 540, 560, 600, 620, 680 y 720 px).
+- **Título:** 16,5, 18, 20, 21, 22 o 24 px.
+- **Cabecera:** `py-5`, `py-[22px]` o `pt-[22px] pb-[18px]`; `px-6` o `px-[26px]`.
+
 #### A2.4 Diálogo de resultado y pantalla de resultado
 
 - **Modal de resultado o de proceso**: `cuenta/components/DeleteAccountFlow.tsx:225/253`, `mis-reservas/[id]/CancelarReservaModal.tsx:105` (procesando) y `:140` (resultado), `datos/EliminarEstablecimientoFlow.tsx:118` (verificando) y `:174` (error), `ActividadesClient.tsx:640` (no se puede eliminar).

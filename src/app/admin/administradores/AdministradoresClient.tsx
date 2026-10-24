@@ -5,7 +5,6 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   UserPlus,
-  X,
   AlertCircle,
   ShieldCheck,
   Crown,
@@ -19,7 +18,6 @@ import {
   User,
   Mail,
   BadgeCheck,
-  UserMinus,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import {
@@ -31,7 +29,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { TextField } from "@/components/ui/text-field";
-import { ActionBtn, Button, IconButton, Skeleton } from "@/components/ui";
+import { ActionBtn, Alert, Button, Skeleton } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { EMAIL_RE } from "@/data/auth";
 import { admInitials } from "@/data/admin";
 import { PermisoAdmin } from "@/lib/permisos";
@@ -475,324 +477,148 @@ function AdminForm({
   };
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onValid)}
-        noValidate
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          maxHeight: "calc(100vh - 80px)",
-        }}
-      >
-        <div
-          style={{
-            padding: "22px 26px",
-            borderBottom: "1px solid var(--outline-variant)",
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 16,
-          }}
-        >
-          <div>
-            <div className="t-label" style={{ marginBottom: 6 }}>
-              {editando ? "Modificar administrador" : "Nuevo administrador"}
-            </div>
-            <h2
-              style={{
-                margin: 0,
-                fontFamily: "var(--font-display)",
-                fontWeight: 700,
-                fontSize: 24,
-                color: "var(--fg-1)",
-              }}
-            >
-              {editando ? "Cambiar el rol asignado" : "Agregar administrador"}
-            </h2>
-            <p
-              style={{
-                margin: "6px 0 0",
-                color: "var(--fg-2)",
-                fontSize: 14,
-                maxWidth: 460,
-                lineHeight: 1.5,
-              }}
-            >
-              {editando
-                ? "Solo podés cambiar el rol del administrador. El resto de los datos no se modifican desde acá."
-                : "Ingresá el correo de un usuario registrado y elegí su rol. Queda activo en el sistema de inmediato."}
-            </p>
-          </div>
-          <IconButton onClick={onCancel} aria-label="Cerrar">
-            <X />
-          </IconButton>
-        </div>
-
-        <div
-          style={{
-            padding: "22px 26px",
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
-            gap: 20,
-          }}
-        >
-          {editando ? (
-            <div
-              style={{
-                border: "1px solid var(--outline-variant)",
-                borderRadius: "var(--radius-lg)",
-                padding: "4px 16px 12px",
-                background: "var(--cream-tert)",
-              }}
-            >
-              <SummaryRow
-                icon={<User size={16} color="var(--fg-2)" />}
-                label="Nombre"
-                value={initial.nombreUsuario}
-              />
-              <SummaryRow
-                icon={<Mail size={16} color="var(--fg-2)" />}
-                label="Correo electrónico"
-                value={initial.emailUsuario}
-                mono
-              />
-              <SummaryRow
-                icon={<BadgeCheck size={16} color="var(--fg-2)" />}
-                label="Identificación"
-                value={initial.identificacion}
-                mono
-              />
-            </div>
-          ) : (
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel required style={lbl}>
-                    Correo electrónico
-                  </FormLabel>
-                  <FormControl>
-                    <TextField
-                      {...field}
-                      type="email"
-                      inputMode="email"
-                      autoComplete="off"
-                      placeholder="nombre@mendozaagrotours.gob.ar"
-                    />
-                  </FormControl>
-                  <div style={{ marginTop: 7 }}>
-                    {fieldState.error ? (
-                      <FormMessage />
-                    ) : (
-                      <CuentaPreview
-                        email={email}
-                        yaEsAdmin={yaEsAdmin}
-                        card={card}
-                        estado={estado}
-                      />
-                    )}
-                  </div>
-                </FormItem>
-              )}
-            />
-          )}
-
-          <FormField
-            control={form.control}
-            name="rolId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel required style={{ ...lbl, marginBottom: 10 }}>
-                  Rol asignado
-                </FormLabel>
-                <div style={{ marginBottom: 12 }}>
-                  <FormMessage />
-                </div>
-                <FormControl>
-                  {rolesLoading ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        fontSize: 13,
-                        color: "var(--fg-3)",
-                      }}
-                    >
-                      <Loader size={15} className="spin" /> Cargando roles…
-                    </div>
-                  ) : (
-                    <RolePicker
-                      roles={roles}
-                      value={field.value}
-                      onChange={field.onChange}
-                    />
-                  )}
-                </FormControl>
-              </FormItem>
-            )}
-          />
-
-          {submitError && <ErrMsg>{submitError}</ErrMsg>}
-        </div>
-
-        <div
-          style={{
-            padding: "16px 26px",
-            borderTop: "1px solid var(--outline-variant)",
-            background: "var(--cream-tert)",
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 12,
-          }}
-        >
-          <Button variant="neutral" onClick={onCancel} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button type="submit" variant="primary" disabled={bloqueado} loading={saving}>
-            {editando ? (
-              <Check size={17} />
-            ) : (
-              <UserPlus size={17} />
-            )}
-            {editando ? "Guardar cambios" : "Agregar administrador"}
-          </Button>
-        </div>
-      </form>
-    </Form>
-  );
-}
-
-function ConfirmarBaja({
-  admin,
-  busy,
-  error,
-  onCancel,
-  onConfirm,
-}: {
-  admin: AdminSistema;
-  busy: boolean;
-  error: string | null;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div style={{ padding: 26 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-          marginBottom: 16,
-        }}
-      >
-        <span
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            background: "var(--danger-fill)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <UserMinus size={22} color="var(--danger)" />
-        </span>
-        <h3
-          style={{
-            margin: 0,
-            fontFamily: "var(--font-display)",
-            fontWeight: 700,
-            fontSize: 20,
-            color: "var(--fg-1)",
-          }}
-        >
-          Borrar administrador
-        </h3>
-      </div>
-      <p
-        style={{
-          margin: "0 0 22px",
-          color: "var(--fg-2)",
-          fontSize: 15,
-          lineHeight: 1.55,
-        }}
-      >
-        ¿Seguro que querés quitar a{" "}
-        <strong style={{ color: "var(--fg-1)" }}>{admin.nombreUsuario}</strong>{" "}
-        del sistema? Perderá el acceso al panel de administración.
-      </p>
-      {error && (
-        <div style={{ marginBottom: 16 }}>
-          <ErrMsg>{error}</ErrMsg>
-        </div>
-      )}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
-          No, volver
-        </Button>
-        <Button variant="danger" onClick={onConfirm} loading={busy}>
-          <Trash2 size={17} />
-          Sí, borrar
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function Scrim({
-  onClose,
-  children,
-  width = 620,
-}: {
-  onClose: () => void;
-  children: React.ReactNode;
-  width?: number;
-}) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 60,
-        background: "rgba(42,38,32,.45)",
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        padding: "40px 20px",
-        overflowY: "auto",
-        backdropFilter: "blur(2px)",
-      }}
+    <Dialog
+      open
+      onOpenChange={(abierto) => { if (!abierto && !saving) onCancel(); }}
+      disablePointerDismissal={saving}
     >
-      <div
-        className="pop"
-        style={{
-          background: "var(--surface)",
-          width: `min(${width}px, 100%)`,
-          borderRadius: "var(--radius-lg)",
-          boxShadow: "var(--shadow-pop)",
-          margin: "auto",
-          overflow: "hidden",
-        }}
-      >
-        {children}
-      </div>
-    </div>
+      <DialogContent size="lg">
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onValid)}
+            noValidate
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <DialogHeader closeDisabled={saving}>
+              <div className="t-label mb-1.5">
+                {editando ? "Modificar administrador" : "Nuevo administrador"}
+              </div>
+              <DialogTitle>{editando ? "Cambiar el rol asignado" : "Agregar administrador"}</DialogTitle>
+              <p className="mt-1.5 max-w-[460px] text-sm leading-normal text-fg-2">
+                {editando
+                  ? "Solo podés cambiar el rol del administrador. El resto de los datos no se modifican desde acá."
+                  : "Ingresá el correo de un usuario registrado y elegí su rol. Queda activo en el sistema de inmediato."}
+              </p>
+            </DialogHeader>
+
+            <DialogBody className="flex flex-col gap-5">
+              {editando ? (
+                <div
+                  style={{
+                    border: "1px solid var(--outline-variant)",
+                    borderRadius: "var(--radius-lg)",
+                    padding: "4px 16px 12px",
+                    background: "var(--cream-tert)",
+                  }}
+                >
+                  <SummaryRow
+                    icon={<User size={16} color="var(--fg-2)" />}
+                    label="Nombre"
+                    value={initial.nombreUsuario}
+                  />
+                  <SummaryRow
+                    icon={<Mail size={16} color="var(--fg-2)" />}
+                    label="Correo electrónico"
+                    value={initial.emailUsuario}
+                    mono
+                  />
+                  <SummaryRow
+                    icon={<BadgeCheck size={16} color="var(--fg-2)" />}
+                    label="Identificación"
+                    value={initial.identificacion}
+                    mono
+                  />
+                </div>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field, fieldState }) => (
+                    <FormItem>
+                      <FormLabel required style={lbl}>
+                        Correo electrónico
+                      </FormLabel>
+                      <FormControl>
+                        <TextField
+                          {...field}
+                          type="email"
+                          inputMode="email"
+                          autoComplete="off"
+                          placeholder="nombre@mendozaagrotours.gob.ar"
+                        />
+                      </FormControl>
+                      <div style={{ marginTop: 7 }}>
+                        {fieldState.error ? (
+                          <FormMessage />
+                        ) : (
+                          <CuentaPreview
+                            email={email}
+                            yaEsAdmin={yaEsAdmin}
+                            card={card}
+                            estado={estado}
+                          />
+                        )}
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="rolId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required style={{ ...lbl, marginBottom: 10 }}>
+                      Rol asignado
+                    </FormLabel>
+                    <div style={{ marginBottom: 12 }}>
+                      <FormMessage />
+                    </div>
+                    <FormControl>
+                      {rolesLoading ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            fontSize: 13,
+                            color: "var(--fg-3)",
+                          }}
+                        >
+                          <Loader size={15} className="spin" /> Cargando roles…
+                        </div>
+                      ) : (
+                        <RolePicker
+                          roles={roles}
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      )}
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+            </DialogBody>
+
+            <DialogFooter alert={submitError && <Alert>{submitError}</Alert>}>
+              <Button variant="neutral" onClick={onCancel} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button type="submit" variant="primary" disabled={bloqueado} loading={saving}>
+                {editando ? (
+                  <Check size={17} />
+                ) : (
+                  <UserPlus size={17} />
+                )}
+                {editando ? "Guardar cambios" : "Agregar administrador"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1321,28 +1147,33 @@ function Inner() {
       </div>
 
       {modal && (
-        <Scrim onClose={() => setModal(null)}>
-          <AdminForm
-            initial={modal === "nuevo" ? null : modal}
-            roles={roles}
-            rolesLoading={rolesLoading}
-            existentes={administradores}
-            onCancel={() => setModal(null)}
-            onGuardado={onGuardado}
-          />
-        </Scrim>
+        <AdminForm
+          initial={modal === "nuevo" ? null : modal}
+          roles={roles}
+          rolesLoading={rolesLoading}
+          existentes={administradores}
+          onCancel={() => setModal(null)}
+          onGuardado={onGuardado}
+        />
       )}
 
       {aBorrar && (
-        <Scrim onClose={() => setABorrar(null)} width={460}>
-          <ConfirmarBaja
-            admin={aBorrar}
-            busy={borrando}
-            error={errorBaja}
-            onCancel={() => setABorrar(null)}
-            onConfirm={confirmarBaja}
-          />
-        </Scrim>
+        <ConfirmDialog
+          open
+          title="Borrar administrador"
+          description={
+            <>
+              ¿Seguro que querés quitar a{" "}
+              <strong className="text-fg-1">{aBorrar.nombreUsuario}</strong> del sistema? Perderá el
+              acceso al panel de administración.
+            </>
+          }
+          confirmLabel="Borrar administrador"
+          busy={borrando}
+          error={errorBaja}
+          onCancel={() => setABorrar(null)}
+          onConfirm={confirmarBaja}
+        />
       )}
     </div>
   );

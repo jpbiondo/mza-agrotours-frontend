@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { ActionBtn, Alert, Card, Skeleton } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DialogBody } from "@/components/ui/dialog";
 import { notify } from "@/lib/notify";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -31,7 +33,7 @@ import {
 } from "@/hooks/useGestionRecetas";
 import type { CultivoOpcion, DatosReceta, DificultadId, RecetaCatalogo } from "@/types/gestionCr";
 import {
-  GcrConfirmDelete, GcrFormShell, GcrFormHeader, GcrFormFooter, GcrFieldLabel, GcrErr,
+  GcrFormShell, GcrFormHeader, GcrFormFooter, GcrFieldLabel, GcrErr,
   GcrListEditor, GcrCultivoMultiSelect, GcrCultivoChip, GcrDifficultyPill, gcrDificultadLabel,
   GcrStats, GcrSearchBar, GcrEmptyState, GcrPageHead, GcrNoMatch,
 } from "@/components/admin/gcr/shared";
@@ -301,11 +303,11 @@ function RecetaForm({
             ? "Modificá los datos de la receta del catálogo."
             : "Sumá una receta al catálogo. Asociala a los cultivos con los que se prepara."
         }
-        onCancel={onCancel}
+        busy={busy}
       />
 
       <Form {...form}>
-      <div className="flex min-h-0 flex-1 flex-col gap-[22px] overflow-y-auto px-[26px] py-[22px]">
+      <DialogBody className="flex flex-col gap-[22px]">
         <FormField
           control={control}
           name="nombre"
@@ -514,7 +516,7 @@ function RecetaForm({
             </div>
           )}
         />
-      </div>
+      </DialogBody>
       </Form>
 
       <GcrFormFooter
@@ -800,7 +802,7 @@ function Inner({
       </Card>
 
       {form && (
-        <GcrFormShell onCancel={() => setForm(null)}>
+        <GcrFormShell onCancel={() => setForm(null)} busy={creando || actualizando}>
           <RecetaForm
             initial={form.datos}
             editando={form.id !== null}
@@ -815,22 +817,23 @@ function Inner({
         </GcrFormShell>
       )}
 
-      <GcrConfirmDelete
-        open={!!toDelete}
-        title="Eliminar receta"
-        busy={borrando}
-        error={deleteError}
-        body={
-          toDelete ? (
+      {toDelete && (
+        <ConfirmDialog
+          open
+          title="Eliminar receta"
+          confirmLabel="Eliminar receta"
+          busy={borrando}
+          error={deleteError}
+          description={
             <>
               ¿Seguro que querés eliminar <strong className="text-fg-1">«{toDelete.nombre}»</strong> del
               catálogo? Dejará de aparecer en las fichas de sus cultivos. Esta acción no se puede deshacer.
             </>
-          ) : null
-        }
-        onCancel={() => setToDelete(null)}
-        onConfirm={confirmarBaja}
-      />
+          }
+          onCancel={() => setToDelete(null)}
+          onConfirm={confirmarBaja}
+        />
+      )}
     </div>
   );
 }

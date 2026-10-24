@@ -7,7 +7,10 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { IconCircle } from "@/components/ui/IconCircle";
 import { TextField } from "@/components/ui/text-field";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { useConfirmStore, type ConfirmOptions } from "@/stores/confirmStore";
 
 export type { ConfirmOptions };
@@ -25,6 +28,8 @@ export interface ConfirmDialogProps extends ConfirmOptions {
   confirmDisabled?: boolean;
   /** Contenido extra entre la descripción y el pie: un campo de motivo, un resumen. */
   children?: ReactNode;
+  /** Debajo de los botones, en el pie fijo: el `<FaltanCampos>` del motivo. */
+  note?: ReactNode;
 }
 
 /**
@@ -45,6 +50,7 @@ export function ConfirmDialog({
   error,
   confirmDisabled = false,
   children,
+  note,
   ...opciones
 }: ConfirmDialogProps) {
   return (
@@ -60,6 +66,7 @@ export function ConfirmDialog({
           busy={busy}
           error={error}
           confirmDisabled={confirmDisabled}
+          note={note}
           onCancel={onCancel}
           onConfirm={onConfirm}
         >
@@ -84,44 +91,50 @@ function Cuerpo({
   onCancel,
   onConfirm,
   children,
+  note,
 }: Omit<ConfirmDialogProps, "open">) {
   const [escrito, setEscrito] = useState("");
   const campoId = useId();
-  const falta = !!requireText && escrito.trim() !== requireText;
+  // Sin distinguir mayúsculas: lo que importa es que se escribió la palabra, no el Bloq Mayús.
+  const falta = !!requireText && escrito.trim().toUpperCase() !== requireText.toUpperCase();
 
   return (
     <>
-      <div className="flex items-center gap-3.5">
-        <IconCircle tone={tone === "danger" ? "danger" : "info"} className="shrink-0">
-          {icon ?? (tone === "danger"
-            ? <AlertTriangle className="size-[22px] text-danger-fg" aria-hidden />
-            : <HelpCircle className="size-[22px] text-info-fg" aria-hidden />)}
-        </IconCircle>
-        <DialogTitle>{title}</DialogTitle>
-      </div>
-
-      {description && <DialogDescription className="mt-4">{description}</DialogDescription>}
-
-      {children && <div className="mt-4">{children}</div>}
-
-      {requireText && (
-        <div className="mt-4 flex flex-col gap-2">
-          <label htmlFor={campoId} className="text-sm text-fg-2">
-            Para confirmar, escribí <strong className="font-mono text-fg-1">{requireText}</strong>
-          </label>
-          <TextField
-            id={campoId}
-            value={escrito}
-            onChange={setEscrito}
-            autoComplete="off"
-            disabled={busy}
-          />
+      <DialogHeader closeDisabled={busy}>
+        <div className="flex items-center gap-3.5">
+          <IconCircle tone={tone === "danger" ? "danger" : "info"} className="shrink-0">
+            {icon ?? (tone === "danger"
+              ? <AlertTriangle className="size-[22px] text-danger-fg" aria-hidden />
+              : <HelpCircle className="size-[22px] text-info-fg" aria-hidden />)}
+          </IconCircle>
+          <DialogTitle>{title}</DialogTitle>
         </div>
+      </DialogHeader>
+
+      {(description || children || requireText) && (
+        <DialogBody>
+          {description && <DialogDescription>{description}</DialogDescription>}
+
+          {children && <div className={description ? "mt-4" : undefined}>{children}</div>}
+
+          {requireText && (
+            <div className={cn("flex flex-col gap-2", (description || children) && "mt-4")}>
+              <label htmlFor={campoId} className="text-sm text-fg-2">
+                Para confirmar, escribí <strong className="font-mono text-fg-1">{requireText}</strong>
+              </label>
+              <TextField
+                id={campoId}
+                value={escrito}
+                onChange={setEscrito}
+                autoComplete="off"
+                disabled={busy}
+              />
+            </div>
+          )}
+        </DialogBody>
       )}
 
-      {error && <Alert className="mt-4">{error}</Alert>}
-
-      <DialogFooter>
+      <DialogFooter alert={error && <Alert>{error}</Alert>} note={note}>
         <Button variant="neutral" onClick={onCancel} disabled={busy}>
           {cancelLabel}
         </Button>

@@ -1,80 +1,32 @@
 "use client";
 
-import { useEffect } from "react";
-import { Search, SearchX, Trash2, X, Plus, Check, AlertCircle, ChevronRight, Gauge } from "lucide-react";
-import { Alert, Button, Card, IconButton, IconCircle, Modal } from "@/components/ui";
+import { Search, SearchX, Trash2, Plus, Check, AlertCircle, ChevronRight, Gauge } from "lucide-react";
+import { Alert, Button, Card } from "@/components/ui";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TextField } from "@/components/ui/text-field";
 import { GCR_MESES, GCR_ESTACIONES, GCR_EST_ORDEN } from "@/data/gestionCr";
 import { gradienteDe } from "@/lib/color";
 import { cn } from "@/lib/utils";
 import type { CultivoOpcion, DificultadId, Estacion } from "@/types/gestionCr";
 
-/* ---- Escape-to-close hook ---------------------------------------------- */
-function useEscape(onClose: () => void) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-}
-
-/* ---- Confirmación de eliminación --------------------------------------- */
-export function GcrConfirmDelete({
-  open,
-  title,
-  body,
-  busy,
-  error,
-  onCancel,
-  onConfirm,
-}: {
-  open: boolean;
-  title: string;
-  body: React.ReactNode;
-  busy?: boolean;
-  /** Rechazo del backend: el diálogo queda abierto con el aviso. */
-  error?: string | null;
+/* ---- Diálogo de formulario ---------------------------------------------
+   Sobre `Dialog` en el ancho `lg`: la cabecera y el pie quedan fijos y sólo
+   scrollea el cuerpo, porque el formulario crece con la cantidad de
+   beneficios o pasos. Escape, la cruz y el click afuera llaman a `onCancel`. */
+export function GcrFormShell({ onCancel, busy = false, children }: {
   onCancel: () => void;
-  onConfirm: () => void;
+  /** Mientras se guarda, no se puede cerrar. */
+  busy?: boolean;
+  children: React.ReactNode;
 }) {
-  if (!open) return null;
   return (
-    <Modal onClose={onCancel} dismissable={!busy}>
-      <div className="flex items-center gap-3.5">
-        <IconCircle tone="danger">
-          <Trash2 className="size-[22px] text-danger" />
-        </IconCircle>
-        <h3 className="font-display text-xl font-bold text-fg-1">{title}</h3>
-      </div>
-      <p className="mt-4 text-[15px] leading-relaxed text-fg-2">{body}</p>
-      {error && <Alert className="mt-4">{error}</Alert>}
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
-          No, volver
-        </Button>
-        <Button variant="danger" onClick={onConfirm} loading={busy}>
-          <Trash2 className="size-[17px]" /> Sí, eliminar
-        </Button>
-      </div>
-    </Modal>
-  );
-}
-
-/* ---- Modal shell de formulario -----------------------------------------
-   No usa <Modal>: ese primitivo es un diálogo centrado de ancho fijo, y acá
-   hace falta un panel ancho, anclado arriba y con scroll propio, porque el
-   formulario crece con la cantidad de beneficios o pasos. */
-export function GcrFormShell({ onCancel, children }: { onCancel: () => void; children: React.ReactNode }) {
-  useEscape(onCancel);
-  return (
-    <div
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
-      className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-[rgba(42,38,32,.45)] px-5 py-10 backdrop-blur-[2px]"
+    <Dialog
+      open
+      onOpenChange={(abierto) => { if (!abierto && !busy) onCancel(); }}
+      disablePointerDismissal={busy}
     >
-      <div className="pop m-auto flex max-h-[calc(100vh-80px)] w-[680px] max-w-full flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface shadow-pop">
-        {children}
-      </div>
-    </div>
+      <DialogContent size="lg">{children}</DialogContent>
+    </Dialog>
   );
 }
 
@@ -82,24 +34,19 @@ export function GcrFormHeader({
   eyebrow,
   title,
   sub,
-  onCancel,
+  busy,
 }: {
   eyebrow: string;
   title: string;
   sub?: string;
-  onCancel: () => void;
+  busy?: boolean;
 }) {
   return (
-    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline-variant px-[26px] py-[22px]">
-      <div className="min-w-0">
-        <div className="t-label mb-1.5">{eyebrow}</div>
-        <h2 className="font-display text-2xl font-bold text-fg-1">{title}</h2>
-        {sub && <p className="mt-1.5 max-w-[480px] text-sm leading-relaxed text-fg-2">{sub}</p>}
-      </div>
-      <IconButton onClick={onCancel} aria-label="Cerrar">
-        <X />
-      </IconButton>
-    </div>
+    <DialogHeader closeDisabled={busy}>
+      <div className="t-label mb-1.5">{eyebrow}</div>
+      <DialogTitle>{title}</DialogTitle>
+      {sub && <p className="mt-1.5 max-w-[480px] text-sm leading-relaxed text-fg-2">{sub}</p>}
+    </DialogHeader>
   );
 }
 
@@ -114,7 +61,8 @@ export function GcrFormFooter({
   error,
 }: {
   onCancel: () => void;
-  onSave: () => void;
+  /** Sin `onSave`, el botón envía el `<form>` que envuelve cuerpo y pie. */
+  onSave?: () => void;
   saveLabel: string;
   saveIcon?: React.ReactNode;
   busy?: boolean;
@@ -126,18 +74,14 @@ export function GcrFormFooter({
   error?: string | null;
 }) {
   return (
-    <div className="shrink-0 border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-      {error && <Alert className="mb-3">{error}</Alert>}
-      <div className="flex items-center justify-end gap-3">
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
-          Cancelar
-        </Button>
-        <Button onClick={onSave} disabled={saveDisabled} loading={busy}>
-          {saveIcon ?? <Check className="size-[17px]" />} {saveLabel}
-        </Button>
-      </div>
-      {aviso && <div className="mt-2">{aviso}</div>}
-    </div>
+    <DialogFooter alert={error && <Alert>{error}</Alert>} note={aviso}>
+      <Button variant="neutral" onClick={onCancel} disabled={busy}>
+        Cancelar
+      </Button>
+      <Button type={onSave ? "button" : "submit"} onClick={onSave} disabled={saveDisabled} loading={busy}>
+        {saveIcon ?? <Check className="size-[17px]" />} {saveLabel}
+      </Button>
+    </DialogFooter>
   );
 }
 

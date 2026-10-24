@@ -7,7 +7,9 @@ import {
   SearchX, RotateCcw, Check,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { ActionBtn, Alert, Button, IconButton, Modal, Skeleton } from "@/components/ui";
+import { ActionBtn, Button, Skeleton } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DialogBody, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { notify } from "@/lib/notify";
 import { TextField } from "@/components/ui/text-field";
 import { TextArea } from "@/components/ui/text-area";
@@ -186,38 +188,28 @@ function FaqEditor({ item, busy, error, onCancel, onSave }: {
   const cerrar = busy ? () => {} : onCancel;
 
   return (
-    <GcrFormShell onCancel={cerrar}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={esEdicion ? "Editar pregunta frecuente" : "Nueva pregunta frecuente"}
-        className="flex min-h-0 flex-1 flex-col"
-      >
-        {/* Cabecera */}
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline-variant px-[26px] py-[22px]">
-          <div className="flex min-w-0 items-center gap-[13px]">
-            <span className="flex size-[42px] shrink-0 items-center justify-center rounded-xl border border-green-100 bg-green-050 text-green-800">
-              {esEdicion ? <Pencil className="size-5" /> : <Plus className="size-5" />}
-            </span>
-            <div className="min-w-0">
-              <span className="t-label">{esEdicion ? "Editar entrada" : "Nueva entrada"}</span>
-              <h2 className="mt-[3px] font-display text-xl leading-tight font-bold text-fg-1">
-                {esEdicion ? "Editar pregunta frecuente" : "Cargá una pregunta frecuente"}
-              </h2>
-            </div>
+    <GcrFormShell onCancel={onCancel} busy={busy}>
+      <DialogHeader closeDisabled={busy}>
+        <div className="flex min-w-0 items-center gap-[13px]">
+          <span className="flex size-[42px] shrink-0 items-center justify-center rounded-xl border border-green-100 bg-green-050 text-green-800">
+            {esEdicion ? <Pencil className="size-5" /> : <Plus className="size-5" />}
+          </span>
+          <div className="min-w-0">
+            <span className="t-label">{esEdicion ? "Editar entrada" : "Nueva entrada"}</span>
+            <DialogTitle className="mt-[3px] leading-tight">
+              {esEdicion ? "Editar pregunta frecuente" : "Cargá una pregunta frecuente"}
+            </DialogTitle>
           </div>
-          <IconButton onClick={cerrar} aria-label="Cerrar">
-            <X />
-          </IconButton>
         </div>
+      </DialogHeader>
 
-        {/* Cuerpo */}
-        <Form {...form}>
-          <form
-            noValidate
-            onSubmit={form.handleSubmit(onSave)}
-            className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-[26px] py-[22px]"
-          >
+      <Form {...form}>
+        <form
+          noValidate
+          onSubmit={form.handleSubmit(onSave)}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <DialogBody className="flex flex-col gap-5">
             <FormField
               control={form.control}
               name="q"
@@ -288,70 +280,26 @@ function FaqEditor({ item, busy, error, onCancel, onSave }: {
                 </FormItem>
               )}
             />
-          </form>
-        </Form>
+          </DialogBody>
 
-        <GcrFormFooter
-          onCancel={cerrar}
-          onSave={form.handleSubmit(onSave)}
-          saveLabel={esEdicion ? "Guardar cambios" : "Crear pregunta"}
-          saveIcon={<Check className="size-[17px]" />}
-          busy={busy}
-          saveDisabled={faltan > 0}
-          aviso={
-            <FaltanCampos
-              faltan={faltan}
-              para={esEdicion ? "guardar" : "crear la pregunta"}
-              onVerQueFalta={verQueFalta}
-            />
-          }
-          error={error}
-        />
-      </div>
+          <GcrFormFooter
+            onCancel={cerrar}
+            saveLabel={esEdicion ? "Guardar cambios" : "Crear pregunta"}
+            saveIcon={<Check className="size-[17px]" />}
+            busy={busy}
+            saveDisabled={faltan > 0}
+            aviso={
+              <FaltanCampos
+                faltan={faltan}
+                para={esEdicion ? "guardar" : "crear la pregunta"}
+                onVerQueFalta={verQueFalta}
+              />
+            }
+            error={error}
+          />
+        </form>
+      </Form>
     </GcrFormShell>
-  );
-}
-
-/* ---- Confirmación de eliminación --------------------------------------- */
-function FaqEliminar({ item, busy, error, onCancel, onConfirm }: {
-  item: FaqItem;
-  busy: boolean;
-  error: string | null;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  useEffect(() => {
-    if (busy) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [busy, onCancel]);
-
-  return (
-    <Modal onClose={onCancel} dismissable={!busy} padding="p-0" className="w-[480px] overflow-hidden">
-      <div className="px-[26px] pt-[26px] pb-1.5 text-center" aria-label="Eliminar pregunta frecuente">
-        <span className="mb-4 inline-flex size-14 items-center justify-center rounded-[14px] bg-danger-fill">
-          <Trash2 className="size-[26px] text-danger-fg" />
-        </span>
-        <h2 className="mb-2 font-display text-xl font-bold text-fg-1">¿Eliminar esta pregunta?</h2>
-        <p className="mx-auto max-w-[380px] text-[14.5px] leading-normal text-fg-2">
-          Se quitará de la base de conocimiento y dejará de mostrarse a los usuarios. Esta acción no se puede deshacer.
-        </p>
-        <div className="mt-[18px] flex items-start gap-[11px] rounded-md border border-outline-variant bg-cream-tert px-3.5 py-3 text-left">
-          <HelpCircle className="mt-px size-[18px] shrink-0 text-fg-3" />
-          <span className="font-display text-[14.5px] leading-[1.4] font-semibold text-fg-1">{item.q}</span>
-        </div>
-        {error && <Alert className="mt-4 text-left">{error}</Alert>}
-      </div>
-      <div className="flex flex-wrap justify-center gap-3 px-[26px] pt-[18px] pb-6">
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
-          <X className="size-[17px]" /> Cancelar
-        </Button>
-        <Button variant="danger" onClick={onConfirm} loading={busy}>
-          <Trash2 className="size-[17px]" /> Eliminar
-        </Button>
-      </div>
-    </Modal>
   );
 }
 
@@ -510,13 +458,21 @@ function FaqGestion({ initial, editor, setEditor }: {
         />
       )}
       {borrar && (
-        <FaqEliminar
-          item={borrar}
+        <ConfirmDialog
+          open
+          title="¿Eliminar esta pregunta?"
+          description="Se quitará de la base de conocimiento y dejará de mostrarse a los usuarios. Esta acción no se puede deshacer."
+          confirmLabel="Eliminar pregunta"
           busy={borrando}
           error={errorBorrar}
           onCancel={() => setBorrar(null)}
           onConfirm={confirmarBorrado}
-        />
+        >
+          <div className="flex items-start gap-2.75 rounded-md border border-outline-variant bg-cream-tert px-3.5 py-3">
+            <HelpCircle className="mt-px size-4.5 shrink-0 text-fg-3" aria-hidden />
+            <span className="font-display text-[14.5px] leading-[1.4] font-semibold text-fg-1">{borrar.q}</span>
+          </div>
+        </ConfirmDialog>
       )}
     </>
   );

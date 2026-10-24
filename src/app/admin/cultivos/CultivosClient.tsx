@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Sprout, Utensils, Leaf, Scissors, Grape, Pencil, Trash2, Lock, Eye } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { ActionBtn, Alert, Card, Skeleton } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DialogBody } from "@/components/ui/dialog";
 import { notify } from "@/lib/notify";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -25,7 +27,7 @@ import {
 } from "@/hooks/useGestionCultivos";
 import type { CultivoCatalogo, DatosCultivo, Estacion } from "@/types/gestionCr";
 import {
-  GcrConfirmDelete, GcrFormShell, GcrFormHeader, GcrFormFooter, GcrFieldLabel, GcrErr,
+  GcrFormShell, GcrFormHeader, GcrFormFooter, GcrFieldLabel, GcrErr,
   GcrSeasonBar, GcrSeasonEditor, GcrListEditor, GcrStats, GcrSearchBar, GcrEmptyState, GcrPageHead,
   GcrNoMatch,
 } from "@/components/admin/gcr/shared";
@@ -281,11 +283,11 @@ function CultivoForm({
             ? "Modificá los datos del cultivo disponible para todos los establecimientos."
             : "Sumá un tipo de cultivo al catálogo de la plataforma. Queda disponible para asociar a actividades y recetas."
         }
-        onCancel={onCancel}
+        busy={busy}
       />
 
       <Form {...form}>
-      <div className="flex min-h-0 flex-1 flex-col gap-[22px] overflow-y-auto px-[26px] py-[22px]">
+      <DialogBody className="flex flex-col gap-[22px]">
         <FormField
           control={control}
           name="nombre"
@@ -401,7 +403,7 @@ function CultivoForm({
             </div>
           )}
         />
-      </div>
+      </DialogBody>
       </Form>
 
       <GcrFormFooter
@@ -689,7 +691,7 @@ function Inner({
       </Card>
 
       {form && (
-        <GcrFormShell onCancel={() => setForm(null)}>
+        <GcrFormShell onCancel={() => setForm(null)} busy={creando || actualizando}>
           <CultivoForm
             initial={form.datos}
             editando={form.id !== null}
@@ -704,22 +706,23 @@ function Inner({
         </GcrFormShell>
       )}
 
-      <GcrConfirmDelete
-        open={!!toDelete}
-        title="Eliminar cultivo"
-        busy={borrando}
-        error={deleteError}
-        body={
-          toDelete ? (
+      {toDelete && (
+        <ConfirmDialog
+          open
+          title="Eliminar cultivo"
+          confirmLabel="Eliminar cultivo"
+          busy={borrando}
+          error={deleteError}
+          description={
             <>
               ¿Seguro que querés eliminar <strong className="text-fg-1">«{toDelete.nombre}»</strong>{" "}
               del catálogo? Esta acción no se puede deshacer.
             </>
-          ) : null
-        }
-        onCancel={() => setToDelete(null)}
-        onConfirm={confirmarBaja}
-      />
+          }
+          onCancel={() => setToDelete(null)}
+          onConfirm={confirmarBaja}
+        />
+      )}
     </div>
   );
 }

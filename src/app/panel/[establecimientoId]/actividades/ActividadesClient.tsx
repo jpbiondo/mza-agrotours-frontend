@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  AlertTriangle, Ban, CalendarDays, CalendarPlus, Check, Clock, Eye, EyeOff, FilePenLine,
+  AlertTriangle, Ban, CalendarDays, CalendarPlus, Clock, Eye, EyeOff, FilePenLine,
   Grape, LayoutGrid, Loader, MapPin, Plus, RotateCcw, Search,
   SearchX, Settings2, SlidersHorizontal, Trash2, X,
 } from "lucide-react";
@@ -12,6 +12,7 @@ import { CropChip, IconoActividad } from "@/components/panel/actividad/identidad
 import { Pagination } from "@/components/catalog/controls";
 import { ActionBtn, Alert, Button, Card, EstadoBadge, Modal, Skeleton } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { notify } from "@/lib/notify";
 import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
@@ -576,32 +577,22 @@ export default function ActividadesClient() {
       </div>
 
       {toDelete && (
-        <Modal onClose={cerrarBaja} dismissable={pendingId !== toDelete.id}>
-          <div className="flex gap-4">
-            <div className="flex size-[46px] shrink-0 items-center justify-center rounded-full bg-danger-fill">
-              <Trash2 className="size-[22px] text-danger" />
-            </div>
-            <div className="flex-1">
-              <h3 className="mb-1.5 font-display text-[19px] font-bold text-fg-1">
-                ¿Querés dar de baja esta actividad?
-              </h3>
-              <p className="text-[14.5px] leading-relaxed text-fg-2">
-                Vas a dar de baja «<strong className="text-fg-1">{toDelete.nombre}</strong>». Dejará
-                de mostrarse al público y no podrán hacerse nuevas reservas. Esta acción no se puede
-                deshacer.
-              </p>
-            </div>
-          </div>
-          {errorBaja && <Alert tone="danger" className="mt-4">{errorBaja}</Alert>}
-          <div className="mt-6 flex justify-end gap-3">
-            <Button variant="neutral" onClick={cerrarBaja} disabled={pendingId === toDelete.id}>
-              Cancelar
-            </Button>
-            <Button variant="danger" onClick={() => confirmDelete(toDelete)} loading={pendingId === toDelete.id}>
-              <Check className="size-[17px]" /> Confirmar
-            </Button>
-          </div>
-        </Modal>
+        <ConfirmDialog
+          open
+          title="¿Querés dar de baja esta actividad?"
+          description={
+            <>
+              Vas a dar de baja «<strong className="text-fg-1">{toDelete.nombre}</strong>». Dejará
+              de mostrarse al público y no podrán hacerse nuevas reservas. Esta acción no se puede
+              deshacer.
+            </>
+          }
+          confirmLabel="Dar de baja la actividad"
+          busy={pendingId === toDelete.id}
+          error={errorBaja}
+          onCancel={cerrarBaja}
+          onConfirm={() => confirmDelete(toDelete)}
+        />
       )}
 
       {blocked && (

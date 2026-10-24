@@ -71,7 +71,7 @@ Para leer un campo de forma reactiva usá **`useWatch`, nunca `form.watch()`**: 
 
 Por eso en `ui/` conviven dos capas, y está bien que así sea:
 
-- `input`, `select`, `checkbox`, `popover` y `sheet` (sobre `@base-ui/react`), `command` (cmdk), `label` y `form` vienen de shadcn. Son los únicos. `sheet` es el patrón a seguir para migrar `Modal.tsx` al `Dialog` de Base UI.
+- `input`, `select`, `checkbox`, `popover`, `sheet` y `dialog` (sobre `@base-ui/react`), `command` (cmdk), `label` y `form` vienen de shadcn. Son los únicos.
 - Los `PascalCase` (`Button`, `Card`, `Alert`, `Toast`, `Skeleton`, `EstadoBadge`…) son presentacionales de Agrotours, escritos a mano.
 - Los `kebab-case` restantes (`text-field`, `date-field`, `searchable-select`, `country-select`, `file-uploader`…) son composites de Agrotours **construidos sobre** los primitivos de shadcn. Ahí va lo nuevo.
 
@@ -79,7 +79,11 @@ Todo control de formulario tiene que reenviar `ref`, `onBlur`, `id`, `aria-inval
 
 Ejemplos: `text-field.tsx`, `date-field.tsx`, `searchable-select.tsx`.
 
-Deuda conocida: `Modal.tsx` está escrito a mano y no tiene trampa de foco, ni Escape, ni bloqueo de scroll — lo usan 10 pantallas y debería pasar al `Dialog` de shadcn. `multi-select.tsx` no reenvía el contrato de arriba.
+Deuda conocida: `Modal.tsx` está escrito a mano y no tiene trampa de foco, ni Escape, ni bloqueo de scroll. Se migra **de a una pantalla**, cuando se las toca, a `dialog.tsx`, que no se parchea. Los formularios largos ya están migrados (`GcrFormShell` ahora es un `Dialog` `lg`); `Panel` queda sólo para el cajón lateral de lote de días. `multi-select.tsx` no reenvía el contrato de arriba.
+
+### Cuando agregues o migres un diálogo
+
+Sobre `Dialog`, con uno de los tres anchos (`size`: `sm` confirmaciones, `md` formularios cortos, `lg` formularios largos) y en tres zonas: `DialogHeader` (título + cruz, fija), `DialogBody` (lo único que scrollea) y `DialogFooter` (acciones, fija; el error en `alert` y `FaltanCampos` en `note`). Con un formulario, el `<form>` envuelve cuerpo y pie con `flex min-h-0 flex-1 flex-col`. Las confirmaciones van con `ConfirmDialog`, que ya arma las tres zonas. Ejemplo: `src/app/admin/deudas/ResolverDeudaModal.tsx`; la regla, en `docs/ui-guidelines.md`, "Diálogos".
 
 ### Cuando wirees un endpoint
 

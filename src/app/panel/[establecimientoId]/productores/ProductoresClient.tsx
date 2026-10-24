@@ -21,7 +21,6 @@ import {
   Trash2,
   User,
   UserCheck,
-  UserMinus,
   UserPlus,
   UserX,
   Users,
@@ -33,11 +32,12 @@ import {
   Alert,
   Button,
   Card,
-  IconCircle,
-  Modal,
-  Panel,
   Skeleton,
 } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { notify } from "@/lib/notify";
 import {
   Form,
@@ -379,27 +379,24 @@ function SummaryRow({
   );
 }
 
-/** Cabecera compartida por los tres diálogos del panel lateral. */
+/** Cabecera del formulario de alta y cambio de rol, con la cruz de cerrar. */
 function PanelHeader({
   etiqueta,
   titulo,
   bajada,
-  icono,
+  busy,
 }: {
   etiqueta: string;
   titulo: string;
   bajada: string;
-  icono?: ReactNode;
+  busy?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-4 border-b border-outline-variant px-[26px] py-[22px]">
-      {icono}
-      <div className="min-w-0">
-        <div className="t-label mb-1.5">{etiqueta}</div>
-        <h2 className="font-display text-2xl font-bold text-fg-1">{titulo}</h2>
-        <p className="mt-1.5 max-w-[460px] text-sm leading-relaxed text-fg-2">{bajada}</p>
-      </div>
-    </div>
+    <DialogHeader closeDisabled={busy}>
+      <div className="t-label mb-1.5">{etiqueta}</div>
+      <DialogTitle>{titulo}</DialogTitle>
+      <p className="mt-1.5 max-w-[460px] text-sm leading-relaxed text-fg-2">{bajada}</p>
+    </DialogHeader>
   );
 }
 
@@ -505,7 +502,7 @@ function ProductorForm({
       <form
         onSubmit={form.handleSubmit(onValid)}
         noValidate
-        className="flex max-h-[calc(100vh-80px)] flex-col"
+        className="flex min-h-0 flex-1 flex-col"
       >
         <PanelHeader
           etiqueta={editando ? "Modificar productor" : "Nuevo productor"}
@@ -515,9 +512,10 @@ function ProductorForm({
               ? "Sólo podés cambiar el rol del productor. El resto de los datos no se modifican desde acá."
               : "Ingresá el correo de un usuario registrado y elegí su rol. Queda activo en la finca de inmediato."
           }
+          busy={acciones.guardando}
         />
 
-        <div className="flex flex-col gap-5 overflow-y-auto px-[26px] py-[22px]">
+        <DialogBody className="flex flex-col gap-5">
           {editando ? (
             <div className="rounded-lg border border-outline-variant bg-cream-tert px-4 py-1">
               <SummaryRow
@@ -592,24 +590,21 @@ function ProductorForm({
               </FormItem>
             )}
           />
-        </div>
+        </DialogBody>
 
-        <div className="border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-          {submitError && <Alert className="mb-3">{submitError}</Alert>}
-          <div className="flex justify-end gap-3">
-            <Button variant="neutral" onClick={onCancel} disabled={acciones.guardando}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={bloqueado} loading={acciones.guardando}>
-              {editando ? (
-                <Check className="size-[17px]" />
-              ) : (
-                <UserPlus className="size-[17px]" />
-              )}
-              {editando ? "Guardar cambios" : "Agregar productor"}
-            </Button>
-          </div>
-        </div>
+        <DialogFooter alert={submitError && <Alert>{submitError}</Alert>}>
+          <Button variant="neutral" onClick={onCancel} disabled={acciones.guardando}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={bloqueado} loading={acciones.guardando}>
+            {editando ? (
+              <Check className="size-[17px]" />
+            ) : (
+              <UserPlus className="size-[17px]" />
+            )}
+            {editando ? "Guardar cambios" : "Agregar productor"}
+          </Button>
+        </DialogFooter>
       </form>
     </Form>
   );
@@ -660,24 +655,20 @@ function SuspenderForm({
   }
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onValid)}
-        noValidate
-        className="flex max-h-[calc(100vh-80px)] flex-col"
-      >
-        <PanelHeader
-          etiqueta="Suspensión temporal"
-          titulo={`Suspender a ${productor.nombreUsuario}`}
-          bajada="Durante la suspensión no va a poder ingresar al sistema, pero conserva su rol y sigue formando parte del establecimiento."
-          icono={
-            <IconCircle tone="danger">
-              <UserX className="size-[22px] text-danger" />
-            </IconCircle>
-          }
-        />
-
-        <div className="flex flex-col gap-5 overflow-y-auto px-[26px] py-[22px]">
+    <ConfirmDialog
+      open
+      title={`Suspender a ${productor.nombreUsuario}`}
+      description="Durante la suspensión no va a poder ingresar al sistema, pero conserva su rol y sigue formando parte del establecimiento."
+      confirmLabel="Suspender productor"
+      note={<FaltanCampos faltan={faltan} para="suspender" onVerQueFalta={verQueFalta} />}
+      busy={acciones.moderando}
+      error={submitError}
+      confirmDisabled={faltan > 0}
+      onCancel={onCancel}
+      onConfirm={form.handleSubmit(onValid)}
+    >
+      <Form {...form}>
+        <div className="flex flex-col gap-5">
           <FormField
             control={form.control}
             name="motivo"
@@ -739,22 +730,8 @@ function SuspenderForm({
             )}
           />
         </div>
-
-        <div className="border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-          {submitError && <Alert className="mb-3">{submitError}</Alert>}
-          <div className="flex justify-end gap-3">
-            <Button variant="neutral" onClick={onCancel} disabled={acciones.moderando}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="danger" disabled={faltan > 0} loading={acciones.moderando}>
-              <UserX className="size-[17px]" />
-              Suspender productor
-            </Button>
-          </div>
-          <FaltanCampos faltan={faltan} para="suspender" onVerQueFalta={verQueFalta} className="mt-2" />
-        </div>
-      </form>
-    </Form>
+      </Form>
+    </ConfirmDialog>
   );
 }
 
@@ -794,24 +771,21 @@ function LevantarForm({
   }
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onValid)}
-        noValidate
-        className="flex max-h-[calc(100vh-80px)] flex-col"
-      >
-        <PanelHeader
-          etiqueta="Suspensión vigente"
-          titulo={`Levantar la suspensión de ${productor.nombreUsuario}`}
-          bajada="Recupera el acceso al sistema de inmediato, antes de la fecha prevista."
-          icono={
-            <IconCircle tone="success">
-              <UserCheck className="size-[22px] text-green-800" />
-            </IconCircle>
-          }
-        />
-
-        <div className="flex flex-col gap-5 overflow-y-auto px-[26px] py-[22px]">
+    <ConfirmDialog
+      open
+      tone="primary"
+      title={`Levantar la suspensión de ${productor.nombreUsuario}`}
+      description="Recupera el acceso al sistema de inmediato, antes de la fecha prevista."
+      confirmLabel="Levantar suspensión"
+      note={<FaltanCampos faltan={faltan} para="levantarla" />}
+      busy={acciones.moderando}
+      error={submitError}
+      confirmDisabled={faltan > 0}
+      onCancel={onCancel}
+      onConfirm={form.handleSubmit(onValid)}
+    >
+      <Form {...form}>
+        <div className="flex flex-col gap-5">
           {/* Detalle de la suspensión vigente: sale del tramo de estado abierto.
               No incluye quién la aplicó — eso el backend todavía no lo manda. */}
           <div className="flex flex-col gap-3 rounded-lg border border-outline-variant bg-cream-tert px-4 py-3.5">
@@ -867,22 +841,8 @@ function LevantarForm({
             )}
           />
         </div>
-
-        <div className="border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-          {submitError && <Alert className="mb-3">{submitError}</Alert>}
-          <div className="flex justify-end gap-3">
-            <Button variant="neutral" onClick={onCancel} disabled={acciones.moderando}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={faltan > 0} loading={acciones.moderando}>
-              <UserCheck className="size-[17px]" />
-              Levantar suspensión
-            </Button>
-          </div>
-          <FaltanCampos faltan={faltan} para="levantarla" className="mt-2" />
-        </div>
-      </form>
-    </Form>
+      </Form>
+    </ConfirmDialog>
   );
 }
 
@@ -1278,77 +1238,68 @@ function Pantalla({
       </div>
 
       {dialogo?.tipo === "form" && (
-        <Panel onClose={cerrar} width="w-[620px]">
-          <ProductorForm
-            initial={dialogo.productor}
-            roles={roles}
-            rolesLoading={rolesLoading}
-            existentes={productores}
-            acciones={acciones}
-            onCancel={cerrar}
-            onGuardado={onGuardado}
-          />
-        </Panel>
+        <Dialog
+          open
+          onOpenChange={(abierto) => { if (!abierto && !acciones.guardando) cerrar(); }}
+          disablePointerDismissal={acciones.guardando}
+        >
+          <DialogContent size="lg">
+            <ProductorForm
+              initial={dialogo.productor}
+              roles={roles}
+              rolesLoading={rolesLoading}
+              existentes={productores}
+              acciones={acciones}
+              onCancel={cerrar}
+              onGuardado={onGuardado}
+            />
+          </DialogContent>
+        </Dialog>
       )}
 
       {dialogo?.tipo === "suspender" && (
-        <Panel onClose={cerrar} width="w-[560px]">
-          <SuspenderForm
-            productor={dialogo.productor}
-            acciones={acciones}
-            onCancel={cerrar}
-            onHecho={(p, hasta) => {
-              reemplazar(p);
-              cerrar();
-              notify.success(`Se suspendió a ${p.nombreUsuario} hasta el ${fmtFecha(finDelDia(hasta))}.`);
-            }}
-          />
-        </Panel>
+        <SuspenderForm
+          productor={dialogo.productor}
+          acciones={acciones}
+          onCancel={cerrar}
+          onHecho={(p, hasta) => {
+            reemplazar(p);
+            cerrar();
+            notify.success(`Se suspendió a ${p.nombreUsuario} hasta el ${fmtFecha(finDelDia(hasta))}.`);
+          }}
+        />
       )}
 
       {dialogo?.tipo === "levantar" && (
-        <Panel onClose={cerrar} width="w-[560px]">
-          <LevantarForm
-            productor={dialogo.productor}
-            acciones={acciones}
-            onCancel={cerrar}
-            onHecho={(p) => {
-              reemplazar(p);
-              cerrar();
-              notify.success(`Se levantó la suspensión de ${p.nombreUsuario}. Ya puede ingresar.`);
-            }}
-          />
-        </Panel>
+        <LevantarForm
+          productor={dialogo.productor}
+          acciones={acciones}
+          onCancel={cerrar}
+          onHecho={(p) => {
+            reemplazar(p);
+            cerrar();
+            notify.success(`Se levantó la suspensión de ${p.nombreUsuario}. Ya puede ingresar.`);
+          }}
+        />
       )}
 
       {dialogo?.tipo === "borrar" && (
-        <Modal onClose={cerrar} dismissable={!acciones.borrando}>
-          <div className="flex items-center gap-3.5">
-            <IconCircle tone="danger">
-              <UserMinus className="size-[22px] text-danger" />
-            </IconCircle>
-            <h3 className="font-display text-xl font-bold text-fg-1">Borrar productor</h3>
-          </div>
-          <p className="mt-4 text-[15px] leading-relaxed text-fg-2">
-            ¿Seguro que querés quitar a{" "}
-            <strong className="text-fg-1">{dialogo.productor.nombreUsuario}</strong> del
-            establecimiento? Perderá el acceso y dejará de figurar en el equipo de la finca.
-          </p>
-          {errorBaja && <Alert className="mt-4">{errorBaja}</Alert>}
-          <div className="mt-6 flex justify-end gap-3">
-            <Button variant="neutral" onClick={cerrar} disabled={acciones.borrando}>
-              No, volver
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => confirmarBaja(dialogo.productor)}
-              loading={acciones.borrando}
-            >
-              <Trash2 className="size-[17px]" />
-              Sí, borrar
-            </Button>
-          </div>
-        </Modal>
+        <ConfirmDialog
+          open
+          title="Borrar productor"
+          description={
+            <>
+              ¿Seguro que querés quitar a{" "}
+              <strong className="text-fg-1">{dialogo.productor.nombreUsuario}</strong> del
+              establecimiento? Perderá el acceso y dejará de figurar en el equipo de la finca.
+            </>
+          }
+          confirmLabel="Borrar productor"
+          busy={acciones.borrando}
+          error={errorBaja}
+          onCancel={cerrar}
+          onConfirm={() => confirmarBaja(dialogo.productor)}
+        />
       )}
 
     </div>

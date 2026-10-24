@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { BackLink, Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { TextField } from "@/components/ui/text-field";
 import { SOL_ESTADO_META } from "@/data/solicitudes";
 import { admInitials } from "@/data/admin";
@@ -627,6 +628,7 @@ function Detail({
   error,
   onBack,
   onResolver,
+  onLimpiarError,
 }: {
   sol: SolicitudDetalle;
   gestionar: boolean;
@@ -634,8 +636,16 @@ function Detail({
   error: string | null;
   onBack: () => void;
   onResolver: (estado: Resolucion, obs: string) => void;
+  /** El error es de la última acción: al abrir o cerrar el diálogo de rechazo deja de aplicar. */
+  onLimpiarError: () => void;
 }) {
+  function pedirRechazo(abierto: boolean) {
+    onLimpiarError();
+    setConfirmarRechazo(abierto);
+  }
+
   const [obs, setObs] = useState("");
+  const [confirmarRechazo, setConfirmarRechazo] = useState(false);
   const { abrir: abrirPrueba, cargando: abriendoPrueba } = useUrlPrueba();
   const readOnly = sol.estado !== "pendiente";
   const obsErr = obs.length > OBS_MAX;
@@ -882,7 +892,7 @@ function Detail({
                 className="w-full"
                 disabled={bloqueado}
                 title={gestionar ? undefined : SIN_GESTION}
-                onClick={() => onResolver("RECHAZADA", obs.trim())}
+                onClick={() => pedirRechazo(true)}
               >
                 <XCircle className="size-[18px]" /> Rechazar solicitud
               </Button>
@@ -892,7 +902,8 @@ function Detail({
                   {SIN_GESTION}.
                 </div>
               )}
-              {error && (
+              {/* Si el rechazo falla, el aviso va adentro del diálogo, que sigue abierto. */}
+              {error && !confirmarRechazo && (
                 <span className="err-msg mt-0.5 text-[12.5px]">
                   <AlertCircle className="size-[14px] text-danger" />
                   {error}
@@ -902,6 +913,24 @@ function Detail({
           )}
         </aside>
       </div>
+
+      {/* Aprobar no se confirma: la observación escrita alcanza. Rechazar sí. */}
+      <ConfirmDialog
+        open={confirmarRechazo}
+        title="¿Rechazar la solicitud?"
+        description={
+          <>
+            Vas a rechazar la solicitud de{" "}
+            <strong className="text-fg-1">{sol.nombreEstablecimiento || "este establecimiento"}</strong>. Las
+            observaciones se guardan junto con la decisión.
+          </>
+        }
+        confirmLabel="Rechazar solicitud"
+        busy={busy}
+        error={error}
+        onCancel={() => pedirRechazo(false)}
+        onConfirm={() => onResolver("RECHAZADA", obs.trim())}
+      />
     </div>
   );
 }
@@ -1097,6 +1126,7 @@ function DetalleCargado({
             error={errorResolver}
             onBack={onBack}
             onResolver={onResolver}
+            onLimpiarError={() => setErrorResolver(null)}
           />
         )}
       </AsyncBoundary>

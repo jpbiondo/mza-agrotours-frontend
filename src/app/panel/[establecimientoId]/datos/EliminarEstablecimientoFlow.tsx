@@ -7,11 +7,10 @@ import {
   Loader,
   RotateCcw,
   ShieldAlert,
-  Trash2,
   X,
 } from "lucide-react";
-import { Alert, Button, IconCircle, Modal } from "@/components/ui";
-import { TextField } from "@/components/ui/text-field";
+import { Button, IconCircle, Modal } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   useCondicionesBaja,
   useEliminarEstablecimiento,
@@ -64,7 +63,6 @@ export default function EliminarEstablecimientoFlow({
 }) {
   const [paso, setPaso] = useState<Paso>("verificando");
   const [condiciones, setCondiciones] = useState<CondicionBaja[]>([]);
-  const [texto, setTexto] = useState("");
   const [errorBaja, setErrorBaja] = useState<string | null>(null);
   const { verificar } = useCondicionesBaja();
   const { eliminar, isLoading: eliminando } = useEliminarEstablecimiento();
@@ -197,57 +195,23 @@ export default function EliminarEstablecimientoFlow({
     );
   }
 
-  const confirmado = texto.trim().toUpperCase() === "ELIMINAR";
-
   return (
-    <Modal onClose={onCancel} dismissable={!eliminando}>
-      <div className="flex items-center gap-3.5">
-        <IconCircle tone="danger">
-          <AlertTriangle className="size-[22px] text-danger-fg" />
-        </IconCircle>
-        <h3 className="font-display text-[19px] font-semibold text-fg-1">
-          Eliminar establecimiento
-        </h3>
-      </div>
-
-      <p className="mt-4 text-[14.5px] leading-relaxed text-fg-2">
-        Vas a eliminar <strong className="text-fg-1">{nombre}</strong>. Se dan de
-        baja sus actividades, cultivos y datos asociados. Esta acción no se puede
-        deshacer.
-      </p>
-
-      <div className="field mt-4">
-        <label
-          htmlFor="confirmar-baja"
-          className="text-[13.5px] font-semibold text-fg-1"
-        >
-          Escribí <span className="font-mono text-danger-fg">ELIMINAR</span> para
-          confirmar
-        </label>
-        <TextField
-          id="confirmar-baja"
-          value={texto}
-          onChange={setTexto}
-          placeholder="ELIMINAR"
-        />
-      </div>
-
-      {errorBaja && <Alert className="mt-4">{errorBaja}</Alert>}
-
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="neutral" onClick={onCancel} disabled={eliminando}>
-          Cancelar
-        </Button>
-        <Button
-          variant="danger"
-          onClick={confirmar}
-          disabled={!confirmado}
-          loading={eliminando}
-        >
-          <Trash2 className="size-[17px]" />
-          Eliminar establecimiento
-        </Button>
-      </div>
-    </Modal>
+    <ConfirmDialog
+      open
+      title="Eliminar establecimiento"
+      description={
+        <>
+          Vas a eliminar <strong className="text-fg-1">{nombre}</strong>. Se dan de
+          baja sus actividades, cultivos y datos asociados. Esta acción no se puede
+          deshacer.
+        </>
+      }
+      confirmLabel="Eliminar establecimiento"
+      requireText="ELIMINAR"
+      busy={eliminando}
+      error={errorBaja}
+      onCancel={onCancel}
+      onConfirm={confirmar}
+    />
   );
 }
