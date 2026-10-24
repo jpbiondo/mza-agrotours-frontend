@@ -11,6 +11,7 @@ import { admInitials } from "@/data/admin";
 import { useParametros, useConfirmarIdentidad, useGuardarParametros } from "@/hooks/useParametros";
 import type { ParametroKey, Parametros } from "@/types/parametros";
 import { Alert, Button } from "@/components/ui";
+import { FaltanCampos } from "@/components/ui/faltan-campos";
 import { notify } from "@/lib/notify";
 
 const ICON: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
@@ -74,11 +75,11 @@ function ParamRow({ fieldKey, value, editing, error, onChange }: { fieldKey: Par
         )}
         {field.unit ? (
           <div style={{ position: "relative" }}>
-            <input inputMode={field.kind === "int" ? "numeric" : "decimal"} value={value} maxLength={field.max} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, paddingRight: 84, fontFamily: field.mono ? "var(--font-mono)" : "var(--font-sans)", borderColor: error ? "var(--danger)" : "var(--sand)" }} />
+            <input id={`param-${fieldKey}`} aria-invalid={!!error} inputMode={field.kind === "int" ? "numeric" : "decimal"} value={value} maxLength={field.max} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, paddingRight: 84, fontFamily: field.mono ? "var(--font-mono)" : "var(--font-sans)", borderColor: error ? "var(--danger)" : "var(--sand)" }} />
             <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 13, fontWeight: 600, color: "var(--fg-3)", pointerEvents: "none" }}>{field.unit}</span>
           </div>
         ) : (
-          <input value={value} maxLength={field.max} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, fontFamily: field.mono ? "var(--font-mono)" : "var(--font-sans)", borderColor: error ? "var(--danger)" : "var(--sand)" }} />
+          <input id={`param-${fieldKey}`} aria-invalid={!!error} value={value} maxLength={field.max} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, fontFamily: field.mono ? "var(--font-mono)" : "var(--font-sans)", borderColor: error ? "var(--danger)" : "var(--sand)" }} />
         )}
         {error ? fieldErr(error) : field.max && <p style={{ margin: "7px 0 0", fontSize: 11.5, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>{(value || "").length}/{field.max}</p>}
       </div>
@@ -207,7 +208,7 @@ function Inner({ initial }: { initial: Parametros }) {
 
   const errors: Partial<Record<ParametroKey, string>> = {};
   PARAM_FIELDS.forEach((f) => { const e = paramError(f.key, draft[f.key]); if (e) errors[f.key] = e; });
-  const hasErrors = Object.keys(errors).length > 0;
+  const faltan = Object.keys(errors).length;
 
   async function onAuthSubmit(pass: string) {
     setAuthError(null);
@@ -220,9 +221,13 @@ function Inner({ initial }: { initial: Parametros }) {
     setEditing(true);
   }
   function cancelEdit() { setEditing(false); setAttempted(false); setDraft({ ...saved }); }
-  function askSave() {
+  /** Marca los campos con error y lleva al primero: el botón está arriba y el campo puede no estar a la vista. */
+  function verQueFalta() {
     setAttempted(true);
-    if (hasErrors) { notify.error("Revisá los campos marcados antes de guardar."); return; }
+    const primero = PARAM_FIELDS.find((f) => errors[f.key]);
+    if (primero) document.getElementById(`param-${primero.key}`)?.focus();
+  }
+  function askSave() {
     setReviewOpen(true);
   }
   async function confirmSave() {
@@ -248,17 +253,21 @@ function Inner({ initial }: { initial: Parametros }) {
         {!editing ? (
           <Button onClick={() => setAuthOpen(true)}><Pencil size={18} /> Modificar parámetros</Button>
         ) : (
-          <div style={{ display: "flex", gap: 12, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
             <Button variant="neutral" onClick={cancelEdit} disabled={guardando}><X size={18} /> Cancelar cambios</Button>
-            <Button onClick={askSave} disabled={guardando}><Save size={18} /> Guardar cambios</Button>
+            <div className="flex flex-col items-end gap-2">
+              {/* Deshabilitado hasta que todo valide; "Ver qué falta" marca los campos en rojo. */}
+              <Button onClick={askSave} disabled={guardando || faltan > 0}><Save size={18} /> Guardar cambios</Button>
+              <FaltanCampos faltan={faltan} onVerQueFalta={verQueFalta} />
+            </div>
           </div>
         )}
       </div>
 
       {editing && (
-        <div role="status" style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--green-050)", border: "1px solid var(--green-300)", borderRadius: "var(--radius)", padding: "12px 16px", marginBottom: 20 }}>
-          <Pencil size={18} color="var(--green-800)" /><span style={{ fontSize: 14.5, color: "var(--green-800)", fontWeight: 500 }}>Estás editando los parámetros. Los cambios no se guardan hasta que los confirmes.</span>
-        </div>
+        <Alert tone="success" icon={<Pencil size={18} />} className="mb-5">
+          Estás editando los parámetros. Los cambios no se guardan hasta que los confirmes.
+        </Alert>
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
