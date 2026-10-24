@@ -204,12 +204,12 @@ function FaqEditor({ item, busy, error, onCancel, onSave }: {
       </DialogHeader>
 
       <Form {...form}>
-        <DialogBody>
-          <form
-            noValidate
-            onSubmit={form.handleSubmit(onSave)}
-            className="flex flex-col gap-5"
-          >
+        <form
+          noValidate
+          onSubmit={form.handleSubmit(onSave)}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <DialogBody className="flex flex-col gap-5">
             <FormField
               control={form.control}
               name="q"
@@ -280,26 +280,25 @@ function FaqEditor({ item, busy, error, onCancel, onSave }: {
                 </FormItem>
               )}
             />
-          </form>
-        </DialogBody>
-      </Form>
+          </DialogBody>
 
-      <GcrFormFooter
-        onCancel={cerrar}
-        onSave={form.handleSubmit(onSave)}
-        saveLabel={esEdicion ? "Guardar cambios" : "Crear pregunta"}
-        saveIcon={<Check className="size-[17px]" />}
-        busy={busy}
-        saveDisabled={faltan > 0}
-        aviso={
-          <FaltanCampos
-            faltan={faltan}
-            para={esEdicion ? "guardar" : "crear la pregunta"}
-            onVerQueFalta={verQueFalta}
+          <GcrFormFooter
+            onCancel={cerrar}
+            saveLabel={esEdicion ? "Guardar cambios" : "Crear pregunta"}
+            saveIcon={<Check className="size-[17px]" />}
+            busy={busy}
+            saveDisabled={faltan > 0}
+            aviso={
+              <FaltanCampos
+                faltan={faltan}
+                para={esEdicion ? "guardar" : "crear la pregunta"}
+                onVerQueFalta={verQueFalta}
+              />
+            }
+            error={error}
           />
-        }
-        error={error}
-      />
+        </form>
+      </Form>
     </GcrFormShell>
   );
 }
