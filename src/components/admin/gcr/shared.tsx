@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Search, SearchX, Trash2, X, Plus, Check, AlertCircle, ChevronRight, Gauge } from "lucide-react";
-import { Alert, Button, Card, IconButton, IconCircle, Modal } from "@/components/ui";
+import { Alert, Button, Card, IconButton } from "@/components/ui";
 import { TextField } from "@/components/ui/text-field";
 import { GCR_MESES, GCR_ESTACIONES, GCR_EST_ORDEN } from "@/data/gestionCr";
 import { gradienteDe } from "@/lib/color";
@@ -16,48 +16,6 @@ function useEscape(onClose: () => void) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-}
-
-/* ---- Confirmación de eliminación --------------------------------------- */
-export function GcrConfirmDelete({
-  open,
-  title,
-  body,
-  busy,
-  error,
-  onCancel,
-  onConfirm,
-}: {
-  open: boolean;
-  title: string;
-  body: React.ReactNode;
-  busy?: boolean;
-  /** Rechazo del backend: el diálogo queda abierto con el aviso. */
-  error?: string | null;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  if (!open) return null;
-  return (
-    <Modal onClose={onCancel} dismissable={!busy}>
-      <div className="flex items-center gap-3.5">
-        <IconCircle tone="danger">
-          <Trash2 className="size-[22px] text-danger" />
-        </IconCircle>
-        <h3 className="font-display text-xl font-bold text-fg-1">{title}</h3>
-      </div>
-      <p className="mt-4 text-[15px] leading-relaxed text-fg-2">{body}</p>
-      {error && <Alert className="mt-4">{error}</Alert>}
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="neutral" onClick={onCancel} disabled={busy}>
-          No, volver
-        </Button>
-        <Button variant="danger" onClick={onConfirm} loading={busy}>
-          <Trash2 className="size-[17px]" /> Sí, eliminar
-        </Button>
-      </div>
-    </Modal>
-  );
 }
 
 /* ---- Modal shell de formulario -----------------------------------------
