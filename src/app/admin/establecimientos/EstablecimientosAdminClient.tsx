@@ -338,6 +338,7 @@ function SuspenderModal({
         </>
       }
       confirmLabel="Suspender establecimiento"
+      note={<FaltanCampos faltan={faltan} para="suspender" />}
       busy={busy}
       error={error}
       confirmDisabled={faltan > 0}
@@ -381,7 +382,6 @@ function SuspenderModal({
           )}
         />
       </Form>
-      <FaltanCampos faltan={faltan} para="suspender" className="mt-2" />
     </ConfirmDialog>
   );
 }
