@@ -176,6 +176,8 @@ Cada uno arma su cabecera y su pie a mano: el padding de la cabecera va de `px-[
 | Parámetros | Reautenticación, revisión de cambios | Overlays inline, 440 y 620 px, z-80 | Esperan la reautenticación real |
 | Cajones laterales | Lote de días (`LoteDrawer`), reembolsos, chat del visitante, calendario | `Panel` derecha 600 px, `Sheet` 460 px, dos propios | Otra familia |
 
+**Estado de la migración** (2026-10-24): los formularios largos (cultivo, receta, FAQ, incidencia, productor, administrador y rol) ya están sobre `Dialog` `lg`, con cruz, trampa de foco y bloqueo de scroll. El `Scrim` de administradores se eliminó y `Panel` quedó sólo para `LoteDrawer`. Falta el resto de la tabla.
+
 **Lo que se repite.** Los cuatro formularios largos son un solo diseño implementado cuatro veces sobre tres bases. Llevan la misma cabecera (etiqueta + título de 24 px + bajada, `px-[26px] py-[22px]` con borde), el mismo cuerpo con scroll y el mismo pie crema. `ProductorForm` y `AdminForm` son casi gemelos: alta por correo con un rol, o cambio del rol ("Cambiar el rol asignado").
 
 **Lo que difiere.**
