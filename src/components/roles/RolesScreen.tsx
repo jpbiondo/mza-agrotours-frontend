@@ -4,7 +4,8 @@ import type { ComponentType, ReactNode } from "react";
 import {
   ChevronRight, Info, KeyRound, Lock, Pencil, Plus, ShieldCheck, Trash2,
 } from "lucide-react";
-import { ActionBtn, Alert, Button, Card, IconCircle, Modal, Panel, Skeleton } from "@/components/ui";
+import { ActionBtn, Button, Card, Panel, Skeleton } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import type { AccionesRoles, DatosRol, GrupoPermiso, RolDetalle } from "@/types/roles";
@@ -457,32 +458,21 @@ export function RolesScreen({
       )}
 
       {toDelete && (
-        <Modal onClose={() => pedirBaja(null)} dismissable={!acciones.borrando}>
-          <div className="flex items-center gap-3.5">
-            <IconCircle tone="danger">
-              <Trash2 className="size-[22px] text-danger" />
-            </IconCircle>
-            <h3 className="font-display text-xl font-bold text-fg-1">Dar de baja el rol</h3>
-          </div>
-          <p className="mt-4 text-[15px] leading-relaxed text-fg-2">
-            ¿Seguro que querés dar de baja el rol{" "}
-            <strong className="text-fg-1">«{toDelete.nombre}»</strong>? {textos.bajaAdvertencia}
-          </p>
-          {deleteError && <Alert className="mt-4">{deleteError}</Alert>}
-          <div className="mt-6 flex justify-end gap-3">
-            <Button variant="neutral" onClick={() => pedirBaja(null)} disabled={acciones.borrando}>
-              No, volver
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => confirmDelete(toDelete)}
-              loading={acciones.borrando}
-            >
-              <Trash2 className="size-[17px]" />
-              Sí, dar de baja
-            </Button>
-          </div>
-        </Modal>
+        <ConfirmDialog
+          open
+          title="Dar de baja el rol"
+          description={
+            <>
+              ¿Seguro que querés dar de baja el rol{" "}
+              <strong className="text-fg-1">«{toDelete.nombre}»</strong>? {textos.bajaAdvertencia}
+            </>
+          }
+          confirmLabel="Dar de baja el rol"
+          busy={acciones.borrando}
+          error={deleteError}
+          onCancel={() => pedirBaja(null)}
+          onConfirm={() => confirmDelete(toDelete)}
+        />
       )}
 
     </div>
