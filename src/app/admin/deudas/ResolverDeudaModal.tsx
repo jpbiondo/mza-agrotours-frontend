@@ -231,7 +231,7 @@ export function ResolverDeudaModal({ deuda, onResuelta, onDesactualizado, onCerr
               <ArrowLeft className="size-[17px]" /> Volver
             </Button>
             <Button onClick={confirmar} loading={guardando}>
-              <Check className="size-[17px]" /> Confirmar
+              <Check className="size-[17px]" /> Resolver deuda
             </Button>
           </div>
         </>
