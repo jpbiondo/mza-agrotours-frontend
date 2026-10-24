@@ -79,7 +79,7 @@ Todo control de formulario tiene que reenviar `ref`, `onBlur`, `id`, `aria-inval
 
 Ejemplos: `text-field.tsx`, `date-field.tsx`, `searchable-select.tsx`.
 
-Deuda conocida: `Modal.tsx` está escrito a mano y no tiene trampa de foco, ni Escape, ni bloqueo de scroll; `Panel`, `GcrFormShell` y el `Scrim` de administradores tampoco. Se migran **de a una pantalla**, cuando se las toca, a `dialog.tsx`, que no se parchea. `multi-select.tsx` no reenvía el contrato de arriba.
+Deuda conocida: `Modal.tsx` está escrito a mano y no tiene trampa de foco, ni Escape, ni bloqueo de scroll. Se migra **de a una pantalla**, cuando se las toca, a `dialog.tsx`, que no se parchea. Los formularios largos ya están migrados (`GcrFormShell` ahora es un `Dialog` `lg`); `Panel` queda sólo para el cajón lateral de lote de días. `multi-select.tsx` no reenvía el contrato de arriba.
 
 ### Cuando agregues o migres un diálogo
 
