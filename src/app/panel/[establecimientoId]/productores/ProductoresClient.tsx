@@ -663,6 +663,7 @@ function SuspenderForm({
       title={`Suspender a ${productor.nombreUsuario}`}
       description="Durante la suspensión no va a poder ingresar al sistema, pero conserva su rol y sigue formando parte del establecimiento."
       confirmLabel="Suspender productor"
+      note={<FaltanCampos faltan={faltan} para="suspender" onVerQueFalta={verQueFalta} />}
       busy={acciones.moderando}
       error={submitError}
       confirmDisabled={faltan > 0}
@@ -732,7 +733,6 @@ function SuspenderForm({
             )}
           />
         </div>
-        <FaltanCampos faltan={faltan} para="suspender" onVerQueFalta={verQueFalta} className="mt-2" />
       </Form>
     </ConfirmDialog>
   );
@@ -780,6 +780,7 @@ function LevantarForm({
       title={`Levantar la suspensión de ${productor.nombreUsuario}`}
       description="Recupera el acceso al sistema de inmediato, antes de la fecha prevista."
       confirmLabel="Levantar suspensión"
+      note={<FaltanCampos faltan={faltan} para="levantarla" />}
       busy={acciones.moderando}
       error={submitError}
       confirmDisabled={faltan > 0}
@@ -843,7 +844,6 @@ function LevantarForm({
             )}
           />
         </div>
-        <FaltanCampos faltan={faltan} para="levantarla" className="mt-2" />
       </Form>
     </ConfirmDialog>
   );
