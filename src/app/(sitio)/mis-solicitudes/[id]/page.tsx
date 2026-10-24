@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GuardSesion from "@/components/GuardSesion";
 import SolicitudDetalleClient from "./SolicitudDetalleClient";
 
 export const metadata: Metadata = {
@@ -15,6 +16,8 @@ export default async function SolicitudDetallePage({
   const { id } = await params;
 
   return (
-    <SolicitudDetalleClient id={id} />
+    <GuardSesion>
+      <SolicitudDetalleClient id={id} />
+    </GuardSesion>
   );
 }
