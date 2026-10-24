@@ -37,16 +37,18 @@ export default function CompletarRegistroClient() {
     window.location.href = DESTINO_DEFAULT.href;
   }
 
-  if (!hasHydrated || checking || sinSesion || conPerfil || finishing) {
+  if (finishing) {
     return (
       <div className="px-7 py-30 text-center text-fg-3">
         <Loader className="mx-auto size-[26px] animate-spin" />
-        <div className="mt-3 text-sm">
-          {finishing ? "Terminando tu registro…" : "Cargando…"}
-        </div>
+        <div className="mt-3 text-sm">Terminando tu registro…</div>
       </div>
     );
   }
+
+  // Mientras se decide si hay algo que completar no se dibuja nada, como en
+  // los guards de sesión.
+  if (!hasHydrated || checking || sinSesion || conPerfil) return null;
 
   return (
     <RegisterView
