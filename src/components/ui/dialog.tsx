@@ -39,7 +39,24 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
 /** Lo que se puede escribir o elegir: si el cuerpo trae un campo, el foco arranca ahí. */
 const CAMPO = 'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])'
 
-function DialogContent({ className, children, initialFocus, ...props }: DialogPrimitive.Popup.Props) {
+/**
+ * Los tres anchos de diálogo (ver docs/ui-guidelines.md, "Diálogos"):
+ * `sm` confirmaciones y avisos, `md` formularios cortos, `lg` formularios
+ * largos y lecturas. Reemplazan a los ocho anchos que convivían.
+ */
+const ANCHO = {
+  sm: "w-117",
+  md: "w-140",
+  lg: "w-170",
+} as const
+
+function DialogContent({
+  className,
+  children,
+  initialFocus,
+  size = "sm",
+  ...props
+}: DialogPrimitive.Popup.Props & { size?: keyof typeof ANCHO }) {
   const popupRef = React.useRef<HTMLDivElement>(null)
   // Sin esto, el foco cae en el primer elemento enfocable, que es la cruz de la
   // cabecera. En un diálogo con motivo o formulario conviene empezar a escribir;
@@ -56,9 +73,11 @@ function DialogContent({ className, children, initialFocus, ...props }: DialogPr
       />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
+        data-size={size}
         className={cn(
-          "fixed top-1/2 left-1/2 z-140 flex max-h-[calc(100dvh-48px)] w-[468px] max-w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface shadow-pop outline-hidden",
+          "group/dialog fixed top-1/2 left-1/2 z-140 flex max-h-[calc(100dvh-48px)] max-w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface shadow-pop outline-hidden",
           "transition-[opacity,transform] duration-200 ease-[cubic-bezier(.2,0,0,1)] data-[ending-style]:translate-y-[calc(-50%+8px)] data-[ending-style]:opacity-0 data-[starting-style]:translate-y-[calc(-50%+8px)] data-[starting-style]:opacity-0 motion-reduce:transition-none",
+          ANCHO[size],
           className
         )}
         ref={popupRef}
@@ -122,7 +141,8 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("m-0 font-display text-xl font-bold text-fg-1", className)}
+      // El título acompaña al ancho: en un formulario largo, 24 px como en los de catálogo.
+      className={cn("m-0 font-display text-xl font-bold text-fg-1 group-data-[size=lg]/dialog:text-2xl", className)}
       {...props}
     />
   )
