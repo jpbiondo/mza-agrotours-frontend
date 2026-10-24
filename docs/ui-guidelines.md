@@ -55,6 +55,23 @@ Está hecho sobre el `Dialog` de Base UI: tiene trampa de foco y cierra con Esca
 | La acción es reversible | No se confirma: toast con Deshacer (ver Feedback) |
 | Se envía un formulario | No se confirma: el formulario ya es la confirmación |
 
+## Diálogos — `Dialog` / `DialogHeader` / `DialogBody` / `DialogFooter` ✅
+
+Todo diálogo centrado se arma en tres zonas, y sólo el cuerpo scrollea. Es lo que ya hacían a mano deudas, impagas, los diálogos de un día y los formularios de catálogo; ahora sale de la base.
+
+| Cuándo | Qué se muestra | Implementación |
+|---|---|---|
+| Cualquier diálogo | **Cabecera fija** con el título a la izquierda y la **cruz** arriba a la derecha (`IconButton`, `aria-label="Cerrar"`). Debajo, un borde | `DialogHeader` ✅ |
+| El contenido no entra en el alto de la ventana | Sólo scrollea el **cuerpo**. El título y las acciones quedan a la vista | `DialogBody` ✅ |
+| Las acciones del diálogo | **Pie fijo** crema con borde: "Cancelar" a la izquierda y la acción a la derecha. Arriba de los botones, el `Alert` del rechazo; debajo, `FaltanCampos` | `DialogFooter` ✅ con `alert` y `note` |
+| La cruz, Escape y el click afuera | Hacen lo mismo que "Cancelar". Si hay cambios sin guardar, piden la misma confirmación (`confirmarDescarte()`) | El `onOpenChange` del `Dialog` |
+| Mientras se procesa la acción | La cruz queda deshabilitada y el diálogo no se cierra | `DialogHeader closeDisabled`, `disablePointerDismissal` |
+| Un paso sin salida (verificando, resultado final que obliga a seguir) | Sin cruz | `DialogHeader hideClose` |
+| Al abrir | El foco va al primer campo del cuerpo. Sin campos, a la cruz: nunca arranca sobre la acción destructiva | `DialogContent` ✅ (se pisa con `initialFocus`) |
+| Una confirmación | Las mismas tres zonas. La cruz convive con "Cancelar" | `ConfirmDialog` ✅ ya las usa |
+
+**Migración.** `Modal`, `Panel`, `GcrFormShell`, el `Scrim` de administradores y los overlays de parámetros se pasan a `Dialog` **de a una pantalla**, cuando se las toca. Al migrar una, gana también la trampa de foco, Escape y el bloqueo de scroll que `Modal` no tiene. Los cajones laterales (`Sheet`, `LoteDrawer`) siguen con su propia cabecera y cuerpo: ya cumplen la regla. El estado de cada pantalla está en [`ui-audit.md`](ui-audit.md), A2.3.
+
 ## Carga
 
 | Cuándo | Qué se muestra | Implementación |
@@ -158,6 +175,13 @@ Los casos de feedback que quedaron dudosos al migrar se resolvieron así (2026-1
 28. **Establecimientos suspendidos en el inicio de admin**: `Alert warning`, no `danger`. Es un estado que se queda a la vista, y `danger` lo anunciaría como urgente en cada carga.
 29. **Validación del cliente en parámetros**: `FaltanCampos` debajo de "Guardar cambios", que queda deshabilitado; "Ver qué falta" marca los campos.
 
+La forma de los diálogos se resolvió así (2026-10-24):
+
+30. **Cruz de cerrar**: todos los diálogos la llevan arriba a la derecha, también las confirmaciones. Sólo la omiten los pasos sin salida.
+31. **Scroll**: cabecera y pie fijos; scrollea sólo el cuerpo. El pie queda fijo para que la acción, su error y el "faltan N campos" estén siempre a la vista.
+32. **`FaltanCampos` en un `ConfirmDialog` con motivo**: va en `note`, debajo de los botones, como en cualquier formulario.
+33. **Migración de `Modal`**: pantalla por pantalla hacia `Dialog`; no se parchea `Modal`.
+
 ## Preguntas abiertas
 
 Ninguna por ahora.
@@ -209,15 +233,20 @@ Cada patrón tiene un único punto de entrada. Las pantallas existentes **todav�
 ### Confirmaciones
 
 **`ConfirmDialog`** · `components/ui/confirm-dialog.tsx` (nuevo), sobre `components/ui/dialog.tsx` (nuevo, `Dialog` de Base UI)
-- Props: `{ open, onCancel, onConfirm, title, description?, confirmLabel, cancelLabel = "Cancelar", tone?: "danger" | "primary", icon?, busy?, error?, confirmDisabled?, requireText?, children? }`.
-- Mientras `busy`, no se puede cerrar. `requireText` pide escribir una palabra para habilitar la acción.
+- Props: `{ open, onCancel, onConfirm, title, description?, confirmLabel, cancelLabel = "Cancelar", tone?: "danger" | "primary", icon?, busy?, error?, confirmDisabled?, requireText?, children?, note? }`.
+- Mientras `busy`, no se puede cerrar. `requireText` pide escribir una palabra para habilitar la acción; no distingue mayúsculas.
+- `note` va debajo de los botones, en el pie fijo: es el lugar del `FaltanCampos` de un motivo.
 
 **`confirm(opciones): Promise<boolean>`** · mismo archivo, con su estado en `stores/confirmStore.ts` (nuevo)
 - Es la pregunta de sí o no para cuando no hace falta mostrar el envío ni el error.
 - Lo dibuja `<ConfirmHost>`, montado en `app/layout.tsx`.
 
-**`Dialog`, `DialogContent`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`** · `components/ui/dialog.tsx`
-- La base para cualquier diálogo nuevo, en lugar de `Modal`.
+**`Dialog`, `DialogContent`, `DialogHeader`, `DialogBody`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`** · `components/ui/dialog.tsx`
+- La base para cualquier diálogo nuevo, en lugar de `Modal`. `DialogContent` no tiene padding: lo ponen las tres zonas. El ancho se cambia con `className` (`w-[560px]`).
+- `DialogHeader { closeDisabled?, hideClose? }`: el título y la cruz. La cruz es un `Dialog.Close`, así que dispara el `onOpenChange` del `Dialog`.
+- `DialogBody`: lo único que scrollea.
+- `DialogFooter { alert?, note? }`: los botones, con el error arriba y la nota debajo.
+- Con un formulario, el `<form>` envuelve cuerpo y pie con `className="flex min-h-0 flex-1 flex-col"`. Ejemplo: `admin/deudas/ResolverDeudaModal.tsx`.
 
 ### Carga y lecturas
 
