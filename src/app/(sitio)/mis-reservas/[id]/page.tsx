@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { leerRetornoPago } from "@/lib/mercadoPago";
+import GuardSesion from "@/components/GuardSesion";
 import DetalleClient from "./DetalleClient";
 
 /* El detalle sale del backend en el cliente y con el token del visitante, así
@@ -18,6 +19,8 @@ export default async function DetalleReservaPage({ params, searchParams }: {
   const { pago } = await searchParams;
 
   return (
-    <DetalleClient id={id} retornoPago={leerRetornoPago(Array.isArray(pago) ? pago[0] : pago)} />
+    <GuardSesion>
+      <DetalleClient id={id} retornoPago={leerRetornoPago(Array.isArray(pago) ? pago[0] : pago)} />
+    </GuardSesion>
   );
 }
