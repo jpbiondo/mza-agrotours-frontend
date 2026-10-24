@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Pagination } from "@/components/catalog/controls";
-import { Alert, Button, Card, EstadoBadge, IconButton, Skeleton } from "@/components/ui";
+import { Alert, Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
 import { notify } from "@/lib/notify";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { TextArea } from "@/components/ui/text-area";
@@ -18,6 +18,7 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { GcrFormShell } from "@/components/admin/gcr/shared";
+import { DialogBody, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { admInitials } from "@/data/admin";
 import { GI_ESTADOS, GI_ORDEN_ESTADOS, giCodigo, giEsTerminal } from "@/data/incidencias";
 import {
@@ -153,7 +154,7 @@ function GestionarForm({ detalle, puedeGestionar, busy, error, onCancel, onGuard
   return (
     <Form {...form}>
       <form noValidate onSubmit={form.handleSubmit(onGuardar)} className="flex min-h-0 flex-1 flex-col">
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-[26px] py-[22px]">
+        <DialogBody className="flex flex-col gap-5">
           {/* Descripción completa — sólo lectura */}
           <div>
             <span className="mb-[9px] block font-display text-[14.5px] font-semibold text-fg-1">Descripción completa</span>
@@ -285,24 +286,22 @@ function GestionarForm({ detalle, puedeGestionar, busy, error, onCancel, onGuard
               )}
             />
           )}
+        </DialogBody>
 
-          {error && <Alert>{error}</Alert>}
-        </div>
-
-        <div className="shrink-0 border-t border-outline-variant bg-cream-tert px-[26px] py-4">
-          <div className="flex justify-end gap-3">
-            <Button variant="neutral" onClick={onCancel} disabled={busy}>
-              <X className="size-[17px]" /> {puedeGestionar ? "Cancelar" : "Cerrar"}
+        <DialogFooter
+          alert={error && <Alert>{error}</Alert>}
+          // Sin cambio de estado no hay nada que completar: el botón ya está apagado por eso.
+          note={puedeGestionar && cambio && <FaltanCampos faltan={faltan} />}
+        >
+          <Button variant="neutral" onClick={onCancel} disabled={busy}>
+            <X className="size-[17px]" /> {puedeGestionar ? "Cancelar" : "Cerrar"}
+          </Button>
+          {puedeGestionar && (
+            <Button type="submit" disabled={cerrada || !cambio || faltan > 0} loading={busy}>
+              <Check className="size-[17px]" /> Guardar
             </Button>
-            {puedeGestionar && (
-              <Button type="submit" disabled={cerrada || !cambio || faltan > 0} loading={busy}>
-                <Check className="size-[17px]" /> Guardar
-              </Button>
-            )}
-          </div>
-          {/* Sin cambio de estado no hay nada que completar: el botón ya está apagado por eso. */}
-          {puedeGestionar && cambio && <FaltanCampos faltan={faltan} className="mt-2" />}
-        </div>
+          )}
+        </DialogFooter>
       </form>
     </Form>
   );
@@ -344,55 +343,47 @@ function GestionarModal({ inc, puedeGestionar, busy, error, onCancel, onGuardar 
   const dato = alDia ? detalle.dato : null;
 
   return (
-    <GcrFormShell onCancel={cerrar}>
-      <div role="dialog" aria-modal="true" aria-label={`Gestionar incidencia ${inc.titulo}`} className="flex min-h-0 flex-1 flex-col">
-        {/* Cabecera */}
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline-variant px-[26px] py-[22px]">
-          <div className="min-w-0">
-            <div className="mb-1.5 flex items-center gap-2.5">
-              <span className="t-label">{puedeGestionar ? "Gestionar incidencia" : "Detalle de la incidencia"}</span>
-              <span className="font-mono text-[11.5px] text-fg-3">{giCodigo(inc.id)}</span>
-            </div>
-            <h2 className="font-display text-[21px] leading-tight font-bold text-fg-1">{inc.titulo}</h2>
-            <div className="mt-[9px] flex items-center gap-2 text-[13px] text-fg-2">
-              <UserRound className="size-[15px] text-fg-3" />
-              Reportada por <strong className="font-semibold text-fg-1">{inc.usuario || "—"}</strong>
-            </div>
-          </div>
-          <IconButton onClick={cerrar} aria-label="Cerrar">
-            <X />
-          </IconButton>
+    <GcrFormShell onCancel={onCancel} busy={busy}>
+      <DialogHeader closeDisabled={busy}>
+        <div className="mb-1.5 flex items-center gap-2.5">
+          <span className="t-label">{puedeGestionar ? "Gestionar incidencia" : "Detalle de la incidencia"}</span>
+          <span className="font-mono text-[11.5px] text-fg-3">{giCodigo(inc.id)}</span>
         </div>
+        <DialogTitle className="leading-tight">{inc.titulo}</DialogTitle>
+        <div className="mt-[9px] flex items-center gap-2 text-[13px] text-fg-2">
+          <UserRound className="size-[15px] text-fg-3" />
+          Reportada por <strong className="font-semibold text-fg-1">{inc.usuario || "—"}</strong>
+        </div>
+      </DialogHeader>
 
-        {!alDia ? (
-          <div aria-busy="true" aria-label="Cargando incidencia…" className="flex flex-col gap-5 px-[26px] py-[22px]">
-            <Skeleton className="h-28" />
-            <div className="flex gap-3"><Skeleton className="h-16 flex-1" /><Skeleton className="h-16 flex-1" /></div>
-            <div className="flex flex-col gap-2">
-              {GI_ORDEN_ESTADOS.map((e) => <Skeleton key={e} className="h-11" />)}
-            </div>
+      {!alDia ? (
+        <DialogBody aria-busy="true" aria-label="Cargando incidencia…" className="flex flex-col gap-5">
+          <Skeleton className="h-28" />
+          <div className="flex gap-3"><Skeleton className="h-16 flex-1" /><Skeleton className="h-16 flex-1" /></div>
+          <div className="flex flex-col gap-2">
+            {GI_ORDEN_ESTADOS.map((e) => <Skeleton key={e} className="h-11" />)}
           </div>
-        ) : !dato || !dato.estado ? (
-          <div className="flex flex-col items-center px-[26px] py-12 text-center">
-            <span className="mb-4 flex size-14 items-center justify-center rounded-full bg-danger-fill">
-              <AlertTriangle className="size-[26px] text-danger-fg" />
-            </span>
-            <p className="mb-5 text-[15px] text-fg-2">{detalle.error ?? "La incidencia tiene un estado que no reconocemos."}</p>
-            <Button variant="neutral" onClick={() => setNonce((n) => n + 1)}>
-              <RotateCcw className="size-4" /> Reintentar
-            </Button>
-          </div>
-        ) : (
-          <GestionarForm
-            detalle={{ ...dato, estado: dato.estado }}
-            puedeGestionar={puedeGestionar}
-            busy={busy}
-            error={error}
-            onCancel={cerrar}
-            onGuardar={onGuardar}
-          />
-        )}
-      </div>
+        </DialogBody>
+      ) : !dato || !dato.estado ? (
+        <DialogBody className="flex flex-col items-center py-12 text-center">
+          <span className="mb-4 flex size-14 items-center justify-center rounded-full bg-danger-fill">
+            <AlertTriangle className="size-[26px] text-danger-fg" />
+          </span>
+          <p className="mb-5 text-[15px] text-fg-2">{detalle.error ?? "La incidencia tiene un estado que no reconocemos."}</p>
+          <Button variant="neutral" onClick={() => setNonce((n) => n + 1)}>
+            <RotateCcw className="size-4" /> Reintentar
+          </Button>
+        </DialogBody>
+      ) : (
+        <GestionarForm
+          detalle={{ ...dato, estado: dato.estado }}
+          puedeGestionar={puedeGestionar}
+          busy={busy}
+          error={error}
+          onCancel={cerrar}
+          onGuardar={onGuardar}
+        />
+      )}
     </GcrFormShell>
   );
 }
