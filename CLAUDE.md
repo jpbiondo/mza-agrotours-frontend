@@ -83,7 +83,7 @@ Deuda conocida: `Modal.tsx` está escrito a mano y no tiene trampa de foco, ni E
 
 ### Cuando agregues o migres un diálogo
 
-Sobre `Dialog`, en tres zonas: `DialogHeader` (título + cruz, fija), `DialogBody` (lo único que scrollea) y `DialogFooter` (acciones, fija; el error en `alert` y `FaltanCampos` en `note`). Con un formulario, el `<form>` envuelve cuerpo y pie con `flex min-h-0 flex-1 flex-col`. Las confirmaciones van con `ConfirmDialog`, que ya arma las tres zonas. Ejemplo: `src/app/admin/deudas/ResolverDeudaModal.tsx`; la regla, en `docs/ui-guidelines.md`, "Diálogos".
+Sobre `Dialog`, con uno de los tres anchos (`size`: `sm` confirmaciones, `md` formularios cortos, `lg` formularios largos) y en tres zonas: `DialogHeader` (título + cruz, fija), `DialogBody` (lo único que scrollea) y `DialogFooter` (acciones, fija; el error en `alert` y `FaltanCampos` en `note`). Con un formulario, el `<form>` envuelve cuerpo y pie con `flex min-h-0 flex-1 flex-col`. Las confirmaciones van con `ConfirmDialog`, que ya arma las tres zonas. Ejemplo: `src/app/admin/deudas/ResolverDeudaModal.tsx`; la regla, en `docs/ui-guidelines.md`, "Diálogos".
 
 ### Cuando wirees un endpoint
 
