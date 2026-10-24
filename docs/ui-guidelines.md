@@ -68,6 +68,7 @@ Todo diálogo centrado se arma en tres zonas, y sólo el cuerpo scrollea. Es lo 
 | La cruz, Escape y el click afuera | Hacen lo mismo que "Cancelar". Si hay cambios sin guardar, piden la misma confirmación (`confirmarDescarte()`) | El `onOpenChange` del `Dialog` |
 | Mientras se procesa la acción | La cruz queda deshabilitada y el diálogo no se cierra | `DialogHeader closeDisabled`, `disablePointerDismissal` |
 | Un paso sin salida (verificando, resultado final que obliga a seguir) | Sin cruz | `DialogHeader hideClose` |
+| Falla la lectura de lo que el diálogo muestra (p. ej. el detalle de una incidencia) | El aviso y "Reintentar" en el cuerpo; el pie, con "Cerrar" (`neutral`) como única acción | `DialogBody` + `DialogFooter` |
 | Al abrir | El foco va al primer campo del cuerpo. Sin campos, a la cruz: nunca arranca sobre la acción destructiva | `DialogContent` ✅ (se pisa con `initialFocus`) |
 | Una confirmación | Las mismas tres zonas. La cruz convive con "Cancelar" | `ConfirmDialog` ✅ ya las usa |
 
@@ -187,6 +188,7 @@ La forma de los diálogos se resolvió así (2026-10-24):
 34. **Anchos**: tres, `sm` 468 px, `md` 560 px y `lg` 680 px, en lugar de los ocho que convivían (de 440 a 720 px).
 35. **Cambios sin guardar en diálogos**: se posterga; la migración a `Dialog` no lo incluye por ahora.
 36. **Unificación**: todos los diálogos centrados van a `Dialog`, también los formularios de productor y administrador. Los cajones laterales (lote de días, reembolsos, chat, calendario) son otra familia y van al `Sheet` lateral en una pasada aparte. Parámetros espera a la reautenticación real.
+37. **Lectura fallida dentro de un diálogo**: el pie queda con "Cerrar", para que la salida no dependa sólo de la cruz.
 
 ## Preguntas abiertas
 
