@@ -61,6 +61,7 @@ Todo diálogo centrado se arma en tres zonas, y sólo el cuerpo scrollea. Es lo 
 
 | Cuándo | Qué se muestra | Implementación |
 |---|---|---|
+| Qué ancho lleva | `sm` (468 px): confirmaciones y avisos. `md` (560 px): formularios cortos (resolver deuda, registrar pago, abrir día, valorar, exportar). `lg` (680 px): formularios largos (catálogo, productor, administrador, rol) y lecturas (reseñas). El título acompaña: 20 px en `sm` y `md`, 24 px en `lg` | `DialogContent size` ✅ |
 | Cualquier diálogo | **Cabecera fija** con el título a la izquierda y la **cruz** arriba a la derecha (`IconButton`, `aria-label="Cerrar"`). Debajo, un borde | `DialogHeader` ✅ |
 | El contenido no entra en el alto de la ventana | Sólo scrollea el **cuerpo**. El título y las acciones quedan a la vista | `DialogBody` ✅ |
 | Las acciones del diálogo | **Pie fijo** crema con borde: "Cancelar" a la izquierda y la acción a la derecha. Arriba de los botones, el `Alert` del rechazo; debajo, `FaltanCampos` | `DialogFooter` ✅ con `alert` y `note` |
@@ -69,6 +70,8 @@ Todo diálogo centrado se arma en tres zonas, y sólo el cuerpo scrollea. Es lo 
 | Un paso sin salida (verificando, resultado final que obliga a seguir) | Sin cruz | `DialogHeader hideClose` |
 | Al abrir | El foco va al primer campo del cuerpo. Sin campos, a la cruz: nunca arranca sobre la acción destructiva | `DialogContent` ✅ (se pisa con `initialFocus`) |
 | Una confirmación | Las mismas tres zonas. La cruz convive con "Cancelar" | `ConfirmDialog` ✅ ya las usa |
+
+**Cambios sin guardar en un diálogo.** La regla de "Cambios sin guardar" (Escape, la cruz y el click afuera preguntan si hay algo cargado) **queda postergada** para los diálogos: la migración no la suma. Mientras tanto, cerrar un formulario en diálogo lo descarta como hasta ahora.
 
 **Migración.** `Modal`, `Panel`, `GcrFormShell`, el `Scrim` de administradores y los overlays de parámetros se pasan a `Dialog` **de a una pantalla**, cuando se las toca. Al migrar una, gana también la trampa de foco, Escape y el bloqueo de scroll que `Modal` no tiene. Los cajones laterales (`Sheet`, `LoteDrawer`) siguen con su propia cabecera y cuerpo: ya cumplen la regla. El estado de cada pantalla está en [`ui-audit.md`](ui-audit.md), A2.3.
 
@@ -181,6 +184,9 @@ La forma de los diálogos se resolvió así (2026-10-24):
 31. **Scroll**: cabecera y pie fijos; scrollea sólo el cuerpo. El pie queda fijo para que la acción, su error y el "faltan N campos" estén siempre a la vista.
 32. **`FaltanCampos` en un `ConfirmDialog` con motivo**: va en `note`, debajo de los botones, como en cualquier formulario.
 33. **Migración de `Modal`**: pantalla por pantalla hacia `Dialog`; no se parchea `Modal`.
+34. **Anchos**: tres, `sm` 468 px, `md` 560 px y `lg` 680 px, en lugar de los ocho que convivían (de 440 a 720 px).
+35. **Cambios sin guardar en diálogos**: se posterga; la migración a `Dialog` no lo incluye por ahora.
+36. **Unificación**: todos los diálogos centrados van a `Dialog`, también los formularios de productor y administrador. Los cajones laterales (lote de días, reembolsos, chat, calendario) son otra familia y van al `Sheet` lateral en una pasada aparte. Parámetros espera a la reautenticación real.
 
 ## Preguntas abiertas
 
@@ -242,7 +248,8 @@ Cada patrón tiene un único punto de entrada. Las pantallas existentes **todav�
 - Lo dibuja `<ConfirmHost>`, montado en `app/layout.tsx`.
 
 **`Dialog`, `DialogContent`, `DialogHeader`, `DialogBody`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`** · `components/ui/dialog.tsx`
-- La base para cualquier diálogo nuevo, en lugar de `Modal`. `DialogContent` no tiene padding: lo ponen las tres zonas. El ancho se cambia con `className` (`w-[560px]`).
+- La base para cualquier diálogo nuevo, en lugar de `Modal`. `DialogContent` no tiene padding: lo ponen las tres zonas.
+- `DialogContent { size?: "sm" | "md" | "lg" }`, `sm` por defecto: el ancho, y con él el tamaño del título. No se pisa con `className`.
 - `DialogHeader { closeDisabled?, hideClose? }`: el título y la cruz. La cruz es un `Dialog.Close`, así que dispara el `onOpenChange` del `Dialog`.
 - `DialogBody`: lo único que scrollea.
 - `DialogFooter { alert?, note? }`: los botones, con el error arriba y la nota debajo.
