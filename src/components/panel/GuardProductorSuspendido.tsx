@@ -6,7 +6,8 @@ import { UserX } from "lucide-react";
 import { fmtFecha } from "@/lib/format";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
 import type { EstablecimientoAcceso } from "@/lib/roles";
-import { buttonClasses } from "@/components/ui";
+import { Button, buttonClasses } from "@/components/ui";
+import { StatusScreen } from "@/components/ui/StatusScreen";
 
 function AccesoSuspendido({
   establecimiento,
@@ -18,59 +19,61 @@ function AccesoSuspendido({
   otros: EstablecimientoAcceso[];
   onElegir: (id: string) => void;
 }) {
+  const motivo = establecimiento.suspension?.motivo?.trim();
+
   return (
-    <div className="mx-auto max-w-[640px] px-7 pt-16 pb-24">
-      <div className="flex flex-col items-center gap-3 rounded-lg border border-outline-variant bg-surface px-8 py-14 text-center">
-        <div className="flex size-16 items-center justify-center rounded-full bg-danger-fill">
-          <UserX className="size-7 text-danger-fg" />
-        </div>
-        <h1 className="font-display text-[24px] font-bold text-fg-1">
-          Tu acceso está suspendido
-        </h1>
-        <p className="max-w-[440px] text-[14.5px] leading-relaxed text-fg-2">
-          No podés ver ni gestionar los datos de{" "}
-          <strong className="font-semibold text-fg-1">{establecimiento.nombre}</strong> hasta el{" "}
-          <strong className="font-semibold text-fg-1">
-            {fmtFecha(establecimiento.suspension?.fechaHoraFin ?? null)}
-          </strong>
-          .
-        </p>
-        <p className="max-w-[440px] text-[13.5px] leading-relaxed text-fg-3">
-          Seguís formando parte del establecimiento y conservás tu rol: el acceso se restablece
-          solo cuando termina la suspensión. Si creés que es un error, hablá con quien lidera el
-          establecimiento.
-        </p>
-
-        {otros.length > 0 && (
-          <div className="mt-4 w-full max-w-[440px] border-t border-outline-variant pt-4">
-            <p className="text-[13.5px] text-fg-2">
-              {otros.length === 1
-                ? "Podés seguir trabajando en tu otro establecimiento:"
-                : "Podés seguir trabajando en tus otros establecimientos:"}
-            </p>
-            <div className="mt-2.5 flex flex-wrap justify-center gap-2">
-              {otros.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  onClick={() => onElegir(e.id)}
-                  className="cursor-pointer rounded-md border border-outline-variant bg-surface px-3.5 py-2 text-[13.5px] font-semibold text-green-800 shadow-[inset_0_-2px_0_var(--green-100)] transition-colors hover:bg-cream-tert"
-                >
-                  Ir a {e.nombre}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* "Volver al inicio" y no "Volver a explorar": la barra del shell ya
-            tiene ese botón, y repetir la etiqueta en la misma pantalla se lee
-            como dos acciones distintas. Es además la salida de <SinPermiso>. */}
-        <Link href="/explorar" className={buttonClasses({ className: "mt-4" })}>
+    // `StatusScreen` directo y no `ForbiddenScreen`: ésa sólo acepta un texto, y
+    // acá hacen falta el motivo y las salidas a los otros establecimientos.
+    <StatusScreen
+      tone="warning"
+      icon={<UserX />}
+      title="Tu acceso está suspendido"
+      // "Volver al inicio" y no "Volver a explorar": la barra del shell ya
+      // tiene ese botón, y repetir la etiqueta en la misma pantalla se lee
+      // como dos acciones distintas. Es además la salida de <SinPermiso>.
+      action={
+        <Link href="/explorar" className={buttonClasses()}>
           Volver al inicio
         </Link>
-      </div>
-    </div>
+      }
+    >
+      <p>
+        No podés ver ni gestionar los datos de{" "}
+        <strong className="font-semibold text-fg-1">{establecimiento.nombre}</strong> hasta el{" "}
+        <strong className="font-semibold text-fg-1">
+          {fmtFecha(establecimiento.suspension?.fechaHoraFin ?? null)}
+        </strong>
+        .
+      </p>
+      {/* El motivo es opcional en el backend: sin él, no se muestra la línea. */}
+      {motivo && (
+        <p className="mt-3 whitespace-pre-line">
+          <strong className="font-semibold text-fg-1">Motivo:</strong> {motivo}
+        </p>
+      )}
+      <p className="mt-3 text-[13.5px] text-fg-3">
+        Seguís formando parte del establecimiento y conservás tu rol: el acceso se restablece
+        solo cuando termina la suspensión. Si creés que es un error, hablá con quien lidera el
+        establecimiento.
+      </p>
+
+      {otros.length > 0 && (
+        <div className="mt-4 border-t border-outline-variant pt-4">
+          <p className="text-[13.5px]">
+            {otros.length === 1
+              ? "Podés seguir trabajando en tu otro establecimiento:"
+              : "Podés seguir trabajando en tus otros establecimientos:"}
+          </p>
+          <div className="mt-2.5 flex flex-wrap justify-center gap-2">
+            {otros.map((e) => (
+              <Button key={e.id} variant="neutral" onClick={() => onElegir(e.id)}>
+                Ir a {e.nombre}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+    </StatusScreen>
   );
 }
 
