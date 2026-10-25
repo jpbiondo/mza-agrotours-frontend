@@ -119,6 +119,7 @@ Reemplaza a los más de 20 locales (`Vacio`, `EmptyState`, `FaqVacio`, `Sin*`, `
 | Hay permiso para ver pero no para la acción | El botón se ve deshabilitado y el motivo aparece **como texto debajo del botón**, no en `title`. En acciones de fila, una sola leyenda arriba de la tabla. *Deshabilitar lo hacen 10 pantallas; ocultar, 3* | `Button disabledReason` ✅; `ActionBtn` + leyenda |
 | Una entrada del menú lleva a una pantalla sin permiso | Se oculta | shells ✅ |
 | El backend responde 403 a una lectura | `ForbiddenScreen`, no el panel de error con "Reintentar" | `AsyncView` / `AsyncBoundary` ✅ (lo detectan solos) |
+| El backend responde 403 a una lectura del panel con el establecimiento activo suspendido | "Este establecimiento está suspendido", con el motivo si vino, en lugar del "tu rol no incluye este permiso" | `SinAccesoPorSuspension` ✅ en `panel/layout.tsx`, vía `SinAccesoProvider` |
 | El backend responde 403 a una escritura | `Alert` en el diálogo: "Tu rol no te permite …" | `Alert` ✅ |
 
 ## Cambios sin guardar — `useAvisoSalida(dirty)` ✅
@@ -189,10 +190,11 @@ La forma de los diálogos se resolvió así (2026-10-24):
 35. **Cambios sin guardar en diálogos**: se posterga; la migración a `Dialog` no lo incluye por ahora.
 36. **Unificación**: todos los diálogos centrados van a `Dialog`, también los formularios de productor y administrador. Los cajones laterales (lote de días, reembolsos, chat, calendario) son otra familia y van al `Sheet` lateral en una pasada aparte. Parámetros espera a la reautenticación real.
 37. **Lectura fallida dentro de un diálogo**: el pie queda con "Cerrar", para que la salida no dependa sólo de la cruz.
+38. **403 con el establecimiento suspendido**: explica la suspensión y su motivo, no la falta de permiso. El rol no cambió, y pedirle el permiso a un administrador no lo resolvería.
 
 ## Preguntas abiertas
 
-Ninguna por ahora.
+- **403 a una escritura con el establecimiento suspendido**: hoy sale el `Alert` "Tu rol no te permite …", que engaña igual que el de las lecturas. Queda pendiente.
 
 ---
 
@@ -263,6 +265,10 @@ Cada patrón tiene un único punto de entrada. Las pantallas existentes **todav�
 - Props: `{ query: { isLoading, error, data?, reload? }, skeleton?, loadingLabel?, isEmpty?, empty?, notFound?, forbidden?, children: (data) => ReactNode }`.
 - El orden que resuelve es: carga → falla (sesión, permiso, no encontrado, red o servidor) → `data` nulo (no encontrado) → vacío → contenido.
 
+**`SinAccesoProvider`** · `components/AsyncView.tsx` (nuevo)
+- Reemplaza la pantalla de 403 en todo un subárbol, para cuando quien envuelve sabe mejor que la pantalla por qué llegó. Lo toman `AsyncView` y `AsyncBoundary`.
+- Prioridad: el `forbidden` de la lectura → el del provider → `ForbiddenScreen`.
+
 **`AsyncBoundary`** · `components/AsyncBoundary.tsx` (modificado, *deprecado*)
 - Mismas props que antes. Ya no pinta el mensaje técnico, y ante un 403 o un 404 muestra `ForbiddenScreen` o `NotFoundScreen`.
 
@@ -292,6 +298,9 @@ Cada patrón tiene un único punto de entrada. Las pantallas existentes **todav�
 **`GuardRol`** · `components/GuardRol.tsx` (modificado)
 - Sin sesión redirige a `/acceso?volver=…`.
 - `SinPermiso` queda como alias *deprecado* de `ForbiddenScreen`.
+
+**`SinAccesoPorSuspension`** · `components/panel/SinAccesoPorSuspension.tsx` (nuevo)
+- Montado en `panel/layout.tsx`. Con el establecimiento activo suspendido, un 403 en una lectura muestra la suspensión y su motivo (`EstablecimientoAcceso.motivoSuspension`).
 
 **`GuardSesion`** · `components/GuardSesion.tsx` (nuevo)
 - Exige sesión sin rol, para las pantallas de visitante. No dibuja nada mientras verifica.

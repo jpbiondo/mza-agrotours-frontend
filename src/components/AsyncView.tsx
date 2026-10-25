@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { createContext, useContext, useEffect } from "react";
 import type { ReactNode } from "react";
 import { Loader } from "lucide-react";
 import { ErrorScreen, ForbiddenScreen, NotFoundScreen } from "@/components/ui/StatusScreen";
@@ -79,6 +79,15 @@ export function AsyncView<T>({
   return <>{children(query.data)}</>;
 }
 
+/**
+ * Reemplaza al `<ForbiddenScreen>` por defecto en todo un subárbol, para cuando
+ * quien envuelve sabe mejor que la pantalla por qué llegó un 403 (p. ej. el
+ * panel con el establecimiento suspendido). El `forbidden` de cada lectura le
+ * sigue ganando.
+ */
+const SinAccesoContext = createContext<ReactNode>(null);
+export const SinAccesoProvider = SinAccesoContext.Provider;
+
 /** La pantalla que corresponde a cada tipo de falla. Compartida con `<AsyncBoundary>`. */
 export function PantallaDeFalla({
   falla,
@@ -91,8 +100,9 @@ export function PantallaDeFalla({
   notFound?: ReactNode;
   forbidden?: ReactNode;
 }) {
+  const sinAcceso = useContext(SinAccesoContext);
   if (falla.tipo === "permiso") {
-    return <>{forbidden ?? <ForbiddenScreen motivo={falla.mensaje} />}</>;
+    return <>{forbidden ?? sinAcceso ?? <ForbiddenScreen motivo={falla.mensaje} />}</>;
   }
   if (falla.tipo === "noEncontrado") return <>{notFound ?? <NotFoundScreen />}</>;
   return <ErrorScreen falla={falla} onRetry={onRetry} />;
