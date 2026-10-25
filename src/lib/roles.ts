@@ -160,6 +160,8 @@ export interface EstablecimientoAcceso {
   /** Rol de la cuenta en ese establecimiento, p. ej. "Propietaria". */
   rolNombre: string;
   establecimientoSuspendido: boolean;
+  /** Por qué se suspendió el establecimiento; `null` si no está suspendido o no vino. */
+  motivoSuspension: string | null;
   /* La cuenta está suspendida *en* ese establecimiento. != null para true */
   suspension: SuspensionAcceso | null;
 }
@@ -175,11 +177,16 @@ export function establecimientosDe(accesos: Acceso[] | undefined): Establecimien
   return accesos
     .filter((a) => tipoDe(a) === TipoPermiso.PRODUCTOR)
     .filter((a) => typeof a?.establecimiento?.id === "string" && a.establecimiento.id.trim() !== "")
-    .map((a) => ({
-      id: (a.establecimiento as EstablecimientoRef).id,
-      nombre: a.establecimiento?.nombre ?? "",
-      rolNombre: a.rolNombre ?? "",
-      establecimientoSuspendido: estaSuspendido(a.establecimiento?.estado),
-      suspension: a.suspension ?? null,
-    }));
+    .map((a) => {
+      const suspendido = estaSuspendido(a.establecimiento?.estado);
+      return {
+        id: (a.establecimiento as EstablecimientoRef).id,
+        nombre: a.establecimiento?.nombre ?? "",
+        rolNombre: a.rolNombre ?? "",
+        establecimientoSuspendido: suspendido,
+        // Un motivo que quedó de una suspensión vieja no se muestra en uno activo.
+        motivoSuspension: (suspendido && a.establecimiento?.motivoEstado?.trim()) || null,
+        suspension: a.suspension ?? null,
+      };
+    });
 }
