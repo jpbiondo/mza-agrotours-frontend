@@ -5,6 +5,12 @@ export interface EstablecimientoRef {
   nombre: string;
   /** "ACTIVO" | "SUSPENDIDO"; leerlo con los helpers de `lib/roles`. */
   estado?: string | null;
+  /**
+   * Por qué un admin lo suspendió; sólo tiene sentido con `estado` SUSPENDIDO.
+   * TODO backend: agregar `motivoEstado` a `AccesoEstablecimientoDTO` (mismo
+   * nombre que en `EstablecimientoAdminDTO`). Hasta entonces no viene.
+   */
+  motivoEstado?: string | null;
 }
 
 export interface SuspensionAcceso {
