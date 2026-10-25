@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import PanelShell from "@/components/panel/PanelShell";
 import GuardProductorSuspendido from "@/components/panel/GuardProductorSuspendido";
 import GuardRol from "@/components/GuardRol";
+import SinAccesoPorSuspension from "@/components/panel/SinAccesoPorSuspension";
 
 /**
  * Chrome y protección de todo el panel del productor. El alta de
@@ -16,7 +17,9 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
   return (
     <PanelShell>
       <GuardRol rol="productor">
-        <GuardProductorSuspendido>{children}</GuardProductorSuspendido>
+        <GuardProductorSuspendido>
+          <SinAccesoPorSuspension>{children}</SinAccesoPorSuspension>
+        </GuardProductorSuspendido>
       </GuardRol>
     </PanelShell>
   );
