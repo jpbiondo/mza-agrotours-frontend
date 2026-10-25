@@ -465,10 +465,15 @@ export default function ActividadesClient() {
         )}
 
         {suspendido && (
-          <Alert tone="danger" icon={<Ban className="size-[18px]" />} className="mb-5">
+          <Alert tone="warning" icon={<Ban className="size-[18px]" />} className="mb-5">
             <strong className="font-bold">Este establecimiento está suspendido.</strong> Podés ver
             tus actividades y su calendario, pero no crear ni modificar ninguna hasta que un
             administrador lo reactive.
+            {activo?.motivoSuspension && (
+              <p className="mt-1.5 whitespace-pre-line">
+                <strong className="font-bold">Motivo:</strong> {activo.motivoSuspension}
+              </p>
+            )}
           </Alert>
         )}
 
