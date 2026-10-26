@@ -35,10 +35,6 @@ import { CAMPO, FieldLabel } from "./actividad/campos";
 
 /** Errores de dominio del alta. El resto cae en el genérico. */
 const ERROR_ALTA: Record<string, string> = {
-  // Llega si suspendieron el establecimiento con el formulario ya abierto: el
-  // guard de la ruta sólo mira el estado que había al entrar.
-  "E.suspendido":
-    "El establecimiento está suspendido, así que no se pueden crear actividades. Vas a poder cuando un administrador lo reactive.",
   // TODO backend: confirmar el resto de los códigos.
 };
 
