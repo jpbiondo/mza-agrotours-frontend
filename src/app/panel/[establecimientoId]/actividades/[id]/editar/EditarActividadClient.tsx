@@ -32,10 +32,6 @@ const LABEL = "font-semibold";
 
 /** Errores de dominio de la edición. El resto cae en el genérico. */
 const ERROR_EDICION: Record<string, string> = {
-  // Llega si suspendieron el establecimiento con el formulario ya abierto: el
-  // guard de la ruta sólo mira el estado que había al entrar.
-  "E.suspendido":
-    "El establecimiento está suspendido, así que no se pueden modificar actividades. Vas a poder cuando un administrador lo reactive.",
   // TODO backend: confirmar el resto de los códigos.
 };
 
