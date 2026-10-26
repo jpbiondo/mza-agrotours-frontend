@@ -136,6 +136,7 @@ Reemplaza a los más de 20 locales (`Vacio`, `EmptyState`, `FaqVacio`, `Sin*`, `
 | Cuándo | Qué se muestra | Implementación |
 |---|---|---|
 | Ruta inexistente | "No encontramos esta página" + "Ir al inicio" | `app/not-found.tsx` ✅ |
+| Ruta inexistente dentro de `/admin` o `/panel/{id}` | El mismo aviso, pero dentro del shell y con "Ir al panel del sistema" / "Ir al panel". Pasa por los guards del layout: sin sesión va a `/acceso`, sin rol ve `ForbiddenScreen`, igual que en una pantalla que existe | `admin/[...resto]` y `panel/[establecimientoId]/[...resto]` llaman a `notFound()`, que pinta `admin/not-found.tsx` / `panel/[establecimientoId]/not-found.tsx` ✅ |
 | Id inexistente o ajeno (cultivo, receta, reserva, solicitud…) | "No encontramos {cosa}", una línea de por qué puede pasar y "Volver a {listado}" (`primary`) | `NotFoundScreen` ✅, o el `notFound` de `AsyncView`. Reemplaza las 6 copias |
 | Falla una lectura (red o 5xx) | Ícono, título, texto según la causa —sin red: "Revisá tu conexión"; servidor: "Tuvimos un problema, probá en unos minutos"— y "Reintentar". El detalle técnico va a la consola, no a la pantalla | `ErrorScreen` ✅, que usan `AsyncView` y `AsyncBoundary` |
 | Error de render no capturado | El mismo panel de error, con "Reintentar" que hace `reset()` | `app/error.tsx` ✅ |
