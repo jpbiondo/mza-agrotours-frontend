@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Sprout, MapPin, ChevronRight, RotateCcw, SearchX, Search, CalendarDays } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
@@ -9,6 +9,8 @@ import ActividadCard, { ActividadCardSkeleton } from "@/components/catalog/Activ
 import { FilterSelect, MultiFilterSelect, Pagination, ActiveFilterPill, SearchField } from "@/components/catalog/controls";
 import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
 import { useCatalogoActividades, useFiltroCultivosActividad, useFiltroDepartamentosActividad } from "@/hooks/useCatalogoActividades";
+import { hrefExplorar } from "@/lib/filtrosExplorar";
+import type { FiltrosExplorar } from "@/lib/filtrosExplorar";
 import type { FilterOption } from "@/types/catalogo";
 
 const PAGE_SIZE = 9;
@@ -46,12 +48,20 @@ function etiqueta(opciones: FilterOption[], value: string): string {
   return opciones.find((o) => o.value === value)?.label ?? value;
 }
 
-export default function CatalogClient() {
-  const [cultivosIds, setCultivosIds] = useState<string[]>([]);
-  const [departamentoId, setDepartamentoId] = useState<string | null>(null);
+export default function CatalogClient({ inicial }: { inicial: FiltrosExplorar }) {
+  const [cultivosIds, setCultivosIds] = useState<string[]>(inicial.cultivosIds);
+  const [departamentoId, setDepartamentoId] = useState<string | null>(inicial.departamentoId);
   // 0-based, igual que el `Pageable` del backend; la paginación se muestra en 1-based.
-  const [page, setPage] = useState(0);
-  const { texto, setTexto, busqueda, aplicarYa, limpiar } = useBusquedaDiferida();
+  const [page, setPage] = useState(inicial.page);
+  const { texto, setTexto, busqueda, aplicarYa, limpiar } = useBusquedaDiferida(undefined, inicial.busqueda);
+
+  // Los filtros viven en la URL para poder compartirlos y para que "atrás"
+  // vuelva con ellos puestos. `replaceState` y no `push`: cada tecla o click no
+  // es un paso del historial.
+  useEffect(() => {
+    const href = hrefExplorar({ busqueda, cultivosIds, departamentoId, page });
+    if (href !== window.location.pathname + window.location.search) window.history.replaceState(null, "", href);
+  }, [busqueda, cultivosIds, departamentoId, page]);
 
   // Búsqueda, filtros y paginado los resuelve el backend, así que cualquier
   // cambio vuelve a pedir el listado.
@@ -59,6 +69,10 @@ export default function CatalogClient() {
   // El conteo de cada faceta depende de la búsqueda y de lo elegido en la otra.
   const cultivos = useFiltroCultivosActividad({ busqueda, departamentoId });
   const departamentos = useFiltroDepartamentosActividad({ busqueda, cultivosIds });
+
+  // Una página que no existe (p. ej. `?pagina=99` en un link viejo) traería la
+  // grilla vacía con el contador en positivo: se salta a la última que hay.
+  if (data && data.totalPages > 0 && page >= data.totalPages) setPage(data.totalPages - 1);
 
   const total = data?.totalElements ?? 0;
   const hayFiltros = busqueda !== "" || cultivosIds.length > 0 || departamentoId !== null;
