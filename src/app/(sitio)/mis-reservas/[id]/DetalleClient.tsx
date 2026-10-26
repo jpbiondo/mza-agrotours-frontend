@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ChevronRight, ArrowLeft, MapPin, Download, ReceiptText, CalendarDays, Clock, Users,
-  SearchX, Loader, XCircle, Map as MapIcon, ExternalLink, Star, CheckCircle2,
+  SearchX, Loader, XCircle, Map as MapIcon, ExternalLink, Star, CheckCircle2, Compass, Ticket,
 } from "lucide-react";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import AsyncBoundary from "@/components/AsyncBoundary";
@@ -116,7 +116,7 @@ function AvisoPago({ retorno, r, pagable, esperando }: {
   return <div role="status" className="mb-6">{aviso}</div>;
 }
 
-function Cabecera({ r, onCancelar, pagable }: { r: ReservaDetalle; onCancelar?: () => void; pagable: boolean }) {
+function Cabecera({ r, pagable }: { r: ReservaDetalle; pagable: boolean }) {
   const meta = metaEstadoReserva(r.estado);
   return (
     <div className="mb-6 overflow-hidden rounded-lg border border-outline-variant bg-surface">
@@ -127,19 +127,17 @@ function Cabecera({ r, onCancelar, pagable }: { r: ReservaDetalle; onCancelar?: 
           {r.id}
         </span>
       </div>
-      <div className="flex flex-wrap items-start justify-between gap-6 px-6 pt-5 pb-[22px]">
-        <div className="min-w-[240px] flex-1">
-          <div className="mb-2.5">
-            <EstadoBadge tone={meta.tone}>{r.estado || "Sin estado"}</EstadoBadge>
-          </div>
-          {r.actividadId ? (
-            <Link href={`/explorar/${r.actividadId}`} className="font-display text-[25px] leading-[1.2] font-bold text-green-800 no-underline hover:underline">
-              {r.actividad || "Actividad sin nombre"}
-            </Link>
-          ) : (
-            <span className="font-display text-[25px] leading-[1.2] font-bold text-fg-1">{r.actividad || "Actividad sin nombre"}</span>
-          )}
-          <div className="mt-2.5 flex flex-wrap items-center gap-[7px] text-[14.5px] text-fg-2">
+      <div className="px-6 pt-5 pb-[22px]">
+        <div className="mb-2.5">
+          <EstadoBadge tone={meta.tone}>{r.estado || "Sin estado"}</EstadoBadge>
+        </div>
+        {/* En pantallas anchas los botones van a la derecha del título, centrados
+            con él; en angostas, debajo del establecimiento y a todo el ancho. */}
+        <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <h2 className="font-display text-[25px] leading-[1.2] font-bold text-fg-1 lg:col-start-1 lg:row-start-1">
+            {r.actividad || "Actividad sin nombre"}
+          </h2>
+          <div className="mt-2.5 flex flex-wrap items-center gap-[7px] text-[14.5px] text-fg-2 lg:col-start-1 lg:row-start-2">
             <MapPin size={16} className="text-brown-700" />
             {r.establecimientoId ? (
               <Link href={`/establecimientos/${r.establecimientoId}`} className="font-semibold text-green-800 no-underline hover:underline">
@@ -150,26 +148,23 @@ function Cabecera({ r, onCancelar, pagable }: { r: ReservaDetalle; onCancelar?: 
             )}
             {r.ubicacion && <span className="text-fg-3">· {r.ubicacion}</span>}
           </div>
-        </div>
-        <div className="flex flex-wrap items-start gap-2.5">
-          {pagable && r.checkout && <PagarConMercadoPago preferenceId={r.checkout.preferenceId} />}
-          <Button variant="neutral" onClick={() => descargarComprobante(r)}>
-            <Download size={17} /> Descargar comprobante
-          </Button>
-          {/* El chat es por actividad: sin los dos ids no hay a quién escribirle. */}
-          {r.actividadId && r.establecimientoId && (
-            <ContactarEstablecimiento
-              actividadId={r.actividadId}
-              establecimientoId={r.establecimientoId}
-              titulo={r.actividad}
-              etiqueta="Contactar establecimiento"
-            />
-          )}
-          {onCancelar && (
-            <Button variant="danger-outline" onClick={onCancelar}>
-              <XCircle size={17} /> Cancelar reserva
-            </Button>
-          )}
+          <div className="mt-5 flex flex-wrap gap-2.5 max-lg:*:grow lg:col-start-2 lg:row-start-1 lg:mt-0 lg:justify-end">
+            {pagable && r.checkout && <PagarConMercadoPago preferenceId={r.checkout.preferenceId} />}
+            {r.actividadId && (
+              <Link href={`/explorar/${r.actividadId}`} className={buttonClasses({ variant: "neutral" })}>
+                <Compass size={17} /> Ver actividad
+              </Link>
+            )}
+            {/* El chat es por actividad: sin los dos ids no hay a quién escribirle. */}
+            {r.actividadId && r.establecimientoId && (
+              <ContactarEstablecimiento
+                actividadId={r.actividadId}
+                establecimientoId={r.establecimientoId}
+                titulo={r.actividad}
+                etiqueta="Contactar establecimiento"
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -220,6 +215,27 @@ function Asistentes({ r }: { r: ReservaDetalle }) {
         </div>
         <div className="font-mono text-[22px] font-bold text-green-800">{moneyAr(r.total)}</div>
       </div>
+    </Bloque>
+  );
+}
+
+/**
+ * Los trámites de la reserva en sí, aparte de los que llevan a la experiencia.
+ * Cancelar va abajo y separado para que no se toque pensando que es otra cosa.
+ */
+function TuReserva({ r, onCancelar }: { r: ReservaDetalle; onCancelar?: () => void }) {
+  return (
+    <Bloque icon={<Ticket size={17} />} title="Tu reserva">
+      <Button variant="neutral" className="w-full" onClick={() => descargarComprobante(r)}>
+        <Download size={17} /> Descargar comprobante
+      </Button>
+      {onCancelar && (
+        <div className="mt-4 border-t border-cream-tert pt-4">
+          <Button variant="danger-outline" className="w-full" onClick={onCancelar}>
+            <XCircle size={17} /> Cancelar reserva
+          </Button>
+        </div>
+      )}
     </Bloque>
   );
 }
@@ -308,10 +324,16 @@ function DetalleSkeleton() {
           </div>
           <Skeleton className="mt-4 h-14" />
         </div>
-        <div className="rounded-lg border border-outline-variant bg-surface p-[22px]">
-          <Skeleton className="h-60" />
-          <Skeleton className="mt-4 h-4 w-[60%]" />
-          <Skeleton className="mt-2 h-4 w-[80%]" />
+        <div className="flex flex-col gap-6">
+          <div className="rounded-lg border border-outline-variant bg-surface p-[22px]">
+            <Skeleton className="h-5 w-[40%]" />
+            <Skeleton className="mt-5 h-10" />
+          </div>
+          <div className="rounded-lg border border-outline-variant bg-surface p-[22px]">
+            <Skeleton className="h-60" />
+            <Skeleton className="mt-4 h-4 w-[60%]" />
+            <Skeleton className="mt-2 h-4 w-[80%]" />
+          </div>
         </div>
       </div>
     </>
@@ -391,10 +413,11 @@ export default function DetalleClient({ id, retornoPago }: { id: string; retorno
         ) : (
           <>
             {retornoPago && <AvisoPago retorno={retornoPago} r={reserva} pagable={pagable} esperando={esperando} />}
-            <Cabecera r={reserva} pagable={pagable} onCancelar={cancelable ? () => setACancelar(reserva) : undefined} />
+            <Cabecera r={reserva} pagable={pagable} />
             <div className={GRILLA}>
               <Asistentes r={reserva} />
               <div className="flex flex-col gap-6">
+                <TuReserva r={reserva} onCancelar={cancelable ? () => setACancelar(reserva) : undefined} />
                 {/* Sin dirección no hay nada que ubicar. */}
                 {reserva.ubicacion && <Ubicacion r={reserva} />}
                 <Valorar r={reserva} onValorar={() => setValorando(true)} />
