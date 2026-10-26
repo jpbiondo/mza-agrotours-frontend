@@ -8,9 +8,7 @@ export const metadata: Metadata = {
 };
 
 // Sin `generateStaticParams`: la actividad la trae el backend con la sesión del
-// productor, así que no hay lista de ids conocida en build. Tampoco va detrás de
-// `GuardEstablecimientoSuspendido`: suspendido, el calendario se puede consultar
-// y la pantalla bloquea sólo las escrituras.
+// productor, así que no hay lista de ids conocida en build.
 export default async function CalendarioActividadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return (
