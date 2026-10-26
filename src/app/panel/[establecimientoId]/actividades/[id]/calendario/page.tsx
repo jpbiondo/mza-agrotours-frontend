@@ -7,8 +7,8 @@ export const metadata: Metadata = {
   description: "Consultá los días programados de la actividad y cómo vienen sus reservas.",
 };
 
-// Sin `generateStaticParams` ni `GuardEstablecimientoSuspendido`, como la
-// gestión de días: es de consulta, así que suspendido también se puede ver.
+// Sin `generateStaticParams`, como la gestión de días: la actividad la trae el
+// backend con la sesión del productor.
 export default async function CalendarioActividadPage({
   params, searchParams,
 }: {

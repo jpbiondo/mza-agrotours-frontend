@@ -5,7 +5,8 @@ import { cn } from "@/lib/utils";
 /**
  * Cuándo va cada tono:
  * - `danger`: falló una acción (dentro del diálogo o arriba del formulario).
- * - `warning`: un estado de la pantalla bloquea algo (suspendido, sólo lectura).
+ * - `warning`: un estado de la pantalla bloquea algo (sólo lectura) o no se puede
+ *   pasar por alto aunque no bloquee (establecimiento suspendido).
  * - `info`: un estado de la pantalla que sólo informa (borrador, advertencias del guardado).
  * - `success`: el resultado se queda en la pantalla (p. ej. pago confirmado).
  */

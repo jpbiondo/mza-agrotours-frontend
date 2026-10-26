@@ -33,7 +33,7 @@ Las clases `.btn-*` de `globals.css` no se usan en código nuevo.
 | Falló una acción **lanzada desde un diálogo** | `Alert danger` dentro del diálogo. El diálogo queda abierto con lo cargado. *Es el caso de ~25 diálogos* | `Alert` ✅ (o `error` de `ConfirmDialog`) |
 | Falló una acción lanzada sin diálogo (toggle, acción de fila) | Toast `danger` de 7 s, con botón de cerrar. Dura más que el de éxito porque hay que leer qué falló. *El envío de un formulario no entra acá: ver "Errores de formulario"* | `notify.error` ✅ |
 | La acción ya no aplica porque lo que se ve quedó viejo (otro usuario o pestaña lo resolvió) | Se cierra el diálogo o panel, se recarga y sale un toast `info` que dice qué pasó | `notify.info` ✅ |
-| Un estado de la pantalla limita lo que se puede hacer (sólo lectura, suspendido, borrador) | `Alert` persistente arriba del contenido: `warning` si bloquea, `info` si sólo informa | `Alert` ✅, con tono `info` ✅ |
+| Un estado de la pantalla limita lo que se puede hacer o cambia lo que ven otros (sólo lectura, suspendido, borrador) | `Alert` persistente arriba del contenido: `warning` si bloquea o si advierte algo que el usuario no debería pasar por alto aunque no le impida nada (establecimiento suspendido: no se ve en el catálogo), `info` si sólo informa | `Alert` ✅, con tono `info` ✅ |
 | Un aviso de contexto dentro de una tarjeta, un formulario o un diálogo (cupos, reembolsos que se van a emitir, fechas descartadas) | `Alert` en el lugar donde hace falta, con el tono de lo que avisa. Nunca una caja armada a mano | `Alert` ✅ |
 | Termina un proceso que cambia de contexto (login, alta enviada, pago, reprogramación, baja de un establecimiento) | Pantalla de resultado con un ícono, un título y un único CTA. Si hay otra salida (reenviar un correo), va como link dentro del texto | `ResultScreen` ✅ |
 | Feedback dentro del propio control ("Link copiado" en el botón Compartir) | El control cambia su texto o ícono un momento; no hace falta toast | — |
@@ -191,6 +191,7 @@ La forma de los diálogos se resolvió así (2026-10-24):
 36. **Unificación**: todos los diálogos centrados van a `Dialog`, también los formularios de productor y administrador. Los cajones laterales (lote de días, reembolsos, chat, calendario) son otra familia y van al `Sheet` lateral en una pasada aparte. Parámetros espera a la reautenticación real.
 37. **Lectura fallida dentro de un diálogo**: el pie queda con "Cerrar", para que la salida no dependa sólo de la cruz.
 38. **403 con el establecimiento suspendido**: explica la suspensión y su motivo, no la falta de permiso. El rol no cambió, y pedirle el permiso a un administrador no lo resolvería.
+39. **Establecimiento suspendido en el panel**: `Alert warning` con el motivo en el inicio, el catálogo de actividades y el calendario de días, aunque no bloquee nada. La suspensión sólo lo saca del catálogo público, pero el productor no puede pasarla por alto.
 
 ## Preguntas abiertas
 

@@ -18,7 +18,7 @@ import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useCalendarioGestion, useConfiguracionDias, useGestionDiasAcciones } from "@/hooks/useGestionDias";
 import { moneyAr } from "@/lib/format";
 import {
-  ORDEN_DIAS, SUSPENDIDO_DIAS, claveMes, diaSemanaDe, fechaCorta, mensajeErrorDias, mesDe, moverMes, type Mes,
+  ORDEN_DIAS, claveMes, diaSemanaDe, fechaCorta, mensajeErrorDias, mesDe, moverMes, type Mes,
 } from "@/lib/gestion-dias";
 import type { AltaDia, AltaLote, CalendarioGestion, DiaProgramado, DiaSemana, FechaISO } from "@/types/gestion-dias";
 
@@ -160,7 +160,7 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
   const fechaMaxima = conf.data?.fechaMaxima ?? sumarDiasISO(hoy, ventanaDias);
   const tarifas = conf.data?.tarifas ?? [];
 
-  const soloLectura = suspendido ? SUSPENDIDO_DIAS : base?.estado === "dado_de_baja" ? DE_BAJA : null;
+  const soloLectura = base?.estado === "dado_de_baja" ? DE_BAJA : null;
 
   const celdas = useMemo(() => {
     if (!cal.data) return [];
@@ -293,17 +293,23 @@ export default function CalendarioClient({ actividadId }: { actividadId: string 
                 <Stat icon={<Users className="size-4" />} label="Cupo base por día" value={String(base.cupoBase)} />
               </div>
 
-              {suspendido && (
-                <Alert tone="danger" icon={<Ban className="size-[18px]" />} className="mt-5">
-                  <strong className="font-bold">Este establecimiento está suspendido.</strong> Podés consultar el
-                  calendario, pero no abrir días ni cambiar cupos hasta que un administrador lo reactive.
+              {/* Dada de baja ya es de sólo lectura: el aviso de suspensión diría lo contrario. */}
+              {suspendido && base.estado !== "dado_de_baja" && (
+                <Alert tone="warning" icon={<Ban className="size-[18px]" />} className="mt-5">
+                  <strong className="font-bold">Este establecimiento está suspendido.</strong> Podés seguir abriendo
+                  días y cambiando cupos, pero no se van a ver en el catálogo hasta que un administrador lo reactive.
+                  {activo?.motivoSuspension && (
+                    <p className="mt-1.5 whitespace-pre-line">
+                      <strong className="font-bold">Motivo:</strong> {activo.motivoSuspension}
+                    </p>
+                  )}
                 </Alert>
               )}
-              {!suspendido && base.estado === "dado_de_baja" && (
+              {base.estado === "dado_de_baja" && (
                 <Alert tone="danger" icon={<Ban className="size-[18px]" />} className="mt-5">{DE_BAJA}</Alert>
               )}
               {base.estado === "borrador" && (
-                <Alert tone="warning" icon={<FilePenLine className="size-[18px]" />} className="mt-5">
+                <Alert tone="info" icon={<FilePenLine className="size-[18px]" />} className="mt-5">
                   <strong className="font-bold">Actividad en borrador.</strong> Los días que abras no se verán en el
                   catálogo hasta que la publiques desde el listado de actividades.
                 </Alert>

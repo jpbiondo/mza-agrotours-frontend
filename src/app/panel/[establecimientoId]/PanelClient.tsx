@@ -3,12 +3,12 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
-  ArrowRight, CalendarDays, Check, ChevronRight, ClipboardList, FilePen, Plus, ReceiptText,
+  ArrowRight, Ban, CalendarDays, Check, ChevronRight, ClipboardList, FilePen, Plus, ReceiptText,
   TrendingDown, TrendingUp, User, Users, Wallet, ExternalLink,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import DashboardSkeleton from "@/components/panel/DashboardSkeleton";
-import { Button, Card, EstadoBadge, Estrellas, Skeleton } from "@/components/ui";
+import { Alert, Button, Card, EstadoBadge, Estrellas, Skeleton } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/Button";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useEstadisticas } from "@/hooks/useEstadisticas";
@@ -17,7 +17,7 @@ import {
   fmtCodigoReserva, fmtDiaLocal, fmtHoraLocal, fmtPctConSigno, fmtPuntaje, moneyAr, recortar,
 } from "@/lib/format";
 import { PermisoProductor, TipoPermiso } from "@/lib/permisos";
-import { ROL_PRODUCTOR_LIDER, tienePermiso, tieneRol } from "@/lib/roles";
+import { ROL_PRODUCTOR_LIDER, tienePermiso, tieneRol, type EstablecimientoAcceso } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import type { DiaReservas, PendientesPanel, ReseniasPanel, ResumenPanel } from "@/types/panel";
@@ -78,6 +78,30 @@ function Encabezado({ nombre, establecimiento, hoy }: { nombre: string; establec
         <span className="font-mono text-sm">{DIAS_SEMANA[hoy.getDay()]} {fmtDiaLocal(hoy)}</span> · {establecimiento}
       </p>
     </div>
+  );
+}
+
+/* ---- Establecimiento suspendido ------------------------------------------- */
+
+/**
+ * Lo primero que ve el productor al entrar: la suspensión no le bloquea nada,
+ * pero saca al establecimiento y sus actividades del catálogo público, y eso no
+ * se puede pasar por alto.
+ */
+function AvisoSuspension({ establecimiento }: { establecimiento: EstablecimientoAcceso }) {
+  if (!establecimiento.establecimientoSuspendido) return null;
+  return (
+    <Alert tone="warning" icon={<Ban className="size-[18px]" />} className="mb-6">
+      <strong className="font-bold">Este establecimiento está suspendido.</strong> Un administrador
+      suspendió <strong className="font-bold">{establecimiento.nombre}</strong>: mientras siga así, ni
+      el establecimiento ni sus actividades se muestran a los visitantes en el catálogo. Podés seguir
+      gestionando todo y atendiendo las reservas que ya tenés.
+      {establecimiento.motivoSuspension && (
+        <p className="mt-1.5 whitespace-pre-line">
+          <strong className="font-bold">Motivo:</strong> {establecimiento.motivoSuspension}
+        </p>
+      )}
+    </Alert>
   );
 }
 
@@ -436,7 +460,7 @@ function Resenias({ resenias, establecimientoId }: { resenias: ReseniasPanel; es
 function Inicio({ resumen, alcance, establecimiento }: {
   resumen: ResumenPanel;
   alcance: Alcance;
-  establecimiento: { id: string; nombre: string };
+  establecimiento: EstablecimientoAcceso;
 }) {
   const nombre = useAuthStore((s) => s.nombre) ?? "";
   const ruta = useRutaPanel();
@@ -447,6 +471,7 @@ function Inicio({ resumen, alcance, establecimiento }: {
   return (
     <div className="mx-auto max-w-[1240px] px-4 pt-8 pb-20 sm:px-7">
       <Encabezado nombre={nombre} establecimiento={establecimiento.nombre} hoy={hoy} />
+      <AvisoSuspension establecimiento={establecimiento} />
       <AccesosRapidos alcance={alcance} />
       <Pendientes items={armarPendientes(resumen.pendientes, alcance, ruta, hoy)} />
       <div className="grid items-start gap-6 min-[1100px]:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">

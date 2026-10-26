@@ -7,8 +7,7 @@ export const metadata: Metadata = {
   description: "Las reservas de un día de la actividad, con sus visitantes y estado de pago.",
 };
 
-// De consulta, como el calendario del que sale: sin `generateStaticParams` ni
-// `GuardEstablecimientoSuspendido`.
+// Sin `generateStaticParams`, como el calendario del que sale.
 export default async function ReservasDiaPage({ params }: { params: Promise<{ id: string; diaId: string }> }) {
   const { id, diaId } = await params;
   return (

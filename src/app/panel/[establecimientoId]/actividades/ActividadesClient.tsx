@@ -23,13 +23,9 @@ import type { ActividadProd, EstadoActividad } from "@/types/actividad-prod";
 
 const PAGE_SIZE = 10;
 
-const SUSPENDIDO_CREAR = "El establecimiento está suspendido: no podés crear actividades.";
-const SUSPENDIDO_MODIFICAR = "El establecimiento está suspendido: no podés modificar actividades.";
-
 /** Códigos de dominio de PATCH .../estado. `validacionNegocio` cubre dada de baja o ya en ese estado. */
 const MENSAJE_ERROR_ESTADO: Record<string, string> = {
   "A.conReservasActivas": "Tiene reservas pendientes o pagadas. Cancelalas antes de ocultarla.",
-  "E.suspendido": SUSPENDIDO_MODIFICAR,
   validacionNegocio: "La actividad cambió desde que cargaste la página. Actualizamos el listado.",
 };
 
@@ -37,17 +33,14 @@ type Override = Partial<Pick<ActividadProd, "estado">>;
 
 /* ---- Toggle Borrador / Público ------------------------------------------ */
 function PublishToggle({
-  act, busy, disabled, title, onCambiar,
+  act, busy, onCambiar,
 }: {
   act: ActividadProd;
   busy: boolean;
-  /** Establecimiento suspendido: se ve el estado pero no se puede cambiar. */
-  disabled: boolean;
-  title?: string;
   onCambiar: (nuevo: "publicado" | "borrador") => void;
 }) {
   const publicada = act.estado === "publicado";
-  const bloqueado = busy || disabled;
+  const bloqueado = busy;
   // El backend ya avisa si se puede: sólo puede fallar al pasar a borrador.
   const sinBorrador = publicada && !act.puedeCambiarEstado;
   const reservas = act.reservasPagadas;
@@ -65,7 +58,6 @@ function PublishToggle({
         role="group"
         aria-label="Estado de publicación"
         aria-busy={busy}
-        title={title}
         className="inline-flex gap-[3px] rounded-pill border border-outline-variant bg-cream-tert p-[3px]"
       >
         <button
@@ -99,11 +91,10 @@ function PublishToggle({
 
 /* ---- Tarjeta de actividad ----------------------------------------------- */
 function ActivityCard({
-  act, busy, suspendido, onEliminar, onCambiarEstado,
+  act, busy, onEliminar, onCambiarEstado,
 }: {
   act: ActividadProd;
   busy: boolean;
-  suspendido: boolean;
   onEliminar: () => void;
   onCambiarEstado: (nuevo: "publicado" | "borrador") => void;
 }) {
@@ -152,13 +143,7 @@ function ActivityCard({
                 <Ban className="mr-1.5 size-[13px]" /> Dada de baja
               </EstadoBadge>
             ) : (
-              <PublishToggle
-                act={act}
-                busy={busy}
-                disabled={suspendido}
-                title={suspendido ? SUSPENDIDO_MODIFICAR : undefined}
-                onCambiar={onCambiarEstado}
-              />
+              <PublishToggle act={act} busy={busy} onCambiar={onCambiarEstado} />
             )}
           </div>
 
@@ -199,15 +184,13 @@ function ActivityCard({
               icon={<Settings2 className="size-[15px]" />}
               label="Modificar"
               href={ruta("actividades", act.id, "editar")}
-              disabled={suspendido}
-              title={suspendido ? SUSPENDIDO_MODIFICAR : "Modificar la actividad"}
+              title="Modificar la actividad"
             />
             <ActionBtn
               icon={<CalendarPlus className="size-[15px]" />}
               label="Agregar días"
               href={ruta("actividades", act.id, "dias")}
-              disabled={suspendido}
-              title={suspendido ? SUSPENDIDO_MODIFICAR : "Agregar días a la actividad"}
+              title="Agregar días a la actividad"
             />
           </>
         )}
@@ -390,7 +373,7 @@ export default function ActividadesClient() {
       // con el listado abierto: se cambia la confirmación por el aviso de qué hacer.
       if (r.code === "A.reservasPagadas") { cerrarBaja(); setBlocked(act); }
       // El resto queda en el diálogo, que sigue abierto para reintentar.
-      else setErrorBaja(r.code === "E.suspendido" ? SUSPENDIDO_MODIFICAR : "No pudimos dar de baja la actividad. Probá de nuevo en un momento.");
+      else setErrorBaja("No pudimos dar de baja la actividad. Probá de nuevo en un momento.");
       return;
     }
     cerrarBaja();
@@ -444,15 +427,9 @@ export default function ActividadesClient() {
               Gestioná las experiencias que ofrecés y revisá su disponibilidad.
             </p>
           </div>
-          {suspendido ? (
-            <Button disabled title={SUSPENDIDO_CREAR}>
-              <Plus className="size-[17px]" /> Crear actividad
-            </Button>
-          ) : (
-            <Link href={ruta("actividades", "crear")} className={buttonClasses()}>
-              <Plus className="size-[17px]" /> Crear actividad
-            </Link>
-          )}
+          <Link href={ruta("actividades", "crear")} className={buttonClasses()}>
+            <Plus className="size-[17px]" /> Crear actividad
+          </Link>
         </div>
 
         <div className="mt-[22px] mb-6 h-px bg-outline-variant" />
@@ -464,11 +441,14 @@ export default function ActividadesClient() {
           </Alert>
         )}
 
+        {/* La suspensión sólo saca al establecimiento y sus actividades del catálogo
+            público: el productor sigue gestionando todo, para atender las reservas
+            que ya tiene y poder recuperar ingresos. */}
         {suspendido && (
           <Alert tone="warning" icon={<Ban className="size-[18px]" />} className="mb-5">
-            <strong className="font-bold">Este establecimiento está suspendido.</strong> Podés ver
-            tus actividades y su calendario, pero no crear ni modificar ninguna hasta que un
-            administrador lo reactive.
+            <strong className="font-bold">Este establecimiento está suspendido.</strong> Sus
+            actividades no se muestran a los visitantes hasta que un administrador lo reactive,
+            pero podés seguir gestionándolas y atendiendo las reservas que ya tenés.
             {activo?.motivoSuspension && (
               <p className="mt-1.5 whitespace-pre-line">
                 <strong className="font-bold">Motivo:</strong> {activo.motivoSuspension}
@@ -498,15 +478,9 @@ export default function ActividadesClient() {
               <p className="mx-auto mb-6 max-w-[420px] text-[15.5px] leading-relaxed text-fg-2">
                 Empezá creando la primera experiencia para tus visitantes.
               </p>
-              {suspendido ? (
-                <Button disabled title={SUSPENDIDO_CREAR}>
-                  <Plus className="size-[18px]" /> Crear actividad
-                </Button>
-              ) : (
-                <Link href={ruta("actividades", "crear")} className={buttonClasses()}>
-                  <Plus className="size-[18px]" /> Crear actividad
-                </Link>
-              )}
+              <Link href={ruta("actividades", "crear")} className={buttonClasses()}>
+                <Plus className="size-[18px]" /> Crear actividad
+              </Link>
             </Card>
           ) : (
             <>
@@ -574,7 +548,6 @@ export default function ActividadesClient() {
                       key={act.id}
                       act={act}
                       busy={pendingId === act.id}
-                      suspendido={suspendido}
                       onEliminar={() => setToDelete(act)}
                       onCambiarEstado={(nuevo) => setEstado(act, nuevo)}
                     />

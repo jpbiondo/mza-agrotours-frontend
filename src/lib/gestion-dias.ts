@@ -69,8 +69,6 @@ export function fechaCorta(iso: FechaISO): string {
   return `${d}/${m}/${y}`;
 }
 
-export const SUSPENDIDO_DIAS = "El establecimiento está suspendido: no podés abrir días ni cambiar cupos.";
-
 /** Códigos de dominio de las escrituras de días (`ActividadError` del backend). */
 const MENSAJE_ERROR: Record<string, string> = {
   "A.diaHorarioPasado": "El horario de inicio elegido ya pasó.",
@@ -89,7 +87,6 @@ const MENSAJE_ERROR: Record<string, string> = {
   "A.fechaInvalidaReprogramacion": "El día sólo se puede postergar: el nuevo inicio no puede ser anterior al que ya tenía.",
   validationError: "Revisá los datos: el nuevo inicio tiene que ser futuro y el motivo no puede superar los 200 caracteres.",
   actividadDiaNotFound: "No encontramos ese día de la actividad. Puede que ya no exista.",
-  "E.suspendido": SUSPENDIDO_DIAS,
 };
 
 /** Mensaje para un código de dominio; sin código es un fallo técnico. */
