@@ -79,9 +79,9 @@ function AccesoSuspendido({
 
 /**
  * Cierra el panel entero mientras la cuenta esté suspendida en el
- * establecimiento activo. A diferencia de `GuardEstablecimientoSuspendido` —que
- * deja leer y sólo corta la escritura— acá no pasa nada: un productor suspendido
- * no puede ni ver los datos del establecimiento.
+ * establecimiento activo. A diferencia de la suspensión del establecimiento
+ * —que sólo lo saca del catálogo público y deja gestionar todo— acá no pasa
+ * nada: un productor suspendido no puede ni ver los datos del establecimiento.
  *
  * No redirige ni saca de la URL, por lo mismo que `GuardRol`: el usuario tiene
  * que entender qué pasó. Y no puede redirigir aunque quisiera, porque la
