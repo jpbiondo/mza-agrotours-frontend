@@ -12,9 +12,12 @@ import type {
   BarraResenias,
   ConsultaActividades,
   EstablecimientoDeActividad,
+  FacetasActividades,
   FaqActividad,
   FilterOption,
+  FiltrosActividades,
   FotoRef,
+  OpcionRangoPrecio,
   OrdenResenias,
   Resenia,
   ResumenResenias,
@@ -23,7 +26,8 @@ import type {
 
 /**
  * Catálogo público de actividades: el listado paginado del visitante, su
- * detalle y las dos facetas con las que se filtra (cultivos y departamentos).
+ * detalle y las facetas con las que se filtra (cultivos, departamentos, precio
+ * y puntuación).
  *
  * Todas las lecturas van **sin token**: son pantallas de `(sitio)`, que se ven
  * sin sesión, y el backend tiene `/actividades/**` abierto salvo `/reservar`.
@@ -32,8 +36,7 @@ import type {
 const BASE = "/actividades";
 const EXPLORAR = `${BASE}/explorar`;
 const DESTACADAS = `${BASE}/destacadas`;
-const FILTRO_CULTIVOS = `${BASE}/cultivos`;
-const FILTRO_DEPARTAMENTOS = `${BASE}/departamentos`;
+const FILTROS = `${BASE}/filtros`;
 
 /* ---- Respuestas crudas --------------------------------------------------- */
 
@@ -253,18 +256,30 @@ async function leer<T>(path: string, mensaje: string): Promise<T | undefined> {
 }
 
 /**
- * Query del listado. `cultivosIds` se repite una vez por cultivo, que es como
- * Spring arma el `List<UUID>`; el resto va suelto. La búsqueda vacía se omite:
- * el backend la trata igual que ausente, pero así la URL queda limpia.
+ * Filtros como los toma el `FiltroActividadRequest` del backend, el mismo en
+ * el listado y en la faceta. `cultivosIds` se repite una vez por cultivo, que
+ * es como Spring arma el `List<UUID>`; el resto va suelto. Lo vacío se omite:
+ * el backend lo trata igual que ausente (y los precios los valida `@Positive`).
  */
-function queryExplorar({ busqueda, cultivosIds, departamentoId, page, size }: ConsultaActividades): string {
+function paramsFiltros({ busqueda, cultivosIds, departamentoId, precio, puntuacionMin }: FiltrosActividades): URLSearchParams {
   const qs = new URLSearchParams();
   const texto = busqueda.trim();
   if (texto) qs.set("busqueda", texto);
   for (const id of cultivosIds) qs.append("cultivosIds", id);
   if (departamentoId) qs.set("departamentoId", departamentoId);
-  qs.set("page", String(page));
-  qs.set("size", String(size));
+  if (precio?.desde) qs.set("precioDesde", String(precio.desde));
+  if (precio?.hasta) qs.set("precioHasta", String(precio.hasta));
+  if (puntuacionMin !== null) qs.set("calificacionMin", String(puntuacionMin));
+  return qs;
+}
+
+/** El backend toma cada orden como un booleano "ascendente"; sin él, no ordena por eso. */
+function queryExplorar(consulta: ConsultaActividades): string {
+  const qs = paramsFiltros(consulta);
+  if (consulta.ordenPrecio) qs.set("ascByPrecio", String(consulta.ordenPrecio === "asc"));
+  if (consulta.ordenPuntuacion) qs.set("ascByCalificacion", String(consulta.ordenPuntuacion === "asc"));
+  qs.set("page", String(consulta.page));
+  qs.set("size", String(consulta.size));
   return `?${qs.toString()}`;
 }
 
@@ -311,31 +326,69 @@ async function verDetalle(id: string): Promise<ActividadPublica | null> {
 }
 
 /** Opciones de una faceta, ordenadas por nombre y sin las que no se pueden filtrar. */
-async function listarFiltro(path: string, mensaje: string): Promise<FilterOption[]> {
-  const data = await leer<FiltroBackend[]>(path, mensaje);
-  if (!Array.isArray(data)) return [];
-  return data
+function aOpciones(v: unknown): FilterOption[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((f): f is FiltroBackend => !!f && typeof f === "object")
     .map(aOpcion)
     .filter((o) => o.value !== "" && o.label !== "")
     .sort((a, b) => a.label.localeCompare(b.label, "es"));
 }
 
+/**
+ * Rangos de precio en el orden en que llegan (de menor a mayor). Uno sin
+ * ninguna de las dos puntas no acota nada, así que se descarta.
+ */
+function aRangosPrecio(v: unknown): OpcionRangoPrecio[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((r): r is Record<string, unknown> => !!r && typeof r === "object")
+    .map((r) => ({ desde: aNumeroOpcional(r.desde), hasta: aNumeroOpcional(r.hasta), count: aNumero(r.cantidad) }))
+    .filter((r) => r.desde !== null || r.hasta !== null);
+}
+
+/**
+ * Puntuaciones mínimas, de más a menos estrellas. La etiqueta se arma acá en
+ * vez de usar el `nombre` del backend, que no es texto de pantalla.
+ */
+function aPuntuaciones(v: unknown): FilterOption[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((f): f is FiltroBackend => !!f && typeof f === "object")
+    .map((f) => ({ estrellas: Number.parseInt(aTexto(f.valor), 10), count: aNumero(f.cantidad) }))
+    .filter((p) => p.estrellas >= 1 && p.estrellas <= 5)
+    .sort((a, b) => b.estrellas - a.estrellas)
+    .map((p) => ({ value: String(p.estrellas), label: `${p.estrellas} o más`, count: p.count }));
+}
+
+interface FacetasBackend {
+  filtroCultivos?: unknown;
+  filtroDepartamentos?: unknown;
+  filtroPrecios?: unknown;
+  filtroCalificaciones?: unknown;
+}
+
+async function listarFacetas(filtros: FiltrosActividades): Promise<FacetasActividades> {
+  const qs = paramsFiltros(filtros).toString();
+  const data = await leer<FacetasBackend>(`${FILTROS}${qs ? `?${qs}` : ""}`, "No pudimos cargar los filtros");
+  return {
+    cultivos: aOpciones(data?.filtroCultivos),
+    departamentos: aOpciones(data?.filtroDepartamentos),
+    precios: aRangosPrecio(data?.filtroPrecios),
+    puntuaciones: aPuntuaciones(data?.filtroCalificaciones),
+  };
+}
+
 /* ---- Hooks --------------------------------------------------------------- */
 
 /**
- * Página del listado. Búsqueda, filtros y paginado los resuelve el backend, así
- * que cambiar cualquiera de ellos vuelve a pedir.
+ * Página del listado. Búsqueda, filtros, orden y paginado los resuelve el
+ * backend, así que cambiar cualquiera de ellos vuelve a pedir.
  */
 export function useCatalogoActividades(
   consulta: ConsultaActividades,
 ): AsyncState<Pagina<ActividadResumen>> {
-  return useAsync<Pagina<ActividadResumen>>(() => listarActividades(consulta), [
-    consulta.busqueda,
-    consulta.cultivosIds,
-    consulta.departamentoId,
-    consulta.page,
-    consulta.size,
-  ]);
+  return useAsync<Pagina<ActividadResumen>>(() => listarActividades(consulta), [queryExplorar(consulta)]);
 }
 
 /** Actividades destacadas de la landing (GET /actividades/destacadas), de 0 a 6. */
@@ -348,50 +401,19 @@ export function useActividadPublica(id: string): AsyncState<ActividadPublica | n
   return useAsync<ActividadPublica | null>(() => verDetalle(id), [id]);
 }
 
-/**
- * Query de una faceta: los mismos criterios que el listado salvo la propia
- * faceta, para que el conteo diga cuántas quedarían al elegir cada opción.
- * Sin parámetros el backend cuenta sobre todo el catálogo.
- */
-function queryFaceta({ busqueda, cultivosIds = [], departamentoId = null }: FiltrosFaceta): string {
-  const qs = new URLSearchParams();
-  const texto = busqueda.trim();
-  if (texto) qs.set("busqueda", texto);
-  for (const id of cultivosIds) qs.append("cultivosIds", id);
-  if (departamentoId) qs.set("departamentoId", departamentoId);
-  const s = qs.toString();
-  return s ? `?${s}` : "";
-}
-
-type FiltrosFaceta = Pick<ConsultaActividades, "busqueda"> &
-  Partial<Pick<ConsultaActividades, "cultivosIds" | "departamentoId">>;
+/** Sin filtros: la faceta cuenta sobre todo el catálogo. */
+export const SIN_FILTROS: FiltrosActividades = {
+  busqueda: "", cultivosIds: [], departamentoId: null, precio: null, puntuacionMin: null,
+};
 
 /**
- * Faceta de cultivos: el `count` es cuántas actividades publicadas trabaja cada
- * uno. Depende de la búsqueda y del departamento elegido, así que se vuelve a
- * pedir cuando cambian.
+ * Las cuatro facetas del listado en un solo pedido. Cada una se cuenta con
+ * todos los filtros menos el suyo, así que se vuelve a pedir cuando cambia
+ * cualquiera. Los rangos de precio salen de los cuartiles de **todo** el
+ * catálogo: no se corren al filtrar, sólo cambia cuántas caen en cada uno.
  */
-export function useFiltroCultivosActividad(
-  filtros: Pick<ConsultaActividades, "busqueda" | "departamentoId">,
-): AsyncState<FilterOption[]> {
-  return useAsync<FilterOption[]>(
-    () => listarFiltro(`${FILTRO_CULTIVOS}${queryFaceta(filtros)}`, "No pudimos cargar los cultivos"),
-    [filtros.busqueda, filtros.departamentoId],
-  );
-}
-
-/**
- * Faceta de departamentos, con la misma forma que la de cultivos. El `count`
- * depende de la búsqueda y los cultivos elegidos, así que se vuelve a pedir
- * cuando cambian.
- */
-export function useFiltroDepartamentosActividad(
-  filtros: Pick<ConsultaActividades, "busqueda" | "cultivosIds">,
-): AsyncState<FilterOption[]> {
-  return useAsync<FilterOption[]>(
-    () => listarFiltro(`${FILTRO_DEPARTAMENTOS}${queryFaceta(filtros)}`, "No pudimos cargar los departamentos"),
-    [filtros.busqueda, filtros.cultivosIds],
-  );
+export function useFacetasActividades(filtros: FiltrosActividades): AsyncState<FacetasActividades> {
+  return useAsync<FacetasActividades>(() => listarFacetas(filtros), [paramsFiltros(filtros).toString()]);
 }
 
 /* ---- Reseñas ------------------------------------------------------------- */
