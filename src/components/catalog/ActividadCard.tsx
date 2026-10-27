@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, MapPin, Warehouse } from "lucide-react";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import { CropChip } from "@/components/catalog/controls";
-import { Skeleton, buttonClasses } from "@/components/ui";
+import { PuntajeBadge, Skeleton, buttonClasses } from "@/components/ui";
 import { moneyAr } from "@/lib/format";
 import type { ActividadResumen } from "@/types/catalogo";
 
@@ -26,6 +26,10 @@ export default function ActividadCard({
       <div className="relative">
         {/* Sin foto cargada queda el degradado del propio id, estable entre pantallas. */}
         <Photo seed={seedDeId(act.id)} height={180} radius={0} src={act.fotoPortada?.url} alt={act.fotoPortada ? act.nombre : ""} />
+        {/* Sin reseñas todavía no hay puntuación que mostrar. */}
+        {act.puntuacion !== null && (
+          <PuntajeBadge puntuacion={act.puntuacion} cantidad={act.cantidadResenias} className="absolute top-3 right-3" />
+        )}
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-[18px]">

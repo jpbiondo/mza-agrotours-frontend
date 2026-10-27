@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Compass, MapPin, Sprout } from "lucide-react";
 import { buttonClasses } from "@/components/ui";
 import { FilterSelect } from "@/components/catalog/controls";
-import { useFiltroCultivosActividad, useFiltroDepartamentosActividad } from "@/hooks/useCatalogoActividades";
+import { SIN_FILTROS, useFacetasActividades } from "@/hooks/useCatalogoActividades";
 import { useCultivosPopulares } from "@/hooks/useCultivosPopulares";
 import { hrefExplorar } from "@/lib/filtrosExplorar";
 
@@ -29,8 +29,7 @@ export default function HeroBuscador() {
   const [departamentoId, setDepartamentoId] = useState<string | null>(null);
   const cultivosIds = cultivoId ? [cultivoId] : [];
 
-  const cultivos = useFiltroCultivosActividad({ busqueda: "", departamentoId });
-  const departamentos = useFiltroDepartamentosActividad({ busqueda: "", cultivosIds });
+  const facetas = useFacetasActividades({ ...SIN_FILTROS, cultivosIds, departamentoId });
   // Son un atajo: si no cargan o no hay, el buscador alcanza solo.
   const populares = useCultivosPopulares(POPULARES).data ?? [];
 
@@ -40,17 +39,17 @@ export default function HeroBuscador() {
         <FilterSelect
           icon={<Sprout size={18} />}
           label="Tipo de cultivo"
-          allLabel={cultivos.isLoading ? "Cargando cultivos…" : "Todos los cultivos"}
+          allLabel={facetas.isLoading ? "Cargando cultivos…" : "Todos los cultivos"}
           value={cultivoId}
-          options={cultivos.data ?? []}
+          options={facetas.data?.cultivos ?? []}
           onChange={setCultivoId}
         />
         <FilterSelect
           icon={<MapPin size={18} />}
           label="Departamento"
-          allLabel={departamentos.isLoading ? "Cargando departamentos…" : "Todos los departamentos"}
+          allLabel={facetas.isLoading ? "Cargando departamentos…" : "Todos los departamentos"}
           value={departamentoId}
-          options={departamentos.data ?? []}
+          options={facetas.data?.departamentos ?? []}
           onChange={setDepartamentoId}
         />
         <Link

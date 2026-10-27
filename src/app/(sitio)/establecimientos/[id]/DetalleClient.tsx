@@ -3,11 +3,11 @@
 import Link from "next/link";
 import {
   ChevronRight as Crumb, Info, Sprout, CalendarDays, Phone, Mail, MapPin,
-  ArrowLeft, ArrowRight, Star, Building2, SearchX,
+  ArrowLeft, ArrowRight, Building2, SearchX,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { BackLink, Skeleton, buttonClasses } from "@/components/ui";
+import { BackLink, PuntajeBadge, Skeleton, buttonClasses } from "@/components/ui";
 import { useEstablecimientoPublico } from "@/hooks/useCatalogoEstablecimientos";
 import { moneyAr } from "@/lib/format";
 import type { ActividadOfrecida, EstablecimientoPublico } from "@/types/catalogo";
@@ -35,10 +35,7 @@ function ActividadCard({ act }: { act: ActividadOfrecida }) {
         <Photo seed={seedDeId(act.id)} height={150} radius={0} src={act.foto?.url} alt="" />
         {/* Sin reseñas todavía no hay puntuación que mostrar. */}
         {act.puntuacion !== null && (
-          <span style={{ position: "absolute", top: 12, right: 12, display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(251,249,248,.95)", borderRadius: "var(--radius-pill)", padding: "5px 11px", boxShadow: "0 2px 8px rgba(45,90,39,.16)" }}>
-            <Star size={14} color="#C9A227" fill="#C9A227" />
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13.5, fontWeight: 700, color: "var(--fg-1)" }}>{act.puntuacion.toFixed(1)}</span>
-          </span>
+          <PuntajeBadge puntuacion={act.puntuacion} cantidad={act.cantidadResenias} className="absolute top-3 right-3" />
         )}
       </div>
       <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: 16, gap: 10 }}>
