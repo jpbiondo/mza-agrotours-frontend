@@ -299,6 +299,13 @@ Cada patrón tiene un único punto de entrada. Las pantallas existentes **todav�
 
 **`app/not-found.tsx`** y **`app/error.tsx`** (nuevos).
 
+### Puntajes
+
+**`PuntajeBadge`** · `components/ui/PuntajeBadge.tsx` (nuevo)
+- Props: `{ puntuacion, cantidad?, className? }`. El puntaje promedio sobre la foto de una tarjeta: estrella, "4,8" y la cantidad de reseñas si se sabe. Se lee como "4,8 de 5, 12 reseñas". Lo usan la tarjeta del catálogo de actividades y la de actividades del detalle de establecimiento.
+- Sin reseñas no se muestra: el que lo usa lo omite cuando no hay puntaje (un promedio de 0 o `null` es "nadie calificó", no un puntaje).
+- Para las cinco estrellas llenas y vacías está `Estrellas`.
+
 ### Autorización
 
 **`GuardRol`** · `components/GuardRol.tsx` (modificado)
