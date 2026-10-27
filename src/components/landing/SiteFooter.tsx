@@ -15,7 +15,7 @@ const COLS = [
     links: [
       { href: "/acceso", label: "Iniciar sesión" },
       { href: "/registro", label: "Registrarse" },
-      { href: "#contacto", label: "Contacto" },
+      { href: "#productores", label: "Productores" },
     ],
   },
 ];
