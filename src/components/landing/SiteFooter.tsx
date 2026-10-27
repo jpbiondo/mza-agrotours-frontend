@@ -1,6 +1,26 @@
 import Link from "next/link";
 
 /**
+ * El logo con los colores invertidos para el verde oscuro del pie: el
+ * `logo-pano.svg` de siempre se pierde sobre ese fondo. Es el mismo dibujo,
+ * pintado con tokens del `@theme`.
+ */
+function LogoInverso() {
+  return (
+    <svg width="45" height="30" viewBox="0 0 96 64" fill="none" aria-hidden className="block">
+      <circle cx="46" cy="18" r="8.5" className="fill-warning" />
+      <path d="M2 42 L20 24 L38 42 Z" className="fill-green-300" />
+      <path d="M58 6 L88 42 H28 Z" className="fill-cream-bg" />
+      <g className="stroke-brown-200" strokeWidth={3} strokeLinecap="round">
+        <path d="M10 47 Q48 42.5 86 47" />
+        <path d="M5 53 Q48 48 91 53" />
+        <path d="M2 59.5 Q48 54 94 59.5" />
+      </g>
+    </svg>
+  );
+}
+
+/**
  * Íconos de redes. lucide v1 sacó los de marcas, así que van dibujados acá con
  * el mismo trazo que el resto (son los que tenía lucide antes de sacarlos).
  */
@@ -69,10 +89,12 @@ export default function SiteFooter() {
     <footer className="bg-green-900 text-fg-on-dark">
       <div className="mx-auto grid max-w-[1160px] grid-cols-2 gap-10 px-7 pt-14 pb-8 min-[721px]:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
         <div className="col-span-2 min-[721px]:col-span-1">
-          {/* Sin logo: el pano no funciona sobre el verde oscuro del pie. */}
-          <div className="mb-4 leading-none">
-            <div className="font-display text-lg font-bold text-white">Mendoza</div>
-            <div className="mt-0.5 text-[10px] font-semibold tracking-[.12em] text-green-300 uppercase">AgroTours</div>
+          <div className="mb-4 flex items-center gap-[11px]">
+            <LogoInverso />
+            <div className="leading-none">
+              <div className="font-display text-lg font-bold text-white">Mendoza</div>
+              <div className="mt-0.5 text-[10px] font-semibold tracking-[.12em] text-green-300 uppercase">AgroTours</div>
+            </div>
           </div>
           <p className="m-0 max-w-[320px] text-sm leading-[1.6] text-fg-on-dark/70">
             Turismo rural participativo que conecta visitantes con los productores de Mendoza.
