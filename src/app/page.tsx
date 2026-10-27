@@ -4,7 +4,7 @@ import Hero from "@/components/landing/Hero";
 import ActividadesSection from "@/components/landing/ActividadesSection";
 import EstablecimientosSection from "@/components/landing/EstablecimientosSection";
 import FaqSection from "@/components/landing/FaqSection";
-import ContactoSection from "@/components/landing/ContactoSection";
+import ProductoresSection from "@/components/landing/ProductoresSection";
 import SiteFooter from "@/components/landing/SiteFooter";
 
 const LANDING_LINKS: NavLink[] = [
@@ -13,7 +13,7 @@ const LANDING_LINKS: NavLink[] = [
   { id: "cultivos", href: "/cultivos", label: "Cultivos" },
   { id: "recetas", href: "/recetas", label: "Recetas" },
   { id: "faq", href: "#faq", label: "Preguntas frecuentes" },
-  { id: "contacto", href: "#contacto", label: "Contacto"},
+  { id: "productores", href: "#productores", label: "Productores" },
 ];
 
 export default function Home() {
@@ -25,7 +25,7 @@ export default function Home() {
         <ActividadesSection />
         <EstablecimientosSection />
         <FaqSection />
-        <ContactoSection />
+        <ProductoresSection />
       </main>
       <SiteFooter />
     </div>
