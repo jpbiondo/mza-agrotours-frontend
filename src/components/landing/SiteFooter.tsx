@@ -1,73 +1,109 @@
 import Link from "next/link";
-import { AtSign, Globe } from "lucide-react";
 
-const COLS = [
+/**
+ * Íconos de redes. lucide v1 sacó los de marcas, así que van dibujados acá con
+ * el mismo trazo que el resto (son los que tenía lucide antes de sacarlos).
+ */
+function IconoFacebook() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="size-[18px]" aria-hidden>
+      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+    </svg>
+  );
+}
+
+function IconoInstagram() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="size-[18px]" aria-hidden>
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  );
+}
+
+/** TODO: las cuentas todavía no existen. Con `href`, el ícono pasa a ser link. */
+const REDES: { nombre: string; icono: React.ReactNode; href?: string }[] = [
+  { nombre: "Facebook", icono: <IconoFacebook /> },
+  { nombre: "Instagram", icono: <IconoInstagram /> },
+];
+
+type Enlace = { href: string; label: string; pdf?: boolean };
+
+/**
+ * Rutas y no anclas de la landing, aunque hoy el footer sólo esté ahí: así
+ * sirve igual el día que se sume al resto del sitio.
+ */
+const COLS: { title: string; links: Enlace[] }[] = [
   {
-    title: "Explorar",
+    title: "Descubrí",
     links: [
-      { href: "#actividades", label: "Actividades" },
-      { href: "#establecimientos", label: "Establecimientos" },
-      { href: "#faq", label: "Preguntas frecuentes" },
+      { href: "/explorar", label: "Actividades" },
+      { href: "/establecimientos", label: "Establecimientos" },
+      { href: "/cultivos", label: "Cultivos" },
+      { href: "/recetas", label: "Recetas" },
     ],
   },
   {
-    title: "Cuenta",
+    title: "Ayuda",
     links: [
-      { href: "/acceso", label: "Iniciar sesión" },
-      { href: "/registro", label: "Registrarse" },
-      { href: "#productores", label: "Productores" },
+      { href: "/ayuda", label: "Preguntas frecuentes" },
+      { href: "/incidencias", label: "Reportar un problema" },
+      { href: "/manuales/Manual%20del%20visitante.pdf", label: "Manual del visitante", pdf: true },
+    ],
+  },
+  {
+    title: "Productores",
+    links: [
+      { href: "/mis-solicitudes/nueva", label: "Sumá tu finca" },
+      { href: "/panel", label: "Panel del productor" },
+      { href: "/manuales/Manual%20del%20productor.pdf", label: "Manual del productor", pdf: true },
     ],
   },
 ];
 
+const LINK = "text-sm text-fg-on-dark/80 no-underline transition-colors hover:text-white";
+
 export default function SiteFooter() {
   return (
-    <footer style={{ background: "var(--green-900)", color: "var(--fg-on-dark)" }}>
-      <div
-        style={{
-          maxWidth: 1160, margin: "0 auto", padding: "56px 28px 32px",
-          display: "grid", gridTemplateColumns: "minmax(0,1.4fr) repeat(2, minmax(0,1fr))", gap: 40,
-        }}
-        className="footer-grid"
-      >
-        <div>
+    <footer className="bg-green-900 text-fg-on-dark">
+      <div className="mx-auto grid max-w-[1160px] grid-cols-2 gap-10 px-7 pt-14 pb-8 min-[721px]:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
+        <div className="col-span-2 min-[721px]:col-span-1">
           {/* Sin logo: el pano no funciona sobre el verde oscuro del pie. */}
-          <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 16 }}>
-            <div style={{ lineHeight: 1 }}>
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: "#fff" }}>Mendoza</div>
-              <div style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 600, color: "var(--green-300)", marginTop: 2 }}>AgroTours</div>
-            </div>
+          <div className="mb-4 leading-none">
+            <div className="font-display text-lg font-bold text-white">Mendoza</div>
+            <div className="mt-0.5 text-[10px] font-semibold tracking-[.12em] text-green-300 uppercase">AgroTours</div>
           </div>
-          <p style={{ fontSize: 14, color: "rgba(247,245,241,.7)", lineHeight: 1.6, maxWidth: 320, margin: 0 }}>
+          <p className="m-0 max-w-[320px] text-sm leading-[1.6] text-fg-on-dark/70">
             Turismo rural participativo que conecta visitantes con los productores de Mendoza.
           </p>
-          <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-            {[AtSign, Globe].map((Icon, i) => (
-              <a
-                key={i}
-                href="#"
-                style={{
-                  width: 38, height: 38, borderRadius: 10, background: "rgba(255,255,255,.08)",
-                  display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#fff",
-                }}
-              >
-                <Icon size={18} />
-              </a>
-            ))}
+          <div className="mt-5 flex gap-2.5">
+            {REDES.map((r) => {
+              const clase = "inline-flex size-[38px] items-center justify-center rounded-[10px] bg-white/8 text-white";
+              return r.href ? (
+                <a key={r.nombre} href={r.href} target="_blank" rel="noopener" aria-label={r.nombre} className={`${clase} transition-colors hover:bg-white/15`}>
+                  {r.icono}
+                </a>
+              ) : (
+                <span key={r.nombre} role="img" aria-label={r.nombre} className={clase}>{r.icono}</span>
+              );
+            })}
           </div>
         </div>
 
         {COLS.map((col) => (
           <div key={col.title}>
-            <div style={{ fontSize: 12.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--green-300)", marginBottom: 16 }}>
-              {col.title}
-            </div>
-            <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 11 }}>
+            <div className="mb-4 text-[12.5px] font-bold tracking-[.06em] text-green-300 uppercase">{col.title}</div>
+            <ul className="m-0 flex list-none flex-col gap-[11px] p-0">
               {col.links.map((l) => (
                 <li key={l.label}>
-                  <Link href={l.href} style={{ fontSize: 14, color: "rgba(247,245,241,.78)", textDecoration: "none" }}>
-                    {l.label}
-                  </Link>
+                  {l.pdf ? (
+                    <a href={l.href} target="_blank" rel="noopener" className={LINK}>
+                      {l.label} <span className="text-fg-on-dark/50">(PDF)</span>
+                    </a>
+                  ) : (
+                    <Link href={l.href} className={LINK}>{l.label}</Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -75,15 +111,14 @@ export default function SiteFooter() {
         ))}
       </div>
 
-      <div style={{ borderTop: "1px solid rgba(255,255,255,.1)" }}>
-        <div style={{ maxWidth: 1160, margin: "0 auto", padding: "20px 28px", fontSize: 13, color: "rgba(247,245,241,.6)" }}>
-          © {new Date().getFullYear()} Mendoza AgroTours. Todos los derechos reservados.
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex max-w-[1160px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-7 py-5 text-[13px] text-fg-on-dark/60">
+          <span>© {new Date().getFullYear()} Mendoza AgroTours. Todos los derechos reservados.</span>
+          <Link href="/terminos" className="text-fg-on-dark/60 no-underline transition-colors hover:text-white">
+            Términos y condiciones
+          </Link>
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 720px) { .footer-grid { grid-template-columns: 1fr 1fr !important; } }
-      `}</style>
     </footer>
   );
 }
