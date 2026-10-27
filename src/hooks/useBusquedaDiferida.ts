@@ -21,10 +21,13 @@ export interface BusquedaDiferida {
  *
  * `texto` y `busqueda` son dos estados a propósito: si fueran uno solo, cada
  * tecla cambiaría la consulta y el listado se recargaría entero.
+ *
+ * `inicial` arranca ya aplicada, sin esperar la pausa (p. ej. la que viene en
+ * la URL).
  */
-export function useBusquedaDiferida(ms: number = ESPERA_MS): BusquedaDiferida {
-  const [texto, setTexto] = useState("");
-  const [busqueda, setBusqueda] = useState("");
+export function useBusquedaDiferida(ms: number = ESPERA_MS, inicial: string = ""): BusquedaDiferida {
+  const [texto, setTexto] = useState(inicial);
+  const [busqueda, setBusqueda] = useState(inicial.trim());
 
   useEffect(() => {
     // Ya aplicado (p. ej. recién se apretó Enter): no hay nada que agendar, y

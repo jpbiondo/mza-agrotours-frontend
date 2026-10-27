@@ -139,6 +139,20 @@ export function useFaqPublica(): UseFaqReturn {
   return useListadoFaq(LISTADO_PUBLICO, false);
 }
 
+/**
+ * Las de la landing: hasta `cantidad` de la categoría General, que son las que
+ * le sirven a quien recién llega. El backend no tiene una marca de
+ * "destacada", así que quién aparece acá lo decide la categoría que le pone el
+ * admin. Mismo `TODO backend` que `useFaqPublica`: sin sesión hoy falla.
+ *
+ * Ojo: en el query param la categoría va por el nombre de la constante del enum
+ * (`GENERAL`), no por su `@JsonValue` ("General"), que sólo vale en el JSON del
+ * cuerpo: Spring convierte los `@RequestParam` con `Enum.valueOf`.
+ */
+export function useFaqGenerales(cantidad: number): UseFaqReturn {
+  return useListadoFaq(`/faq?categoria=GENERAL&size=${cantidad}`, false);
+}
+
 /** Corre una escritura y la reduce a `{ ok, code?, id? }`. */
 async function escribir(
   path: string,

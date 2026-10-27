@@ -38,7 +38,7 @@ function AccesoInner() {
       : {
           eyebrow: "Bienvenido de nuevo",
           quote: "Cada cosecha es una historia. Sumate a vivirla junto a quienes la cultivan.",
-          quoteAuthor: "— Productores de Mendoza AgroTours",
+          quoteAuthor: "— Mendoza AgroTours",
         };
 
   return (

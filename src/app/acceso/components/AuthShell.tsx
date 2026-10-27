@@ -7,6 +7,7 @@ import {
   Lock,
 } from "lucide-react";
 import { TextField, EyeToggle } from "@/components/ui/text-field";
+import fotoPanel from "../../../../public/acceso/panel.jpg";
 
 /* ---- Header público minimal (logo + ayuda) ----------------------------- */
 export function AuthHeader({ onHome }: { onHome?: () => void }) {
@@ -56,73 +57,41 @@ interface AuthLayoutProps {
 
 export function AuthLayout({ children, eyebrow, quote, quoteAuthor }: AuthLayoutProps) {
   return (
-    <div
-      style={{
-        minHeight: "calc(100vh - 69px)", display: "grid",
-        gridTemplateColumns: "1fr 1fr", maxWidth: 1240, margin: "0 auto",
-      }}
-      className="auth-grid"
-    >
-      {/* Panel visual de marca (se oculta en pantallas chicas vía CSS) */}
-      <aside
-        className="auth-brand"
-        style={{
-          position: "relative", overflow: "hidden", minHeight: 520,
-          margin: "28px 0 28px 28px", borderRadius: "var(--radius-lg)",
-          background: "linear-gradient(135deg, #0a2209 0%, #154212 30%, #1e5418 55%, #2d5a27 78%, #4a7c3f 100%)",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute", inset: 0,
-            background:
-              "radial-gradient(ellipse 60% 50% at 80% 30%, rgba(167,201,139,.18) 0%, transparent 70%), radial-gradient(ellipse 50% 60% at 15% 85%, rgba(200,127,42,.12) 0%, transparent 60%)",
-          }}
+    <div className="mx-auto grid min-h-[calc(100vh_-_69px)] max-w-[1240px] grid-cols-1 min-[881px]:grid-cols-2">
+      {/* Panel visual de marca: sólo en escritorio. El verde de fondo es lo
+          que se ve mientras carga la foto. */}
+      <aside className="relative my-7 ml-7 hidden min-h-[520px] overflow-hidden rounded-lg bg-green-900 min-[881px]:block">
+        {/* Decorativa: el mensaje lo da la frase. Sin `priority` a propósito:
+            en celular el panel está oculto y la foto no tiene por qué bajarse;
+            en escritorio el lazy la pide igual de entrada porque está a la vista. */}
+        <Image
+          src={fotoPanel}
+          alt=""
+          fill
+          placeholder="blur"
+          sizes="(min-width: 1240px) 600px, 50vw"
+          className="object-cover object-[58%_center]"
         />
-        <div
-          style={{
-            position: "absolute", inset: 0,
-            background: "linear-gradient(160deg, rgba(14,46,12,.30) 0%, rgba(14,46,12,.15) 45%, rgba(14,46,12,.62) 100%)",
-          }}
-        />
-        <div style={{ position: "absolute", inset: 0, padding: 40, display: "flex", flexDirection: "column" }}>
-          <div
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 8, padding: "7px 14px",
-              borderRadius: 999, background: "rgba(255,255,255,.16)", color: "#fff",
-              fontSize: 12.5, fontWeight: 600, backdropFilter: "blur(4px)", alignSelf: "flex-start",
-            }}
-          >
+        {/* La foto es clara y cargada: velo suave arriba para la etiqueta y
+            fuerte abajo, donde va la frase en blanco. */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(14,46,12,.35)_0%,rgba(14,46,12,.1)_35%,rgba(14,46,12,.85)_100%)]" />
+        <div className="absolute inset-0 flex flex-col p-10">
+          <div className="inline-flex items-center gap-2 self-start rounded-pill bg-white/16 px-3.5 py-[7px] text-[12.5px] font-semibold text-white backdrop-blur-[4px]">
             <Sprout size={15} /> {eyebrow || "Turismo rural en Mendoza"}
           </div>
-          <div style={{ marginTop: "auto" }}>
-            <blockquote
-              style={{
-                margin: 0, fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 26,
-                lineHeight: 1.3, color: "#fff", letterSpacing: "-.01em",
-              }}
-            >
+          <div className="mt-auto">
+            <blockquote className="m-0 font-display text-[26px] leading-[1.3] font-semibold tracking-[-.01em] text-white">
               {quote || "Viví la cosecha junto a los productores mendocinos."}
             </blockquote>
-            {quoteAuthor && (
-              <div style={{ marginTop: 16, fontSize: 13.5, color: "rgba(255,255,255,.85)", fontWeight: 500 }}>{quoteAuthor}</div>
-            )}
+            {quoteAuthor && <div className="mt-4 text-[13.5px] font-medium text-white/85">{quoteAuthor}</div>}
           </div>
         </div>
       </aside>
 
       {/* Columna del formulario */}
-      <main style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "48px 28px 64px" }}>
-        <div style={{ width: "100%", maxWidth: 412 }}>{children}</div>
+      <main className="flex items-start justify-center px-7 pt-12 pb-16">
+        <div className="w-full max-w-[412px]">{children}</div>
       </main>
-
-      {/* Oculta el panel de marca en pantallas chicas */}
-      <style>{`
-        @media (max-width: 880px) {
-          .auth-grid  { grid-template-columns: 1fr !important; }
-          .auth-brand { display: none !important; }
-        }
-      `}</style>
     </div>
   );
 }

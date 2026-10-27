@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Versión simplificada de logo-pano.svg para el favicon: solo el sol y la
+       montaña grande (la montaña chica y los surcos no se leen a 16 px). -->
+  <rect width="64" height="64" rx="14" fill="#F5F1EA"/>
+  <g transform="translate(-18.27 11.2) scale(.867)">
+    <circle cx="46" cy="18" r="8.5" fill="#C77F2A"/>
+    <path d="M58 6 L88 42 H28 Z" fill="#154212"/>
+  </g>
+</svg>

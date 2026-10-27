@@ -1,11 +1,11 @@
 import {
-  CalendarCheck, Info, LayoutGrid, Tractor, UserRound, Wallet, type LucideIcon,
+  CalendarCheck, ChevronDown, HelpCircle, Info, LayoutGrid, Tractor, UserRound, Wallet, type LucideIcon,
 } from "lucide-react";
 import { FAQ_CATEGORIAS } from "@/data/faq";
 import { cn } from "@/lib/utils";
 import type { FaqItem } from "@/types/catalogo";
 
-/* Piezas que comparten la consulta de FAQ (/ayuda) y su gestión (/admin/faq). */
+/* Piezas que comparten la consulta de FAQ (/ayuda y la landing) y su gestión (/admin/faq). */
 
 const CAT_ICON: Record<string, LucideIcon> = {
   "layout-grid": LayoutGrid, info: Info, "calendar-check": CalendarCheck,
@@ -81,6 +81,56 @@ export function FaqChips({ value, onChange, counts }: {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Una entrada del acordeón de consulta. `conCategoria` muestra la etiqueta
+ * debajo de la pregunta; se apaga donde todas son de la misma (la landing).
+ */
+export function FaqFila({ item, open, onToggle, conCategoria = true }: {
+  item: FaqItem;
+  open: boolean;
+  onToggle: () => void;
+  conCategoria?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border bg-surface transition-[border-color,box-shadow] duration-200",
+        open ? "border-green-300 shadow-hover" : "border-outline-variant",
+      )}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full cursor-pointer items-center gap-4 bg-transparent px-[22px] py-5 text-left"
+      >
+        <span
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-[10px] transition-colors",
+            open ? "bg-green-800 text-white" : "bg-green-050 text-green-800",
+          )}
+        >
+          <HelpCircle className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-lg leading-[1.35] font-semibold text-fg-1">{item.q}</span>
+          {conCategoria && <span className="t-label mt-[7px] inline-block text-[11px]">{etiquetaCat(item.cat)}</span>}
+        </span>
+        <ChevronDown
+          className={cn(
+            "size-[22px] shrink-0 transition-[transform,color] duration-200",
+            open ? "rotate-180 text-green-800" : "text-fg-3",
+          )}
+        />
+      </button>
+
+      <FaqDesplegable open={open} className="pr-[22px] pb-[22px] pl-[78px]">
+        <p className="text-[15.5px] leading-relaxed text-pretty text-fg-2">{item.a}</p>
+      </FaqDesplegable>
     </div>
   );
 }

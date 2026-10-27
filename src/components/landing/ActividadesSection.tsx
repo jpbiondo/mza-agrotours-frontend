@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarDays } from "lucide-react";
 import ActividadCard, { ActividadCardSkeleton } from "@/components/catalog/ActividadCard";
 import Destacados from "@/components/landing/Destacados";
 import { useActividadesDestacadas } from "@/hooks/useCatalogoActividades";
@@ -19,7 +20,11 @@ export default function ActividadesSection() {
         cargando={isLoading}
         error={error}
         onRetry={reload}
-        vacio="Pronto vas a encontrar acá las experiencias que ofrecen las fincas de Mendoza."
+        vacio={{
+          icono: <CalendarDays />,
+          titulo: "Todavía no hay experiencias destacadas",
+          texto: "Pronto vas a encontrar acá las experiencias que ofrecen las fincas de Mendoza.",
+        }}
         cantidad={actividades.length}
         esqueleto={<ActividadCardSkeleton />}
       >
