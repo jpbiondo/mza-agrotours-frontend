@@ -1,5 +1,5 @@
 import type { AsyncState } from "@/hooks/useAsync";
-import { useFiltroCultivosActividad } from "@/hooks/useCatalogoActividades";
+import { SIN_FILTROS, useFacetasActividades } from "@/hooks/useCatalogoActividades";
 import { useFiltroCultivos } from "@/hooks/useCatalogoEstablecimientos";
 import type { FilterOption } from "@/types/catalogo";
 
@@ -14,13 +14,13 @@ import type { FilterOption } from "@/types/catalogo";
  */
 export function useCultivosPopulares(cantidad: number): Pick<AsyncState<FilterOption[]>, "data" | "isLoading" | "error"> {
   const establecimientos = useFiltroCultivos();
-  const actividades = useFiltroCultivosActividad({ busqueda: "", departamentoId: null });
+  const actividades = useFacetasActividades(SIN_FILTROS);
 
   const isLoading = establecimientos.isLoading || actividades.isLoading;
   const error = establecimientos.error ?? actividades.error;
   if (isLoading || error || !establecimientos.data || !actividades.data) return { data: null, isLoading, error };
 
-  const conActividades = new Set(actividades.data.filter((o) => (o.count ?? 0) > 0).map((o) => o.value));
+  const conActividades = new Set(actividades.data.cultivos.filter((o) => (o.count ?? 0) > 0).map((o) => o.value));
   const data = establecimientos.data
     .filter((o) => (o.count ?? 0) > 0 && conActividades.has(o.value))
     // A igual cantidad, alfabético: la faceta ya viene ordenada por nombre y el sort es estable.
