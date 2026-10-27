@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import Link from "next/link";
 import type { ButtonHTMLAttributes } from "react";
 import { Loader } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,8 @@ interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
   appearance?: "bordered" | "plain" | "primary";
   /** Envío en curso: el spinner reemplaza al ícono y el botón queda deshabilitado. */
   loading?: boolean;
+  /** Navega en vez de ejecutar: se dibuja como `<Link>` (p. ej. los CTA del header en móvil). */
+  href?: string;
 }
 
 const APARIENCIAS = {
@@ -26,20 +29,32 @@ const APARIENCIAS = {
 /**
  * Botón de sólo ícono (cerrar, mes anterior / siguiente, quitar, enviar). Un
  * único tamaño, 36 px: reemplaza a los de 32, 34, 38 y 42 que convivían.
+ *
+ * Con `href` es un link; deshabilitado o cargando se dibuja como botón, porque
+ * un link no se apaga (igual que `ActionBtn`).
  */
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  { appearance = "bordered", loading = false, disabled, className, type = "button", children, ...props },
+  { appearance = "bordered", loading = false, disabled, className, type = "button", href, children, ...props },
   ref,
 ) {
+  const clase = cn(
+    "inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md no-underline transition-colors disabled:cursor-not-allowed [&_svg]:size-[18px]",
+    APARIENCIAS[appearance],
+    className,
+  );
+
+  if (href && !disabled && !loading) {
+    return (
+      <Link href={href} aria-label={props["aria-label"]} title={props.title} className={clase}>
+        {children}
+      </Link>
+    );
+  }
   return (
     <button
       ref={ref}
       type={type}
-      className={cn(
-        "inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed [&_svg]:size-[18px]",
-        APARIENCIAS[appearance],
-        className,
-      )}
+      className={clase}
       {...props}
       disabled={disabled || loading}
       aria-busy={loading || undefined}

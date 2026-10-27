@@ -222,8 +222,9 @@ Cada patrón tiene un único punto de entrada. Las pantallas existentes **todav�
 - Con `href` es un `<Link>`; deshabilitado o cargando se dibuja como botón apagado.
 
 **`IconButton`** · `components/ui/IconButton.tsx` (nuevo)
-- `{ "aria-label": string (obligatorio), appearance?: "bordered" | "plain" | "primary", loading?, ...props de <button> }`. Mide 36 px.
+- `{ "aria-label": string (obligatorio), appearance?: "bordered" | "plain" | "primary", loading?, href?, ...props de <button> }`. Mide 36 px.
 - `loading` reemplaza el ícono por el spinner y deshabilita el botón.
+- Con `href` es un `<Link>` (los CTA de invitado del header en móvil); deshabilitado o cargando se dibuja como botón apagado.
 
 **`BackLink`** · `components/ui/BackLink.tsx` (nuevo)
 - `{ href?: string, onClick?, children = "Volver" }`. Con `href` es un link; con `onClick`, un botón (para pasar por `useAvisoSalida().salir`).

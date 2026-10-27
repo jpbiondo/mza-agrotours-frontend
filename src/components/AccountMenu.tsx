@@ -138,9 +138,12 @@ export default function AccountMenu() {
         }}
       >
         <span style={avatarStyle}>{initials}</span>
+        {/* En móvil sobra: el avatar ya se lee como botón y el header no tiene
+            lugar. */}
         <ChevronDown
           size={15}
           color="var(--fg-3)"
+          className="max-nav:hidden"
           style={{
             transform: open ? "rotate(180deg)" : "none",
             transition: "transform .16s ease-out",
