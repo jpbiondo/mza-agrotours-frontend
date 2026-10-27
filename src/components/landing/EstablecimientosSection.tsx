@@ -1,5 +1,6 @@
 "use client";
 
+import { Building2 } from "lucide-react";
 import EstablecimientoCard, { EstablecimientoCardSkeleton } from "@/components/catalog/EstablecimientoCard";
 import Destacados from "@/components/landing/Destacados";
 import { useEstablecimientosDestacados } from "@/hooks/useCatalogoEstablecimientos";
@@ -20,7 +21,11 @@ export default function EstablecimientosSection() {
           cargando={isLoading}
           error={error}
           onRetry={reload}
-          vacio="Pronto vas a encontrar acá las fincas y bodegas que abren sus puertas."
+          vacio={{
+            icono: <Building2 />,
+            titulo: "Todavía no hay establecimientos destacados",
+            texto: "Pronto vas a encontrar acá las fincas y bodegas que abren sus puertas.",
+          }}
           cantidad={establecimientos.length}
           esqueleto={<EstablecimientoCardSkeleton />}
         >
