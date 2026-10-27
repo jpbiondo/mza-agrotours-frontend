@@ -7,10 +7,10 @@ import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /*
- * Hoja que sube desde abajo, sobre el `Dialog` de Base UI: trae la trampa de
- * foco, Escape, el bloqueo de scroll y la semántica de diálogo que `Modal.tsx`
- * no tiene. Por ahora sólo existe el lado de abajo, que es el único que pide
- * el diseño (la hoja de reserva del detalle en móvil).
+ * Hoja sobre el `Dialog` de Base UI: trae la trampa de foco, Escape, el bloqueo
+ * de scroll y la semántica de diálogo que `Modal.tsx` no tiene. Sube desde
+ * abajo (la hoja de reserva del detalle en móvil) o entra por la izquierda (el
+ * menú móvil del sitio).
  */
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
@@ -26,10 +26,24 @@ function SheetClose({ ...props }: SheetPrimitive.Close.Props) {
 }
 
 /**
- * En angosto (< 600px) ocupa toda la pantalla; más ancho queda como hoja con
- * las esquinas de arriba redondeadas y hasta el 92% del alto.
+ * `bottom`: en angosto (< 600px) ocupa toda la pantalla; más ancho queda como
+ * hoja con las esquinas de arriba redondeadas y hasta el 92% del alto.
+ * `left`: cajón a todo el alto, del mismo ancho que el del shell del panel.
  */
-function SheetContent({ className, children, ...props }: SheetPrimitive.Popup.Props) {
+const LADOS = {
+  bottom: cn(
+    "inset-x-0 top-0 bottom-0 data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full",
+    "sm:top-auto sm:max-h-[92vh] sm:rounded-t-2xl sm:border-t sm:border-outline-variant sm:shadow-[0_-8px_24px_rgba(45,90,39,.12)]"
+  ),
+  left: "inset-y-0 left-0 w-[min(300px,86vw)] border-r border-outline-variant shadow-pop data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full",
+} as const
+
+function SheetContent({
+  side = "bottom",
+  className,
+  children,
+  ...props
+}: SheetPrimitive.Popup.Props & { side?: keyof typeof LADOS }) {
   return (
     <SheetPrimitive.Portal>
       <SheetPrimitive.Backdrop
@@ -39,8 +53,8 @@ function SheetContent({ className, children, ...props }: SheetPrimitive.Popup.Pr
       <SheetPrimitive.Popup
         data-slot="sheet-content"
         className={cn(
-          "fixed inset-x-0 top-0 bottom-0 z-[146] flex flex-col bg-surface outline-hidden transition-transform duration-[220ms] ease-[cubic-bezier(.2,0,0,1)] data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full motion-reduce:transition-none",
-          "sm:top-auto sm:max-h-[92vh] sm:rounded-t-2xl sm:border-t sm:border-outline-variant sm:shadow-[0_-8px_24px_rgba(45,90,39,.12)]",
+          "fixed z-[146] flex flex-col bg-surface outline-hidden transition-transform duration-[220ms] ease-[cubic-bezier(.2,0,0,1)] motion-reduce:transition-none",
+          LADOS[side],
           className
         )}
         {...props}
