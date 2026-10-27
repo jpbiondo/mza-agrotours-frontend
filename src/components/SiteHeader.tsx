@@ -18,21 +18,22 @@ export interface NavLink {
   label: string;
 }
 
-/** Links por defecto (sitio logueado / navegación por rutas). */
-const APP_LINKS: NavLink[] = [
+/**
+ * Los mismos en todo el sitio, landing incluido: van a las páginas reales y no
+ * a las secciones de la landing.
+ */
+const NAV_LINKS: NavLink[] = [
   { id: "explorar", href: "/explorar", label: "Actividades" },
   { id: "establecimientos", href: "/establecimientos", label: "Establecimientos" },
   { id: "cultivos", href: "/cultivos", label: "Cultivos" },
   { id: "recetas", href: "/recetas", label: "Recetas" },
-  { id: "faq", href: "/#faq", label: "Preguntas frecuentes" },
-  { id: "productores", href: "/#productores", label: "Productores" },
 ];
 
 /**
  * Ítem activo según la URL: el href más específico que sea prefijo del path.
  * Sale del pathname y no de una prop para que no puedan desincronizarse, y para
  * que el header pueda vivir en el layout en vez de repetirse en cada pantalla.
- * Las anclas del landing (`/#faq`) no participan.
+ * Un link con ancla (`/#seccion`) no participa.
  */
 function idActivo(pathname: string, links: NavLink[]): string | undefined {
   let largo = 0;
@@ -49,8 +50,6 @@ function idActivo(pathname: string, links: NavLink[]): string | undefined {
 }
 
 interface SiteHeaderProps {
-  /** Permite que el landing pase anclas de sección en lugar de rutas. */
-  navLinks?: NavLink[];
   maxWidth?: number;
 }
 
@@ -62,7 +61,8 @@ interface SiteHeaderProps {
  * El cluster se renderiza sólo tras la hidratación para que el primer render del
  * cliente coincida con el del servidor (evita el flash de estado incorrecto).
  */
-export default function SiteHeader({ navLinks = APP_LINKS, maxWidth = 1200 }: SiteHeaderProps) {
+export default function SiteHeader({ maxWidth = 1200 }: SiteHeaderProps) {
+  const navLinks = NAV_LINKS;
   const pathname = usePathname();
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const nombre = useAuthStore((s) => s.nombre);
