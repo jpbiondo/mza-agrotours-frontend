@@ -109,7 +109,9 @@ export default function CatalogClient({ inicial }: { inicial: FiltrosExplorar })
   const hayFiltros = busqueda !== "" || cultivosIds.length > 0 || departamentoId !== null || precio !== null || puntuacionMin !== null;
   // Sin filtros y sin resultados: no hay nada publicado todavía, que no es lo
   // mismo que "tu búsqueda no encontró nada".
-  const catalogoVacio = data !== null && total === 0 && !hayFiltros;
+  // Sólo con la respuesta fresca: con la anterior y los filtros nuevos (p. ej.
+  // al limpiar desde "sin resultados") se vería un vacío que no es.
+  const catalogoVacio = listado.data !== null && total === 0 && !hayFiltros;
 
   // Cualquier cambio de criterio vuelve a la primera página: la que estabas
   // mirando puede no existir con los resultados nuevos, o tener otras.
