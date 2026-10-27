@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowRight, CalendarDays, ChevronRight, Info, Leaf, List, Moon, RotateCcw, SearchX, Sprout,
 } from "lucide-react";
-import AsyncBoundary from "@/components/AsyncBoundary";
+import { AsyncView } from "@/components/AsyncView";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import { Pagination } from "@/components/catalog/controls";
 import { Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
@@ -143,8 +143,11 @@ export default function CultivosListClient() {
   const [page, setPage] = useState(0);
 
   // El filtro y el paginado los resuelve el backend, así que cualquier cambio
-  // vuelve a pedir el listado.
-  const { data, isLoading, error, reload } = useCatalogoCultivos({ enTemporada, page, size: PAGE_SIZE });
+  // vuelve a pedir el listado. Mientras llega queda la página anterior (marcada
+  // con `aria-busy`): el esqueleto es sólo para la primera.
+  const listado = useCatalogoCultivos({ enTemporada, page, size: PAGE_SIZE });
+  const data = listado.data ?? listado.ultimo;
+  const recargando = listado.isLoading && listado.ultimo !== null;
   const totales = useTotalesTemporada();
   const mesActual = useMesActual();
 
@@ -152,8 +155,10 @@ export default function CultivosListClient() {
   // Sin filtro y sin resultados no hay cultivos cargados, que no es lo mismo que
   // "tu filtro no encontró ninguno". Se mira el propio listado y no los
   // contadores: son dos lecturas distintas y la otra puede no haber llegado.
-  const catalogoVacio = data !== null && total === 0 && enTemporada === null;
-  const sinResultados = data !== null && total === 0 && enTemporada !== null;
+  // Sólo con la respuesta fresca: con la anterior y los filtros nuevos (p. ej.
+  // al limpiar desde "sin resultados") se vería un vacío que no es.
+  const catalogoVacio = listado.data !== null && total === 0 && enTemporada === null;
+  const sinResultados = data !== null && total === 0 && !catalogoVacio;
 
   const filtrar = (v: FiltroTemporada) => { setEnTemporada(v); setPage(0); };
 
@@ -188,40 +193,47 @@ export default function CultivosListClient() {
         </Card>
       )}
 
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<GrillaSkeleton />}>
-        {catalogoVacio ? (
-          <Vacio icon={<Sprout size={28} className="text-brown-700" />} titulo="Todavía no hay cultivos cargados">
-            Cuando el catálogo tenga cultivos vas a poder consultarlos acá, con su estacionalidad, sus propiedades
-            y las actividades en las que se cosechan.
-          </Vacio>
-        ) : sinResultados ? (
-          <Vacio
-            icon={<SearchX size={28} className="text-fg-3" />}
-            titulo="No hay cultivos en este filtro"
-            accion={
-              <Button variant="neutral" className="mt-2" onClick={() => filtrar(null)}>
-                <RotateCcw size={16} /> Ver todos
-              </Button>
-            }
-          >
-            {enTemporada === true
-              ? "Ningún cultivo está en cosecha este mes. Mirá el calendario de cada uno para saber cuándo vuelve."
-              : "Ningún cultivo coincide con el filtro elegido."}
-          </Vacio>
-        ) : (
-          <>
-            <div className="mb-3.5 text-[13.5px] text-fg-3">
-              Mostrando <strong className="font-semibold text-fg-2">{total}</strong>{" "}
-              {total === 1 ? "cultivo" : "cultivos"}
-            </div>
-            <div className={GRILLA}>
-              {(data?.items ?? []).map((c) => <CultivoCard key={c.id} cultivo={c} />)}
-            </div>
-            {/* El backend numera desde 0 y la paginación desde 1. */}
-            <Pagination page={page + 1} pages={data?.totalPages ?? 1} onPage={(n) => setPage(n - 1)} />
-          </>
+      <AsyncView
+        query={{ isLoading: listado.isLoading && !recargando, error: listado.error, data, reload: listado.reload }}
+        skeleton={<GrillaSkeleton />}
+      >
+        {() => (
+          <div aria-busy={recargando} className={cn("transition-opacity", recargando && "opacity-60")}>
+            {catalogoVacio ? (
+              <Vacio icon={<Sprout size={28} className="text-brown-700" />} titulo="Todavía no hay cultivos cargados">
+                Cuando el catálogo tenga cultivos vas a poder consultarlos acá, con su estacionalidad, sus propiedades
+                y las actividades en las que se cosechan.
+              </Vacio>
+            ) : sinResultados ? (
+              <Vacio
+                icon={<SearchX size={28} className="text-fg-3" />}
+                titulo="No hay cultivos en este filtro"
+                accion={
+                  <Button variant="neutral" className="mt-2" onClick={() => filtrar(null)}>
+                    <RotateCcw size={16} /> Ver todos
+                  </Button>
+                }
+              >
+                {enTemporada === true
+                  ? "Ningún cultivo está en cosecha este mes. Mirá el calendario de cada uno para saber cuándo vuelve."
+                  : "Ningún cultivo coincide con el filtro elegido."}
+              </Vacio>
+            ) : (
+              <>
+                <div className="mb-3.5 text-[13.5px] text-fg-3">
+                  Mostrando <strong className="font-semibold text-fg-2">{total}</strong>{" "}
+                  {total === 1 ? "cultivo" : "cultivos"}
+                </div>
+                <div className={GRILLA}>
+                  {(data?.items ?? []).map((c) => <CultivoCard key={c.id} cultivo={c} />)}
+                </div>
+                {/* El backend numera desde 0 y la paginación desde 1. */}
+                <Pagination page={page + 1} pages={data?.totalPages ?? 1} onPage={(n) => setPage(n - 1)} />
+              </>
+            )}
+          </div>
         )}
-      </AsyncBoundary>
+      </AsyncView>
     </div>
   );
 }
