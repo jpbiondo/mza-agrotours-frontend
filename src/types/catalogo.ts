@@ -47,8 +47,9 @@ export interface ActividadOfrecida {
   cultivos: string[];
   /** `null` es "todavía sin precio publicado", que no es lo mismo que $ 0. */
   precioDesde: number | null;
-  /** `null` es "todavía sin reseñas". */
+  /** Promedio de 1 a 5. `null` es "todavía sin reseñas". */
   puntuacion: number | null;
+  cantidadResenias: number;
   /** Portada de la actividad; `null` si no tiene fotos. */
   foto: FotoRef | null;
 }
@@ -92,6 +93,9 @@ export interface ActividadResumen {
   fotoPortada: FotoRef | null;
   nombreEstablecimiento: string;
   nombreDepartamento: string;
+  /** Promedio de 1 a 5. `null` es "todavía sin reseñas": no hay puntuación que mostrar. */
+  puntuacion: number | null;
+  cantidadResenias: number;
 }
 
 /**
