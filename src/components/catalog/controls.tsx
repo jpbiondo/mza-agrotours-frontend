@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Check, RotateCcw, Search, X } from "lucide-react";
-import type { FilterOption } from "@/types/catalogo";
+import {
+  ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Check, RotateCcw, Search, SlidersHorizontal, X,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { DireccionOrden, FilterOption } from "@/types/catalogo";
 
 /* ---- Hook: cerrar popover al click fuera / Esc ------------------------- */
 function useOutside(open: boolean, close: () => void) {
@@ -288,6 +291,142 @@ export function Pagination({ page, pages, onPage }: { page: number; pages: numbe
       {cell(<ChevronLeft size={18} />, { key: "prev", disabled: page === 1, onClick: () => onPage(page - 1), aria: "Página anterior" })}
       {Array.from({ length: pages }, (_, i) => i + 1).map((n) => cell(n, { key: String(n), active: n === page, onClick: () => onPage(n), aria: `Página ${n}` }))}
       {cell(<ChevronRight size={18} />, { key: "next", disabled: page === pages, onClick: () => onPage(page + 1), aria: "Página siguiente" })}
+    </div>
+  );
+}
+
+/* ---- Grupo de chips de un valor ----------------------------------------- */
+
+/**
+ * Opciones a la vista, para cuando son pocas (rangos de precio, puntuación).
+ * Una sola a la vez: tocar la elegida la suelta. `value` es la clave de la
+ * opción elegida; quien lo usa decide cómo se arma.
+ */
+export function ChipGroup({
+  icon, label, value, options, onChange,
+}: {
+  icon: React.ReactNode; label: string; value: string | null;
+  options: FilterOption[]; onChange: (v: string | null) => void;
+}) {
+  const id = useId();
+  return (
+    <div role="group" aria-labelledby={id} className="flex min-w-0 flex-col gap-2">
+      <span id={id} className="t-label flex items-center gap-1.5 [&_svg]:size-3.5 [&_svg]:text-fg-3">
+        {icon}{label}
+      </span>
+      <div className="flex flex-wrap gap-2">
+        {options.map((o) => {
+          const on = o.value === value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onChange(on ? null : o.value)}
+              className={cn(
+                "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-pill border px-3.5 font-sans text-sm whitespace-nowrap transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-800",
+                on
+                  ? "border-green-800 bg-green-800 font-semibold text-white"
+                  : "border-sand bg-surface font-medium text-fg-1 hover:bg-cream-tert",
+              )}
+            >
+              {on && <Check className="size-3.5" />}
+              {o.label}
+              {o.count !== undefined && (
+                <span className={cn("font-mono text-[11.5px]", on ? "text-white/80" : "text-fg-3")}>{o.count}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---- Botón "Más filtros" ------------------------------------------------ */
+
+/** Abre y cierra el panel de filtros secundarios; `count` dice cuántos hay puestos. */
+export function MoreFiltersButton({ open, count, controls, onClick }: {
+  open: boolean; count: number; controls: string; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={open}
+      aria-controls={controls}
+      className={cn(
+        "inline-flex h-[46px] shrink-0 cursor-pointer items-center gap-2 rounded-md border px-3.5 font-sans text-[14.5px] font-semibold whitespace-nowrap text-fg-1",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-800",
+        open ? "bg-green-050" : "bg-surface hover:bg-cream-tert",
+        open || count > 0 ? "border-green-300" : "border-sand",
+      )}
+    >
+      <SlidersHorizontal className="size-[17px] text-green-800" />
+      Más filtros
+      {count > 0 && (
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-pill bg-green-800 px-1.5 text-xs font-bold text-white">
+          {count}
+        </span>
+      )}
+      <ChevronDown className={cn("size-[15px] text-fg-3 transition-transform", open && "rotate-180")} />
+    </button>
+  );
+}
+
+/* ---- Orden por columna ------------------------------------------------- */
+
+export interface CriterioOrden {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  /** Con qué dirección arranca al tocarlo: el precio de menor a mayor, la puntuación de mayor a menor. */
+  primera: DireccionOrden;
+  value: DireccionOrden | null;
+  onChange: (v: DireccionOrden | null) => void;
+}
+
+/**
+ * Un botón por criterio, que gira sin orden → primera dirección → la otra →
+ * sin orden. Se pueden combinar: el orden de `criterios` es la prioridad, y
+ * con más de uno puesto cada botón muestra su número.
+ */
+export function SortToggles({ criterios }: { criterios: CriterioOrden[] }) {
+  const activos = criterios.filter((c) => c.value !== null);
+  const siguiente = (c: CriterioOrden): DireccionOrden | null =>
+    c.value === null ? c.primera : c.value === c.primera ? (c.primera === "asc" ? "desc" : "asc") : null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm text-fg-3">Ordenar por</span>
+      {criterios.map((c) => {
+        const on = c.value !== null;
+        const estado = c.value === "asc" ? "de menor a mayor" : c.value === "desc" ? "de mayor a menor" : "sin ordenar";
+        const Flecha = c.value === "asc" ? ArrowUp : c.value === "desc" ? ArrowDown : ArrowUpDown;
+        return (
+          <button
+            key={c.key}
+            type="button"
+            aria-pressed={on}
+            aria-label={`${c.label}: ${estado}`}
+            title={estado.charAt(0).toUpperCase() + estado.slice(1)}
+            onClick={() => c.onChange(siguiente(c))}
+            className={cn(
+              "inline-flex h-9 shrink-0 cursor-pointer items-center gap-[7px] rounded-pill border px-3 font-sans text-sm font-semibold whitespace-nowrap transition-colors",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-800",
+              on ? "border-green-300 bg-green-050 text-green-800" : "border-sand bg-surface text-fg-2 hover:bg-cream-tert",
+            )}
+          >
+            <span className={cn("inline-flex [&_svg]:size-[15px]", on ? "text-green-700" : "text-fg-3")}>{c.icon}</span>
+            {c.label}
+            {on && activos.length > 1 && (
+              <span className="font-mono text-[11px] text-green-700">{activos.indexOf(c) + 1}</span>
+            )}
+            <Flecha className={cn("size-[15px]", on ? "text-green-800" : "text-fg-3")} />
+          </button>
+        );
+      })}
     </div>
   );
 }
