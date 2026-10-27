@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Sprout, MapPin, ChevronRight, RotateCcw, Building2, SearchX, Search } from "lucide-react";
-import AsyncBoundary from "@/components/AsyncBoundary";
+import { AsyncView } from "@/components/AsyncView";
 import { Button } from "@/components/ui";
 import EstablecimientoCard, { EstablecimientoCardSkeleton } from "@/components/catalog/EstablecimientoCard";
 import { FilterSelect, MultiFilterSelect, Pagination, ActiveFilterPill, SearchField } from "@/components/catalog/controls";
 import { useBusquedaDiferida } from "@/hooks/useBusquedaDiferida";
 import { useCatalogoEstablecimientos, useFiltroCultivos, useFiltroDepartamentos } from "@/hooks/useCatalogoEstablecimientos";
+import { cn } from "@/lib/utils";
 import type { FilterOption } from "@/types/catalogo";
 
 const PAGE_SIZE = 8;
@@ -54,8 +55,11 @@ export default function ListClient() {
   const { texto, setTexto, busqueda, aplicarYa, limpiar } = useBusquedaDiferida();
 
   // Búsqueda, filtros y paginado los resuelve el backend, así que cualquier
-  // cambio vuelve a pedir el listado.
-  const { data, isLoading, error, reload } = useCatalogoEstablecimientos({ busqueda, cultivosIds, departamentoId, page, size: PAGE_SIZE });
+  // cambio vuelve a pedir el listado. Mientras llega queda la página anterior
+  // (marcada con `aria-busy`): el esqueleto es sólo para la primera.
+  const listado = useCatalogoEstablecimientos({ busqueda, cultivosIds, departamentoId, page, size: PAGE_SIZE });
+  const data = listado.data ?? listado.ultimo;
+  const recargando = listado.isLoading && listado.ultimo !== null;
   const cultivos = useFiltroCultivos();
   const departamentos = useFiltroDepartamentos();
 
@@ -63,7 +67,9 @@ export default function ListClient() {
   const hayFiltros = busqueda !== "" || cultivosIds.length > 0 || departamentoId !== null;
   // Sin filtros y sin resultados: no hay nada publicado todavía, que no es lo
   // mismo que "tu búsqueda no encontró nada".
-  const catalogoVacio = data !== null && total === 0 && !hayFiltros;
+  // Sólo con la respuesta fresca: con la anterior y los filtros nuevos (p. ej.
+  // al limpiar desde "sin resultados") se vería un vacío que no es.
+  const catalogoVacio = listado.data !== null && total === 0 && !hayFiltros;
 
   // Cualquier cambio de criterio vuelve a la primera página: la que estabas
   // mirando puede no existir con los resultados nuevos.
@@ -125,65 +131,72 @@ export default function ListClient() {
         </div>
       )}
 
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<GrillaSkeleton />}>
-        {catalogoVacio ? (
-          <Vacio icon={<Building2 size={30} color="var(--brown-700)" />} titulo="No hay establecimientos disponibles">
-            Cuando los productores publiquen sus establecimientos, vas a poder consultarlos acá con su descripción y los cultivos que trabajan.
-          </Vacio>
-        ) : (
-          <>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 15, color: "var(--fg-2)" }}>
-                <strong style={{ color: "var(--fg-1)", fontWeight: 700 }}>{total}</strong>{" "}
-                {total === 1 ? "establecimiento" : "establecimientos"}
-                {hayFiltros ? (total === 1 ? " encontrado" : " encontrados") : " disponibles"}
-              </span>
-              {busqueda !== "" && (
-                <ActiveFilterPill icon={<Search size={13} />} label={`«${busqueda}»`} onClear={limpiarBusqueda} />
-              )}
-              {cultivosIds.map((id) => (
-                <ActiveFilterPill
-                  key={id}
-                  icon={<Sprout size={13} />}
-                  label={etiqueta(cultivos.data ?? [], id)}
-                  onClear={() => elegirCultivos(cultivosIds.filter((x) => x !== id))}
-                />
-              ))}
-              {departamentoId && (
-                <ActiveFilterPill
-                  icon={<MapPin size={13} />}
-                  label={etiqueta(departamentos.data ?? [], departamentoId)}
-                  onClear={() => elegirDepartamento(null)}
-                />
-              )}
-            </div>
-
-            {total === 0 ? (
-              <Vacio
-                icon={<SearchX size={30} color="var(--fg-3)" />}
-                titulo="No encontramos establecimientos"
-                accion={
-                  <Button variant="neutral" onClick={limpiarTodo}>
-                    <RotateCcw size={17} /> Limpiar todo
-                  </Button>
-                }
-              >
-                {busqueda !== ""
-                  ? "Ningún establecimiento coincide con lo que buscaste. Probá con otras palabras o quitá los filtros."
-                  : "Ningún establecimiento coincide con los filtros elegidos. Probá quitándolos para ver todos."}
+      <AsyncView
+        query={{ isLoading: listado.isLoading && !recargando, error: listado.error, data, reload: listado.reload }}
+        skeleton={<GrillaSkeleton />}
+      >
+        {() => (
+          <div aria-busy={recargando} className={cn("transition-opacity", recargando && "opacity-60")}>
+            {catalogoVacio ? (
+              <Vacio icon={<Building2 size={30} color="var(--brown-700)" />} titulo="No hay establecimientos disponibles">
+                Cuando los productores publiquen sus establecimientos, vas a poder consultarlos acá con su descripción y los cultivos que trabajan.
               </Vacio>
             ) : (
               <>
-                <div className={GRILLA}>
-                  {(data?.items ?? []).map((est) => <EstablecimientoCard key={est.id} est={est} cultivosIds={cultivosIds} />)}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 15, color: "var(--fg-2)" }}>
+                    <strong style={{ color: "var(--fg-1)", fontWeight: 700 }}>{total}</strong>{" "}
+                    {total === 1 ? "establecimiento" : "establecimientos"}
+                    {hayFiltros ? (total === 1 ? " encontrado" : " encontrados") : " disponibles"}
+                  </span>
+                  {busqueda !== "" && (
+                    <ActiveFilterPill icon={<Search size={13} />} label={`«${busqueda}»`} onClear={limpiarBusqueda} />
+                  )}
+                  {cultivosIds.map((id) => (
+                    <ActiveFilterPill
+                      key={id}
+                      icon={<Sprout size={13} />}
+                      label={etiqueta(cultivos.data ?? [], id)}
+                      onClear={() => elegirCultivos(cultivosIds.filter((x) => x !== id))}
+                    />
+                  ))}
+                  {departamentoId && (
+                    <ActiveFilterPill
+                      icon={<MapPin size={13} />}
+                      label={etiqueta(departamentos.data ?? [], departamentoId)}
+                      onClear={() => elegirDepartamento(null)}
+                    />
+                  )}
                 </div>
-                {/* El backend numera desde 0 y la paginación desde 1. */}
-                <Pagination page={page + 1} pages={data?.totalPages ?? 1} onPage={(n) => setPage(n - 1)} />
+
+                {total === 0 ? (
+                  <Vacio
+                    icon={<SearchX size={30} color="var(--fg-3)" />}
+                    titulo="No encontramos establecimientos"
+                    accion={
+                      <Button variant="neutral" onClick={limpiarTodo}>
+                        <RotateCcw size={17} /> Limpiar todo
+                      </Button>
+                    }
+                  >
+                    {busqueda !== ""
+                      ? "Ningún establecimiento coincide con lo que buscaste. Probá con otras palabras o quitá los filtros."
+                      : "Ningún establecimiento coincide con los filtros elegidos. Probá quitándolos para ver todos."}
+                  </Vacio>
+                ) : (
+                  <>
+                    <div className={GRILLA}>
+                      {(data?.items ?? []).map((est) => <EstablecimientoCard key={est.id} est={est} cultivosIds={cultivosIds} />)}
+                    </div>
+                    {/* El backend numera desde 0 y la paginación desde 1. */}
+                    <Pagination page={page + 1} pages={data?.totalPages ?? 1} onPage={(n) => setPage(n - 1)} />
+                  </>
+                )}
               </>
             )}
-          </>
+          </div>
         )}
-      </AsyncBoundary>
+      </AsyncView>
     </div>
   );
 }
