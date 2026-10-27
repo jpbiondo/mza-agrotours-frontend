@@ -10,7 +10,7 @@ import AccountMenu from "@/components/AccountMenu";
 import MobileNav from "@/components/MobileNav";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
-import { buttonClasses } from "@/components/ui";
+import { IconButton, buttonClasses } from "@/components/ui";
 
 export interface NavLink {
   id: string;
@@ -75,19 +75,25 @@ export default function SiteHeader({ maxWidth = 1200 }: SiteHeaderProps) {
           los pocos valores que siguen yendo inline. */}
       <div
         style={{ maxWidth }}
-        className="mx-auto flex h-[68px] items-center justify-between gap-6 px-7"
+        className="mx-auto flex h-[68px] items-center justify-between gap-3 px-4 nav:gap-6 nav:px-7"
       >
-        <Link href="/" className="flex items-center gap-[11px] no-underline">
-          <Image src="/logo-pano.svg" width={45} height={30} alt="Mendoza AgroTours logo" />
-          <div className="leading-none">
-            <div className="font-display text-[18px] font-bold text-green-800">Mendoza</div>
-            <div className="mt-0.5 text-[10px] font-semibold tracking-[.12em] text-brown-700 uppercase">
-              AgroTours
+        {/* Debajo del corte los links se pliegan en el cajón de <MobileNav>,
+            que abre el burger a la izquierda del logo. */}
+        <div className="flex items-center gap-2">
+          <MobileNav links={navLinks} active={active} />
+          <Link href="/" className="flex items-center gap-[11px] no-underline">
+            <Image src="/logo-pano.svg" width={45} height={30} alt="Mendoza AgroTours logo" />
+            {/* Con sesión, el cluster de la derecha es más ancho que los CTA de
+                invitado y por debajo de 360 px no entra junto al wordmark. */}
+            <div className={cn("leading-none", loggedIn && "max-[359px]:hidden")}>
+              <div className="font-display text-[18px] font-bold text-green-800">Mendoza</div>
+              <div className="mt-0.5 text-[10px] font-semibold tracking-[.12em] text-brown-700 uppercase">
+                AgroTours
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+        </div>
 
-        {/* Debajo del corte los links se pliegan en el menú de <MobileNav>. */}
         <nav className="hidden items-center gap-1 nav:flex">
           {navLinks.map(({ id, href, label }) => (
             <Link
@@ -110,7 +116,7 @@ export default function SiteHeader({ maxWidth = 1200 }: SiteHeaderProps) {
             248 px es el ancho medido del estado más ancho. Sólo hace falta con
             el nav a la vista: sin él, el bloque crece contra el borde derecho y
             no mueve a nadie. */}
-        <div className="flex items-center justify-end gap-2.5 nav:min-w-[248px]">
+        <div className="flex items-center justify-end gap-2 nav:min-w-[248px] nav:gap-2.5">
           {hasHydrated &&
             (loggedIn ? (
               <>
@@ -119,16 +125,22 @@ export default function SiteHeader({ maxWidth = 1200 }: SiteHeaderProps) {
                 <AccountMenu />
               </>
             ) : (
+              // Debajo del corte quedan sólo los íconos.
               <>
-                <Link href="/acceso" className={buttonClasses({ variant: "neutral", size: "sm" })}>
+                <Link href="/acceso" className={buttonClasses({ variant: "neutral", size: "sm", className: "max-nav:hidden" })}>
                   <LogIn className="size-4" /> Iniciar sesión
                 </Link>
-                <Link href="/registro" className={buttonClasses({ size: "sm" })}>
+                <Link href="/registro" className={buttonClasses({ size: "sm", className: "max-nav:hidden" })}>
                   <UserPlus className="size-4" /> Registrarse
                 </Link>
+                <IconButton href="/acceso" aria-label="Iniciar sesión" className="nav:hidden">
+                  <LogIn />
+                </IconButton>
+                <IconButton href="/registro" appearance="primary" aria-label="Registrarse" className="nav:hidden">
+                  <UserPlus />
+                </IconButton>
               </>
             ))}
-          <MobileNav links={navLinks} active={active} />
         </div>
       </div>
     </header>
