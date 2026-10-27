@@ -1,10 +1,11 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { IconButton, buttonClasses } from "@/components/ui";
+import { EmptyState, IconButton, buttonClasses } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 /**
  * Fila deslizable: 3 tarjetas por vista en escritorio, 2 en tablet y en
@@ -14,9 +15,12 @@ import { IconButton, buttonClasses } from "@/components/ui";
  * El padding con margen negativo deja lugar para la sombra y el levantado del
  * hover, que el `overflow` recortaría; el `scroll-px` hace que el encaje
  * respete ese padding.
+ *
+ * La barra de scroll se oculta sólo donde hay flechas: en una ventana angosta
+ * con mouse es la única forma de desplazarse.
  */
 const FILA =
-  "-mx-1 -mt-1 -mb-3 flex snap-x snap-mandatory scroll-px-1 gap-6 overflow-x-auto px-1 pt-1 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden " +
+  "-mx-1 -mt-1 -mb-3 flex snap-x snap-mandatory scroll-px-1 gap-6 overflow-x-auto px-1 pt-1 pb-3 min-[681px]:[scrollbar-width:none] min-[681px]:[&::-webkit-scrollbar]:hidden " +
   "[&>*]:shrink-0 [&>*]:snap-start [&>*]:basis-[85%] min-[681px]:[&>*]:basis-[calc((100%-24px)/2)] min-[1041px]:[&>*]:basis-[calc((100%-48px)/3)]";
 
 /** Tarjetas fantasma mientras carga: una vista, que es lo mínimo que puede llegar con datos. */
@@ -33,7 +37,7 @@ interface DestacadosProps {
   error: string | null;
   onRetry: () => void;
   /** Se muestra en lugar de la fila cuando el backend no devolvió ninguno. */
-  vacio: string;
+  vacio: { icono: React.ReactNode; titulo: string; texto: string };
   /** Cuántos llegaron: con 0 va el aviso de vacío. */
   cantidad: number;
   esqueleto: React.ReactNode;
@@ -90,25 +94,36 @@ export default function Destacados({
   etiqueta, titulo, bajada, href, verTodas, cargando, error, onRetry, vacio, cantidad, esqueleto, children,
 }: DestacadosProps) {
   const fila = useRef<HTMLDivElement>(null);
+  const anterior = useRef<HTMLButtonElement>(null);
+  const siguiente = useRef<HTMLButtonElement>(null);
   const hayFila = !cargando && !error && cantidad > 0;
   const { atras, adelante, mover } = useDesplazamiento(fila, hayFila);
+  const id = useId();
+
+  // Al llegar a una punta, la flecha de ese lado se deshabilita y el foco se
+  // caería al `body`: quien navega con teclado sigue en la del otro lado.
+  useEffect(() => {
+    const activo = document.activeElement;
+    if (!adelante && activo === siguiente.current) anterior.current?.focus();
+    if (!atras && activo === anterior.current) siguiente.current?.focus();
+  }, [atras, adelante]);
 
   return (
     <>
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="t-label mb-2.5 text-brown-700">{etiqueta}</div>
-          <h2 className="m-0 font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">{titulo}</h2>
+          <h2 id={`${id}-titulo`} className="m-0 font-display text-[32px] font-bold tracking-[-.01em] text-fg-1">{titulo}</h2>
           <p className="mt-2.5 mb-0 max-w-[540px] text-base text-fg-2">{bajada}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {/* Si todo entra en una vista no hay nada que deslizar. */}
           {hayFila && (atras || adelante) && (
             <div className="mr-2 flex gap-2 max-[680px]:hidden">
-              <IconButton aria-label="Ver anteriores" disabled={!atras} onClick={() => mover(-1)}>
+              <IconButton ref={anterior} aria-label="Ver anteriores" aria-controls={`${id}-fila`} disabled={!atras} onClick={() => mover(-1)}>
                 <ChevronLeft />
               </IconButton>
-              <IconButton aria-label="Ver siguientes" disabled={!adelante} onClick={() => mover(1)}>
+              <IconButton ref={siguiente} aria-label="Ver siguientes" aria-controls={`${id}-fila`} disabled={!adelante} onClick={() => mover(1)}>
                 <ChevronRight />
               </IconButton>
             </div>
@@ -124,14 +139,14 @@ export default function Destacados({
         error={error}
         onRetry={onRetry}
         pad={48}
-        skeleton={<div className={FILA}>{Array.from({ length: FANTASMAS }, (_, i) => <Fragment key={i}>{esqueleto}</Fragment>)}</div>}
+        // Misma fila, pero quieta: no tiene sentido deslizar fantasmas.
+        skeleton={<div className={cn(FILA, "overflow-hidden")}>{Array.from({ length: FANTASMAS }, (_, i) => <Fragment key={i}>{esqueleto}</Fragment>)}</div>}
       >
         {cantidad === 0 ? (
-          <div className="rounded-lg border border-dashed border-sand bg-surface px-6 py-10 text-center text-[15px] text-fg-2">
-            {vacio}
-          </div>
+          // Sin CTA: el visitante no puede crear destacados.
+          <EmptyState icon={vacio.icono} title={vacio.titulo}>{vacio.texto}</EmptyState>
         ) : (
-          <div ref={fila} className={FILA}>{children}</div>
+          <div ref={fila} id={`${id}-fila`} role="region" aria-labelledby={`${id}-titulo`} className={FILA}>{children}</div>
         )}
       </AsyncBoundary>
     </>
