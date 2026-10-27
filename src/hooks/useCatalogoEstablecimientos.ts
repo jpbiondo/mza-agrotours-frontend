@@ -45,7 +45,8 @@ interface ActividadBackend {
   nombre?: string;
   cultivos?: unknown;
   precioDesde?: unknown;
-  puntuacion?: unknown;
+  calificacionPromedio?: unknown;
+  cantidadResenias?: unknown;
   fotoPortada?: unknown;
 }
 
@@ -126,12 +127,17 @@ function aResumen(e: ResumenBackend): EstablecimientoResumen {
 }
 
 function aActividad(a: ActividadBackend): ActividadOfrecida {
+  const cantidadResenias = aNumero(a.cantidadResenias);
+  const promedio = aNumeroOpcional(a.calificacionPromedio);
   return {
     id: aTexto(a.id),
     nombre: aTexto(a.nombre),
     cultivos: aNombresCultivo(a.cultivos),
     precioDesde: aNumeroOpcional(a.precioDesde),
-    puntuacion: aNumeroOpcional(a.puntuacion),
+    // Sin reseñas el promedio puede venir `null` o 0: los dos son "nadie
+    // calificó", y un 0 no se puede mostrar como puntaje (el mínimo es 1).
+    puntuacion: cantidadResenias > 0 && promedio !== null && promedio > 0 ? promedio : null,
+    cantidadResenias,
     foto: aFoto(a.fotoPortada),
   };
 }
