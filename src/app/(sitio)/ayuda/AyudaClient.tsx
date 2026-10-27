@@ -3,58 +3,15 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ChevronDown, ChevronRight, Headset, HelpCircle, LifeBuoy, MessagesSquare, RotateCcw, SearchX,
+  ChevronRight, Headset, LifeBuoy, MessagesSquare, RotateCcw, SearchX,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Button, Skeleton, buttonClasses } from "@/components/ui";
 import {
-  FaqChips, FaqDesplegable, contarPorCategoria, etiquetaCat,
+  FaqChips, FaqFila, contarPorCategoria, etiquetaCat,
 } from "@/components/faq/piezas";
 import { useFaqPublica } from "@/hooks/useFaq";
-import { cn } from "@/lib/utils";
 import type { FaqItem } from "@/types/catalogo";
-
-/* ---- Una entrada del acordeón ----------------------------------------- */
-function FaqFila({ item, open, onToggle }: { item: FaqItem; open: boolean; onToggle: () => void }) {
-  return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-lg border bg-surface transition-[border-color,box-shadow] duration-200",
-        open ? "border-green-300 shadow-hover" : "border-outline-variant",
-      )}
-    >
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full cursor-pointer items-center gap-4 bg-transparent px-[22px] py-5 text-left"
-      >
-        <span
-          className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-[10px] transition-colors",
-            open ? "bg-green-800 text-white" : "bg-green-050 text-green-800",
-          )}
-        >
-          <HelpCircle className="size-5" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-display text-lg leading-[1.35] font-semibold text-fg-1">{item.q}</span>
-          <span className="t-label mt-[7px] inline-block text-[11px]">{etiquetaCat(item.cat)}</span>
-        </span>
-        <ChevronDown
-          className={cn(
-            "size-[22px] shrink-0 transition-[transform,color] duration-200",
-            open ? "rotate-180 text-green-800" : "text-fg-3",
-          )}
-        />
-      </button>
-
-      <FaqDesplegable open={open} className="pr-[22px] pb-[22px] pl-[78px]">
-        <p className="text-[15.5px] leading-relaxed text-pretty text-fg-2">{item.a}</p>
-      </FaqDesplegable>
-    </div>
-  );
-}
 
 /* ---- Estado vacío ------------------------------------------------------ */
 function FaqVacio({ sinDatos, onVerTodas }: { sinDatos: boolean; onVerTodas: () => void }) {
