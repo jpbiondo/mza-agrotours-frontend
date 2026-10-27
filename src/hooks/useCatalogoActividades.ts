@@ -49,6 +49,8 @@ interface ResumenBackend {
   fotoPortada?: unknown;
   nombreEstablecimiento?: string;
   nombreDepartamento?: string;
+  calificacionPromedio?: unknown;
+  cantidadResenias?: unknown;
 }
 
 interface DetalleBackend {
@@ -207,7 +209,13 @@ function aResenias(v: unknown): Resenia[] {
 }
 
 function aResumen(a: ResumenBackend): ActividadResumen {
+  const cantidadResenias = aNumero(a.cantidadResenias);
+  const promedio = aNumeroOpcional(a.calificacionPromedio);
   return {
+    // Sin reseñas el promedio puede venir `null` o 0: los dos son "nadie
+    // calificó", y un 0 no se puede mostrar como puntaje (el mínimo es 1).
+    puntuacion: cantidadResenias > 0 && promedio !== null && promedio > 0 ? promedio : null,
+    cantidadResenias,
     id: aTexto(a.id),
     nombre: aTexto(a.nombre),
     precioRegular: aNumeroOpcional(a.precioRegular),
