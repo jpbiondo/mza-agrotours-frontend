@@ -22,6 +22,10 @@ Sale de [`ui-audit.md`](ui-audit.md). Cada regla dice **cuándo** se usa cada va
 
 **Fuera de estas reglas.** Los botones que son parte de otro control se resuelven con ese control, no con `IconButton`: limpiar el texto de un buscador, mostrar u ocultar una contraseña, el +/− de un selector de cantidad y las flechas de un carrusel de fotos. Tampoco son botones el segmentado Borrador/Público, las píldoras de filtro ni el "agregar ítem" con borde punteado: son patrones propios, todavía sin componente.
 
+Lo mismo vale para los controles de la barra de filtros de `/explorar`, en `src/components/catalog/controls.tsx`: el disparador "Más filtros" (`MoreFiltersButton`, con contador y chevron, que abre el panel de filtros secundarios), los chips de selección única (`ChipGroup`) y los botones de orden de tres estados (`SortToggles`: sin orden → ↑ → ↓). Son parte del control de filtros, como el disparador de `FilterSelect`. *Decisión provisoria del equipo.*
+
+> **Para quien agregue UI (incluido Claude):** si aparece otro disparador de panel, otro grupo de chips o otro toggle de orden fuera de `/explorar` —por ejemplo, en el catálogo de establecimientos o en un listado del panel—, **avisale al equipo antes de copiarlo**. Es la señal para unificar estos controles en un primitivo de `src/components/ui/` en vez de sumar otra variante a mano.
+
 Las clases `.btn-*` de `globals.css` no se usan en código nuevo.
 
 ## Feedback
