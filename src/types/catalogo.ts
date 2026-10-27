@@ -95,18 +95,60 @@ export interface ActividadResumen {
 }
 
 /**
- * Consulta de GET /actividades/explorar. Los cultivos son varios y suman (trae
- * las que trabajen **alguno** de ellos); el departamento es uno solo. La
- * `busqueda` el backend la aplica sólo sobre el **nombre de la actividad**:
- * no alcanza al establecimiento ni al departamento.
+ * Rango de precio de la tarifa base, `[desde, hasta)`. `null` en una punta es
+ * "sin piso" o "sin techo".
  */
-export interface ConsultaActividades {
+export interface RangoPrecio {
+  desde: number | null;
+  hasta: number | null;
+}
+
+export type DireccionOrden = "asc" | "desc";
+
+/**
+ * Filtros de GET /actividades/explorar y de su faceta. Los cultivos son varios
+ * y suman (trae las que trabajen **alguno** de ellos); el resto acota. La
+ * `busqueda` el backend la aplica sólo sobre el **nombre de la actividad**: no
+ * alcanza al establecimiento ni al departamento.
+ */
+export interface FiltrosActividades {
   busqueda: string;
   cultivosIds: string[];
   departamentoId: string | null;
+  precio: RangoPrecio | null;
+  /** Estrellas enteras: trae las de promedio igual o mayor. */
+  puntuacionMin: number | null;
+}
+
+/**
+ * Consulta del listado: los filtros más el orden y el paginado. Con los dos
+ * órdenes puestos, el backend ordena primero por precio y desempata por
+ * puntuación; sin ninguno, el orden lo decide él.
+ */
+export interface ConsultaActividades extends FiltrosActividades {
+  ordenPrecio: DireccionOrden | null;
+  ordenPuntuacion: DireccionOrden | null;
   /** 0-based, como lo numera el `Pageable` del backend. */
   page: number;
   size: number;
+}
+
+/** Opción de la faceta de precio: los rangos los arma el backend por cuartiles. */
+export interface OpcionRangoPrecio extends RangoPrecio {
+  count: number;
+}
+
+/**
+ * Facetas del listado, de GET /actividades/filtros. Cada una cuenta con todos
+ * los filtros puestos menos el suyo: el número dice cuántas quedarían al elegir
+ * esa opción.
+ */
+export interface FacetasActividades {
+  cultivos: FilterOption[];
+  departamentos: FilterOption[];
+  precios: OpcionRangoPrecio[];
+  /** `value` es la cantidad mínima de estrellas, como texto ("4"). */
+  puntuaciones: FilterOption[];
 }
 
 /** Tarifa por rango etario. La base es la que se publica como "precio desde". */
