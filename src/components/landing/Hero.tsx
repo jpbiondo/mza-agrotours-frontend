@@ -1,13 +1,27 @@
+import Image from "next/image";
 import { Sprout } from "lucide-react";
 import HeroBuscador from "@/components/landing/HeroBuscador";
+import fotoHero from "../../../public/landing/hero.jpg";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      {/* Fondo de viñedo */}
-      <div className="absolute inset-0 bg-[linear-gradient(135deg,#0a2209_0%,#154212_30%,#1e5418_55%,#2d5a27_75%,#4a7c3f_100%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_80%_50%,rgba(167,201,139,.12)_0%,transparent_70%),radial-gradient(ellipse_40%_60%_at_20%_80%,rgba(200,127,42,.08)_0%,transparent_60%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(14,46,12,.60)_0%,rgba(14,46,12,.25)_55%,rgba(251,249,248,.05)_100%)]" />
+    // El verde de fondo es lo que se ve mientras carga la foto.
+    <section className="relative overflow-hidden bg-green-900">
+      {/* Decorativa: el mensaje lo da el título, así que va sin alt. */}
+      <Image
+        src={fotoHero}
+        alt=""
+        fill
+        priority
+        placeholder="blur"
+        sizes="100vw"
+        className="object-cover object-[center_65%]"
+      />
+      {/* La foto es clara (cielo, arena): un velo parejo para el texto en
+          celular, donde ocupa todo el ancho, y uno más fuerte a la izquierda,
+          donde van el título y el buscador en escritorio. */}
+      <div className="absolute inset-0 bg-green-900/45" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(14,46,12,.75)_0%,rgba(14,46,12,.45)_45%,rgba(14,46,12,0)_100%)]" />
 
       <div className="relative mx-auto flex min-h-[min(680px,calc(100vh_-_68px))] max-w-[1160px] flex-col justify-center px-7 py-18">
         <div className="max-w-[600px]">
