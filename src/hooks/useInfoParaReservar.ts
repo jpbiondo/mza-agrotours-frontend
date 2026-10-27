@@ -43,7 +43,7 @@ interface InfoParaReservarBackend {
  * de pedir: usar `auth.currentUser` directo puede pegarle sin token todavía
  * si la sesión persistida no terminó de rehidratarse (p. ej. al refrescar).
  */
-export function useInfoParaReservar(actividadId: string): AsyncState<InfoParaReservar> {
+export function useInfoParaReservar(actividadId: string): Omit<AsyncState<InfoParaReservar>, "ultimo"> {
   const [data, setData] = useState<InfoParaReservar | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
