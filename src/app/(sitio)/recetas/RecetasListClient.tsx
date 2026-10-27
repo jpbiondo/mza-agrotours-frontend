@@ -6,7 +6,7 @@ import {
   ArrowRight, ArrowUpDown, ChevronRight, Clock, Leaf, List, ListOrdered, RotateCcw, SearchX,
   UtensilsCrossed, Users, X,
 } from "lucide-react";
-import AsyncBoundary from "@/components/AsyncBoundary";
+import { AsyncView } from "@/components/AsyncView";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import { Pagination } from "@/components/catalog/controls";
 import { Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
@@ -292,12 +292,16 @@ export default function RecetasListClient() {
   const [page, setPage] = useState(0);
 
   const filtros = useFiltrosRecetas();
-  const { data, isLoading, error, reload } = useCatalogoRecetas({
+  // Mientras llega un filtro, orden o página nuevos queda lo anterior (marcado
+  // con `aria-busy`): el esqueleto es sólo para la primera carga.
+  const listado = useCatalogoRecetas({
     ...seleccion,
     orden: ORDENES[orden] ?? null,
     page,
     size: PAGE_SIZE,
   });
+  const data = listado.data ?? listado.ultimo;
+  const recargando = listado.isLoading && listado.ultimo !== null;
 
   // Total del recetario sin filtrar: sale de los contadores de dificultad, que
   // cubren todas las recetas exactamente una vez. `totalElements` no sirve acá
@@ -308,8 +312,10 @@ export default function RecetasListClient() {
   const hayFiltro = seleccion.dificultad !== null || seleccion.duracion !== null || seleccion.cultivoId !== null;
   // Sin filtro y sin resultados no hay recetas cargadas, que no es lo mismo que
   // "tu filtro no encontró ninguna".
-  const recetarioVacio = data !== null && total === 0 && !hayFiltro;
-  const sinResultados = data !== null && total === 0 && hayFiltro;
+  // Sólo con la respuesta fresca: con la anterior y los filtros nuevos (p. ej.
+  // al limpiar desde "sin resultados") se vería un vacío que no es.
+  const recetarioVacio = listado.data !== null && total === 0 && !hayFiltro;
+  const sinResultados = data !== null && total === 0 && !recetarioVacio;
 
   // Cualquier cambio de filtro vuelve a la primera página: la que estabas mirando
   // puede no existir con el filtro nuevo.
@@ -351,59 +357,66 @@ export default function RecetasListClient() {
         ) : null
       )}
 
-      <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<GrillaSkeleton />}>
-        {recetarioVacio ? (
-          <Vacio icon={<UtensilsCrossed size={28} className="text-brown-700" />} titulo="Todavía no hay recetas">
-            Cuando el recetario tenga recetas vas a poder explorarlas acá, filtrando por dificultad, duración y
-            cultivo.
-          </Vacio>
-        ) : sinResultados ? (
-          <Vacio
-            icon={<SearchX size={28} className="text-fg-3" />}
-            titulo="Ninguna receta coincide con estos filtros"
-            accion={
-              <Button variant="neutral" className="mt-2" onClick={limpiar}>
-                <RotateCcw size={16} /> Limpiar filtros
-              </Button>
-            }
-          >
-            Probá aflojar alguno de los filtros para ver más opciones.
-          </Vacio>
-        ) : (
-          <>
-            <div className="mb-3.5 flex flex-wrap items-center justify-between gap-4">
-              <div className="inline-flex flex-wrap items-center gap-2.5 text-[13.5px] text-fg-3">
-                <span>
-                  Mostrando <strong className="font-semibold text-fg-2">{total}</strong>{" "}
-                  {total === 1 ? "receta" : "recetas"}
-                </span>
-                {hayFiltro && (
-                  <Button variant="text" onClick={limpiar}>
-                    <X size={13} /> Limpiar filtros
+      <AsyncView
+        query={{ isLoading: listado.isLoading && !recargando, error: listado.error, data, reload: listado.reload }}
+        skeleton={<GrillaSkeleton />}
+      >
+        {() => (
+          <div aria-busy={recargando} className={cn("transition-opacity", recargando && "opacity-60")}>
+            {recetarioVacio ? (
+              <Vacio icon={<UtensilsCrossed size={28} className="text-brown-700" />} titulo="Todavía no hay recetas">
+                Cuando el recetario tenga recetas vas a poder explorarlas acá, filtrando por dificultad, duración y
+                cultivo.
+              </Vacio>
+            ) : sinResultados ? (
+              <Vacio
+                icon={<SearchX size={28} className="text-fg-3" />}
+                titulo="Ninguna receta coincide con estos filtros"
+                accion={
+                  <Button variant="neutral" className="mt-2" onClick={limpiar}>
+                    <RotateCcw size={16} /> Limpiar filtros
                   </Button>
-                )}
-              </div>
+                }
+              >
+                Probá aflojar alguno de los filtros para ver más opciones.
+              </Vacio>
+            ) : (
+              <>
+                <div className="mb-3.5 flex flex-wrap items-center justify-between gap-4">
+                  <div className="inline-flex flex-wrap items-center gap-2.5 text-[13.5px] text-fg-3">
+                    <span>
+                      Mostrando <strong className="font-semibold text-fg-2">{total}</strong>{" "}
+                      {total === 1 ? "receta" : "recetas"}
+                    </span>
+                    {hayFiltro && (
+                      <Button variant="text" onClick={limpiar}>
+                        <X size={13} /> Limpiar filtros
+                      </Button>
+                    )}
+                  </div>
 
-              <label className="inline-flex items-center gap-2 text-[13px] text-fg-3">
-                <ArrowUpDown size={14} />
-                Ordenar
-                <SimpleSelect
-                  value={orden}
-                  onChange={(v) => { setOrden(v); setPage(0); }}
-                  options={ORDEN_OPCIONES}
-                  className="h-[38px]! w-auto min-w-[152px] text-[13.5px] font-semibold"
-                />
-              </label>
-            </div>
+                  <label className="inline-flex items-center gap-2 text-[13px] text-fg-3">
+                    <ArrowUpDown size={14} />
+                    Ordenar
+                    <SimpleSelect
+                      value={orden}
+                      onChange={(v) => { setOrden(v); setPage(0); }}
+                      options={ORDEN_OPCIONES}
+                      className="h-[38px]! w-auto min-w-[152px] text-[13.5px] font-semibold"
+                    />
+                  </label>
+                </div>
 
-            <div className={GRILLA}>
-              {(data?.items ?? []).map((r) => <RecetaCard key={r.id} receta={r} />)}
-            </div>
-            {/* El backend numera desde 0 y la paginación desde 1. */}
-            <Pagination page={page + 1} pages={data?.totalPages ?? 1} onPage={(n) => setPage(n - 1)} />
-          </>
+                <div className={GRILLA}>
+                  {(data?.items ?? []).map((r) => <RecetaCard key={r.id} receta={r} />)}
+                </div>
+                {/* El backend numera desde 0 y la paginación desde 1. */}
+                <Pagination page={page + 1} pages={data?.totalPages ?? 1} onPage={(n) => setPage(n - 1)} />
+              </>
+            )}
+          </div>
         )}
-      </AsyncBoundary>
+      </AsyncView>
     </div>
   );
 }
