@@ -1,17 +1,18 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-  Users, Banknote, CalendarX, TrendingUp, TrendingDown, CheckCircle2, Info, Download, X,
-  FileText, FileSpreadsheet, Table2, BarChart3, Grape, Sprout, Wheat, Apple,
+  Users, Banknote, CalendarX, TrendingUp, TrendingDown, CheckCircle2, Info, Download,
+  BarChart3, Grape, Sprout, Wheat, Apple,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { SinPermiso } from "@/components/GuardRol";
 import { Donut, BarChart, OccupancyBar } from "@/components/panel/charts";
+import { SelectorFormato } from "@/components/ui/selector-formato";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Modal } from "@/components/ui/Modal";
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PERIODOS, labelPeriodo } from "@/data/estadisticas";
 import { useEstablecimientos } from "@/hooks/useEstablecimientos";
@@ -25,7 +26,6 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import type { ActividadPerf, Periodo, RangoFechas } from "@/types/estadisticas";
 import EmptyEstablecimiento from "../../EmptyEstablecimiento";
-import { IconButton } from "@/components/ui";
 
 const SIN_ACCESO =
   "Sólo el Productor Líder puede ver las estadísticas del establecimiento. Pedíselas al Productor Líder de la finca.";
@@ -153,12 +153,6 @@ const ALCANCES: { id: ExportOpts["scope"]; label: string; sub: string }[] = [
   { id: "completo", label: "Reporte completo", sub: "Incluye KPIs, gráfico mensual y tabla" },
 ];
 
-const FORMATOS: { id: ExportOpts["format"]; label: string; sub: string; Icon: LucideIcon }[] = [
-  { id: "pdf", label: "PDF", sub: "Reporte con formato y gráficos", Icon: FileText },
-  { id: "csv", label: "CSV", sub: "Datos tabulares, separado por comas", Icon: FileSpreadsheet },
-  { id: "xlsx", label: "Excel", sub: "Hoja de cálculo .xlsx", Icon: Table2 },
-];
-
 /** Recuadro elegible del modal: borde de 2px cuando está activo, sin que el contenido salte. */
 const opcion = (on: boolean) =>
   cn(
@@ -170,58 +164,45 @@ function ExportModal({ busy, error, onClose, onConfirm }: { busy: boolean; error
   const [format, setFormat] = useState<ExportOpts["format"]>("pdf");
   const [scope, setScope] = useState<ExportOpts["scope"]>("performance");
 
-  // TODO: `Modal` no maneja Escape; se va cuando pase al Dialog de Base UI.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !busy) onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [busy, onClose]);
+  const cerrar = () => { if (!busy) onClose(); };
 
   return (
-    <Modal onClose={onClose} dismissable={!busy} className="w-[520px]">
-      <IconButton appearance="plain" onClick={onClose} disabled={busy} aria-label="Cerrar" className="absolute top-3.5 right-3.5"><X /></IconButton>
-      <h3 className="mt-0 mb-2 font-display text-[22px] leading-tight font-semibold text-fg-1">Exportar reporte</h3>
-      <p className="mt-0 mb-[22px] text-sm leading-normal text-fg-2">Vas a descargar los datos de performance del período seleccionado. Elegí qué incluir y en qué formato.</p>
+    <Dialog open onOpenChange={(abierto) => { if (!abierto) cerrar(); }} disablePointerDismissal={busy}>
+      <DialogContent size="md">
+        <DialogHeader closeDisabled={busy}>
+          <DialogTitle>Exportar reporte</DialogTitle>
+          <DialogDescription className="mt-1.5 text-sm leading-normal text-fg-2">
+            Vas a descargar los datos de performance del período seleccionado. Elegí qué incluir y en qué formato.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <div className="t-label mb-2.5">Contenido</div>
+          <div className="mb-6 flex flex-col gap-2">
+            {ALCANCES.map((s) => {
+              const on = scope === s.id;
+              return (
+                <label key={s.id} className={cn(opcion(on), "flex items-start gap-3 p-3.5")}>
+                  <input type="radio" name="scope" checked={on} onChange={() => setScope(s.id)} className="mt-[3px] accent-green-800" />
+                  <span>
+                    <span className="block text-sm font-semibold text-fg-1">{s.label}</span>
+                    <span className="mt-0.5 block text-[12.5px] text-fg-3">{s.sub}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
 
-      <div className="t-label mb-2.5">Contenido</div>
-      <div className="mb-6 flex flex-col gap-2">
-        {ALCANCES.map((s) => {
-          const on = scope === s.id;
-          return (
-            <label key={s.id} className={cn(opcion(on), "flex items-start gap-3 p-3.5")}>
-              <input type="radio" name="scope" checked={on} onChange={() => setScope(s.id)} className="mt-[3px] accent-green-800" />
-              <span>
-                <span className="block text-sm font-semibold text-fg-1">{s.label}</span>
-                <span className="mt-0.5 block text-[12.5px] text-fg-3">{s.sub}</span>
-              </span>
-            </label>
-          );
-        })}
-      </div>
-
-      <div className="t-label mb-2.5">Formato</div>
-      <div role="radiogroup" aria-label="Formato" className="mb-[26px] grid grid-cols-3 gap-2">
-        {FORMATOS.map(({ id, label, sub, Icon }) => {
-          const on = format === id;
-          return (
-            <button key={id} type="button" role="radio" aria-checked={on} onClick={() => setFormat(id)} className={cn(opcion(on), "flex flex-col items-start gap-1.5 px-3 py-3.5 font-sans")}>
-              <Icon size={20} className={on ? "text-green-800" : "text-fg-2"} />
-              <span className="text-sm font-semibold text-fg-1">{label}</span>
-              <span className="text-[11.5px] leading-[1.3] text-fg-3">{sub}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {error && <Alert tone="danger" className="mb-5">{error}</Alert>}
-
-      <div className="flex justify-end gap-3">
-        <Button variant="neutral" onClick={onClose} disabled={busy}>Cancelar</Button>
-        <Button onClick={() => onConfirm({ format, scope })} loading={busy}>
-          <Download size={17} /> Descargar
-        </Button>
-      </div>
-    </Modal>
+          <div className="t-label mb-2.5">Formato</div>
+          <SelectorFormato value={format} onChange={setFormat} />
+        </DialogBody>
+        <DialogFooter alert={error && <Alert>{error}</Alert>}>
+          <Button variant="neutral" onClick={cerrar} disabled={busy}>Cancelar</Button>
+          <Button onClick={() => onConfirm({ format, scope })} loading={busy}>
+            <Download size={17} /> Descargar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
