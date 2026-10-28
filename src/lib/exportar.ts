@@ -99,6 +99,40 @@ export async function cargarPdf() {
 
 export type Doc = InstanceType<typeof import("jspdf").jsPDF>;
 
+/**
+ * El logo de `public/logo-pano.svg` dibujado en vectores (sale nítido al
+ * imprimir y no hay que cargar una imagen) con «Mendoza AgroTours» al lado,
+ * como en el sidebar. Se alinea a la derecha en `derecha`; `arriba` es el borde
+ * superior del logo.
+ */
+export function marcaPdf(doc: Doc, derecha: number, arriba: number) {
+  const ALTO = 9;
+  const k = ALTO / 64; // el viewBox del SVG es 96 × 64
+  const palabra = "Mendoza";
+  doc.setFont("helvetica", "bold").setFontSize(11.5);
+  const anchoTexto = Math.max(doc.getTextWidth(palabra), 19);
+  const xTexto = derecha - anchoTexto;
+  const x = xTexto - 2.5 - 96 * k;
+  const X = (u: number) => x + u * k;
+  const Y = (v: number) => arriba + v * k;
+
+  doc.setFillColor(199, 127, 42).circle(X(46), Y(18), 8.5 * k, "F");
+  doc.setFillColor(127, 168, 118).triangle(X(2), Y(42), X(20), Y(24), X(38), Y(42), "F");
+  doc.setFillColor(21, 66, 18).triangle(X(58), Y(6), X(88), Y(42), X(28), Y(42), "F");
+
+  // Los surcos son cuadráticas con el control en x = 48; jsPDF sólo dibuja cúbicas.
+  doc.setDrawColor(128, 85, 51).setLineWidth(3 * k).setLineCap("round");
+  for (const [x0, y0, yc, x2] of [[10, 47, 42.5, 86], [5, 53, 48, 91], [2, 59.5, 54, 94]]) {
+    const c1 = [(2 / 3) * (48 - x0), (2 / 3) * (yc - y0)];
+    const c2 = [x2 - x0 + (2 / 3) * (48 - x2), (2 / 3) * (yc - y0)];
+    doc.lines([[c1[0] * k, c1[1] * k, c2[0] * k, c2[1] * k, (x2 - x0) * k, 0]], X(x0), Y(y0), [1, 1], "S", false);
+  }
+  doc.setLineCap("butt");
+
+  doc.setTextColor(...C.verde).text(palabra, xTexto, arriba + 4.6);
+  doc.setFontSize(6).setTextColor(128, 85, 51).text("AGROTOURS", xTexto, arriba + 8.2, { charSpace: 0.45 });
+}
+
 /** Pie en todas las páginas, una vez que se sabe cuántas son. */
 export function pieDePaginaPdf(doc: Doc, margen: number) {
   const paginas = doc.getNumberOfPages();
