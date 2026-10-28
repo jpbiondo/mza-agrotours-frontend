@@ -1,5 +1,5 @@
 import {
-  C, FORMATO_PESOS, armarCsv, cargarPdf, encabezarFila, filaCsv as fila, nuevoLibro, pieDePaginaPdf,
+  C, FORMATO_PESOS, armarCsv, cargarPdf, encabezarFila, filaCsv as fila, marcaPdf, nuevoLibro, pieDePaginaPdf,
 } from "@/lib/exportar";
 import { fmtCodigoReserva, moneyAr } from "@/lib/format";
 import { fechaLarga } from "@/lib/gestion-dias";
@@ -38,11 +38,11 @@ export function nombrePlanilla(r: ResumenDia): string {
   return ["planilla", slug, r.fecha].filter(Boolean).join("-");
 }
 
-const COLUMNAS = ["Reserva", "Estado", "Personas", "Total reserva (ARS)", "Visitante", "Tipo", "Edad", "Asistencia", "Observaciones"];
+const COLUMNAS = ["Reserva", "Estado", "Personas", "Total reserva (ARS)", "Visitante", "Tipo", "Edad", "Asistió", "Observaciones"];
 
 /* ---- CSV ------------------------------------------------------------------ */
 
-/** La planilla como CSV, con «Asistencia» y «Observaciones» vacías para completar. */
+/** La planilla como CSV, con «Asistió» y «Observaciones» vacías para completar. */
 export function planillaACsv(dia: ResumenDia, reservas: ReservaDia[]): string {
   const lineas = [
     fila("Actividad", dia.nombre),
@@ -63,7 +63,7 @@ export function planillaACsv(dia: ResumenDia, reservas: ReservaDia[]): string {
 
 /* ---- Excel ---------------------------------------------------------------- */
 
-/** La planilla como .xlsx: «Asistencia» trae una lista Sí/No para marcar en la hoja. */
+/** La planilla como .xlsx: «Asistió» trae una lista Sí/No para marcar en la hoja. */
 export async function planillaAXlsx(dia: ResumenDia, reservas: ReservaDia[]): Promise<ArrayBuffer> {
   const libro = await nuevoLibro();
   const hoja = libro.addWorksheet("Asistencia");
@@ -111,17 +111,24 @@ export async function planillaAPdf(dia: ResumenDia, reservas: ReservaDia[]): Pro
   const alto = doc.internal.pageSize.getHeight();
   let y = M + 4;
 
-  // Encabezado.
+  // Encabezado, con la marca arriba a la derecha.
+  marcaPdf(doc, M + ancho, M - 2);
   doc.setFont("helvetica", "bold").setFontSize(18).setTextColor(...C.fg1);
   doc.text("Planilla de asistencia", M, y);
   y += 7;
+  // Un nombre o un lugar largos bajan de renglón y empujan lo que sigue.
+  // El nombre va más angosto para no pisar la marca.
   doc.setFontSize(12);
-  doc.text(dia.nombre, M, y, { maxWidth: ancho });
-  y += 5.5;
+  const nombre = doc.splitTextToSize(dia.nombre, ancho - 45) as string[];
+  doc.text(nombre, M, y);
+  y += 5.5 * nombre.length;
   doc.setFont("helvetica", "normal").setFontSize(10).setTextColor(...C.fg2);
-  const datos = [dia.fecha ? fechaLarga(dia.fecha) : "", horario(dia), lugar(dia)].filter(Boolean).join(" · ");
-  doc.text(datos, M, y, { maxWidth: ancho });
-  y += 5;
+  const datos = doc.splitTextToSize(
+    [dia.fecha ? fechaLarga(dia.fecha) : "", horario(dia), lugar(dia)].filter(Boolean).join(" · "),
+    ancho,
+  ) as string[];
+  doc.text(datos, M, y);
+  y += 5 * datos.length;
   const n = visitantesDe(reservas);
   doc.text(
     `${reservas.length} ${reservas.length === 1 ? "reserva" : "reservas"} · ${n} ${n === 1 ? "visitante esperado" : "visitantes esperados"}`,
@@ -155,7 +162,7 @@ export async function planillaAPdf(dia: ResumenDia, reservas: ReservaDia[]): Pro
     theme: "grid",
     // Una reserva cortada al pie deja su código en una hoja y el estado en la otra.
     rowPageBreak: "avoid",
-    head: [["Reserva", "Visitante", "Tipo", "Edad", "Asistencia", "Observaciones"]],
+    head: [["Reserva", "Visitante", "Tipo", "Edad", "Asistió", "Observaciones"]],
     body: body.length
       ? body
       : [[{ content: "No hay reservas pagadas para este día.", colSpan: 6, styles: { halign: "center", textColor: C.fg3 } }]],
@@ -165,9 +172,9 @@ export async function planillaAPdf(dia: ResumenDia, reservas: ReservaDia[]): Pro
       0: { cellWidth: 34, fontSize: 8 },
       2: { cellWidth: 20 },
       3: { cellWidth: 12, halign: "right" },
-      [COL_ASISTENCIA]: { cellWidth: 22 },
+      [COL_ASISTENCIA]: { cellWidth: 18 },
       // Se queda con el ancho que libera no tener «No vino».
-      5: { cellWidth: 46 },
+      5: { cellWidth: 50 },
     },
     // Casillero vacío para marcar con birome.
     didDrawCell: (h) => {
