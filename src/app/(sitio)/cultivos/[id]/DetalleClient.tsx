@@ -2,28 +2,19 @@
 
 import Link from "next/link";
 import {
-  ArrowLeft, ArrowRight, BookOpen, CalendarDays, CheckCircle2, ChevronRight, Clock, Gauge, Leaf,
-  MapPin, SearchX, Tractor, UtensilsCrossed, Users,
+  ArrowLeft, BookOpen, CalendarDays, CheckCircle2, ChevronRight, Leaf,
+  SearchX, Tractor, UtensilsCrossed,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
+import ActividadCard from "@/components/catalog/ActividadCard";
+import RecetaCard from "@/components/catalog/RecetaCard";
 import CalendarioTemporada from "@/components/cultivos/CalendarioTemporada";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { BackLink, Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { BackLink, Button, Card, EmptyState, EstadoBadge, Skeleton } from "@/components/ui";
 import { useCultivoDetalle } from "@/hooks/useCatalogoCultivos";
 import { useMesActual } from "@/hooks/useMesActual";
-import { moneyAr } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { ActividadDeCultivo, CultivoDetalle, RecetaDeCultivo } from "@/types/cultivos";
-import type { DificultadId } from "@/types/recetas";
-
-const DIFICULTAD_LABEL: Record<DificultadId, string> = {
-  FACIL: "Fácil",
-  MEDIA: "Media",
-  DIFICIL: "Difícil",
-};
-
-const TARJETA_HOVER =
-  "transition-[box-shadow,border-color,transform] hover:-translate-y-px hover:border-sand hover:shadow-hover";
+import type { CultivoDetalle } from "@/types/cultivos";
 
 /* ---- Piezas -------------------------------------------------------------- */
 
@@ -44,20 +35,11 @@ function Seccion({ icon, titulo, sub, className, children }: {
   );
 }
 
-/** Caja de texto para lo que el cultivo todavía no tiene cargado. */
-function Vacio({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-dashed border-sand bg-surface px-6 py-9 text-center text-[14.5px] text-fg-2">
-      {children}
-    </div>
-  );
-}
-
 function NutricionCard({ cultivo }: { cultivo: CultivoDetalle }) {
   const { informacionNutricional: datos, beneficios, porcionReferencia } = cultivo;
 
   if (datos.length === 0 && beneficios.length === 0) {
-    return <Vacio>Este cultivo todavía no tiene cargada su información nutricional.</Vacio>;
+    return <EmptyState size="inline">Este cultivo todavía no tiene cargada su información nutricional.</EmptyState>;
   }
 
   return (
@@ -107,70 +89,6 @@ function NutricionCard({ cultivo }: { cultivo: CultivoDetalle }) {
         </div>
       )}
     </Card>
-  );
-}
-
-function RecetaCard({ receta }: { receta: RecetaDeCultivo }) {
-  return (
-    <Link
-      href={`/recetas/${receta.id}`}
-      className={cn("flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline", TARJETA_HOVER)}
-    >
-      {/* Decorativa: el nombre de la receta está debajo. */}
-      <Photo seed={seedDeId(receta.id)} height={140} radius={0} icon={UtensilsCrossed} src={receta.foto?.url} alt="" />
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <h4 className="m-0 font-display text-base leading-tight font-semibold text-fg-1">{receta.nombre}</h4>
-        <div className="flex flex-wrap gap-3 text-xs text-fg-3">
-          {/* El tiempo ya viene formateado del backend ("1 h 15 min"). */}
-          {receta.tiempo && (
-            <span className="inline-flex items-center gap-1"><Clock size={12} /> {receta.tiempo}</span>
-          )}
-          <span className="inline-flex items-center gap-1"><Users size={12} /> {receta.porciones} porc.</span>
-          <span className="inline-flex items-center gap-1">
-            <Gauge size={12} /> {DIFICULTAD_LABEL[receta.dificultad]}
-          </span>
-        </div>
-        <div className="mt-auto flex items-center justify-between border-t border-cream-tert pt-2.5">
-          <span className="text-xs text-fg-3">Ver receta</span>
-          <ArrowRight size={14} className="text-green-800" />
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function ActividadCard({ actividad }: { actividad: ActividadDeCultivo }) {
-  const ubicacion = [actividad.establecimiento, actividad.departamento].filter(Boolean).join(" · ");
-  return (
-    <Link
-      href={`/explorar/${actividad.id}`}
-      className={cn("flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline", TARJETA_HOVER)}
-    >
-      {/* Sin portada cargada queda el degradado por seed. */}
-      <Photo seed={seedDeId(actividad.id)} height={130} radius={0} src={actividad.foto?.url} alt="" />
-      <div className="flex flex-1 flex-col gap-[7px] p-4">
-        <h4 className="m-0 font-display text-[15.5px] leading-tight font-semibold text-fg-1">{actividad.titulo}</h4>
-        {ubicacion && (
-          <div className="inline-flex items-center gap-1.5 text-[12.5px] text-fg-2">
-            <MapPin size={13} className="shrink-0 text-brown-700" /> {ubicacion}
-          </div>
-        )}
-        <div className="mt-auto flex items-baseline justify-between gap-2 border-t border-cream-tert pt-2.5">
-          {/* `null` es "todavía sin precio publicado", que no es lo mismo que $ 0. */}
-          {actividad.precio === null ? (
-            <span className="text-sm font-semibold text-fg-3">A consultar</span>
-          ) : (
-            <span>
-              <span className="font-mono text-[15px] font-semibold text-green-800">{moneyAr(actividad.precio)}</span>
-              <span className="text-[11.5px] text-fg-3"> / pers.</span>
-            </span>
-          )}
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-800">
-            Ver <ArrowRight size={13} />
-          </span>
-        </div>
-      </div>
-    </Link>
   );
 }
 
@@ -245,7 +163,7 @@ function Detalle({ cultivo }: { cultivo: CultivoDetalle }) {
             {cultivo.descripcion ? (
               <p className="m-0 text-base leading-relaxed text-pretty text-fg-1">{cultivo.descripcion}</p>
             ) : (
-              <Vacio>Este cultivo todavía no tiene cargada su descripción.</Vacio>
+              <EmptyState size="inline">Este cultivo todavía no tiene cargada su descripción.</EmptyState>
             )}
           </Seccion>
 
@@ -255,7 +173,7 @@ function Detalle({ cultivo }: { cultivo: CultivoDetalle }) {
             sub="Calendario de cosecha, crecimiento y reposo a lo largo del año en Mendoza."
           >
             {cultivo.calendario.length === 0 ? (
-              <Vacio>Este cultivo todavía no tiene cargado su calendario de estacionalidad.</Vacio>
+              <EmptyState size="inline">Este cultivo todavía no tiene cargado su calendario de estacionalidad.</EmptyState>
             ) : (
               <Card className="px-6 py-[22px]">
                 <CalendarioTemporada calendario={cultivo.calendario} />
@@ -276,10 +194,10 @@ function Detalle({ cultivo }: { cultivo: CultivoDetalle }) {
           : undefined}
       >
         {cultivo.recetas.length === 0 ? (
-          <Vacio>Todavía no hay recetas cargadas para este cultivo.</Vacio>
+          <EmptyState size="inline">Todavía no hay recetas cargadas para este cultivo.</EmptyState>
         ) : (
           <div className="grid grid-cols-1 gap-5 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3">
-            {cultivo.recetas.map((r) => <RecetaCard key={r.id} receta={r} />)}
+            {cultivo.recetas.map((r) => <RecetaCard key={r.id} receta={r} sinCultivos />)}
           </div>
         )}
       </Seccion>
@@ -293,10 +211,10 @@ function Detalle({ cultivo }: { cultivo: CultivoDetalle }) {
           : undefined}
       >
         {cultivo.actividades.length === 0 ? (
-          <Vacio>Por ahora no hay actividades publicadas para cosechar este cultivo.</Vacio>
+          <EmptyState size="inline">Por ahora no hay actividades publicadas para cosechar este cultivo.</EmptyState>
         ) : (
           <div className="grid grid-cols-1 gap-5 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3">
-            {cultivo.actividades.map((a) => <ActividadCard key={a.id} actividad={a} />)}
+            {cultivo.actividades.map((a) => <ActividadCard key={a.id} act={a} sinCultivos />)}
           </div>
         )}
       </Seccion>
