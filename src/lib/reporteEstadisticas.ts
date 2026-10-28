@@ -1,10 +1,12 @@
-import { fmtDiaLocal, fmtFecha, fmtPctConSigno, moneyAr } from "@/lib/format";
+import {
+  C, FORMATO_PESOS, armarCsv, cargarPdf, encabezarFila, filaCsv as fila, nuevoLibro, pdfTexto, pieDePaginaPdf, type Doc,
+} from "@/lib/exportar";
+import { fmtFecha, fmtPctConSigno, moneyAr } from "@/lib/format";
 import type { Estadisticas, RangoFechas } from "@/types/estadisticas";
 
 /*
  * El reporte se arma en el navegador con los datos que ya están en pantalla:
- * el backend no tiene un endpoint que lo genere. Las librerías de Excel y PDF
- * pesan, así que se cargan recién cuando alguien pide el archivo.
+ * el backend no tiene un endpoint que lo genere.
  */
 
 /** Qué incluye el reporte: sólo la tabla, o además los KPIs y la serie. */
@@ -22,16 +24,6 @@ const rango = (r: RangoFechas) => `${fmtFecha(r.desde)} – ${fmtFecha(r.hasta)}
 const COLUMNAS_ACTIVIDADES = ["Actividad", "Cultivo", "Cupos totales", "Reservas", "Ingresos del período (ARS)", "Ocupación (%)"];
 
 /* ---- CSV ------------------------------------------------------------------ */
-
-/** Una celda CSV: entre comillas si trae coma, comilla o salto de línea. */
-function celda(v: string | number | null): string {
-  const s = v == null ? "" : String(v);
-  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-function fila(...celdas: (string | number | null)[]): string {
-  return celdas.map(celda).join(",");
-}
 
 /**
  * Las estadísticas como CSV. Los montos van como número pelado, sin "$" ni
@@ -64,30 +56,14 @@ export function estadisticasACsv(data: Estadisticas, alcance: AlcanceReporte, en
     lineas.push(fila(a.nombre, a.cultivo, a.cupos, a.reservas, a.ingresos, a.ocupacion));
   }
 
-  // BOM para que Excel abra los acentos bien.
-  return "﻿" + lineas.join("\r\n");
+  return armarCsv(lineas);
 }
 
 /* ---- Excel ---------------------------------------------------------------- */
 
-const VERDE = "FF154212";
-const FORMATO_PESOS = '"$" #,##0';
-
 /** Las estadísticas como .xlsx: una hoja por bloque, con los montos como número y formato de pesos. */
 export async function estadisticasAXlsx(data: Estadisticas, alcance: AlcanceReporte, enc: EncabezadoReporte): Promise<ArrayBuffer> {
-  // exceljs es CommonJS: según el bundler, `Workbook` llega suelto o bajo `default`.
-  const mod = await import("exceljs");
-  const Workbook = (mod as unknown as { default?: typeof mod }).default?.Workbook ?? mod.Workbook;
-  const libro = new Workbook();
-  libro.creator = "Mendoza AgroTours";
-  libro.created = new Date();
-
-  type Hoja = ReturnType<typeof libro.addWorksheet>;
-  const encabezar = (hoja: Hoja, nroFila: number) => {
-    const f = hoja.getRow(nroFila);
-    f.font = { bold: true, color: { argb: "FFFFFFFF" } };
-    f.fill = { type: "pattern", pattern: "solid", fgColor: { argb: VERDE } };
-  };
+  const libro = await nuevoLibro();
 
   if (alcance === "completo") {
     const { kpis, serie, anterior } = data;
@@ -98,7 +74,7 @@ export async function estadisticasAXlsx(data: Estadisticas, alcance: AlcanceRepo
     resumen.addRow(["Período", `${enc.periodo} (${rango(data.actual)})`]);
     if (anterior) resumen.addRow(["Período anterior", rango(anterior)]);
     resumen.addRow([]);
-    encabezar(resumen, resumen.addRow(["Indicador", "Valor"]).number);
+    encabezarFila(resumen, resumen.addRow(["Indicador", "Valor"]).number);
     resumen.addRow(["Ocupación (%)", kpis.ocupacionPct]);
     resumen.addRow(["Cupos reservados", kpis.ocupacionFilled]);
     resumen.addRow(["Cupos ofertados", kpis.ocupacionTotal]);
@@ -110,7 +86,7 @@ export async function estadisticasAXlsx(data: Estadisticas, alcance: AlcanceRepo
 
     const hojaSerie = libro.addWorksheet("Serie");
     hojaSerie.columns = [{ width: 14 }, { width: 24 }, { width: 18, style: { numFmt: FORMATO_PESOS } }];
-    encabezar(hojaSerie, hojaSerie.addRow(["Período", "Reservas confirmadas", "Ganancia"]).number);
+    encabezarFila(hojaSerie, hojaSerie.addRow(["Período", "Reservas confirmadas", "Ganancia"]).number);
     for (const b of serie.bars) hojaSerie.addRow([b.label, b.value, b.ganancia ?? 0]);
   }
 
@@ -119,7 +95,7 @@ export async function estadisticasAXlsx(data: Estadisticas, alcance: AlcanceRepo
     { width: 40 }, { width: 28 }, { width: 14 }, { width: 12 },
     { width: 24, style: { numFmt: FORMATO_PESOS } }, { width: 14 },
   ];
-  encabezar(hojaAct, hojaAct.addRow(COLUMNAS_ACTIVIDADES).number);
+  encabezarFila(hojaAct, hojaAct.addRow(COLUMNAS_ACTIVIDADES).number);
   for (const a of data.actividades) hojaAct.addRow([a.nombre, a.cultivo, a.cupos, a.reservas, a.ingresos, a.ocupacion]);
   hojaAct.views = [{ state: "frozen", ySplit: 1 }];
 
@@ -128,28 +104,9 @@ export async function estadisticasAXlsx(data: Estadisticas, alcance: AlcanceRepo
 
 /* ---- PDF ------------------------------------------------------------------ */
 
-// Paleta del sitio, en RGB para jsPDF.
-type RGB = [number, number, number];
-const C = {
-  verde: [21, 66, 18] as RGB,
-  verdeBorde: [45, 90, 39] as RGB,
-  verdeBarra: [234, 241, 226] as RGB,
-  fg1: [42, 38, 32] as RGB,
-  fg2: [92, 86, 78] as RGB,
-  fg3: [138, 130, 120] as RGB,
-  linea: [217, 210, 194] as RGB,
-  crema: [245, 241, 234] as RGB,
-};
-
-/**
- * Las fuentes estándar de PDF no tienen el menos tipográfico (−); con él, el
- * signo saldría como un carácter roto.
- */
-const pdfTexto = (s: string) => s.replace(/−/g, "-");
-
 /** Las estadísticas como PDF A4: encabezado, KPIs y gráfico (si es completo) y la tabla. */
 export async function estadisticasAPdf(data: Estadisticas, alcance: AlcanceReporte, enc: EncabezadoReporte): Promise<ArrayBuffer> {
-  const [{ jsPDF }, { autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
+  const { jsPDF, autoTable } = await cargarPdf();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const M = 15; // margen
   const ancho = doc.internal.pageSize.getWidth() - M * 2;
@@ -194,20 +151,10 @@ export async function estadisticasAPdf(data: Estadisticas, alcance: AlcanceRepor
     },
   });
 
-  // Pie en todas las páginas, una vez que se sabe cuántas son.
-  const paginas = doc.getNumberOfPages();
-  const alto = doc.internal.pageSize.getHeight();
-  for (let i = 1; i <= paginas; i++) {
-    doc.setPage(i);
-    doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...C.fg3);
-    doc.text(`Generado el ${fmtDiaLocal(new Date())} · Mendoza AgroTours`, M, alto - 8);
-    doc.text(`${i} / ${paginas}`, M + ancho, alto - 8, { align: "right" });
-  }
+  pieDePaginaPdf(doc, M);
 
   return doc.output("arraybuffer");
 }
-
-type Doc = InstanceType<typeof import("jspdf").jsPDF>;
 
 /** Las tres tarjetas de KPI en fila. Devuelve dónde terminan. */
 function kpisPdf(doc: Doc, data: Estadisticas, x: number, y: number, ancho: number): number {
