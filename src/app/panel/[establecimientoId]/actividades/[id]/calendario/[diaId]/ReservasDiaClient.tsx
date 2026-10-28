@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
    Banknote, CalendarClock, CalendarDays, CalendarX, CheckCircle2, Clock, CreditCard, FilterX, MapPin,
-  RotateCcw, Settings2, SlidersHorizontal, Timer, Users, XCircle,
+  Printer, RotateCcw, Settings2, SlidersHorizontal, Timer, Users, XCircle,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Pagination } from "@/components/catalog/controls";
@@ -14,8 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { hoyISO } from "@/components/ui/date-picker";
 import { CropChip, IconoActividad } from "@/components/panel/actividad/identidad";
 import { CancelarDiaModal } from "@/components/panel/gestion-dias/CancelarDiaModal";
+import { PlanillaDiaDialog } from "@/components/panel/gestion-dias/PlanillaDiaDialog";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
-import { useCancelarDia, useEstadosReservaDia, useReservasDia, useResumenDia } from "@/hooks/useReservasDia";
+import {
+  ESTADOS_PLANILLA, useCancelarDia, useEstadosReservaDia, usePlanillaDia, useReservasDia, useResumenDia,
+} from "@/hooks/useReservasDia";
+import type { FormatoExport } from "@/lib/exportar";
 import { fmtCodigoReserva, moneyAr } from "@/lib/format";
 import { fechaCorta, fechaLarga, mensajeErrorDias } from "@/lib/gestion-dias";
 import { cn } from "@/lib/utils";
@@ -399,7 +403,10 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
   const estados = useEstadosReservaDia(establecimientoId, actividadId, diaId);
   const { cancelar, cancelando } = useCancelarDia(establecimientoId, actividadId, diaId);
 
+  const { generar, generando } = usePlanillaDia(establecimientoId, actividadId, diaId);
+
   const [modalCancelar, setModalCancelar] = useState(false);
+  const [modalPlanilla, setModalPlanilla] = useState(false);
 
   // Al recargar después de cancelar, o al filtrar o paginar, sigue a la vista lo
   // último que llegó en vez de volver al esqueleto.
@@ -444,6 +451,18 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
     }
     return null;
   }
+
+  async function descargarPlanilla(formato: FormatoExport): Promise<string | null> {
+    if (!r) return null;
+    const res = await generar(r, formato);
+    if (!res.ok) return res.mensaje ?? null;
+    setModalPlanilla(false);
+    notify.success(`Planilla descargada en ${formato.toUpperCase()}`);
+    return null;
+  }
+
+  // Sólo las reservas que efectivamente vienen entran en la planilla.
+  const paraPlanilla = ESTADOS_PLANILLA.reduce((n, e) => n + (conteo?.[e] ?? 0), 0);
 
   const cantidad = pagina?.totalElements ?? (estado ? conteo?.[estado] : r?.totalReservas);
 
@@ -544,13 +563,20 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
                   </p>
                 </div>
                 {r.totalReservas > 0 && (
-                  <FiltroEstado
-                    value={estado}
-                    onChange={filtrar}
-                    opciones={opciones}
-                    conteo={conteo}
-                    total={r.totalReservas}
-                  />
+                  <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
+                    {paraPlanilla > 0 && (
+                      <Button variant="neutral" onClick={() => setModalPlanilla(true)} className="w-full sm:w-auto">
+                        <Printer className="size-[17px]" /> Planilla del día
+                      </Button>
+                    )}
+                    <FiltroEstado
+                      value={estado}
+                      onChange={filtrar}
+                      opciones={opciones}
+                      conteo={conteo}
+                      total={r.totalReservas}
+                    />
+                  </div>
                 )}
               </div>
 
@@ -586,6 +612,15 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
           cancelando={cancelando}
           onConfirmar={confirmarCancelacion}
           onCerrar={() => setModalCancelar(false)}
+        />
+      )}
+
+      {modalPlanilla && r && (
+        <PlanillaDiaDialog
+          fecha={r.fecha}
+          generando={generando}
+          onDescargar={descargarPlanilla}
+          onCerrar={() => setModalPlanilla(false)}
         />
       )}
 
