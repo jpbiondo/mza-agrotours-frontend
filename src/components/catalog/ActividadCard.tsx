@@ -68,10 +68,7 @@ export default function ActividadCard({
             {act.precioRegular === null ? (
               <span className="text-[14.5px] font-semibold text-fg-3">A consultar</span>
             ) : (
-              <div className="flex items-baseline gap-[5px]">
-                <span className="font-mono text-[19px] font-bold text-fg-1">{moneyAr(act.precioRegular)}</span>
-                <span className="text-[12.5px] text-fg-3">/ persona</span>
-              </div>
+              <span className="font-mono text-[19px] font-bold text-fg-1">{moneyAr(act.precioRegular)}</span>
             )}
           </div>
           <span className={buttonClasses({ size: "sm", className: "shrink-0 whitespace-nowrap" })}>
