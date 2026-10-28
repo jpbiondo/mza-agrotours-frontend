@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { BackLink, PuntajeBadge, Skeleton, buttonClasses } from "@/components/ui";
+import { BackLink, EmptyState, PuntajeBadge, Skeleton, buttonClasses } from "@/components/ui";
 import { useEstablecimientoPublico } from "@/hooks/useCatalogoEstablecimientos";
 import { moneyAr } from "@/lib/format";
 import type { ActividadOfrecida, EstablecimientoPublico } from "@/types/catalogo";
@@ -28,11 +28,14 @@ function ContactRow({ icon, label, value, href }: { icon: React.ReactNode; label
 }
 
 /* ---- Card de actividad ofrecida ---------------------------------------- */
+/** La misma grilla que `/explorar`, para que las cards tengan el mismo ancho. */
+const GRILLA_ACTIVIDADES = "grid gap-6 grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
+
 function ActividadCard({ act }: { act: ActividadOfrecida }) {
   return (
     <Link href={`/explorar/${act.id}`} className="card-hover" style={{ display: "flex", flexDirection: "column", textDecoration: "none", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
       <div style={{ position: "relative" }}>
-        <Photo seed={seedDeId(act.id)} height={150} radius={0} src={act.foto?.url} alt="" />
+        <Photo seed={seedDeId(act.id)} height={180} radius={0} src={act.foto?.url} alt="" />
         {/* Sin reseñas todavía no hay puntuación que mostrar. */}
         {act.puntuacion !== null && (
           <PuntajeBadge puntuacion={act.puntuacion} cantidad={act.cantidadResenias} className="absolute top-3 right-3" />
@@ -47,8 +50,8 @@ function ActividadCard({ act }: { act: ActividadOfrecida }) {
             </span>
           ))}
         </div>
-        <div style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid var(--cream-tert)", display: "flex", flexDirection: "column", gap: 8 }}>
-          <div>
+        <div className="mt-auto flex items-end justify-between gap-3 border-t border-cream-tert pt-3">
+          <div className="min-w-0">
             <div className="t-label" style={{ marginBottom: 2 }}>Desde</div>
             {act.precioDesde === null ? (
               <span style={{ fontSize: 14, fontWeight: 600, color: "var(--fg-3)" }}>A consultar</span>
@@ -59,8 +62,7 @@ function ActividadCard({ act }: { act: ActividadOfrecida }) {
               </div>
             )}
           </div>
-          {/* En su propia línea: con 3 cards por fila no entra al lado del precio. */}
-          <span className={buttonClasses({ size: "sm", className: "self-end whitespace-nowrap" })}>
+          <span className={buttonClasses({ size: "sm", className: "shrink-0 whitespace-nowrap" })}>
             Ver detalle <ArrowRight size={16} />
           </span>
         </div>
@@ -78,15 +80,6 @@ function Seccion({ icon, titulo, children }: { icon: React.ReactNode; titulo: st
       </div>
       {children}
     </section>
-  );
-}
-
-/** Caja de texto para lo que el establecimiento todavía no cargó. */
-function Vacio({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ background: "var(--surface)", border: "1px dashed var(--sand)", borderRadius: "var(--radius-lg)", padding: "36px 24px", textAlign: "center", color: "var(--fg-2)", fontSize: 14.5 }}>
-      {children}
-    </div>
   );
 }
 
@@ -150,13 +143,13 @@ function Detalle({ est }: { est: EstablecimientoPublico }) {
             {est.descripcion ? (
               <p style={{ margin: 0, color: "var(--fg-1)", fontSize: 15.5, lineHeight: 1.65 }}>{est.descripcion}</p>
             ) : (
-              <Vacio>Este establecimiento todavía no cargó su descripción.</Vacio>
+              <EmptyState size="inline">Este establecimiento todavía no cargó su descripción.</EmptyState>
             )}
           </Seccion>
 
           <Seccion icon={<Sprout size={19} color="var(--green-800)" />} titulo="Cultivos populares">
             {est.cultivos.length === 0 ? (
-              <Vacio>Este establecimiento todavía no cargó sus cultivos.</Vacio>
+              <EmptyState size="inline">Este establecimiento todavía no cargó sus cultivos.</EmptyState>
             ) : (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
                 {est.cultivos.map((cult) => (
@@ -164,16 +157,6 @@ function Detalle({ est }: { est: EstablecimientoPublico }) {
                     <Sprout size={15} color="var(--green-700)" /> {cult}
                   </span>
                 ))}
-              </div>
-            )}
-          </Seccion>
-
-          <Seccion icon={<CalendarDays size={19} color="var(--green-800)" />} titulo={`Actividades ofrecidas (${est.actividades.length})`}>
-            {est.actividades.length === 0 ? (
-              <Vacio>Este establecimiento todavía no publicó actividades.</Vacio>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(230px, 100%), 1fr))", gap: 18 }}>
-                {est.actividades.map((act) => <ActividadCard key={act.id} act={act} />)}
               </div>
             )}
           </Seccion>
@@ -213,6 +196,20 @@ function Detalle({ est }: { est: EstablecimientoPublico }) {
             </div>
           </div>
         </aside>
+      </div>
+
+      {/* Fuera de la grilla con el aside, a todo el ancho: así las cards miden
+          lo mismo que en `/explorar`. */}
+      <div className="mt-9.5">
+        <Seccion icon={<CalendarDays size={19} color="var(--green-800)" />} titulo={`Actividades ofrecidas (${est.actividades.length})`}>
+          {est.actividades.length === 0 ? (
+            <EmptyState size="inline">Este establecimiento todavía no publicó actividades.</EmptyState>
+          ) : (
+            <div className={GRILLA_ACTIVIDADES}>
+              {est.actividades.map((act) => <ActividadCard key={act.id} act={act} />)}
+            </div>
+          )}
+        </Seccion>
       </div>
     </>
   );
