@@ -1,5 +1,5 @@
 import {
-  C, FORMATO_PESOS, armarCsv, cargarPdf, encabezarFila, filaCsv as fila, nuevoLibro, pdfTexto, pieDePaginaPdf, type Doc,
+  C, FORMATO_PESOS, armarCsv, cargarPdf, encabezarFila, filaCsv as fila, marcaPdf, nuevoLibro, pdfTexto, pieDePaginaPdf, type Doc,
 } from "@/lib/exportar";
 import { fmtFecha, fmtPctConSigno, moneyAr } from "@/lib/format";
 import type { Estadisticas, RangoFechas } from "@/types/estadisticas";
@@ -112,13 +112,16 @@ export async function estadisticasAPdf(data: Estadisticas, alcance: AlcanceRepor
   const ancho = doc.internal.pageSize.getWidth() - M * 2;
   let y = M + 4;
 
-  // Encabezado.
+  // Encabezado, con la marca arriba a la derecha.
+  marcaPdf(doc, M + ancho, M - 2);
   doc.setFont("helvetica", "bold").setFontSize(18).setTextColor(...C.fg1);
   doc.text("Estadísticas y reportes", M, y);
   y += 7;
+  // Un nombre de establecimiento largo baja de renglón y empuja lo que sigue.
   doc.setFont("helvetica", "normal").setFontSize(10).setTextColor(...C.fg2);
-  doc.text(`${enc.establecimiento} · ${enc.periodo} · ${rango(data.actual)}`, M, y);
-  y += 4;
+  const datos = doc.splitTextToSize(`${enc.establecimiento} · ${enc.periodo} · ${rango(data.actual)}`, ancho) as string[];
+  doc.text(datos, M, y);
+  y += 4 + 4.6 * (datos.length - 1);
   doc.setDrawColor(...C.linea).setLineWidth(0.3).line(M, y, M + ancho, y);
   y += 8;
 
