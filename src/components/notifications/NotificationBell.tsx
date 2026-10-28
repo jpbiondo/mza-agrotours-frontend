@@ -105,8 +105,8 @@ export default function NotificationBell({ ambito = "personal", className }: Not
         aria-label={listo && noLeidas > 0 ? `Notificaciones, ${noLeidas} sin leer` : "Notificaciones"}
         onClick={toggle}
         className={cn(
-          "relative inline-flex size-9.5 cursor-pointer items-center justify-center rounded-md border border-outline-variant",
-          open ? "bg-cream-tert" : "bg-surface",
+          "relative inline-flex size-9.5 cursor-pointer items-center justify-center rounded-md border border-outline-variant transition-colors",
+          open ? "bg-cream-tert" : "bg-surface hover:bg-cream-tert",
           className,
         )}
       >
