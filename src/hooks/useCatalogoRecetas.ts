@@ -36,7 +36,8 @@ interface CultivoBackend {
   nombre?: string;
 }
 
-interface ResumenBackend {
+/** Lo comparte el listado de recetas del detalle de un cultivo. */
+export interface ResumenBackend {
   id?: string;
   nombre?: string;
   cultivos?: unknown;
@@ -121,7 +122,7 @@ function aCultivos(v: unknown): CultivoDeReceta[] {
     .filter((c) => c.id !== "");
 }
 
-function aResumen(r: ResumenBackend): RecetaResumen {
+export function aResumen(r: ResumenBackend): RecetaResumen {
   return {
     id: aTexto(r.id),
     nombre: aTexto(r.nombre),
