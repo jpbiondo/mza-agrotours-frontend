@@ -17,7 +17,7 @@ import type { CultivoResumen, FiltroTemporada, TotalesTemporada } from "@/types/
 const PAGE_SIZE = 12;
 
 /** Misma grilla para las tarjetas y para el esqueleto, así nada salta al llegar los datos. */
-const GRILLA = "grid gap-[22px] grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
+const GRILLA = "grid gap-5 grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
 
 const MESES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
