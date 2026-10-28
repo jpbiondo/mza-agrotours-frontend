@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Building2, CalendarDays, MapPin } from "lucide-react";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import { CropChip } from "@/components/catalog/controls";
-import { Skeleton } from "@/components/ui";
+import { Skeleton, buttonClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { EstablecimientoResumen } from "@/types/catalogo";
 
@@ -58,7 +58,7 @@ export default function EstablecimientoCard({
             <CalendarDays size={13} className="text-brown-700" />
             {est.cantidadActividades} {est.cantidadActividades === 1 ? "actividad" : "actividades"}
           </span>
-          <span className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-green-800">
+          <span className={buttonClasses({ size: "sm", className: "shrink-0 whitespace-nowrap" })}>
             Ver establecimiento <ArrowRight size={16} />
           </span>
         </div>
