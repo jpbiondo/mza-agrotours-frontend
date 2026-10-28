@@ -112,11 +112,16 @@ function FiltroEstado({
           <SelectValue className="font-semibold" />
         </span>
       </SelectTrigger>
-      <SelectContent className="rounded-md bg-surface p-1.5 shadow-pop">
+      <SelectContent alignItemWithTrigger={false} className="rounded-md bg-surface p-1.5 shadow-pop">
         {items.map((o) => {
           const n = cuenta(o.value);
           return (
-            <SelectItem key={o.value} value={o.value} className="rounded-[8px] py-2.5 pr-3 pl-3 text-sm">
+            <SelectItem
+              key={o.value}
+              value={o.value}
+              indicator="start"
+              className="rounded-[8px] py-2.5 pr-3 pl-8 text-sm"
+            >
               <span className="flex flex-1 items-center justify-between gap-3">
                 {o.label}
                 {n !== null && (
