@@ -7,16 +7,26 @@ import { moneyAr } from "@/lib/format";
 import type { ActividadResumen } from "@/types/catalogo";
 
 /**
- * Tarjeta de una actividad del catálogo público. La usan `/explorar` y las
- * destacadas de la landing: los dos endpoints devuelven el mismo DTO.
+ * Tarjeta de una actividad del catálogo público. La usan `/explorar`, las
+ * destacadas de la landing y los listados de actividades del detalle de un
+ * establecimiento y de un cultivo.
  */
 export default function ActividadCard({
   act,
   cultivosIds = [],
+  sinEstablecimiento = false,
+  sinCultivos = false,
 }: {
   act: ActividadResumen;
   /** Cultivos filtrados en el listado, para resaltar su chip. */
   cultivosIds?: string[];
+  /**
+   * En el detalle de un establecimiento: el establecimiento y su departamento
+   * son los de la página, así que repetirlos en cada tarjeta no suma.
+   */
+  sinEstablecimiento?: boolean;
+  /** En el detalle de un cultivo: todas las actividades lo comparten. */
+  sinCultivos?: boolean;
 }) {
   return (
     <Link
@@ -33,20 +43,24 @@ export default function ActividadCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-[18px]">
-        {act.nombreDepartamento && (
+        {!sinEstablecimiento && act.nombreDepartamento && (
           <div className="flex items-center gap-1.5 text-[13px] text-fg-3">
             <MapPin size={14} className="text-brown-700" />
             <span className="font-medium text-fg-2">{act.nombreDepartamento}, Mendoza</span>
           </div>
         )}
         <h3 className="m-0 font-display text-[18.5px] leading-tight font-bold text-fg-1">{act.nombre}</h3>
-        <div className="flex items-center gap-1.5 text-[13px] text-fg-3">
-          <Warehouse size={14} className="shrink-0" />
-          <span className="truncate">{act.nombreEstablecimiento}</span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {act.cultivos.map((c) => <CropChip key={c.id} active={cultivosIds.includes(c.id)}>{c.nombre}</CropChip>)}
-        </div>
+        {!sinEstablecimiento && act.nombreEstablecimiento && (
+          <div className="flex items-center gap-1.5 text-[13px] text-fg-3">
+            <Warehouse size={14} className="shrink-0" />
+            <span className="truncate">{act.nombreEstablecimiento}</span>
+          </div>
+        )}
+        {!sinCultivos && act.cultivos.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {act.cultivos.map((c) => <CropChip key={c.id} active={cultivosIds.includes(c.id)}>{c.nombre}</CropChip>)}
+          </div>
+        )}
         <div className="mt-auto flex items-end justify-between gap-3 border-t border-cream-tert pt-3.5">
           <div className="min-w-0">
             <div className="t-label mb-0.5">Desde</div>
@@ -54,10 +68,7 @@ export default function ActividadCard({
             {act.precioRegular === null ? (
               <span className="text-[14.5px] font-semibold text-fg-3">A consultar</span>
             ) : (
-              <div className="flex items-baseline gap-[5px]">
-                <span className="font-mono text-[19px] font-bold text-fg-1">{moneyAr(act.precioRegular)}</span>
-                <span className="text-[12.5px] text-fg-3">/ persona</span>
-              </div>
+              <span className="font-mono text-[19px] font-bold text-fg-1">{moneyAr(act.precioRegular)}</span>
             )}
           </div>
           <span className={buttonClasses({ size: "sm", className: "shrink-0 whitespace-nowrap" })}>

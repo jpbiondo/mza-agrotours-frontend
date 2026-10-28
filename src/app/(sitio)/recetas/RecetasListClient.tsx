@@ -3,25 +3,24 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  ArrowRight, ArrowUpDown, ChevronRight, Clock, Leaf, List, ListOrdered, RotateCcw, SearchX,
-  UtensilsCrossed, Users, X,
+  ArrowUpDown, ChevronRight, Clock, Leaf, List, RotateCcw, SearchX, UtensilsCrossed, X,
 } from "lucide-react";
 import { AsyncView } from "@/components/AsyncView";
-import Photo, { seedDeId } from "@/components/landing/Photo";
 import { Pagination } from "@/components/catalog/controls";
-import { Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import RecetaCard, { RecetaCardSkeleton } from "@/components/catalog/RecetaCard";
+import { Button, Card, Skeleton } from "@/components/ui";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { useCatalogoRecetas, useFiltrosRecetas } from "@/hooks/useCatalogoRecetas";
 import { cn } from "@/lib/utils";
 import type {
-  DificultadId, DuracionId, FiltrosRecetas, OrdenRecetas, RecetaResumen,
+  DificultadId, DuracionId, FiltrosRecetas, OrdenRecetas,
 } from "@/types/recetas";
 
 /** El backend pagina de a 9 por defecto; la grilla es de 3 columnas. */
 const PAGE_SIZE = 9;
 
 /** Misma grilla para las tarjetas y para el esqueleto, así nada salta al llegar los datos. */
-const GRILLA = "grid gap-[22px] grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
+const GRILLA = "grid gap-5 grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
 
 const DIFICULTAD_LABEL: Record<DificultadId, string> = {
   FACIL: "Fácil",
@@ -189,79 +188,12 @@ function FiltrosSkeleton() {
   );
 }
 
-/* ---- Tarjeta ------------------------------------------------------------- */
-
-function Stat({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-[5px] whitespace-nowrap">{icon}{children}</span>
-  );
-}
-
-function RecetaCard({ receta }: { receta: RecetaResumen }) {
-  return (
-    <Link
-      href={`/recetas/${receta.id}`}
-      className="flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline transition-[box-shadow,border-color,transform] hover:-translate-y-px hover:border-sand hover:shadow-hover"
-    >
-      <div className="relative">
-        {/* Decorativa: el nombre de la receta está en el encabezado de al lado.
-            Sin imagen cargada queda el degradado por seed. */}
-        <Photo seed={seedDeId(receta.id)} height={176} radius={0} icon={UtensilsCrossed} src={receta.foto?.url} alt="" />
-        <EstadoBadge tone="neutral" className="absolute top-3 left-3 shadow-hover">
-          {DIFICULTAD_LABEL[receta.dificultad]}
-        </EstadoBadge>
-      </div>
-
-      <div className="flex flex-1 flex-col gap-2.5 p-[18px]">
-        <h3 className="m-0 font-display text-[19px] leading-tight font-semibold text-fg-1">{receta.nombre}</h3>
-
-        <div className="flex flex-wrap items-center gap-3.5 text-[12.5px] text-fg-3">
-          {/* El tiempo ya viene formateado del backend ("1 h 15 min"). */}
-          {receta.tiempo && <Stat icon={<Clock size={13} />}>{receta.tiempo}</Stat>}
-          <Stat icon={<Users size={13} />}>{receta.porciones} porc.</Stat>
-          <Stat icon={<ListOrdered size={13} />}>
-            {receta.cantidadPasos} {receta.cantidadPasos === 1 ? "paso" : "pasos"}
-          </Stat>
-        </div>
-
-        {receta.cultivos.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {receta.cultivos.map((c) => (
-              <span
-                key={c.id}
-                className="inline-flex items-center gap-1.5 rounded-pill bg-cream-tert py-1 pr-2.5 pl-1.5 text-[11.5px] font-medium text-fg-2"
-              >
-                <span className="inline-flex size-[15px] shrink-0 items-center justify-center rounded-full bg-green-050">
-                  <Leaf size={9} className="text-green-800" />
-                </span>
-                {c.nombre}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-auto flex items-center justify-between border-t border-cream-tert pt-3">
-          <span className="text-[12.5px] text-fg-3">Ver receta</span>
-          <ArrowRight size={15} className="text-green-800" />
-        </div>
-      </div>
-    </Link>
-  );
-}
+/* ---- Tarjetas ------------------------------------------------------------ */
 
 function GrillaSkeleton() {
   return (
     <div className={GRILLA}>
-      {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} className="overflow-hidden rounded-lg border border-outline-variant bg-surface">
-          <Skeleton className="h-[176px] rounded-none" />
-          <div className="flex flex-col gap-3 p-[18px]">
-            <Skeleton className="h-5 w-3/5" />
-            <Skeleton className="h-3.5 w-4/5" />
-            <Skeleton className="h-3.5 w-2/5" />
-          </div>
-        </div>
-      ))}
+      {Array.from({ length: 6 }, (_, i) => <RecetaCardSkeleton key={i} />)}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import {
 import { AsyncView } from "@/components/AsyncView";
 import Photo, { seedDeId } from "@/components/landing/Photo";
 import { Pagination } from "@/components/catalog/controls";
-import { Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { Button, Card, EstadoBadge, Skeleton, buttonClasses } from "@/components/ui";
 import { useCatalogoCultivos, useTotalesTemporada } from "@/hooks/useCatalogoCultivos";
 import { useMesActual } from "@/hooks/useMesActual";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ import type { CultivoResumen, FiltroTemporada, TotalesTemporada } from "@/types/
 const PAGE_SIZE = 12;
 
 /** Misma grilla para las tarjetas y para el esqueleto, así nada salta al llegar los datos. */
-const GRILLA = "grid gap-[22px] grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
+const GRILLA = "grid gap-5 grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
 
 const MESES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -77,27 +77,29 @@ function CultivoCard({ cultivo }: { cultivo: CultivoResumen }) {
   return (
     <Link
       href={`/cultivos/${cultivo.id}`}
-      className="flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline transition-[box-shadow,border-color,transform] hover:-translate-y-px hover:border-sand hover:shadow-hover"
+      className="flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface no-underline transition-[box-shadow,border-color,transform] duration-150 hover:-translate-y-0.5 hover:border-sand hover:shadow-hover"
     >
       <div className="relative">
         {/* Decorativa: el nombre del cultivo está en el encabezado de al lado.
             Sin imagen cargada queda el degradado por seed. */}
-        <Photo seed={seedDeId(cultivo.id)} height={170} radius={0} icon={Leaf} src={cultivo.foto?.url} alt="" />
+        <Photo seed={seedDeId(cultivo.id)} height={180} radius={0} icon={Leaf} src={cultivo.foto?.url} alt="" />
         <EstadoBadge tone={cultivo.enTemporada ? "success" : "neutral"} className="absolute top-3 right-3 shadow-hover">
           {cultivo.enTemporada ? "En temporada" : "Fuera de temporada"}
         </EstadoBadge>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1.5 p-[18px]">
-        <h3 className="m-0 font-display text-[19px] leading-tight font-semibold text-fg-1">{cultivo.nombre}</h3>
-        <div className="mt-auto flex items-center gap-1.5 pt-2 text-[13px] text-fg-2">
+      <div className="flex flex-1 flex-col gap-3 p-4.5">
+        <h3 className="m-0 font-display text-[18.5px] leading-tight font-bold text-fg-1">{cultivo.nombre}</h3>
+        <div className="flex items-center gap-1.5 text-[13px] text-fg-2">
           <CalendarDays size={14} className="shrink-0 text-green-700" />
           {/* Sin meses de cosecha cargados el backend no manda resumen. */}
           {cultivo.resumenCosecha ? `Cosecha: ${cultivo.resumenCosecha}` : "Sin meses de cosecha cargados"}
         </div>
-        <span className="inline-flex items-center gap-1.5 pt-2 text-[13px] font-semibold text-green-800">
-          Ver cultivo <ArrowRight size={15} />
-        </span>
+        <div className="mt-auto flex justify-end border-t border-cream-tert pt-3.5">
+          <span className={buttonClasses({ size: "sm", className: "shrink-0 whitespace-nowrap" })}>
+            Ver cultivo <ArrowRight size={16} />
+          </span>
+        </div>
       </div>
     </Link>
   );
@@ -108,8 +110,8 @@ function GrillaSkeleton() {
     <div className={GRILLA}>
       {Array.from({ length: 6 }, (_, i) => (
         <div key={i} className="overflow-hidden rounded-lg border border-outline-variant bg-surface">
-          <Skeleton className="h-[170px] rounded-none" />
-          <div className="flex flex-col gap-3 p-[18px]">
+          <Skeleton className="h-45 rounded-none" />
+          <div className="flex flex-col gap-3 p-4.5">
             <Skeleton className="h-5 w-3/5" />
             <Skeleton className="h-3.5 w-2/5" />
             <Skeleton className="h-3.5 w-1/4" />

@@ -1,20 +1,21 @@
-import { aFoto } from "@/hooks/useCatalogoActividades";
+import { aFoto, aResumen as aActividadResumen } from "@/hooks/useCatalogoActividades";
+import type { ResumenBackend as ActividadResumenBackend } from "@/hooks/useCatalogoActividades";
 import { useAsync } from "@/hooks/useAsync";
 import type { AsyncState } from "@/hooks/useAsync";
+import { aResumen as aRecetaResumen } from "@/hooks/useCatalogoRecetas";
+import type { ResumenBackend as RecetaResumenBackend } from "@/hooks/useCatalogoRecetas";
 import { ApiError, apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
 import type { Pagina } from "@/lib/api";
+import type { ActividadResumen } from "@/types/catalogo";
 import type {
-  ActividadDeCultivo,
   ConsultaCultivos,
   CultivoDetalle,
   CultivoResumen,
   DatoNutricional,
   EstadoMes,
   MesEstacionalidad,
-  RecetaDeCultivo,
   TotalesTemporada,
 } from "@/types/cultivos";
-import type { DificultadId } from "@/types/recetas";
 
 /**
  * Catálogo de cultivos del visitante: el listado paginado, los totales con los
@@ -53,22 +54,21 @@ interface NutricionBackend {
   unidad?: string;
 }
 
-interface RecetaBackend {
-  foto?: unknown;
-  id?: string;
-  nombre?: string;
-  tiempo?: string | null;
-  porciones?: unknown;
-  dificultad?: unknown;
-}
+/**
+ * Receta en la que entra el cultivo. Es el `ResumenBackend` del recetario salvo
+ * por los cultivos y la cantidad de pasos, que no vienen.
+ * TODO backend: mandar el mismo DTO que el listado de `/recetas`.
+ */
+type RecetaBackend = RecetaResumenBackend;
 
-interface ActividadBackend {
-  id?: string;
+/**
+ * Actividad en la que se cosecha el cultivo. Es el `ResumenBackend` del catálogo
+ * de actividades salvo por el nombre, que hoy viene como `titulo`, y por los
+ * cultivos y las reseñas, que no vienen.
+ * TODO backend: mandar el mismo DTO que el listado de `/actividades`.
+ */
+interface ActividadBackend extends ActividadResumenBackend {
   titulo?: string;
-  nombreEstablecimiento?: string;
-  nombreDepartamento?: string;
-  precioRegular?: unknown;
-  fotoPortada?: unknown;
 }
 
 interface DetalleBackend {
@@ -115,9 +115,6 @@ const ESTADOS: Record<string, EstadoMes> = {
   REPOSO: "reposo",
 };
 
-/** Valores del enum `Dificultad`, para descartar el que no conozcamos. */
-const DIFICULTADES: DificultadId[] = ["FACIL", "MEDIA", "DIFICIL"];
-
 /** `UnidadNutricional` del backend → el símbolo que se muestra. */
 const UNIDADES: Record<string, string> = {
   KCAL: "kcal",
@@ -135,11 +132,6 @@ function aTexto(v: unknown): string {
 
 function aNumero(v: unknown): number {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
-}
-
-/** El precio distingue "sin cargar" de 0, así que el `null` se conserva. */
-function aNumeroOpcional(v: unknown): number | null {
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
 function aResumen(c: ResumenBackend): CultivoResumen {
@@ -186,30 +178,8 @@ function aNutricion(v: unknown): DatoNutricional[] {
     .filter((d) => d.nombre !== "" && d.valor !== "");
 }
 
-/** La dificultad es obligatoria en el alta de la receta; si faltara, la media. */
-function aReceta(r: RecetaBackend): RecetaDeCultivo {
-  const dificultad = aTexto(r.dificultad);
-  return {
-    id: aTexto(r.id),
-    nombre: aTexto(r.nombre),
-    tiempo: aTexto(r.tiempo),
-    porciones: aNumero(r.porciones),
-    dificultad: DIFICULTADES.includes(dificultad as DificultadId)
-      ? (dificultad as DificultadId)
-      : "MEDIA",
-    foto: aFoto(r.foto),
-  };
-}
-
-function aActividad(a: ActividadBackend): ActividadDeCultivo {
-  return {
-    id: aTexto(a.id),
-    titulo: aTexto(a.titulo),
-    establecimiento: aTexto(a.nombreEstablecimiento),
-    departamento: aTexto(a.nombreDepartamento),
-    precio: aNumeroOpcional(a.precioRegular),
-    foto: aFoto(a.fotoPortada),
-  };
+function aActividad(a: ActividadBackend): ActividadResumen {
+  return aActividadResumen({ ...a, nombre: a.nombre ?? a.titulo });
 }
 
 /** Lista de textos sueltos (los beneficios), sin los vacíos. */
@@ -231,7 +201,7 @@ function aDetalle(d: DetalleBackend): CultivoDetalle {
     recetas: Array.isArray(d.recetas)
       ? d.recetas
           .filter((r): r is RecetaBackend => !!r && typeof r === "object")
-          .map(aReceta)
+          .map(aRecetaResumen)
           .filter((r) => r.id !== "")
       : [],
     // Sin id no se puede linkear la actividad: se descarta la fila.

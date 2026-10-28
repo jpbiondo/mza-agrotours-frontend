@@ -20,7 +20,7 @@ import type { DireccionOrden, FilterOption, RangoPrecio } from "@/types/catalogo
 const PAGE_SIZE = 9;
 
 /** Misma grilla para las tarjetas y para el skeleton, así nada salta al llegar los datos. */
-const GRILLA = "grid gap-6 grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
+const GRILLA = "grid gap-5 grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
 
 function GrillaSkeleton() {
   return (

@@ -13,6 +13,7 @@ import {
   Sprout,
   LayoutDashboard,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import { cerrarSesion } from "@/hooks/useAuth";
 
@@ -125,17 +126,10 @@ export default function AccountMenu() {
         aria-expanded={open}
         aria-label="Tu cuenta"
         onClick={() => setOpen((o) => !o)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 7,
-          padding: "3px 6px 3px 3px",
-          border:
-            "1px solid " + (open ? "var(--outline-variant)" : "transparent"),
-          borderRadius: 999,
-          background: open ? "var(--surface)" : "transparent",
-          cursor: "pointer",
-        }}
+        className={cn(
+          "flex cursor-pointer items-center gap-[7px] rounded-pill border py-[3px] pr-1.5 pl-[3px] transition-colors",
+          open ? "border-outline-variant bg-surface" : "border-transparent bg-transparent hover:bg-cream-tert",
+        )}
       >
         <span style={avatarStyle}>{initials}</span>
         {/* En móvil sobra: el avatar ya se lee como botón y el header no tiene

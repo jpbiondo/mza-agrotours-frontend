@@ -3,14 +3,14 @@
 import Link from "next/link";
 import {
   ChevronRight as Crumb, Info, Sprout, CalendarDays, Phone, Mail, MapPin,
-  ArrowLeft, ArrowRight, Building2, SearchX,
+  ArrowLeft, Building2, SearchX,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
+import ActividadCard from "@/components/catalog/ActividadCard";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { BackLink, PuntajeBadge, Skeleton, buttonClasses } from "@/components/ui";
+import { BackLink, EmptyState, Skeleton, buttonClasses } from "@/components/ui";
 import { useEstablecimientoPublico } from "@/hooks/useCatalogoEstablecimientos";
-import { moneyAr } from "@/lib/format";
-import type { ActividadOfrecida, EstablecimientoPublico } from "@/types/catalogo";
+import type { EstablecimientoPublico } from "@/types/catalogo";
 
 /* ---- Fila de contacto -------------------------------------------------- */
 function ContactRow({ icon, label, value, href }: { icon: React.ReactNode; label: string; value: string; href?: string }) {
@@ -27,47 +27,9 @@ function ContactRow({ icon, label, value, href }: { icon: React.ReactNode; label
   return href ? <a href={href} style={base}>{inner}</a> : <div style={base}>{inner}</div>;
 }
 
-/* ---- Card de actividad ofrecida ---------------------------------------- */
-function ActividadCard({ act }: { act: ActividadOfrecida }) {
-  return (
-    <Link href={`/explorar/${act.id}`} className="card-hover" style={{ display: "flex", flexDirection: "column", textDecoration: "none", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-      <div style={{ position: "relative" }}>
-        <Photo seed={seedDeId(act.id)} height={150} radius={0} src={act.foto?.url} alt="" />
-        {/* Sin reseñas todavía no hay puntuación que mostrar. */}
-        {act.puntuacion !== null && (
-          <PuntajeBadge puntuacion={act.puntuacion} cantidad={act.cantidadResenias} className="absolute top-3 right-3" />
-        )}
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: 16, gap: 10 }}>
-        <h4 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16.5, color: "var(--fg-1)", lineHeight: 1.3 }}>{act.nombre}</h4>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {act.cultivos.map((c) => (
-            <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--green-050)", color: "var(--green-800)", borderRadius: "var(--radius-pill)", padding: "2px 9px", fontSize: 11.5, fontWeight: 600 }}>
-              <Sprout size={10} color="var(--green-700)" /> {c}
-            </span>
-          ))}
-        </div>
-        <div style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid var(--cream-tert)", display: "flex", flexDirection: "column", gap: 8 }}>
-          <div>
-            <div className="t-label" style={{ marginBottom: 2 }}>Desde</div>
-            {act.precioDesde === null ? (
-              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--fg-3)" }}>A consultar</span>
-            ) : (
-              <div style={{ display: "flex", alignItems: "baseline", gap: 4, whiteSpace: "nowrap" }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 17, fontWeight: 700, color: "var(--fg-1)" }}>{moneyAr(act.precioDesde)}</span>
-                <span style={{ fontSize: 12, color: "var(--fg-3)" }}>/ adulto</span>
-              </div>
-            )}
-          </div>
-          {/* En su propia línea: con 3 cards por fila no entra al lado del precio. */}
-          <span style={{ alignSelf: "flex-end", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--green-800)", whiteSpace: "nowrap" }}>
-            Ver detalle <ArrowRight size={15} />
-          </span>
-        </div>
-      </div>
-    </Link>
-  );
-}
+/* ---- Actividades ofrecidas --------------------------------------------- */
+/** La misma grilla que `/explorar`, para que las cards tengan el mismo ancho. */
+const GRILLA_ACTIVIDADES = "grid gap-5 grid-cols-1 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3";
 
 function Seccion({ icon, titulo, children }: { icon: React.ReactNode; titulo: string; children: React.ReactNode }) {
   return (
@@ -78,15 +40,6 @@ function Seccion({ icon, titulo, children }: { icon: React.ReactNode; titulo: st
       </div>
       {children}
     </section>
-  );
-}
-
-/** Caja de texto para lo que el establecimiento todavía no cargó. */
-function Vacio({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ background: "var(--surface)", border: "1px dashed var(--sand)", borderRadius: "var(--radius-lg)", padding: "36px 24px", textAlign: "center", color: "var(--fg-2)", fontSize: 14.5 }}>
-      {children}
-    </div>
   );
 }
 
@@ -150,13 +103,13 @@ function Detalle({ est }: { est: EstablecimientoPublico }) {
             {est.descripcion ? (
               <p style={{ margin: 0, color: "var(--fg-1)", fontSize: 15.5, lineHeight: 1.65 }}>{est.descripcion}</p>
             ) : (
-              <Vacio>Este establecimiento todavía no cargó su descripción.</Vacio>
+              <EmptyState size="inline">Este establecimiento todavía no cargó su descripción.</EmptyState>
             )}
           </Seccion>
 
           <Seccion icon={<Sprout size={19} color="var(--green-800)" />} titulo="Cultivos populares">
             {est.cultivos.length === 0 ? (
-              <Vacio>Este establecimiento todavía no cargó sus cultivos.</Vacio>
+              <EmptyState size="inline">Este establecimiento todavía no cargó sus cultivos.</EmptyState>
             ) : (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
                 {est.cultivos.map((cult) => (
@@ -164,16 +117,6 @@ function Detalle({ est }: { est: EstablecimientoPublico }) {
                     <Sprout size={15} color="var(--green-700)" /> {cult}
                   </span>
                 ))}
-              </div>
-            )}
-          </Seccion>
-
-          <Seccion icon={<CalendarDays size={19} color="var(--green-800)" />} titulo={`Actividades ofrecidas (${est.actividades.length})`}>
-            {est.actividades.length === 0 ? (
-              <Vacio>Este establecimiento todavía no publicó actividades.</Vacio>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(230px, 100%), 1fr))", gap: 18 }}>
-                {est.actividades.map((act) => <ActividadCard key={act.id} act={act} />)}
               </div>
             )}
           </Seccion>
@@ -214,6 +157,20 @@ function Detalle({ est }: { est: EstablecimientoPublico }) {
           </div>
         </aside>
       </div>
+
+      {/* Fuera de la grilla con el aside, a todo el ancho: así las cards miden
+          lo mismo que en `/explorar`. */}
+      <div className="mt-9.5">
+        <Seccion icon={<CalendarDays size={19} color="var(--green-800)" />} titulo={`Actividades ofrecidas (${est.actividades.length})`}>
+          {est.actividades.length === 0 ? (
+            <EmptyState size="inline">Este establecimiento todavía no publicó actividades.</EmptyState>
+          ) : (
+            <div className={GRILLA_ACTIVIDADES}>
+              {est.actividades.map((act) => <ActividadCard key={act.id} act={act} sinEstablecimiento />)}
+            </div>
+          )}
+        </Seccion>
+      </div>
     </>
   );
 }
@@ -238,8 +195,6 @@ export default function DetalleClient({ id }: { id: string }) {
       </AsyncBoundary>
 
       <style>{`
-        .card-hover { transition: box-shadow .16s, border-color .16s, transform .16s; }
-        .card-hover:hover { box-shadow: var(--shadow-hover); border-color: var(--sand); transform: translateY(-2px); }
         @media (max-width: 940px) { .est-detail-grid { grid-template-columns: 1fr !important; } }
       `}</style>
     </div>

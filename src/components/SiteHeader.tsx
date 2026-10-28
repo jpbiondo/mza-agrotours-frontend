@@ -99,11 +99,12 @@ export default function SiteHeader({ maxWidth = 1200 }: SiteHeaderProps) {
             <Link
               key={id}
               href={href}
+              aria-current={id === active ? "page" : undefined}
               className={cn(
-                "rounded-md px-3.5 py-2 text-[14.5px] no-underline",
+                "rounded-md px-3.5 py-2 text-[14.5px] no-underline transition-colors",
                 id === active
                   ? "bg-green-050 font-semibold text-green-800"
-                  : "font-medium text-fg-2",
+                  : "font-medium text-fg-2 hover:bg-cream-tert",
               )}
             >
               {label}

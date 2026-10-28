@@ -1,11 +1,12 @@
 import { useAsync } from "@/hooks/useAsync";
 import type { AsyncState } from "@/hooks/useAsync";
-import { aFoto } from "@/hooks/useCatalogoActividades";
+import { aFoto, aResumen as aActividadResumen } from "@/hooks/useCatalogoActividades";
+import type { ResumenBackend as ActividadResumenBackend } from "@/hooks/useCatalogoActividades";
 import { ApiError, apiFetch, comoEnvelope, comoPagina } from "@/lib/api";
 import type { Pagina } from "@/lib/api";
 import type { CultivoRef } from "@/types/datos";
 import type {
-  ActividadOfrecida,
+  ActividadResumen,
   ConsultaCatalogo,
   DepartamentoRef,
   EstablecimientoPublico,
@@ -40,14 +41,14 @@ interface ResumenBackend {
   foto?: unknown;
 }
 
-interface ActividadBackend {
-  id?: string;
-  nombre?: string;
-  cultivos?: unknown;
+/**
+ * Actividad ofrecida. Es el `ResumenBackend` del catálogo de actividades salvo
+ * por el precio, que hoy viene como `precioDesde`, y por el establecimiento y el
+ * departamento, que no vienen (se toman del propio detalle).
+ * TODO backend: mandar el mismo DTO que el listado de `/actividades`.
+ */
+interface ActividadBackend extends ActividadResumenBackend {
   precioDesde?: unknown;
-  calificacionPromedio?: unknown;
-  cantidadResenias?: unknown;
-  fotoPortada?: unknown;
 }
 
 /** El detalle nombra el departamento como texto, no como objeto. */
@@ -80,11 +81,6 @@ function aTexto(v: unknown): string {
 
 function aNumero(v: unknown): number {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
-}
-
-/** Precio y puntuación distinguen "sin cargar" de 0, así que el `null` se conserva. */
-function aNumeroOpcional(v: unknown): number | null {
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
 /**
@@ -126,20 +122,13 @@ function aResumen(e: ResumenBackend): EstablecimientoResumen {
   };
 }
 
-function aActividad(a: ActividadBackend): ActividadOfrecida {
-  const cantidadResenias = aNumero(a.cantidadResenias);
-  const promedio = aNumeroOpcional(a.calificacionPromedio);
-  return {
-    id: aTexto(a.id),
-    nombre: aTexto(a.nombre),
-    cultivos: aNombresCultivo(a.cultivos),
-    precioDesde: aNumeroOpcional(a.precioDesde),
-    // Sin reseñas el promedio puede venir `null` o 0: los dos son "nadie
-    // calificó", y un 0 no se puede mostrar como puntaje (el mínimo es 1).
-    puntuacion: cantidadResenias > 0 && promedio !== null && promedio > 0 ? promedio : null,
-    cantidadResenias,
-    foto: aFoto(a.fotoPortada),
-  };
+function aActividad(a: ActividadBackend, d: DetalleBackend): ActividadResumen {
+  return aActividadResumen({
+    ...a,
+    precioRegular: a.precioRegular ?? a.precioDesde,
+    nombreEstablecimiento: a.nombreEstablecimiento ?? d.nombre,
+    nombreDepartamento: a.nombreDepartamento ?? d.departamento ?? undefined,
+  });
 }
 
 function aDetalle(d: DetalleBackend): EstablecimientoPublico {
@@ -157,7 +146,7 @@ function aDetalle(d: DetalleBackend): EstablecimientoPublico {
     actividades: Array.isArray(d.actividades)
       ? d.actividades
           .filter((a): a is ActividadBackend => !!a && typeof a === "object")
-          .map(aActividad)
+          .map((a) => aActividad(a, d))
           .filter((a) => a.id !== "")
       : [],
     foto: aFoto(d.foto),

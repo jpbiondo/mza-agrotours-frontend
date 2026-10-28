@@ -76,7 +76,7 @@ function ReservaCard({ r }: { r: ReservaResumen }) {
               </span>
             )}
           </div>
-          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-fg-1">
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-green-800">
             Ver detalle <ArrowRight size={15} />
           </span>
         </div>

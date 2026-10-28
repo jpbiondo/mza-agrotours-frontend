@@ -54,7 +54,7 @@ export default function MobileNav({ links, active }: { links: NavLink[]; active?
                 onClick={() => setOpen(false)}
                 aria-current={id === active ? "page" : undefined}
                 className={cn(
-                  "flex items-center rounded-[10px] px-3 py-[11px] text-[15px] no-underline",
+                  "flex items-center rounded-[10px] px-3 py-[11px] text-[15px] no-underline transition-colors",
                   id === active
                     ? "bg-green-050 font-semibold text-green-800"
                     : "font-medium text-fg-1 hover:bg-cream-tert",

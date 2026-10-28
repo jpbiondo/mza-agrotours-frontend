@@ -40,20 +40,6 @@ export interface ConsultaCatalogo {
   size: number;
 }
 
-/** Actividad ofrecida, tal como la lista el detalle de un establecimiento. */
-export interface ActividadOfrecida {
-  id: string;
-  nombre: string;
-  cultivos: string[];
-  /** `null` es "todavía sin precio publicado", que no es lo mismo que $ 0. */
-  precioDesde: number | null;
-  /** Promedio de 1 a 5. `null` es "todavía sin reseñas". */
-  puntuacion: number | null;
-  cantidadResenias: number;
-  /** Portada de la actividad; `null` si no tiene fotos. */
-  foto: FotoRef | null;
-}
-
 /** GET /establecimientos/{id}/detalle. Los textos vacíos son campos sin cargar. */
 export interface EstablecimientoPublico {
   id: string;
@@ -65,7 +51,8 @@ export interface EstablecimientoPublico {
   telefono: string;
   ubicacion: string;
   cultivos: string[];
-  actividades: ActividadOfrecida[];
+  /** Con la misma forma que el catálogo, para dibujarlas con la misma tarjeta. */
+  actividades: ActividadResumen[];
   /** Portada de la finca. `null` mientras el titular no haya cargado ninguna. */
   foto: FotoRef | null;
 }

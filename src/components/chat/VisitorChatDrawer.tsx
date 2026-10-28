@@ -260,8 +260,8 @@ export default function VisitorChatDrawer() {
         aria-label="Mis chats"
         title="Mis chats"
         className={cn(
-          "relative inline-flex size-[38px] cursor-pointer items-center justify-center rounded-md border border-outline-variant",
-          abierto ? "bg-cream-tert" : "bg-surface",
+          "relative inline-flex size-[38px] cursor-pointer items-center justify-center rounded-md border border-outline-variant transition-colors",
+          abierto ? "bg-cream-tert" : "bg-surface hover:bg-cream-tert",
         )}
       >
         <MessageCircle size={18} className="text-fg-2" />

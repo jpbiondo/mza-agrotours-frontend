@@ -40,8 +40,11 @@ const FILTROS = `${BASE}/filtros`;
 
 /* ---- Respuestas crudas --------------------------------------------------- */
 
-/** Item del listado. Campos opcionales: defensivo. */
-interface ResumenBackend {
+/**
+ * Item del listado. Campos opcionales: defensivo. Lo comparten los listados de
+ * actividades del detalle de un establecimiento y de un cultivo.
+ */
+export interface ResumenBackend {
   id?: string;
   nombre?: string;
   precioRegular?: unknown;
@@ -208,7 +211,7 @@ function aResenias(v: unknown): Resenia[] {
     .filter((r) => r.puntaje >= 1 && r.puntaje <= 5);
 }
 
-function aResumen(a: ResumenBackend): ActividadResumen {
+export function aResumen(a: ResumenBackend): ActividadResumen {
   const cantidadResenias = aNumero(a.cantidadResenias);
   const promedio = aNumeroOpcional(a.calificacionPromedio);
   return {
