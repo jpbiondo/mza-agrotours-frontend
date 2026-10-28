@@ -60,8 +60,8 @@ function ActividadCard({ act }: { act: ActividadOfrecida }) {
             )}
           </div>
           {/* En su propia línea: con 3 cards por fila no entra al lado del precio. */}
-          <span style={{ alignSelf: "flex-end", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--green-800)", whiteSpace: "nowrap" }}>
-            Ver detalle <ArrowRight size={15} />
+          <span className={buttonClasses({ size: "sm", className: "self-end whitespace-nowrap" })}>
+            Ver detalle <ArrowRight size={16} />
           </span>
         </div>
       </div>
