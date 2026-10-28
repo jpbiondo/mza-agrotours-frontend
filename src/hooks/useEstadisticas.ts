@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { apiFetch, comoEnvelope } from "@/lib/api";
+import { descargar, type FormatoExport } from "@/lib/exportar";
 import {
   estadisticasACsv, estadisticasAPdf, estadisticasAXlsx, type AlcanceReporte, type EncabezadoReporte,
 } from "@/lib/reporteEstadisticas";
@@ -235,26 +236,9 @@ export function useEstadisticas(establecimientoId: string, periodo: Periodo): Us
 /* ---- Exportar --------------------------------------------------------------- */
 
 export interface ExportOpts {
-  format: "pdf" | "csv" | "xlsx";
+  format: FormatoExport;
   scope: AlcanceReporte;
 }
-
-/** Baja un archivo generado en el navegador. */
-function descargar(contenido: BlobPart, nombre: string, tipo: string) {
-  const url = URL.createObjectURL(new Blob([contenido], { type: tipo }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nombre;
-  a.click();
-  // Revocar en el mismo tick puede cortar la descarga en algunos navegadores.
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-}
-
-const TIPOS: Record<ExportOpts["format"], string> = {
-  csv: "text/csv;charset=utf-8",
-  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  pdf: "application/pdf",
-};
 
 /**
  * Genera y descarga el reporte en el navegador, con los datos que ya están en
@@ -275,7 +259,7 @@ export function useExportarReporte() {
         opts.format === "csv" ? estadisticasACsv(data, opts.scope, enc)
         : opts.format === "xlsx" ? await estadisticasAXlsx(data, opts.scope, enc)
         : await estadisticasAPdf(data, opts.scope, enc);
-      descargar(contenido, `estadisticas-${periodo}-${data.actual.hasta || "reporte"}.${opts.format}`, TIPOS[opts.format]);
+      descargar(contenido, `estadisticas-${periodo}-${data.actual.hasta || "reporte"}.${opts.format}`, opts.format);
       return { ok: true };
     } catch {
       return { ok: false };
