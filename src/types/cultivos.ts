@@ -1,6 +1,6 @@
-import type { FotoRef } from "@/types/catalogo";
+import type { ActividadResumen, FotoRef } from "@/types/catalogo";
 
-import type { DificultadId } from "./recetas";
+import type { RecetaResumen } from "./recetas";
 
 export type EstadoMes = "cosecha" | "crecimiento" | "reposo";
 
@@ -31,32 +31,6 @@ export interface DatoNutricional {
   valor: string;
 }
 
-/** Actividad en la que se cosecha el cultivo, tal como la lista su detalle. */
-export interface ActividadDeCultivo {
-  id: string;
-  titulo: string;
-  establecimiento: string;
-  departamento: string;
-  precio: number | null;
-  /** Portada de la actividad; `null` si no tiene fotos. */
-  foto: FotoRef | null;
-}
-
-/**
- * Receta en la que entra el cultivo, tal como la lista su detalle. Es un resumen
- * más corto que el del recetario: no trae ni cultivos ni cantidad de pasos.
- */
-export interface RecetaDeCultivo {
-  id: string;
-  nombre: string;
-  /** Ya viene formateado del backend, p. ej. "1 h 15 min". */
-  tiempo: string;
-  porciones: number;
-  dificultad: DificultadId;
-  /** Imagen del plato. `null` mientras no se haya cargado ninguna. */
-  foto: FotoRef | null;
-}
-
 export interface CultivoDetalle {
   id: string;
   nombre: string;
@@ -65,8 +39,9 @@ export interface CultivoDetalle {
   calendario: MesEstacionalidad[];
   porcionReferencia: string;
   informacionNutricional: DatoNutricional[];
-  recetas: RecetaDeCultivo[];
-  actividades: ActividadDeCultivo[];
+  /** Recetas y actividades con la misma forma que sus catálogos, para dibujarlas con la misma tarjeta. */
+  recetas: RecetaResumen[];
+  actividades: ActividadResumen[];
   /** Imagen representativa. `null` mientras el admin no haya cargado ninguna. */
   foto: FotoRef | null;
 }
