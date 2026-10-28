@@ -2,6 +2,9 @@ import { useState } from "react";
 import { ApiError, apiFetch, comoEnvelope, comoPagina, type Pagina } from "@/lib/api";
 import { aNumero, objetos } from "@/hooks/useGestionDias";
 import { useLecturaConToken, type UseAsyncConToken } from "@/hooks/useLecturaConToken";
+import { clasificarError } from "@/lib/errores";
+import { descargar, type FormatoExport } from "@/lib/exportar";
+import { nombrePlanilla, planillaACsv, planillaAPdf, planillaAXlsx } from "@/lib/planillaDia";
 import { conToken } from "@/lib/sesion";
 import { aCultivos } from "@/hooks/useTiposCultivo";
 import type { EstadoDia } from "@/types/gestion-dias";
@@ -211,6 +214,72 @@ export function useEstadosReservaDia(
     },
     SIN_SESION,
   );
+}
+
+/* ---- Planilla del día --------------------------------------------------- */
+
+/** Los que efectivamente vienen. Finalizada cubre un día ya cerrado. */
+export const ESTADOS_PLANILLA: EstadoReservaDia[] = ["pagada", "finalizada"];
+
+/** Tamaño de página para traer todo: pocas vueltas sin pedirle al backend una página enorme. */
+const SIZE_PLANILLA = 100;
+
+/** Todas las reservas del día en un estado, recorriendo las páginas. */
+async function todasLasReservas(path: string, estado: EstadoReservaDia, token: string): Promise<ReservaDia[]> {
+  const items: ReservaDia[] = [];
+  for (let page = 0; ; page++) {
+    const qs = new URLSearchParams({ page: String(page), size: String(SIZE_PLANILLA), estado: ESTADO_RESERVA_BACKEND[estado] });
+    const env = comoEnvelope<unknown>(await apiFetch<unknown>(`${path}/reservas?${qs}`, { token }));
+    if (!env.ok) throw new Error("No pudimos cargar las reservas");
+    const pagina = comoPagina<ReservaBackend>(env.data);
+    items.push(...pagina.items.map(aReserva).filter((x): x is ReservaDia => x !== null));
+    if (page + 1 >= pagina.totalPages || pagina.items.length === 0) return items;
+  }
+}
+
+/** Por qué no salió la planilla: de red, sesión y permiso se dice qué pasó; lo demás, genérico. */
+function mensajePlanilla(e: unknown): string {
+  const falla = clasificarError(e);
+  switch (falla?.tipo) {
+    case "red":
+    case "sesion":
+      return falla.mensaje;
+    case "permiso":
+      return "Tu rol no te permite descargar la planilla de este día.";
+    case "noEncontrado":
+      return "No encontramos ese día de la actividad. Puede que ya no exista.";
+    default:
+      return "No se pudo generar la planilla. Intentá nuevamente en unos minutos.";
+  }
+}
+
+/**
+ * Trae, al pedir la planilla, todas las reservas pagadas y finalizadas del día
+ * (sin el paginado de la pantalla) y arma el archivo en el navegador.
+ */
+export function usePlanillaDia(establecimientoId: string, actividadId: string, diaId: string) {
+  const [generando, setGenerando] = useState(false);
+
+  async function generar(dia: ResumenDia, formato: FormatoExport): Promise<{ ok: boolean; mensaje?: string }> {
+    setGenerando(true);
+    try {
+      const path = diaPath(establecimientoId, actividadId, diaId);
+      const porEstado = await conToken((token) => Promise.all(ESTADOS_PLANILLA.map((e) => todasLasReservas(path, e, token))));
+      const reservas = porEstado.flat();
+      const contenido =
+        formato === "csv" ? planillaACsv(dia, reservas)
+        : formato === "xlsx" ? await planillaAXlsx(dia, reservas)
+        : await planillaAPdf(dia, reservas);
+      descargar(contenido, `${nombrePlanilla(dia)}.${formato}`, formato);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, mensaje: mensajePlanilla(e) };
+    } finally {
+      setGenerando(false);
+    }
+  }
+
+  return { generar, generando };
 }
 
 /* ---- Escrituras --------------------------------------------------------- */

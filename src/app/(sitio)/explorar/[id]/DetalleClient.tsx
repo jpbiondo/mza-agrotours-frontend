@@ -246,10 +246,13 @@ function etiquetaDia(iso: string): string {
   return `${DIAS_SEMANA[d.getDay()]} ${m[3]}/${m[2]}`;
 }
 
-/** Una columna por día; el `<style>` del final la reacomoda en pantallas chicas. */
-function grillaClima(columnas: number): React.CSSProperties {
-  return { display: "grid", gridTemplateColumns: `repeat(${columnas}, minmax(0, 1fr))`, gap: 10 };
-}
+/**
+ * Una columna por día, siempre en una sola fila. En angosto cada día tiene un
+ * ancho fijo (un 30% deja ver que hay más) y la fila se desplaza de costado;
+ * desde `md` se reparten el ancho en partes iguales.
+ */
+const GRILLA_CLIMA =
+  "grid grid-flow-col auto-cols-[max(96px,30%)] gap-2.5 overflow-x-auto snap-x snap-mandatory pb-1 md:auto-cols-[minmax(0,1fr)] md:overflow-visible md:pb-0";
 
 function grados(t: number | null): string {
   return t === null ? "—" : `${Math.round(t)}°`;
@@ -259,7 +262,7 @@ function DiaClima({ d }: { d: DiaPronostico }) {
   const { Icono, texto, color } = d.condicion ? CLIMA[d.condicion] : SIN_CONDICION;
   const llueve = d.probabilidadLluvia >= 50;
   return (
-    <div style={{ padding: "16px 12px", textAlign: "center", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: 12 }}>
+    <div className="snap-start" style={{ padding: "16px 12px", textAlign: "center", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: 12 }}>
       <div style={{ fontSize: 12, color: "var(--fg-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>
         {etiquetaDia(d.fecha)}
       </div>
@@ -292,8 +295,8 @@ function Pronostico({ departamento }: { departamento: string }) {
       <Block>
         <SectionTitle>Pronóstico del clima</SectionTitle>
         {/* Cinco columnas es lo que suele devolver el backend; el alto es el de una tarjeta. */}
-        <div style={grillaClima(5)} className="clima-grid">
-          {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-37 w-full rounded-xl" />)}
+        <div className={GRILLA_CLIMA}>
+          {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-37 w-full snap-start rounded-xl" />)}
         </div>
       </Block>
     );
@@ -307,7 +310,7 @@ function Pronostico({ departamento }: { departamento: string }) {
         {/* Cuántos días trae depende de lo que haya cargado el scheduler: suelen ser 5 o 6. */}
         {data.dias.length === 1 ? "Pronóstico para hoy" : `Pronóstico próximos ${data.dias.length} días`}
       </SectionTitle>
-      <div style={grillaClima(data.dias.length)} className="clima-grid">
+      <div className={GRILLA_CLIMA}>
         {data.dias.map((d) => <DiaClima key={d.fecha} d={d} />)}
       </div>
     </Block>
@@ -478,16 +481,6 @@ function Detalle({ a }: { a: ActividadPublica }) {
           )}
         </div>
       </div>
-
-      <style>{`
-        /* Las columnas del clima son una por día: en angosto se apilan de a tres y de a dos. */
-        @media (max-width: 720px) {
-          .clima-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-        }
-        @media (max-width: 460px) {
-          .clima-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-        }
-      `}</style>
     </>
   );
 }
