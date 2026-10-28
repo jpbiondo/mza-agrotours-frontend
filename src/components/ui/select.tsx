@@ -111,8 +111,12 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  indicator = "end",
   ...props
-}: SelectPrimitive.Item.Props) {
+}: SelectPrimitive.Item.Props & {
+  /** Dónde va el tick del seleccionado. Con "start", el ítem tiene que reservar el lugar con `pl-8`. */
+  indicator?: "start" | "end"
+}) {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
@@ -127,7 +131,12 @@ function SelectItem({
       </SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator
         render={
-          <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
+          <span
+            className={cn(
+              "pointer-events-none absolute flex size-4 items-center justify-center",
+              indicator === "start" ? "left-2.5" : "right-2"
+            )}
+          />
         }
       >
         <CheckIcon className="pointer-events-none" />
