@@ -18,6 +18,15 @@ interface ParametrosBackend {
   /** Fracción: 0.1 es 10 %. BigDecimal, así que puede venir como string. */
   porcentajeComision?: unknown;
   diasImpagoReserva?: unknown;
+  /**
+   * Así, con el typo, se llama el componente del record `ParametrosDTO`, y por
+   * lo tanto la clave del JSON. La entidad lo escribe bien: se lee también así
+   * por si el DTO se corrige.
+   */
+  cantidadCalifiacionesFicticias?: unknown;
+  cantidadCalificacionesFicticias?: unknown;
+  puntajeCalificacionFicticia?: unknown;
+  usarCalificacionGlobalComoPuntaje?: unknown;
 }
 
 /** Campo del DTO → el nuestro, para ubicar cada mensaje de `validationError`. */
@@ -27,12 +36,20 @@ const CAMPO: Record<string, ParametroKey> = {
   ttlReserva: "ttlReserva",
   porcentajeComision: "comision",
   diasImpagoReserva: "diasImpago",
+  cantidadCalifiacionesFicticias: "cantidadFicticias",
+  cantidadCalificacionesFicticias: "cantidadFicticias",
+  puntajeCalificacionFicticia: "puntajeFicticio",
+  usarCalificacionGlobalComoPuntaje: "usarPromedioGlobal",
 };
 
 function aNumero(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
   return Number.isFinite(n) ? n : null;
+}
+
+function aBooleano(v: unknown): boolean | null {
+  return typeof v === "boolean" ? v : null;
 }
 
 function aParametros(p: ParametrosBackend): Parametros {
@@ -44,6 +61,9 @@ function aParametros(p: ParametrosBackend): Parametros {
     diasMinReembolso: aNumero(p.diasMinReembolso),
     ttlReserva: aNumero(p.ttlReserva),
     diasImpago: aNumero(p.diasImpagoReserva),
+    cantidadFicticias: aNumero(p.cantidadCalifiacionesFicticias ?? p.cantidadCalificacionesFicticias),
+    puntajeFicticio: aNumero(p.puntajeCalificacionFicticia),
+    usarPromedioGlobal: aBooleano(p.usarCalificacionGlobalComoPuntaje),
   };
 }
 
@@ -55,6 +75,9 @@ function aBackend(d: DatosParametros): ParametrosBackend {
     // Cuatro decimales en la fracción son los dos del porcentaje; toFixed saca el ruido de punto flotante.
     porcentajeComision: Number((d.comision / 100).toFixed(4)),
     diasImpagoReserva: d.diasImpago,
+    cantidadCalifiacionesFicticias: d.cantidadFicticias,
+    puntajeCalificacionFicticia: d.puntajeFicticio,
+    usarCalificacionGlobalComoPuntaje: d.usarPromedioGlobal,
   };
 }
 

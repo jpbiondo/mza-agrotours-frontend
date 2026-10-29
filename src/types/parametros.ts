@@ -11,6 +11,12 @@ export interface Parametros {
   /** En minutos. */
   ttlReserva: number | null;
   diasImpago: number | null;
+  /** C del promedio bayesiano: cuántas calificaciones ficticias suma cada actividad y establecimiento. */
+  cantidadFicticias: number | null;
+  /** m del promedio bayesiano, de 0 a 5. Se ignora con `usarPromedioGlobal`. */
+  puntajeFicticio: number | null;
+  /** Si las calificaciones ficticias valen el promedio global del sistema en vez de `puntajeFicticio`. */
+  usarPromedioGlobal: boolean | null;
 }
 
 export type ParametroKey = keyof Parametros;
@@ -20,11 +26,12 @@ export type DatosParametros = { [K in ParametroKey]: NonNullable<Parametros[K]> 
 
 export interface ParamField {
   key: ParametroKey;
-  group: "finanzas" | "reglas";
+  group: "finanzas" | "reglas" | "ranking";
   label: string;
   /** Clave de ícono lucide. */
   icon: string;
-  kind: "int" | "percent";
+  /** `decimal` admite hasta dos decimales; `flag` es un sí/no. */
+  kind: "int" | "percent" | "decimal" | "flag";
   hint: string;
   unit?: string;
 }

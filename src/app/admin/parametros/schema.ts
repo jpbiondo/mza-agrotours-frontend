@@ -13,11 +13,26 @@ const entero = (min: 0 | 1) =>
     .refine((v) => Number(v) <= ENTERO_MAX, "Es un número demasiado grande.");
 
 /** "12,25" → 12.25; `null` si está vacío. `NumberField` ya acota a dos decimales. */
-export function leerPorcentaje(v: string): number | null {
+export function leerDecimal(v: string): number | null {
   const t = v.trim();
   if (!t) return null;
   const n = Number(t.replace(",", "."));
   return Number.isFinite(n) ? n : null;
+}
+
+/** El puntaje ficticio es una calificación: mayor a 0 y hasta 5 estrellas. */
+const PUNTAJE_MAX = 5;
+
+/**
+ * Lo que se manda como puntaje ficticio si se usa el promedio global y el
+ * campo quedó vacío o fuera de rango: el backend lo exige igual aunque no lo
+ * use. Es el default de la entidad.
+ */
+const PUNTAJE_POR_DEFECTO = 3;
+
+function puntajeValido(v: string): number | null {
+  const n = leerDecimal(v);
+  return n !== null && n > 0 && n <= PUNTAJE_MAX ? n : null;
 }
 
 /**
@@ -29,14 +44,29 @@ export const parametrosSchema = z.object({
     .string()
     .min(1, "Completá este campo.")
     .refine((v) => {
-      const n = leerPorcentaje(v);
+      const n = leerDecimal(v);
       return n !== null && n <= 100;
     }, "Tiene que estar entre 0 y 100."),
   diasMaxActividad: entero(1),
   diasMinReembolso: entero(0),
   ttlReserva: entero(1),
   diasImpago: entero(1),
-});
+  cantidadFicticias: entero(1),
+  usarPromedioGlobal: z.boolean(),
+  puntajeFicticio: z.string(),
+})
+  // El puntaje sólo cuenta sin el promedio global. Con `when` el refine corre
+  // aunque falte otro campo; si no, el conteo de lo que falta saltaría a mitad de camino.
+  .refine((v) => v.usarPromedioGlobal || v.puntajeFicticio.trim() !== "", {
+    path: ["puntajeFicticio"],
+    message: "Completá este campo.",
+    when: () => true,
+  })
+  .refine((v) => v.usarPromedioGlobal || !v.puntajeFicticio.trim() || puntajeValido(v.puntajeFicticio) !== null, {
+    path: ["puntajeFicticio"],
+    message: `Tiene que ser mayor a 0 y hasta ${PUNTAJE_MAX}.`,
+    when: () => true,
+  });
 
 export type ParametrosForm = z.infer<typeof parametrosSchema>;
 
@@ -49,17 +79,24 @@ export function aFormulario(p: Parametros): ParametrosForm {
     diasMinReembolso: num(p.diasMinReembolso),
     ttlReserva: num(p.ttlReserva),
     diasImpago: num(p.diasImpago),
+    cantidadFicticias: num(p.cantidadFicticias),
+    // Sin cargar arranca activo, como el default del backend.
+    usarPromedioGlobal: p.usarPromedioGlobal ?? true,
+    puntajeFicticio: p.puntajeFicticio === null ? "" : String(p.puntajeFicticio).replace(".", ","),
   };
 }
 
 /** El formulario ya validado → lo que se guarda. */
 export function aDatos(f: ParametrosForm): DatosParametros {
   return {
-    comision: leerPorcentaje(f.comision) ?? 0,
+    comision: leerDecimal(f.comision) ?? 0,
     diasMaxActividad: Number(f.diasMaxActividad),
     diasMinReembolso: Number(f.diasMinReembolso),
     ttlReserva: Number(f.ttlReserva),
     diasImpago: Number(f.diasImpago),
+    cantidadFicticias: Number(f.cantidadFicticias),
+    usarPromedioGlobal: f.usarPromedioGlobal,
+    puntajeFicticio: puntajeValido(f.puntajeFicticio) ?? PUNTAJE_POR_DEFECTO,
   };
 }
 
