@@ -1,14 +1,15 @@
 "use client";
 import { useState } from "react";
-import { useForm, useFormState, type UseFormReturn } from "react-hook-form";
+import { useForm, useFormState, useWatch, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  ArrowRight, CalendarPlus, Check, ChevronRight, HandCoins, Info, Lock, Pencil, Percent, Save, Settings2,
-  ShieldCheck, Timer, Undo2, Wallet, X,
+  ArrowRight, CalendarPlus, Check, ChevronRight, Globe, HandCoins, Info, Lock, Pencil, Percent, Save, Settings2,
+  ShieldCheck, Star, Timer, Trophy, Undo2, Users, Wallet, X,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { AsyncView } from "@/components/AsyncView";
 import { Alert, Button, Card, IconCircle, Skeleton } from "@/components/ui";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
@@ -30,16 +31,25 @@ import {
 
 const ICON: Record<string, ComponentType<{ className?: string }>> = {
   percent: Percent, "calendar-plus": CalendarPlus, "undo-2": Undo2, timer: Timer, "hand-coins": HandCoins,
-  wallet: Wallet, "settings-2": Settings2,
+  wallet: Wallet, "settings-2": Settings2, trophy: Trophy, users: Users, globe: Globe, star: Star,
 };
 
 /** Cómo se lee un valor guardado. `null` es un parámetro que todavía no se cargó. */
-function mostrar(f: ParamField, v: number | null): string | null {
+function mostrar(f: ParamField, v: number | boolean | null): string | null {
   if (v === null) return null;
+  if (typeof v === "boolean") return v ? "Activado" : "Desactivado";
   if (f.kind === "percent") return `${String(v).replace(".", ",")} %`;
+  if (f.kind === "decimal") return `${String(v).replace(".", ",")} ${v === 1 ? f.unit?.replace(/s$/, "") : f.unit}`.trim();
   if (f.unit) return `${v} ${v === 1 ? f.unit.replace(/s$/, "") : f.unit}`;
   return String(v);
 }
+
+/** Con el promedio global activo, el puntaje ficticio está guardado pero no se usa. */
+function ignorado(f: ParamField, p: { usarPromedioGlobal: boolean | null }): boolean {
+  return f.key === "puntajeFicticio" && p.usarPromedioGlobal === true;
+}
+
+const SE_USA_EL_GLOBAL = "Se usa el promedio global";
 
 /* ---- Fila de parámetro ------------------------------------------------- */
 /** Con `enFormulario`, el título es el `<FormLabel>` del campo: sólo va dentro de un `<FormItem>`. */
@@ -62,13 +72,16 @@ function Etiqueta({ f, enFormulario }: { f: ParamField; enFormulario?: boolean }
   );
 }
 
-function FilaLectura({ f, valor }: { f: ParamField; valor: number | null }) {
+/** Con `ignorado`, el valor está guardado pero no se usa (el puntaje ficticio con el promedio global activo). */
+function FilaLectura({ f, valor, ignorado }: { f: ParamField; valor: number | boolean | null; ignorado?: string }) {
   const texto = mostrar(f, valor);
   return (
     <div className="grid grid-cols-1 items-center gap-3 py-3.5 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] sm:gap-6">
       <Etiqueta f={f} />
       <div className="flex min-w-0 items-center sm:justify-end">
-        {texto === null ? (
+        {ignorado ? (
+          <span className="text-[14.5px] text-fg-3 italic sm:text-right">{ignorado}</span>
+        ) : texto === null ? (
           <span className="text-[14.5px] text-fg-3 italic">Sin definir</span>
         ) : (
           <span className="min-w-0 font-mono text-[15.5px] font-semibold break-words text-fg-1 sm:text-right">{texto}</span>
@@ -78,17 +91,56 @@ function FilaLectura({ f, valor }: { f: ParamField; valor: number | null }) {
   );
 }
 
-function FilaEdicion({ f, form }: { f: ParamField; form: UseFormReturn<ParametrosForm> }) {
+/** El sí/no del promedio global. Va con su propio `<label>`: el checkbox de base-ui no es un input al que apunte un `htmlFor`. */
+function FilaFlag({ f, form }: { f: ParamField; form: UseFormReturn<ParametrosForm> }) {
   return (
     <FormField
       control={form.control}
-      name={f.key}
+      name="usarPromedioGlobal"
+      render={({ field }) => (
+        <FormItem className="grid grid-cols-1 items-center gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:gap-6">
+          <Etiqueta f={f} />
+          <label className="flex cursor-pointer items-center gap-3 rounded-md border border-outline-variant bg-surface px-4 py-3">
+            <Checkbox
+              ref={field.ref}
+              checked={field.value}
+              onCheckedChange={(ck) => {
+                field.onChange(ck === true);
+                // Con el promedio global el puntaje deja de validarse: se le borra el error que tuviera.
+                if (ck === true) form.clearErrors("puntajeFicticio");
+              }}
+              onBlur={field.onBlur}
+              className="size-5"
+            />
+            <span className="text-[14px] text-fg-1">Usar el promedio global del sistema</span>
+          </label>
+          <FormMessage className="sm:col-start-2" />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function FilaEdicion({ f, form }: { f: ParamField; form: UseFormReturn<ParametrosForm> }) {
+  const usarPromedioGlobal = useWatch({ control: form.control, name: "usarPromedioGlobal" });
+  if (f.kind === "flag") return <FilaFlag f={f} form={form} />;
+  const deshabilitado = f.key === "puntajeFicticio" && usarPromedioGlobal;
+  return (
+    <FormField
+      control={form.control}
+      name={f.key as Exclude<ParametroKey, "usarPromedioGlobal">}
       render={({ field }) => (
         <FormItem className="grid grid-cols-1 items-start gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:gap-6">
           <Etiqueta f={f} enFormulario />
           <div className="flex min-w-0 flex-col gap-[7px]">
             <FormControl>
-              <NumberField {...field} decimales={f.kind === "percent" ? 2 : 0} sufijo={f.unit} placeholder={f.kind === "percent" ? "Ej.: 12,5" : undefined} />
+              <NumberField
+                {...field}
+                disabled={deshabilitado}
+                decimales={f.kind === "int" ? 0 : 2}
+                sufijo={f.unit}
+                placeholder={f.kind === "percent" ? "Ej.: 12,5" : f.kind === "decimal" ? "Ej.: 3,5" : undefined}
+              />
             </FormControl>
             <div className="flex min-h-5 items-center">
               <FormMessage />
@@ -176,7 +228,8 @@ function Reautenticar({ onCancel, onOk }: { onCancel: () => void; onOk: () => vo
 
 /* ---- Resumen de cambios ------------------------------------------------ */
 function ResumenCambios({ antes, despues }: { antes: Parametros; despues: DatosParametros }) {
-  const cambios = PARAM_FIELDS.filter((f) => antes[f.key] !== despues[f.key]);
+  // El puntaje que no se usa no se muestra como cambio: lo que se manda ahí es sólo para cumplir con el DTO.
+  const cambios = PARAM_FIELDS.filter((f) => antes[f.key] !== despues[f.key] && !ignorado(f, despues));
   return (
     <ul className="flex flex-col divide-y divide-cream-tert rounded-md border border-outline-variant px-4">
       {cambios.map((f) => (
@@ -218,7 +271,7 @@ function Pantalla({ inicial }: { inicial: Parametros }) {
   const { faltan, verQueFalta } = useCamposFaltantes(form, parametrosSchema);
   const { confirmarDescarte } = useAvisoSalida(editando && isDirty);
 
-  const sinDefinir = PARAM_FIELDS.filter((f) => guardado[f.key] === null).length;
+  const sinDefinir = PARAM_FIELDS.filter((f) => guardado[f.key] === null && !ignorado(f, guardado)).length;
 
   async function cancelar() {
     if (!(await confirmarDescarte())) return;
@@ -306,7 +359,15 @@ function Pantalla({ inicial }: { inicial: Parametros }) {
                   <div className="divide-y divide-cream-tert">
                     {campos.map((f) => (
                       <div key={f.key} className="px-[22px] py-1.5">
-                        {editando ? <FilaEdicion f={f} form={form} /> : <FilaLectura f={f} valor={guardado[f.key]} />}
+                        {editando ? (
+                          <FilaEdicion f={f} form={form} />
+                        ) : (
+                          <FilaLectura
+                            f={f}
+                            valor={guardado[f.key]}
+                            ignorado={ignorado(f, guardado) ? SE_USA_EL_GLOBAL : undefined}
+                          />
+                        )}
                       </div>
                     ))}
                   </div>
@@ -373,9 +434,10 @@ function ParametrosSkeleton() {
       <Skeleton className="mt-4 h-9 w-80" />
       <Skeleton className="mt-3 mb-6 h-4 w-full max-w-[560px]" />
       <div className="flex flex-col gap-5">
-        {/* Una tarjeta por grupo, con su cantidad de filas: 1 y 4. */}
+        {/* Una tarjeta por grupo, con su cantidad de filas: 1, 4 y 3. */}
         <Skeleton className="h-[126px] rounded-lg" />
         <Skeleton className="h-[336px] rounded-lg" />
+        <Skeleton className="h-[266px] rounded-lg" />
       </div>
     </div>
   );
