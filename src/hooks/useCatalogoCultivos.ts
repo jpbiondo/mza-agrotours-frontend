@@ -64,7 +64,7 @@ type RecetaBackend = RecetaResumenBackend;
 /**
  * Actividad en la que se cosecha el cultivo. Es el `ResumenBackend` del catálogo
  * de actividades salvo por el nombre, que hoy viene como `titulo`, y por los
- * cultivos y las reseñas, que no vienen.
+ * cultivos, que no vienen.
  * TODO backend: mandar el mismo DTO que el listado de `/actividades`.
  */
 interface ActividadBackend extends ActividadResumenBackend {
