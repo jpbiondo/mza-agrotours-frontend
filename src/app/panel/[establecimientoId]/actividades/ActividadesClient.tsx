@@ -601,7 +601,7 @@ export default function ActividadesClient() {
           </div>
           <div className="mt-6 flex justify-end gap-3">
             <Button variant="neutral" onClick={() => setBlocked(null)}>Cerrar</Button>
-            <Link href={ruta("reservas")} className={buttonClasses()}>
+            <Link href={ruta("actividades", blocked.id, "calendario")} className={buttonClasses()}>
               <CalendarDays className="size-[17px]" /> Ver reservas
             </Link>
           </div>

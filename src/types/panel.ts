@@ -1,3 +1,5 @@
+import type { EstadoReservaDia } from "@/types/reservas-dia";
+
 /** Lo que el inicio del panel marca para resolver en el establecimiento activo. */
 export interface PendientesPanel {
   /** Reembolsos que Mercado Pago no pudo hacer y esperan al productor. */
@@ -19,6 +21,8 @@ export interface ReservaProxima {
   actividad: string;
   visitante: string;
   personas: number;
+  /** `null` si el backend manda un estado que no conocemos. */
+  estado: EstadoReservaDia | null;
 }
 
 /** Reservas de un mismo día, ya ordenadas por hora. */

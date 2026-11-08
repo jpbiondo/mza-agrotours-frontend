@@ -19,6 +19,7 @@ import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import {
   ESTADOS_PLANILLA, useCancelarDia, useEstadosReservaDia, usePlanillaDia, useReservasDia, useResumenDia,
 } from "@/hooks/useReservasDia";
+import { ESTADO_RESERVA } from "@/lib/estadoReserva";
 import type { FormatoExport } from "@/lib/exportar";
 import { fmtCodigoReserva, moneyAr } from "@/lib/format";
 import { fechaCorta, fechaLarga, mensajeErrorDias } from "@/lib/gestion-dias";
@@ -30,18 +31,18 @@ const PAGE_SIZE = 10;
 type Tono = "neutral" | "success" | "warning" | "danger" | "info";
 
 const ESTADO_META: Record<EstadoReservaDia, { label: string; tono: Tono; icon: React.ReactNode; pie: string }> = {
-  pendiente: { label: "Pendiente", tono: "warning", icon: <Clock className="size-[15px] text-warning" />, pie: "A la espera del pago" },
-  pagada: { label: "Pagada", tono: "info", icon: <CreditCard className="size-[15px] text-info" />, pie: "Pago confirmado" },
+  pendiente: { ...ESTADO_RESERVA.pendiente, icon: <Clock className="size-[15px] text-warning" />, pie: "A la espera del pago" },
+  pagada: { ...ESTADO_RESERVA.pagada, icon: <CreditCard className="size-[15px] text-info" />, pie: "Pago confirmado" },
   cancelada_con_reembolso: {
-    label: "Cancelada con reembolso", tono: "neutral", icon: <RotateCcw className="size-[15px] text-fg-3" />,
+    ...ESTADO_RESERVA.cancelada_con_reembolso, icon: <RotateCcw className="size-[15px] text-fg-3" />,
     pie: "Reembolso emitido al visitante",
   },
   cancelada_sin_reembolso: {
-    label: "Cancelada sin reembolso", tono: "danger", icon: <XCircle className="size-[15px] text-danger" />,
+    ...ESTADO_RESERVA.cancelada_sin_reembolso, icon: <XCircle className="size-[15px] text-danger" />,
     pie: "Cancelada fuera de plazo · sin reembolso",
   },
-  finalizada: { label: "Finalizada", tono: "success", icon: <CheckCircle2 className="size-[15px] text-success" />, pie: "Experiencia completada" },
-  expirada: { label: "Expirada", tono: "neutral", icon: <Timer className="size-[15px] text-fg-3" />, pie: "No se pagó a tiempo" },
+  finalizada: { ...ESTADO_RESERVA.finalizada, icon: <CheckCircle2 className="size-[15px] text-success" />, pie: "Experiencia completada" },
+  expirada: { ...ESTADO_RESERVA.expirada, icon: <Timer className="size-[15px] text-fg-3" />, pie: "No se pagó a tiempo" },
 };
 
 type Temporalidad = "hoy" | "futura" | "pasada";

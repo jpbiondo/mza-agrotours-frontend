@@ -13,6 +13,7 @@ import { buttonClasses } from "@/components/ui/Button";
 import { useEstablecimientos, useRutaPanel } from "@/hooks/useEstablecimientos";
 import { useEstadisticas } from "@/hooks/useEstadisticas";
 import { usePanelResumen } from "@/hooks/usePanelResumen";
+import { ESTADO_RESERVA } from "@/lib/estadoReserva";
 import {
   fmtCodigoReserva, fmtDiaLocal, fmtHoraLocal, fmtPctConSigno, fmtPuntaje, moneyAr, recortar,
 } from "@/lib/format";
@@ -121,7 +122,7 @@ function AccesosRapidos({ alcance }: { alcance: Alcance }) {
           { icon: CalendarDays, label: "Tus actividades", href: ruta("actividades") },
         ]
       : []),
-    { icon: ClipboardList, label: "Reservas recibidas", href: ruta("reservas") },
+    { icon: ClipboardList, label: "Reservas recibidas", href: ruta("actividades") },
   ];
 
   return (
@@ -267,7 +268,7 @@ function ProximasReservas({ dias, alcance, hoy }: { dias: DiaReservas[]; alcance
             {total ? `${plural(total, "reserva", "reservas")} en los próximos 3 días` : "Próximos 3 días"}
           </p>
         </div>
-        <Link href={ruta("reservas")} className={LINK_CABECERA}>
+        <Link href={ruta("actividades")} className={LINK_CABECERA}>
           Ver reservas <ArrowRight size={14} />
         </Link>
       </div>
@@ -307,10 +308,11 @@ function ProximasReservas({ dias, alcance, hoy }: { dias: DiaReservas[]; alcance
                     <span className="font-mono text-xs text-fg-3" title={r.id}>{fmtCodigoReserva(r.id)}</span>
                   </span>
                 </span>
-                <span className="col-start-2 sm:col-start-auto">
-                  {/* El resumen trae sólo reservas pagadas. */}
-                  <EstadoBadge tone="success">Confirmada</EstadoBadge>
-                </span>
+                {r.estado && (
+                  <span className="col-start-2 sm:col-start-auto">
+                    <EstadoBadge tone={ESTADO_RESERVA[r.estado].tono}>{ESTADO_RESERVA[r.estado].label}</EstadoBadge>
+                  </span>
+                )}
               </>
             );
             const fila = "grid grid-cols-[52px_minmax(0,1fr)] items-center gap-4 border-t border-cream-tert px-4 py-3.5 text-inherit no-underline sm:grid-cols-[64px_minmax(0,1fr)_auto] sm:px-6";

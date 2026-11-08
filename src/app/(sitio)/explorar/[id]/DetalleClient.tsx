@@ -10,7 +10,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { Button, Skeleton, buttonClasses } from "@/components/ui";
+import { Button, Skeleton, TextoExpandible, buttonClasses } from "@/components/ui";
 import { useActividadPublica } from "@/hooks/useCatalogoActividades";
 import { usePronosticoClima } from "@/hooks/useClima";
 import ContactarEstablecimiento from "@/components/chat/ContactarEstablecimiento";
@@ -249,10 +249,11 @@ function etiquetaDia(iso: string): string {
 /**
  * Una columna por día, siempre en una sola fila. En angosto cada día tiene un
  * ancho fijo (un 30% deja ver que hay más) y la fila se desplaza de costado;
- * desde `md` se reparten el ancho en partes iguales.
+ * desde `md` se reparten el ancho en partes iguales, pero nunca por debajo de
+ * lo que ocupa "MIÉ 22/09" en un renglón: si no entran, la fila se desplaza.
  */
 const GRILLA_CLIMA =
-  "grid grid-flow-col auto-cols-[max(96px,30%)] gap-2.5 overflow-x-auto snap-x snap-mandatory pb-1 md:auto-cols-[minmax(0,1fr)] md:overflow-visible md:pb-0";
+  "grid grid-flow-col auto-cols-[max(104px,30%)] gap-2.5 overflow-x-auto snap-x snap-mandatory pb-1 md:auto-cols-[minmax(104px,1fr)] md:pb-0";
 
 function grados(t: number | null): string {
   return t === null ? "—" : `${Math.round(t)}°`;
@@ -263,7 +264,9 @@ function DiaClima({ d }: { d: DiaPronostico }) {
   const llueve = d.probabilidadLluvia >= 50;
   return (
     <div className="snap-start" style={{ padding: "16px 12px", textAlign: "center", background: "var(--surface)", border: "1px solid var(--outline-variant)", borderRadius: 12 }}>
-      <div style={{ fontSize: 12, color: "var(--fg-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>
+      {/* En un solo renglón: partido, unas tarjetas quedaban en dos y otras en
+          uno según lo que ocupaba el día. El ancho mínimo de la grilla asegura que entre. */}
+      <div className="whitespace-nowrap" style={{ fontSize: 12, color: "var(--fg-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>
         {etiquetaDia(d.fecha)}
       </div>
       <div style={{ margin: "10px 0 8px", display: "flex", justifyContent: "center" }}>
@@ -450,7 +453,9 @@ function Detalle({ a }: { a: ActividadPublica }) {
                   </div>
                 )}
                 {a.establecimiento.descripcion && (
-                  <p style={{ fontSize: 14, color: "var(--fg-2)", lineHeight: 1.55, margin: "10px 0 0" }}>{a.establecimiento.descripcion}</p>
+                  <div className="mt-2.5">
+                    <TextoExpandible texto={a.establecimiento.descripcion} max={400} className="text-sm leading-[1.55]" />
+                  </div>
                 )}
                 {a.establecimiento.id && (
                   <AccionesEstablecimiento id={a.establecimiento.id} actividadId={a.id} actividadNombre={a.nombre} />

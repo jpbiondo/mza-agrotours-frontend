@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3, Grape, CalendarCheck, MessageSquare, Home, ShieldCheck,
+  BarChart3, Grape, MessageSquare, Home, ShieldCheck,
   ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound, Users, ReceiptText,
   FileText,
 } from "lucide-react";
@@ -56,7 +56,6 @@ const SIDEBAR: Row[] = [
     id: "actividades", icon: Grape, label: "Actividades", seccion: "actividades",
     permiso: PermisoProductor.GESTIONAR_ACTIVIDAD,
   },
-  { id: "reservas", icon: CalendarCheck, label: "Reservas", seccion: "reservas" },
   {
     id: "reembolsos", icon: ReceiptText, label: "Reembolsos pendientes", seccion: "reembolsos",
     permiso: PermisoProductor.GESTIONAR_REEMBOLSOS_PENDIENTES,

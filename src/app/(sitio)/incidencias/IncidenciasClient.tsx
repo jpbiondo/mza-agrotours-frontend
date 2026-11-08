@@ -9,7 +9,7 @@ import {
   MessageSquareReply, Plus, Send, X, XCircle, type LucideIcon,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
-import { Alert, BackLink, Button, Card, EstadoBadge, Skeleton } from "@/components/ui";
+import { Alert, BackLink, Button, Card, EstadoBadge, Skeleton, TextoExpandible } from "@/components/ui";
 import { notify } from "@/lib/notify";
 import { FaltanCampos, useCamposFaltantes } from "@/components/ui/faltan-campos";
 import { TextField } from "@/components/ui/text-field";
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form";
 import { GI_ESTADOS, giCodigo } from "@/data/incidencias";
 import { useMisIncidencias, useReportarIncidencia } from "@/hooks/useMisIncidencias";
-import { fmtFechaHora, recortar } from "@/lib/format";
+import { fmtFechaHora } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { EstadoIncidencia, IncidenciaPropia } from "@/types/incidencias";
 import {
@@ -51,33 +51,6 @@ function Migas({ children }: { children: React.ReactNode }) {
       <ChevronRight className="size-3.5" />
       {children}
     </nav>
-  );
-}
-
-/** Caracteres antes del "Ver más" (la descripción y la respuesta pueden ser largas). */
-const MAX_RESUMEN = 220;
-
-/* ---- Texto recortado con "Ver más" -------------------------------------- */
-function TextoExpandible({ texto, className }: { texto: string; className?: string }) {
-  const [completo, setCompleto] = useState(false);
-  const largo = texto.length > MAX_RESUMEN;
-
-  return (
-    <>
-      <p className={cn("wrap-break-word whitespace-pre-line text-fg-2", className)}>
-        {largo && !completo ? recortar(texto, MAX_RESUMEN) : texto}
-      </p>
-      {largo && (
-        <Button
-          variant="text"
-          onClick={() => setCompleto((c) => !c)}
-          aria-expanded={completo}
-          className="mt-1.5 text-[13px]"
-        >
-          {completo ? "Ver menos" : "Ver más"}
-        </Button>
-      )}
-    </>
   );
 }
 
