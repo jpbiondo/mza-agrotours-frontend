@@ -16,4 +16,5 @@ export { Skeleton, SkeletonLayout } from "./Skeleton";
 export { SectionLabel } from "./SectionLabel";
 export { Estrellas } from "./Estrellas";
 export { PuntajeBadge } from "./PuntajeBadge";
+export { TextoExpandible } from "./TextoExpandible";
 export { ErrorScreen, ForbiddenScreen, NotFoundScreen, ResultScreen, StatusScreen } from "./StatusScreen";

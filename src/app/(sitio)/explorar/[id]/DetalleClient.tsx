@@ -10,14 +10,14 @@ import {
 import type { LucideIcon } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import Photo, { seedDeId } from "@/components/landing/Photo";
-import { Button, Skeleton, buttonClasses } from "@/components/ui";
+import { Button, Skeleton, TextoExpandible, buttonClasses } from "@/components/ui";
 import { useActividadPublica } from "@/hooks/useCatalogoActividades";
 import { usePronosticoClima } from "@/hooks/useClima";
 import ContactarEstablecimiento from "@/components/chat/ContactarEstablecimiento";
 import MapaEmbed, { HAY_MAPA_EMBED, consultaMapa, urlComoLlegar } from "@/components/MapaEmbed";
 import BookingWidget from "./BookingWidget";
 import Resenias from "./Resenias";
-import { fmtPuntaje, recortar } from "@/lib/format";
+import { fmtPuntaje } from "@/lib/format";
 import type { ActividadPublica, FotoRef } from "@/types/catalogo";
 import type { CondicionClima, DiaPronostico } from "@/types/clima";
 
@@ -453,7 +453,9 @@ function Detalle({ a }: { a: ActividadPublica }) {
                   </div>
                 )}
                 {a.establecimiento.descripcion && (
-                  <p style={{ fontSize: 14, color: "var(--fg-2)", lineHeight: 1.55, margin: "10px 0 0" }}>{recortar(a.establecimiento.descripcion, 400)}</p>
+                  <div className="mt-2.5">
+                    <TextoExpandible texto={a.establecimiento.descripcion} max={400} className="text-sm leading-[1.55]" />
+                  </div>
                 )}
                 {a.establecimiento.id && (
                   <AccionesEstablecimiento id={a.establecimiento.id} actividadId={a.id} actividadNombre={a.nombre} />
