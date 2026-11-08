@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { apiFetch, comoEnvelope } from "@/lib/api";
+import { aEstadoReserva } from "@/lib/estadoReserva";
 import { leerFechaLocal } from "@/lib/format";
 import type {
   DiaReservas, PendientesPanel, ReseniaReciente, ReseniasPanel, ReservaProxima, ResumenPanel,
@@ -39,6 +40,7 @@ interface ReservaBackend {
   actividadNombre?: unknown;
   visitanteNombre?: unknown;
   personas?: unknown;
+  estado?: unknown;
 }
 
 interface ReseniasBackend {
@@ -92,6 +94,7 @@ function aReserva(r: ReservaBackend, i: number): ReservaProxima {
     actividad: texto(r.actividadNombre),
     visitante: texto(r.visitanteNombre),
     personas: num(r.personas),
+    estado: aEstadoReserva(r.estado),
   };
 }
 
