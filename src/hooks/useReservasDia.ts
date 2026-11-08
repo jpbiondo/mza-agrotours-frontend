@@ -3,6 +3,7 @@ import { ApiError, apiFetch, comoEnvelope, comoPagina, type Pagina } from "@/lib
 import { aNumero, objetos } from "@/hooks/useGestionDias";
 import { useLecturaConToken, type UseAsyncConToken } from "@/hooks/useLecturaConToken";
 import { clasificarError } from "@/lib/errores";
+import { aEstadoReserva } from "@/lib/estadoReserva";
 import { descargar, type FormatoExport } from "@/lib/exportar";
 import { nombrePlanilla, planillaACsv, planillaAPdf, planillaAXlsx } from "@/lib/planillaDia";
 import { conToken } from "@/lib/sesion";
@@ -66,15 +67,6 @@ const ESTADOS_DIA: Record<string, EstadoDia> = {
   CANCELADA: "cancelada",
 };
 
-const ESTADOS_RESERVA: Record<string, EstadoReservaDia> = {
-  PENDIENTE: "pendiente",
-  PAGADA: "pagada",
-  CANCELADA_CON_REEMBOLSO: "cancelada_con_reembolso",
-  CANCELADA_SIN_REEMBOLSO: "cancelada_sin_reembolso",
-  FINALIZADA: "finalizada",
-  EXPIRADA: "expirada",
-};
-
 /** El nombre del enum `EstadoReservaNombre`, que es como viaja el filtro `estado`. */
 const ESTADO_RESERVA_BACKEND: Record<EstadoReservaDia, string> = {
   pendiente: "PENDIENTE",
@@ -89,8 +81,6 @@ const clave = (v: unknown) => (typeof v === "string" ? v.trim().toUpperCase() : 
 
 /** Un estado de día desconocido se lee como finalizado: es la lectura que no ofrece acciones. */
 const aEstadoDia = (v: unknown): EstadoDia => ESTADOS_DIA[clave(v)] ?? "finalizada";
-
-const aEstadoReserva = (v: unknown): EstadoReservaDia | null => ESTADOS_RESERVA[clave(v)] ?? null;
 
 /** `LocalTime.toString()` manda "06:00" o "06:00:30". */
 const aHora = (v: unknown) => (typeof v === "string" && /^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : "");
