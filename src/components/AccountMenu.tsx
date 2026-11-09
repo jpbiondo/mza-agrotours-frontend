@@ -8,7 +8,7 @@ import {
   CalendarCheck,
   ClipboardList,
   LifeBuoy,
-  ShieldCheck,
+  CircleHelp,
   LogOut,
   Sprout,
   LayoutDashboard,
@@ -214,8 +214,8 @@ export default function AccountMenu() {
             {ready &&
               roles.includes("admin") &&
               item(LayoutDashboard, "Panel de administrador", "/admin")}
-            {item(LifeBuoy, "Ayuda", "/ayuda")}
-            {item(ShieldCheck, "Acceso y seguridad", "/cuenta?tab=seguridad")}
+            {item(CircleHelp, "Preguntas frecuentes", "/ayuda")}
+            {item(LifeBuoy, "Reportar incidencia", "/incidencias")}
             <div
               style={{
                 height: 1,

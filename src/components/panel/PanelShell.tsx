@@ -8,7 +8,8 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3, Grape, MessageSquare, Home, ShieldCheck,
   ChevronsUpDown, MapPin, Check, PlusCircle, Settings2, Compass, Menu, X, UserRound, Users, ReceiptText,
-  FileText, TriangleAlert, CircleHelp, BookOpen,
+  FileText, CircleHelp, BookOpen,
+  LifeBuoy,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -79,7 +80,7 @@ const SIDEBAR: Row[] = [
   { id: "roles", icon: ShieldCheck, label: "Roles y permisos", seccion: "roles", soloLider: true },
   // Soporte vive en el espacio del visitante: es el mismo para todas las cuentas.
   { section: "Soporte" },
-  { id: "incidencias", icon: TriangleAlert, label: "Reportar incidencia", href: "/incidencias", siempreDisponible: true },
+  { id: "incidencias", icon: LifeBuoy, label: "Reportar incidencia", href: "/incidencias", siempreDisponible: true },
   { id: "faq", icon: CircleHelp, label: "Preguntas frecuentes", href: "/ayuda", siempreDisponible: true },
   {
     // TODO: el widget del asistente se sacó (c329994); hasta que vuelva, el
