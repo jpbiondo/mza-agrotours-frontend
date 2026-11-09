@@ -159,7 +159,7 @@ Las preguntas abiertas del primer borrador quedaron resueltas así (2026-10-19):
 6. **`sm` con texto de 14 px**: vuelve a `sm`.
 7. **`ghost`**: se elimina.
 8. **Edición en línea**: cuenta como cambios sin guardar.
-9. **Después del login**: se vuelve a la pantalla de origen.
+9. **Después del login**: se vuelve a la pantalla de origen. Si el login trae `volver` (un guard o una acción que exige sesión, como reservar), se navega directo, sin la `ResultScreen` de bienvenida: el usuario estaba a mitad de algo y lo retoma. Sin `volver`, la bienvenida queda.
 10. **Reautenticación**: sólo en parámetros, implementada de verdad con Firebase.
 11. **Toast de error**: también se cierra solo, a los 7 s.
 

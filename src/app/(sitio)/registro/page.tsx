@@ -7,6 +7,16 @@ import RegisterView from "./components/RegisterView";
 import { useCuentaFirebase } from "@/hooks/useCuentaFirebase";
 import { useAuthStore } from "@/stores/authStore";
 import { DESTINO_DEFAULT, RUTA_COMPLETAR_REGISTRO } from "@/data/auth";
+import { destinoSeguro } from "@/lib/volver";
+
+/**
+ * A dónde ir después del alta: el `?volver=` si lo trae (p. ej. desde el login
+ * de una reserva) o el destino por defecto. Se lee de `window` y no con
+ * `useSearchParams` para no tener que envolver la página en `Suspense`.
+ */
+function destinoTrasAlta(): string {
+  return destinoSeguro(new URLSearchParams(window.location.search).get("volver")) ?? DESTINO_DEFAULT.href;
+}
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -19,7 +29,7 @@ export default function RegistroPage() {
 
   // Si ya hay sesión, no mostramos el registro: al destino post-login.
   useEffect(() => {
-    if (loggedIn) router.replace(DESTINO_DEFAULT.href);
+    if (loggedIn) router.replace(destinoTrasAlta());
   }, [loggedIn, router]);
 
   // Cuenta de Firebase sin perfil (alta a medias): se completa, no se vuelve a
@@ -34,7 +44,7 @@ export default function RegistroPage() {
   // para que la navbar se hidrate en estado logueado.
   function handleSuccess() {
     setFinishing(true);
-    window.location.href = DESTINO_DEFAULT.href;
+    window.location.href = destinoTrasAlta();
   }
 
   // Mientras navegamos al destino tras el alta.

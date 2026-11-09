@@ -149,18 +149,3 @@ export function FormHead({ icon, title, sub }: { icon?: React.ReactNode; title: 
     </div>
   );
 }
-
-/* ---- Link inline de auth ----------------------------------------------- */
-export function AuthLink({ onClick, href, children, strong }: { onClick?: () => void; href?: string; children: React.ReactNode; strong?: boolean }) {
-  return (
-    <a
-      href={href || "#"}
-      onClick={(e) => { if (!href) e.preventDefault(); onClick?.(); }}
-      style={{ color: "var(--green-800)", fontWeight: strong ? 700 : 600, textDecoration: "none" }}
-      onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-      onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
-    >
-      {children}
-    </a>
-  );
-}

@@ -1,7 +1,6 @@
 "use client";
 
 import { MailCheck } from "lucide-react";
-import { AuthLink } from "@/app/acceso/components/AuthShell";
 import { Button, ResultScreen } from "@/components/ui";
 
 interface RecoverSentViewProps {
@@ -21,7 +20,7 @@ export default function RecoverSentView({ email, onBackLogin, onResend }: Recove
       entrada y seguí el enlace para crear una nueva contraseña.
       {/* Es la salida si el correo no llega, no un segundo CTA: va como link dentro del texto. */}
       <span className="mt-2.5 block text-[13px] text-fg-3">
-        ¿No te llegó? Revisá el spam o <AuthLink onClick={onResend}>reenviá el correo</AuthLink>.
+        ¿No te llegó? Revisá el spam o <Button variant="text" onClick={onResend} className="text-[length:inherit]">reenviá el correo</Button>.
       </span>
     </ResultScreen>
   );
