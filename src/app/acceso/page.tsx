@@ -2,13 +2,15 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Loader } from "lucide-react";
 import { AuthHeader, AuthLayout } from "./components/AuthShell";
 import LoginForm from "./components/LoginForm";
 import LoginSuccess from "./components/LoginSuccess";
 import type { Cuenta } from "@/types/auth";
 import { destinoSeguro, type MotivoAcceso } from "@/lib/volver";
 
-type View = "login" | "login-ok";
+/** `volviendo`: hay a dónde volver y se navega directo, sin la pantalla de resultado. */
+type View = "login" | "login-ok" | "volviendo";
 
 /** Avisos que llegan por `?motivo=…` (p. ej. tras cambiar el email en Mi cuenta). */
 const NOTICES: Record<MotivoAcceso, string> = {
@@ -48,11 +50,28 @@ function AccesoInner() {
         {view === "login" && (
           <LoginForm
             notice={notice}
-            onSuccess={(c) => { setCuenta(c); setView("login-ok"); }}
-            onRecover={() => router.push("/acceso/recuperar")}
+            volver={volver}
+            onSuccess={(c) => {
+              // Si se vino a mitad de algo (p. ej. una reserva con el día y los
+              // visitantes en la URL), se retoma sin hacer esperar la bienvenida.
+              // Navegación dura, como `LoginSuccess`: la navbar arranca logueada.
+              if (volver) {
+                setView("volviendo");
+                window.location.replace(volver);
+                return;
+              }
+              setCuenta(c);
+              setView("login-ok");
+            }}
           />
         )}
         {view === "login-ok" && cuenta && <LoginSuccess cuenta={cuenta} volver={volver} />}
+        {view === "volviendo" && (
+          <div className="py-16 text-center text-fg-3" role="status">
+            <Loader className="mx-auto size-[26px] animate-spin" aria-hidden />
+            <div className="mt-3 text-sm">Iniciando sesión…</div>
+          </div>
+        )}
       </AuthLayout>
     </div>
   );

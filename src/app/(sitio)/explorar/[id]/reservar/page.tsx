@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GuardSesion from "@/components/GuardSesion";
 import ReservaClient from "./ReservaClient";
 
 /* La actividad sale del backend en el cliente —y este endpoint además exige
@@ -22,12 +23,15 @@ export default async function ReservarPage({ params, searchParams }: {
   const { id } = await params;
   const query = await searchParams;
 
-  // `dia` y `visitantes` los manda el widget de reserva del detalle.
+  // `dia` y `visitantes` los manda el widget de reserva del detalle. Sin sesión
+  // (link compartido, recarga), el guard lleva al login y vuelve acá.
   return (
-    <ReservaClient
-      id={id}
-      diaInicial={primero(query.dia)}
-      visitantesIniciales={Number(primero(query.visitantes)) || 1}
-    />
+    <GuardSesion>
+      <ReservaClient
+        id={id}
+        diaInicial={primero(query.dia)}
+        visitantesIniciales={Number(primero(query.visitantes)) || 1}
+      />
+    </GuardSesion>
   );
 }
