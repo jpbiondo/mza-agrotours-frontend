@@ -41,6 +41,10 @@ interface ReservaBackend {
   resumenRangoEtario?: unknown;
   visitantes?: unknown;
   montoTotalReserva?: unknown;
+  subtotalComisionSistema?: unknown;
+  /** `null` hasta que Mercado Pago aprueba el pago y se concilia. */
+  subtotalComisionTransaccion?: unknown;
+  subtotalProductor?: unknown;
 }
 
 interface RangoBackend {
@@ -85,6 +89,9 @@ const aEstadoDia = (v: unknown): EstadoDia => ESTADOS_DIA[clave(v)] ?? "finaliza
 /** `LocalTime.toString()` manda "06:00" o "06:00:30". */
 const aHora = (v: unknown) => (typeof v === "string" && /^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : "");
 
+/** Un monto que puede no conocerse todavía: `null` y lo que no es número quedan en `null`, no en 0. */
+const montoONull = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null);
+
 function aResumen(r: ResumenBackend): ResumenDia {
   return {
     actividadId: r.id ?? "",
@@ -119,6 +126,9 @@ function aReserva(r: ReservaBackend): ReservaDia | null {
       .filter((g) => g.rango && g.cantidad > 0),
     visitantes,
     total: aNumero(r.montoTotalReserva),
+    comisionSistema: montoONull(r.subtotalComisionSistema),
+    comisionTransaccion: montoONull(r.subtotalComisionTransaccion),
+    neto: montoONull(r.subtotalProductor),
   };
 }
 

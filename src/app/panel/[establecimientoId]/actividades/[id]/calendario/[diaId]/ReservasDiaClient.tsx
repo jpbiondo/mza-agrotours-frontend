@@ -143,9 +143,49 @@ function iniciales(nombre: string): string {
   return nombre.split(/\s+/).filter(Boolean).map((s) => s[0]).join("").slice(0, 2).toUpperCase();
 }
 
+/** Las reservas cuyo pago le queda al productor: sólo en esas tiene sentido descontar comisiones. */
+const CON_COBRO: EstadoReservaDia[] = ["pagada", "finalizada", "cancelada_sin_reembolso"];
+
+function FilaDesglose({ label, monto, resta }: { label: string; monto: number; resta?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-0.75">
+      <dt className="text-fg-2">{label}</dt>
+      <dd className="font-mono text-fg-1">{resta ? `− ${moneyAr(monto)}` : moneyAr(monto)}</dd>
+    </div>
+  );
+}
+
+/**
+ * De dónde sale lo que cobra el productor. La comisión de Mercado Pago se
+ * conoce recién cuando se aprueba el pago: hasta entonces el neto es estimado.
+ */
+function DesgloseCobro({ r }: { r: ReservaDia }) {
+  if (r.comisionSistema === null) return null;
+  const mp = r.comisionTransaccion;
+  return (
+    <div className="border-t border-outline-variant px-[22px] py-3.5">
+      <dl className="text-[13px] sm:ml-auto sm:max-w-90">
+        <FilaDesglose label="Subtotal de la reserva" monto={r.total} />
+        <FilaDesglose label="Comisión de Mendoza AgroTours" monto={r.comisionSistema} resta />
+        {/* En un pago manual viene en 0: no hay comisión que mostrar. */}
+        {mp !== null && mp > 0 && <FilaDesglose label="Comisión de Mercado Pago" monto={mp} resta />}
+      </dl>
+      {mp === null && (
+        <p className="mt-1.5 text-xs text-fg-3 sm:ml-auto sm:max-w-90">
+          Todavía no incluye la comisión de Mercado Pago, que depende del medio de pago y se conoce cuando se aprueba el pago.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function TarjetaReserva({ r }: { r: ReservaDia }) {
   const meta = ESTADO_META[r.estado];
   const cancelada = r.estado === "cancelada_con_reembolso" || r.estado === "cancelada_sin_reembolso";
+  const conDesglose = CON_COBRO.includes(r.estado) && r.comisionSistema !== null;
+  // Sin el neto del backend, se estima con lo que ya se sabe en vez de mostrar el bruto como si fuera lo cobrado.
+  const neto = r.neto ?? r.total - (r.comisionSistema ?? 0) - (r.comisionTransaccion ?? 0);
+  const netoEstimado = r.comisionTransaccion === null;
 
   return (
     <Card className="overflow-hidden p-0">
@@ -212,22 +252,31 @@ function TarjetaReserva({ r }: { r: ReservaDia }) {
         </ul>
       </div>
 
+      {conDesglose && <DesgloseCobro r={r} />}
+
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant bg-cream-tert px-[22px] py-3">
         <span className="inline-flex items-center gap-[7px] text-[12.5px] text-fg-2">
           {meta.icon} {meta.pie}
         </span>
-        <span className="text-[12.5px] text-fg-3">
-          {cancelada ? "Total reserva" : "Subtotal"}
-          <span
-            className={cn(
-              "ml-1.5 font-mono text-[14.5px] font-semibold",
-              cancelada ? "text-fg-3" : "text-green-800",
-              r.estado === "cancelada_con_reembolso" && "line-through",
-            )}
-          >
-            {moneyAr(r.total)}
+        {conDesglose ? (
+          <span className="text-[12.5px] text-fg-3">
+            {netoEstimado ? "Te queda (estimado)" : "Te queda"}
+            <span className="ml-1.5 font-mono text-[14.5px] font-semibold text-green-800">{moneyAr(neto)}</span>
           </span>
-        </span>
+        ) : (
+          <span className="text-[12.5px] text-fg-3">
+            {cancelada ? "Total reserva" : "Subtotal"}
+            <span
+              className={cn(
+                "ml-1.5 font-mono text-[14.5px] font-semibold",
+                cancelada ? "text-fg-3" : "text-green-800",
+                r.estado === "cancelada_con_reembolso" && "line-through",
+              )}
+            >
+              {moneyAr(r.total)}
+            </span>
+          </span>
+        )}
       </div>
     </Card>
   );
@@ -545,7 +594,7 @@ export default function ReservasDiaClient({ actividadId, diaId }: { actividadId:
                     <div className="font-mono text-[25px] leading-[1.05] font-semibold text-fg-1">{moneyAr(r.ingresoEstimado)}</div>
                     <div className="t-label mt-[7px]">Ingreso estimado del día</div>
                     <div className="mt-[3px] text-xs text-fg-3">
-                      Reservas {temporalidad === "pasada" ? "finalizadas" : "pagadas"} + canceladas sin reembolso
+                      Reservas {temporalidad === "pasada" ? "finalizadas" : "pagadas"} + canceladas sin reembolso, sin comisiones
                     </div>
                   </div>
                 </div>

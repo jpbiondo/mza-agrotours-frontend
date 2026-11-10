@@ -400,23 +400,22 @@ export default function RegistroForm({
                 />
                 <span className="text-[13.5px] leading-relaxed text-fg-1">
                   Leí y acepto los{" "}
+                  {/* En otra pestaña para no perder lo cargado; stopPropagation para que no tilde el checkbox. */}
                   <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
+                    href="/terminos"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="font-semibold text-green-800"
                   >
                     términos y condiciones
                   </a>{" "}
                   y la{" "}
                   <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
+                    href="/terminos#datos-personales"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="font-semibold text-green-800"
                   >
                     política de privacidad

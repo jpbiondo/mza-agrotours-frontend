@@ -11,10 +11,18 @@ import { cn } from "@/lib/utils";
  * Con `layout` dibuja un esqueleto entero de una forma conocida (ver
  * `SkeletonLayout`). Si la pantalla tiene una forma propia, se arma con bloques
  * sueltos, como hasta ahora.
+ *
+ * Con `inline` es un `<span>` en línea, para un dato dentro de una frase: un
+ * `<div>` dentro de un `<p>` es HTML inválido y rompe la hidratación.
  */
-export function Skeleton({ className = "", ...layout }: { className?: string } & Partial<SkeletonLayoutProps>) {
+export function Skeleton({
+  className = "",
+  inline = false,
+  ...layout
+}: { className?: string; inline?: boolean } & Partial<SkeletonLayoutProps>) {
   if (layout.layout) return <SkeletonLayout {...(layout as SkeletonLayoutProps)} className={className} />;
-  return <div aria-hidden className={cn("animate-pulse rounded-md bg-cream-tert", className)} />;
+  const Tag = inline ? "span" : "div";
+  return <Tag aria-hidden className={cn("animate-pulse rounded-md bg-cream-tert", inline && "inline-block align-middle", className)} />;
 }
 
 type SkeletonLayoutProps =

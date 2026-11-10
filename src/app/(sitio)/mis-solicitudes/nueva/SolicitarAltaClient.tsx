@@ -29,6 +29,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Alert, BackLink, Button, Modal, ResultScreen, SectionLabel } from "@/components/ui";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ComisionSistema } from "@/components/legal/ComisionSistema";
 import { cn } from "@/lib/utils";
 import {
   REQUISITOS_DOC,
@@ -517,6 +519,51 @@ export default function SolicitarAltaClient() {
                   error={filesError}
                 />
               </div>
+
+              {/* Términos y comisión: el mismo control que el checkbox de términos del registro. */}
+              <FormField
+                control={form.control}
+                name="terminos"
+                render={({ field, fieldState }) => (
+                  <FormItem id="fld-terminos" className="mt-6">
+                    <label
+                      className={cn(
+                        "flex cursor-pointer items-start gap-3 rounded-md border p-4 transition-colors",
+                        fieldState.error ? "border-danger" : "border-outline-variant",
+                        field.value ? "bg-green-050" : "bg-surface",
+                      )}
+                    >
+                      {/* FormControl le pasa id, aria-invalid y aria-describedby: el error queda asociado al checkbox. */}
+                      <FormControl>
+                        <Checkbox
+                          ref={field.ref}
+                          checked={field.value}
+                          onCheckedChange={(ck) => field.onChange(ck === true)}
+                          onBlur={field.onBlur}
+                          className="mt-0.5 size-5"
+                        />
+                      </FormControl>
+                      <span className="text-[13.5px] leading-relaxed text-fg-1">
+                        Leí y acepto los{" "}
+                        {/* En otra pestaña para no perder lo cargado; stopPropagation para que no tilde el checkbox. */}
+                        <a
+                          href="/terminos/productores"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-semibold text-green-800"
+                        >
+                          términos para productores
+                        </a>{" "}
+                        de Mendoza AgroTours, incluida la comisión{" "}
+                        <ComisionSistema prefijo="del " sinDato="de la plataforma" /> sobre cada reserva
+                        cobrada. Mercado Pago cobra aparte la suya, que depende del medio de pago.
+                      </span>
+                    </label>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Acciones */}
               <div className="mt-6">
