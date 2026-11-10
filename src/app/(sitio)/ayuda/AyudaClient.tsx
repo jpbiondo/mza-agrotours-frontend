@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ChevronRight, Headset, LifeBuoy, MessagesSquare, RotateCcw, SearchX,
+  BookOpen, ChevronRight, Download, Headset, LifeBuoy, MessagesSquare, RotateCcw, SearchX,
 } from "lucide-react";
 import AsyncBoundary from "@/components/AsyncBoundary";
 import { Button, Skeleton, buttonClasses } from "@/components/ui";
@@ -11,7 +11,44 @@ import {
   FaqChips, FaqFila, contarPorCategoria, etiquetaCat,
 } from "@/components/faq/piezas";
 import { useFaqPublica } from "@/hooks/useFaq";
+import { useDescargarManual, useManualUsuario } from "@/hooks/useManualUsuario";
 import type { FaqItem } from "@/types/catalogo";
+
+/* ---- Manual de usuario ------------------------------------------------- */
+
+/**
+ * El manual es un extra de la ayuda, no su contenido: si falla o todavía no se
+ * cargó ninguno, la sección desaparece en vez de mostrar un error con
+ * "Reintentar" (mismo criterio que el pronóstico del detalle). Mientras carga
+ * deja el esqueleto para que lo de abajo no salte.
+ */
+function ManualUsuarioSeccion() {
+  const { data, isLoading } = useManualUsuario();
+  const { bajar, descargando } = useDescargarManual();
+
+  if (isLoading) return <Skeleton className="mt-10 h-[104px] w-full rounded-lg" />;
+  if (!data) return null;
+
+  return (
+    <section
+      aria-labelledby="manual-titulo"
+      className="mt-10 flex flex-wrap items-center justify-between gap-6 rounded-lg border border-outline-variant bg-surface px-[30px] py-7"
+    >
+      <div className="flex min-w-[280px] flex-1 items-center gap-4">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-green-050 text-green-800">
+          <BookOpen className="size-6" />
+        </span>
+        <div>
+          <h2 id="manual-titulo" className="mb-1 font-display text-[19px] font-bold text-fg-1">Manual de usuario</h2>
+          <p className="text-sm text-fg-2">La guía paso a paso para visitantes y productores, en PDF.</p>
+        </div>
+      </div>
+      <Button variant="neutral" onClick={() => bajar(data)} loading={descargando}>
+        <Download className="size-[17px]" /> Descargar manual
+      </Button>
+    </section>
+  );
+}
 
 /* ---- Estado vacío ------------------------------------------------------ */
 function FaqVacio({ sinDatos, onVerTodas }: { sinDatos: boolean; onVerTodas: () => void }) {
@@ -132,6 +169,8 @@ export default function AyudaClient() {
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<FaqEsqueleto />}>
         <FaqListado items={data} />
       </AsyncBoundary>
+
+      <ManualUsuarioSeccion />
 
       {/* CTA de soporte */}
       <div className="mt-10 flex flex-wrap items-center justify-between gap-6 rounded-lg border border-green-100 bg-green-050 px-[30px] py-7">
