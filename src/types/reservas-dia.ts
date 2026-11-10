@@ -24,7 +24,10 @@ export interface ResumenDia {
   /** "HH:MM" */
   horaInicio: string;
   horaFin: string;
-  /** Pagadas, finalizadas y canceladas sin reembolso: lo que el productor cobra. */
+  /**
+   * Pagadas, finalizadas y canceladas sin reembolso: lo que el productor cobra,
+   * ya sin comisiones (suma `subtotalProductor`).
+   */
   ingresoEstimado: number;
   /** Reservas visibles para el productor, en cualquier estado. */
   totalReservas: number;
@@ -45,6 +48,15 @@ export interface ReservaDia {
   rangos: { rango: string; cantidad: number }[];
   visitantes: VisitanteReserva[];
   total: number;
+  /**
+   * Lo que retiene la plataforma, guardado al pagar con el porcentaje de ese
+   * momento. `null` mientras la reserva no tiene pago.
+   */
+  comisionSistema: number | null;
+  /** Lo que cobró Mercado Pago. `null` hasta que se aprueba el pago; `0` en un pago manual. */
+  comisionTransaccion: number | null;
+  /** Lo que le queda al productor: total menos las dos comisiones. */
+  neto: number | null;
 }
 
 /** Cuántas reservas del día hay en cada estado (sólo los que tienen alguna). */
