@@ -92,6 +92,7 @@ Todo diálogo centrado se arma en tres zonas, y sólo el cuerpo scrollea. Es lo 
 | "Cargar más" | Spinner en línea al pie de la lista | — |
 | Un guard decide sesión o permiso | Nada, el área queda vacía. *Ya lo hace `GuardRol` en ~30 rutas: dura un frame y un cartel se leería como demora* | `GuardRol` ✅, `GuardSesion` ✅ para las pantallas de visitante |
 | Envío de formulario o acción | Spinner en el botón | `Button loading` ✅, `ActionBtn loading` ✅ |
+| Un dato suelto dentro de una frase (p. ej. el porcentaje de comisión en los términos) | Mientras carga, un esqueleto en línea del ancho del dato. Si falla, un texto alternativo que deje la frase completa, sin pantalla de error ni "Reintentar": es preferible no dar el dato a dar uno viejo o inventado | `Skeleton inline` ✅; ejemplo: `components/legal/ComisionSistema.tsx` |
 
 ## Estados vacíos — `EmptyState` ✅
 
@@ -283,6 +284,7 @@ Cada patrón tiene un único punto de entrada. Las pantallas existentes **todav�
 
 **`Skeleton`** · `components/ui/Skeleton.tsx` (modificado)
 - Sin `layout`, el bloque de siempre (`className`).
+- `inline`: un `<span>` en línea, para un dato dentro de una frase (un `<div>` dentro de un `<p>` rompe la hidratación).
 - `layout="list"` (`rows`), `"table"` (`rows`, `cols`), `"cards"` (`count`) y `"detail"`. También como `SkeletonLayout`.
 
 **`clasificarError(e): Falla | null`** · `lib/errores.ts` (nuevo)

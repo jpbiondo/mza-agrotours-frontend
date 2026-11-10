@@ -52,6 +52,13 @@ export const solicitarAltaSchema = z.object({
     .trim()
     .min(1, "El teléfono es obligatorio.")
     .regex(TELEFONO_RE, TELEFONO_MSG),
+  /**
+   * Sólo del front: no viaja en el payload. Sin aceptar no se puede enviar, así
+   * que toda solicitud registrada implica que se aceptaron los términos.
+   */
+  terminos: z
+    .boolean()
+    .refine((v) => v === true, "Tenés que aceptar los términos para productores para enviar la solicitud."),
 });
 
 export type SolicitarAltaForm = z.infer<typeof solicitarAltaSchema>;
@@ -65,4 +72,5 @@ export const SOLICITAR_ALTA_INICIAL: SolicitarAltaForm = {
   domicilio: "",
   email: "",
   telefono: "",
+  terminos: false,
 };

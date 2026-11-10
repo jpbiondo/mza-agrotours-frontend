@@ -1,39 +1,35 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DocumentoLegal, LINK_LEGAL, Seccion } from "@/components/legal/DocumentoLegal";
 
 export const metadata: Metadata = {
   title: "Términos y condiciones · Mendoza AgroTours",
-  description: "Condiciones de uso de Mendoza AgroTours para visitantes y productores.",
+  description: "Condiciones de uso de Mendoza AgroTours.",
 };
 
 /*
  * TODO legal: borrador escrito a partir de cómo funciona la plataforma, no por
  * un abogado. Antes de salir a producción lo tiene que revisar alguien que
  * sepa: sobre todo responsabilidad, reembolsos y datos personales.
+ *
+ * Son los términos que se aceptan al registrarse. Lo propio de los productores
+ * (alta, responsabilidades, comisiones) va en /terminos/productores, que se
+ * acepta al solicitar el alta de un establecimiento.
  */
-const ACTUALIZACION = "26 de octubre de 2026";
-
-function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-10">
-      <h2 className="m-0 font-display text-[22px] font-bold text-fg-1">{titulo}</h2>
-      <div className="mt-3 flex flex-col gap-3 text-[15.5px] leading-[1.65] text-fg-2">{children}</div>
-    </section>
-  );
-}
+const ACTUALIZACION = "9 de noviembre de 2026";
 
 export default function TerminosPage() {
   return (
-    <article className="mx-auto max-w-[760px] px-7 pt-10 pb-24">
-      <h1 className="m-0 font-display text-[38px] leading-[1.1] font-bold tracking-[-.015em] text-fg-1">
-        Términos y condiciones
-      </h1>
-      <p className="mt-3 mb-0 text-sm text-fg-3">Última actualización: {ACTUALIZACION}</p>
-      <p className="mt-6 mb-0 text-base leading-[1.65] text-fg-2">
-        Estos términos regulan el uso de Mendoza AgroTours. Al crear una cuenta o hacer una reserva, aceptás lo que
-        sigue. Si no estás de acuerdo con alguna parte, no uses la plataforma.
-      </p>
-
+    <DocumentoLegal
+      titulo="Términos y condiciones"
+      actualizacion={ACTUALIZACION}
+      intro={
+        <p className="m-0">
+          Estos términos regulan el uso de Mendoza AgroTours. Al crear una cuenta o hacer una reserva, aceptás lo que
+          sigue. Si no estás de acuerdo con alguna parte, no uses la plataforma.
+        </p>
+      }
+    >
       <Seccion titulo="1. Qué es Mendoza AgroTours">
         <p className="m-0">
           Mendoza AgroTours es una plataforma que conecta a visitantes con establecimientos rurales de Mendoza que
@@ -89,13 +85,12 @@ export default function TerminosPage() {
 
       <Seccion titulo="6. Productores y establecimientos">
         <p className="m-0">
-          Para publicar actividades, un productor solicita el alta de su establecimiento y adjunta la documentación
-          que se le pida. Revisamos cada solicitud y podemos aprobarla, pedir correcciones o rechazarla.
-        </p>
-        <p className="m-0">
-          Quien publica es responsable de que la información sea cierta, de contar con las habilitaciones que exija su
-          actividad, de cumplir lo publicado y de la seguridad de los visitantes durante la experiencia. Podemos
-          suspender un establecimiento o despublicar actividades que incumplan estos términos.
+          Para publicar actividades, un productor solicita el alta de su establecimiento. Al hacerlo acepta, además de
+          estos términos, los{" "}
+          <Link href="/terminos/productores" className={LINK_LEGAL}>
+            términos para productores
+          </Link>
+          , que regulan el alta, sus responsabilidades y las comisiones que cobra la plataforma.
         </p>
       </Seccion>
 
@@ -118,7 +113,7 @@ export default function TerminosPage() {
         </p>
       </Seccion>
 
-      <Seccion titulo="9. Datos personales">
+      <Seccion id="datos-personales" titulo="9. Datos personales">
         <p className="m-0">
           Usamos tus datos para gestionar tu cuenta, tus reservas y tus pagos, y le compartimos al establecimiento sólo
           lo necesario para recibirte. No los vendemos ni los cedemos a terceros con otros fines.
@@ -148,12 +143,12 @@ export default function TerminosPage() {
       <Seccion titulo="12. Contacto">
         <p className="m-0">
           Para cualquier consulta o reclamo sobre estos términos, escribinos desde{" "}
-          <Link href="/incidencias" className="font-semibold text-green-800 underline-offset-2 hover:underline">
+          <Link href="/incidencias" className={LINK_LEGAL}>
             Incidencias
           </Link>
           .
         </p>
       </Seccion>
-    </article>
+    </DocumentoLegal>
   );
 }
