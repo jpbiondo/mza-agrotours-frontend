@@ -24,8 +24,12 @@ import {
 } from "@/components/faq/piezas";
 import { FAQ_CATEGORIAS } from "@/data/faq";
 import { useFaq, useFaqCrud } from "@/hooks/useFaq";
+import { PermisoAdmin } from "@/lib/permisos";
+import { tienePermiso } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/authStore";
 import type { FaqItem } from "@/types/catalogo";
+import ManualUsuarioCard from "./ManualUsuarioCard";
 import { FAQ_INICIAL, PREGUNTA_MAX, RESPUESTA_MAX, faqSchema, type FaqForm } from "./schema";
 
 /** Las que se pueden asignar: "todas" es sólo un filtro. */
@@ -485,6 +489,8 @@ export default function FaqAdminClient() {
   // fuera del <AsyncBoundary>. Se habilita recién con el listado cargado: el
   // alta se suma a la lista local.
   const [editor, setEditor] = useState<{ item: FaqItem | null } | null>(null);
+  const accesos = useAuthStore((s) => s.accesos);
+  const puedeGestionarManual = tienePermiso(accesos, PermisoAdmin.GESTIONAR_PARAMETROS);
 
   return (
     <div className="mx-auto max-w-[920px] px-7 pt-7 pb-[88px]">
@@ -516,6 +522,10 @@ export default function FaqAdminClient() {
       <AsyncBoundary loading={isLoading} error={error} onRetry={reload} skeleton={<FaqEsqueleto />}>
         <FaqGestion initial={data} editor={editor} setEditor={setEditor} />
       </AsyncBoundary>
+
+      {/* Debajo de las preguntas, como en la ayuda pública. El backend lo pide con
+          GESTIONAR_PARAMETROS, no con el permiso de FAQ que exige esta ruta. */}
+      <ManualUsuarioCard puedeGestionar={puedeGestionarManual} />
     </div>
   );
 }
